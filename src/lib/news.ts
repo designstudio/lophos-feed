@@ -26,13 +26,13 @@ function isArticleUrl(url: string): boolean {
 
 export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
   // 1. Tavily — só últimos 3 dias, busca artigos específicos
-  const today = new Date().toISOString().split('T')[0]
+  const todayISO = new Date().toISOString().split('T')[0]
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       api_key: TAVILY_KEY,
-      query: `${topic} ${today}`,   // data no query força resultados recentes
+      query: `${topic} ${todayISO}`,   // data no query força resultados recentes
       search_depth: 'basic',
       max_results: 10,
       days: 3,                       // só últimos 3 dias
@@ -52,17 +52,32 @@ export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
 
   if (results.length === 0) return []
 
-  // 2. Prompt compacto pro Gemini — flash-lite é 10x mais barato que 2.5-flash
-  // Snippet curto (150 chars) — suficiente pra identificar o evento, poupa tokens
+  // 2. Contexto rico — snippets maiores para síntese jornalística de qualidade
+  const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const context = results
     .map((r: any, i: number) =>
-      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}": ${(r.content || '').slice(0, 150)}`
+      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 400)}`
     )
-    .join('\n')
+    .join('\n\n')
 
-  const prompt = `Notícias de "${topic}". Agrupe as que falam do MESMO evento em 1 notícia (máx 2 no total).
-JSON: [{"title":"título pt-BR","summary":"resumo 2-3 frases pt-BR","sourceIndexes":[1,2,3]}]
-Resultados:
+  const prompt = `Você é um jornalista sênior. Hoje é ${today}. Analise as fontes abaixo sobre "${topic}" e produza uma síntese jornalística.
+
+INSTRUÇÕES:
+1. Agrupe fontes que cobrem o MESMO evento em 1 notícia. Só crie 2 notícias se forem eventos genuinamente distintos.
+2. CRUZAMENTO DE FONTES: compare o que cada fonte diz. Se houver divergências ou informações complementares, mencione explicitamente (ex: "Segundo o X, ... já o Y aponta que...").
+3. SÍNTESE NARRATIVA: escreva um resumo coeso de 4-5 frases em português, organizado como um parágrafo jornalístico — contexto → fato central → desdobramentos → impacto/reação.
+4. Separe fatos confirmados de especulações ("confirmou que..." vs "segundo fontes, pode...").
+5. Título direto e preciso, sem clickbait.
+6. Se o evento ocorreu hoje ou ontem, indique isso no resumo.
+
+Responda APENAS com JSON válido:
+[{
+  "title": "título jornalístico preciso em pt-BR",
+  "summary": "síntese de 4-5 frases cruzando as fontes, narrativa coesa",
+  "sourceIndexes": [1, 2, 3]
+}]
+
+FONTES:
 ${context}`
 
   const geminiRes = await fetch(
