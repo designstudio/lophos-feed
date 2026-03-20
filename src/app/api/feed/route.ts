@@ -50,10 +50,15 @@ export async function POST(req: NextRequest) {
     await writer.write(encoder.encode(JSON.stringify({ topics }) + '\n'))
 
     // 1. Fetch ALL existing articles + last fetch times in parallel
-    const [{ data: allArticles }, { data: fetchTimes }] = await Promise.all([
+    const [{ data: allArticles }, fetchResult] = await Promise.all([
       db.from('news_cache').select('*').in('topic', topics).order('cached_at', { ascending: false }),
       db.from('topic_fetches').select('*').in('topic', topics),
     ])
+
+    const fetchTimes = fetchResult.data ?? []
+    if (fetchResult.error) {
+      console.warn('[feed] topic_fetches table missing or error — run SQL migration. Will fetch all topics.')
+    }
 
     // Group existing articles by topic
     const byTopic = new Map<string, any[]>()

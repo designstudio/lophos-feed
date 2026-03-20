@@ -5,6 +5,14 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY!
 
 export const CACHE_TTL_MINUTES = 120
 
+// Domains to exclude — low quality sources
+const LOW_QUALITY_DOMAINS = [
+  'reddit.com', 'twitter.com', 'x.com', 'facebook.com', 'instagram.com',
+  'youtube.com', 'twitch.tv', 'tiktok.com', 'discord.com',
+  'fandom.com', 'wikia.com', 'wiki.', 'forums.', 'forum.',
+  'mobafire.com', 'op.gg', 'u.gg', 'lolalytics.com',
+]
+
 const GENERIC_PATTERNS = [
   /\/(tag|tags|category|categories|topic|topics|section|search|archive|label)\//i,
   /\/(news|articles|latest|all|feed)\/?(\?.*)?$/i,
@@ -14,13 +22,13 @@ const GENERIC_PATTERNS = [
 
 function isArticleUrl(url: string): boolean {
   try {
-    const path = new URL(url).pathname
-    if (path.length < 10) return false
+    const u = new URL(url)
+    if (u.pathname.length < 10) return false
+    if (LOW_QUALITY_DOMAINS.some(d => u.hostname.includes(d))) return false
     return !GENERIC_PATTERNS.some((p) => p.test(url))
   } catch { return false }
 }
 
-// Source guidance by topic category
 function getSourceHint(topic: string): string {
   const t = topic.toLowerCase()
   if (/cinema|filme|série|entretenimento|music|album|award|oscar|emmy/.test(t))
@@ -31,27 +39,34 @@ function getSourceHint(topic: string): string {
     return 'Bloomberg, Financial Times, Reuters, WSJ'
   if (/tech|ia|inteligência artificial|startup|software/.test(t))
     return 'TechCrunch, The Verge, Wired, Ars Technica'
-  if (/esport|valorant|league|lol|overwatch|gaming|game/.test(t))
-    return 'IGN, Kotaku, PC Gamer, Dot Esports, The Gamer'
+  if (/esport|valorant|league|lol|overwatch|gaming|game|tft|teamfight/.test(t))
+    return 'Dot Esports, The Esports Observer, Liquipedia, HLTV, VLR.gg, Lolesports'
   return 'Reuters, AP, BBC, The Guardian'
+}
+
+// Build a more specific query to get news articles, not guides/wikis
+function buildQuery(topic: string): string {
+  const todayISO = new Date().toISOString().split('T')[0]
+  // Add "news" explicitly and today's date to force recency
+  return `"${topic}" news ${todayISO}`
 }
 
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = []
 ): Promise<NewsItem[]> {
-  const todayISO = new Date().toISOString().split('T')[0]
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       api_key: TAVILY_KEY,
-      query: `${topic} ${todayISO}`,
-      search_depth: 'basic',
+      query: buildQuery(topic),
+      search_depth: 'advanced', // better quality results
       max_results: 10,
-      days: 3,
+      days: 2, // tighter window — only last 2 days
       include_answer: false,
       include_images: true,
+      include_raw_content: false,
     }),
   })
 
@@ -59,8 +74,9 @@ export async function fetchNewsForTopic(
   const tavilyData = await tavilyRes.json()
   const images: string[] = tavilyData.images || []
 
+  // Filter — keep only real articles from quality domains
   const results = (tavilyData.results || []).filter((r: any) =>
-    r.url && r.title && isArticleUrl(r.url)
+    r.url && r.title && r.content && r.content.length > 100 && isArticleUrl(r.url)
   )
 
   if (results.length === 0) return []
@@ -68,8 +84,6 @@ export async function fetchNewsForTopic(
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
-
-  // Richer snippets for section-level synthesis
   const context = results
     .map((r: any, i: number) =>
       `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
@@ -79,39 +93,32 @@ export async function fetchNewsForTopic(
   const sourceHint = getSourceHint(topic)
 
   const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (não repita estes eventos):\n${existingTitles.map((t, i) => `- ${t}`).join('\n')}\n`
+    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
     : ''
 
-  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes, multi-tópico.
+  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes.
 
 Hoje é ${today}. Tópico: "${topic}".
 ${existingContext}
 REGRAS OBRIGATÓRIAS:
-1. Use APENAS as fontes fornecidas abaixo — não invente ou substitua por outras.
+1. Use APENAS as fontes fornecidas. NÃO invente fatos.
 2. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
-3. NÃO invente fatos. Se informação insuficiente, foque no confirmado ou escreva "ainda sem confirmação oficial".
-4. Cruzar múltiplas fontes — mencionar divergências quando existirem.
-5. Tom editorial de referência para este tópico: ${sourceHint}. Use isso apenas como referência de nível de rigor e estilo — não como lista restrita de fontes.
-6. Tom: neutro, jornalístico, empolgante. Sem clickbait.
-7. Se TODOS os eventos das fontes já foram cobertos pelas notícias existentes acima, retorne um array vazio: []
+3. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
+4. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo.
+5. Se não houver nenhum evento noticiável real nas fontes, retorne [].
+6. Tom editorial de referência: ${sourceHint}.
+7. Tom: neutro, jornalístico, sem clickbait.
+8. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
 
-ESTRUTURA OBRIGATÓRIA de cada notícia:
-- title: título principal direto e preciso em pt-BR
-- summary: parágrafo introdutório completo (4-5 frases) — o que aconteceu, quando, quem está envolvido, repercussão inicial. Tom empolgante e factual.
-- sections: array de 2-4 seções temáticas, cada uma com:
-  - heading: subtítulo curto e chamativo (ex: "Detalhes do anúncio", "Reação dos fãs", "Impacto no mercado")
-  - body: 2-4 frases factuais sintetizando informações específicas das fontes
-- conclusion: string simples (não objeto) com 2-4 linhas sobre "O que esperar", "Contexto maior" ou "Próximos passos" — só inclua se houver informação relevante, senão omita ou use null
-- sourceIndexes: índices de todos os resultados usados
+ESTRUTURA de cada notícia:
+- title: título preciso em pt-BR
+- summary: parágrafo introdutório de 4-5 frases, factual e empolgante
+- sections: array de 2-4 seções com heading e body
+- conclusion: "O que esperar" ou null
+- sourceIndexes: índices das fontes usadas
 
 Responda APENAS com JSON válido:
-[{
-  "title": "...",
-  "summary": "...",
-  "sections": [{"heading": "...", "body": "..."}, ...],
-  "conclusion": "texto simples aqui, sem objeto",
-  "sourceIndexes": [1, 2, 3]
-}]
+[{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2]}]
 
 FONTES:
 ${context}`
@@ -123,7 +130,7 @@ ${context}`
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2 },
+        generationConfig: { temperature: 0.1 },
       }),
     }
   )
@@ -161,15 +168,17 @@ ${context}`
       .replace(/^-|-$/g, '')
       .slice(0, 80)
 
+    const conclusion = typeof item.conclusion === 'string'
+      ? item.conclusion
+      : item.conclusion?.body || undefined
+
     return {
       id: safeId,
       topic,
       title: item.title,
       summary: item.summary,
       sections: (item.sections || []) as ArticleSection[],
-      conclusion: typeof item.conclusion === 'string'
-        ? item.conclusion
-        : item.conclusion?.body || undefined,
+      conclusion,
       sources,
       imageUrl: images[i] ?? undefined,
       publishedAt: now,
