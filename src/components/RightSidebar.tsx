@@ -36,13 +36,15 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     }
   }, [])
 
-  // Render widgets in the saved order, only the active ones
+  // Widgets to render in saved order
   const widgetsToRender = order.filter(id => active.includes(id))
+  const activeNonWeather = widgetsToRender.filter(id => id !== 'weather')
 
   return (
     <aside className="flex flex-col gap-4 py-6 h-full">
       {widgetsToRender.map(id => {
         if (id === 'weather') return <WeatherWidget key="weather" />
+        // Each smart widget renders only itself but has access to all topics
         return (
           <SmartWidgets
             key={id}

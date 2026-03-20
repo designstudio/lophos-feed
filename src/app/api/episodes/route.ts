@@ -39,11 +39,26 @@ async function getShowDetails(showId: number): Promise<any | null> {
   return res.json()
 }
 
+const SKIP_KEYWORDS = [
+  'valorant', 'league of legends', 'lol', 'tft', 'overwatch', 'cs2',
+  'futebol', 'nba', 'f1', 'formula 1', 'esport', 'música', 'music',
+  'política', 'economia', 'tecnologia', 'tech', 'ia', 'inteligência artificial',
+  'mercado', 'crypto', 'bitcoin', 'notícias', 'news',
+]
+
+function isLikelyTVTopic(topic: string): boolean {
+  const lower = topic.toLowerCase()
+  return !SKIP_KEYWORDS.some(kw => lower.includes(kw))
+}
+
 export async function GET(req: NextRequest) {
   const topicsParam = req.nextUrl.searchParams.get('topics')
   if (!topicsParam) return NextResponse.json({ episodes: [] })
 
-  const topics = topicsParam.split(',').map((t) => t.trim())
+  const allTopics = topicsParam.split(',').map((t) => t.trim())
+  // Only search topics that could plausibly be TV shows
+  const topics = allTopics.filter(isLikelyTVTopic)
+  if (topics.length === 0) return NextResponse.json({ episodes: [] })
 
   const results = await Promise.allSettled(
     topics.map(async (topic) => {

@@ -92,13 +92,16 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
   }, [activeWidgets.join(','), topics.join(',')])
 
   useEffect(() => {
-    if (!showSeries || seriesTopics.length === 0) { setEpisodes([]); return }
+    if (!showSeries) { setEpisodes([]); return }
+    // Use all topics — TMDB will find what matches as TV shows
+    const topicsToSearch = topics.length > 0 ? topics : []
+    if (topicsToSearch.length === 0) { setEpisodes([]); return }
     setLoadingEpisodes(true)
-    fetch(`/api/episodes?topics=${seriesTopics.map(encodeURIComponent).join(',')}`)
+    fetch(`/api/episodes?topics=${topicsToSearch.map(encodeURIComponent).join(',')}`)
       .then((r) => r.json())
       .then((data) => { setEpisodes(data.episodes || []); setLoadingEpisodes(false) })
       .catch(() => setLoadingEpisodes(false))
-  }, [showSeries, seriesTopics.join(',')])
+  }, [showSeries, topics.join(',')])
 
   return (
     <>
@@ -141,9 +144,7 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
           </div>
           {loadingEpisodes && <div className="space-y-2"><div className="skeleton h-10 rounded" /><div className="skeleton h-10 rounded" /></div>}
           {!loadingEpisodes && episodes.length === 0 && (
-            <p className="text-[12px] text-ink-tertiary">
-              {seriesTopics.length === 0 ? 'Adicione séries nos seus tópicos para ver episódios.' : 'Nenhum episódio próximo encontrado.'}
-            </p>
+            <p className="text-[12px] text-ink-tertiary">Nenhum episódio próximo encontrado.</p>
           )}
           {!loadingEpisodes && episodes.map((ep) => (
             <div key={ep.showId} className="flex items-start gap-2.5 py-2.5 border-b border-border last:border-0">
