@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
-import { Check } from '@solar-icons/react-perf/Linear'
+import { Unread } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
 const SUGGESTED_TOPICS = [
@@ -98,7 +98,7 @@ export default function OnboardingPage() {
                     : 'bg-white text-ink-primary border-border hover:border-border-strong'
                 )}
               >
-                {active && <Check size={13} />}
+                {active && <Unread size={13} />}
                 <span>{emoji}</span>
                 <span>{label}</span>
               </button>
@@ -135,7 +135,7 @@ export default function OnboardingPage() {
                   onClick={() => toggle(t)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-ink-primary text-white text-sm"
                 >
-                  <Check size={12} />
+                  <Unread size={12} />
                   {t}
                 </button>
               ))}

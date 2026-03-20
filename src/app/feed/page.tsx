@@ -6,11 +6,49 @@ import { RightSidebar } from '@/components/RightSidebar'
 import { NewsCard } from '@/components/NewsCard'
 import { SkeletonCard } from '@/components/SkeletonCard'
 import { NewsItem } from '@/lib/types'
-import { Rss } from '@solar-icons/react-perf/Linear'
+import { Feed } from '@solar-icons/react-perf/Linear'
 
 export const dynamic = 'force-dynamic'
 
 const REFRESH_INTERVAL = 30 * 60 * 1000
+
+// Renders items in the Perplexity pattern:
+// [full-left] [card card card] [full-right] → repeat
+function FeedLayout({ items }: { items: NewsItem[] }) {
+  const blocks: React.ReactNode[] = []
+  let i = 0
+  let cycle = 0 // 0 = full-left, 1 = full-right
+
+  while (i < items.length) {
+    // 1 full row (alternates left/right)
+    if (i < items.length) {
+      const variant = cycle % 2 === 0 ? 'full-left' : 'full-right'
+      blocks.push(
+        <div key={`full-${i}`} className="py-6 border-b border-border">
+          <NewsCard item={items[i]} variant={variant} />
+        </div>
+      )
+      i++
+    }
+
+    // 3 card grid
+    const cardSlice = items.slice(i, i + 3)
+    if (cardSlice.length > 0) {
+      blocks.push(
+        <div key={`cards-${i}`} className="grid grid-cols-3 gap-5 py-6 border-b border-border">
+          {cardSlice.map((item) => (
+            <NewsCard key={item.id} item={item} variant="card" />
+          ))}
+        </div>
+      )
+      i += cardSlice.length
+    }
+
+    cycle++
+  }
+
+  return <div>{blocks}</div>
+}
 
 export default function FeedPage() {
   const router = useRouter()
@@ -56,22 +94,16 @@ export default function FeedPage() {
 
   const filteredItems = activeFilter ? items.filter((i) => i.topic === activeFilter) : items
   const topicsInFeed = [...new Set(items.map((i) => i.topic))]
-  const featured = filteredItems[0]
-  const secondary = filteredItems.slice(1, 4)
-  const rest = filteredItems.slice(4)
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg-primary">
-      {/* Left sidebar — fixed */}
       <Sidebar onRefresh={() => fetchFeed(true)} refreshing={refreshing} />
 
-      {/* Scrollable area — feed + right sidebar together */}
       <div className="flex-1 min-w-0 overflow-y-auto">
         <div className="max-w-[1136px] mx-auto px-6 py-6 flex gap-10">
 
-          {/* Feed — main column */}
+          {/* Feed */}
           <div className="flex-1 min-w-0">
-            {/* Header + filters */}
             <div className="mb-5">
               <h1 className="text-xl font-semibold text-ink-primary mb-3">Descobrir</h1>
               {topicsInFeed.length > 1 && (
@@ -103,19 +135,22 @@ export default function FeedPage() {
               )}
             </div>
 
-            {/* Loading */}
             {loading && (
-              <div className="space-y-8">
-                <div className="pb-8 border-b border-border"><SkeletonCard featured /></div>
-                <div className="grid grid-cols-3 gap-4"><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>
-                <div className="space-y-6"><SkeletonCard featured /><SkeletonCard featured /></div>
+              <div className="space-y-0">
+                <div className="py-6 border-b border-border"><SkeletonCard featured /></div>
+                <div className="grid grid-cols-3 gap-5 py-6 border-b border-border">
+                  <SkeletonCard /><SkeletonCard /><SkeletonCard />
+                </div>
+                <div className="py-6 border-b border-border"><SkeletonCard featured /></div>
+                <div className="grid grid-cols-3 gap-5 py-6 border-b border-border">
+                  <SkeletonCard /><SkeletonCard /><SkeletonCard />
+                </div>
               </div>
             )}
 
-            {/* Empty */}
             {!loading && items.length === 0 && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
-                <Rss size={32} className="text-ink-muted mb-4" />
+                <Feed size={32} className="text-ink-muted mb-4" />
                 <p className="text-ink-secondary">Nenhuma notícia encontrada.</p>
                 <button onClick={() => fetchFeed(true)} className="mt-4 text-sm text-accent hover:underline">
                   Tentar novamente
@@ -123,33 +158,12 @@ export default function FeedPage() {
               </div>
             )}
 
-            {/* Feed */}
             {!loading && filteredItems.length > 0 && (
-              <div className="stagger">
-                {featured && (
-                  <div className="pb-6 border-b border-border mb-6 animate-slide-up">
-                    <NewsCard item={featured} featured />
-                  </div>
-                )}
-                {secondary.length > 0 && (
-                  <div className="grid grid-cols-3 gap-4 pb-6 border-b border-border mb-6 animate-slide-up">
-                    {secondary.map((item) => <NewsCard key={item.id} item={item} />)}
-                  </div>
-                )}
-                {rest.length > 0 && (
-                  <div className="animate-slide-up">
-                    {rest.map((item, i) => (
-                      <div key={item.id} className="py-6 border-b border-border last:border-0">
-                        <NewsCard item={item} featured={i % 2 === 0} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <FeedLayout items={filteredItems} />
             )}
           </div>
 
-          {/* Right sidebar — inline, scrolls with content */}
+          {/* Right sidebar */}
           <div className="w-[336px] flex-shrink-0 pt-12">
             <RightSidebar topics={topics} />
           </div>

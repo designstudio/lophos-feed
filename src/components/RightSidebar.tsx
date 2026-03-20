@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
-import { Plus, Close, Check } from '@solar-icons/react-perf/Linear'
+import { Unread } from '@solar-icons/react-perf/Linear'
+import { IconClose, IconPlus } from '@/components/icons'
 
 const AVAILABLE_WIDGETS = [
   { id: 'weather', label: 'Clima', always: true },
@@ -66,7 +67,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
             onClick={() => setShowPicker((v) => !v)}
             className="flex items-center gap-2 text-[12px] text-ink-tertiary hover:text-ink-secondary transition-colors px-1"
           >
-            <Plus size={13} />
+            <IconPlus size={13} />
             Gerenciar widgets
           </button>
 
@@ -84,7 +85,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
                 >
                   <span className="text-[13px] text-ink-primary">{w.label}</span>
                   {(w.always || activeWidgets.includes(w.id)) && (
-                    <Check size={13} className="text-accent flex-shrink-0" />
+                    <Unread size={13} className="text-accent flex-shrink-0" />
                   )}
                 </button>
               ))}
@@ -93,7 +94,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
                   onClick={() => setShowPicker(false)}
                   className="flex items-center gap-1.5 text-[12px] text-ink-tertiary hover:text-ink-secondary px-2 py-1 transition-colors"
                 >
-                  <Close size={12} /> Fechar
+                  <IconClose size={12} /> Fechar
                 </button>
               </div>
             </div>

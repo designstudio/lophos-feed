@@ -3,7 +3,8 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
-import { Close, Plus, Check } from '@solar-icons/react-perf/Linear'
+import { Unread } from '@solar-icons/react-perf/Linear'
+import { IconClose, IconPlus } from '@/components/icons'
 
 const SUGGESTED_TOPICS = [
   'Valorant', 'League of Legends', 'TFT', 'Inteligência Artificial',
@@ -102,7 +103,7 @@ export default function SettingsPage() {
                         onClick={() => remove(t)}
                         className="opacity-70 hover:opacity-100 transition-opacity"
                       >
-                        <Close size={12} />
+                        <IconClose size={12} />
                       </button>
                     </div>
                   ))}
@@ -122,7 +123,7 @@ export default function SettingsPage() {
                     onClick={() => toggle(s)}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-border text-sm text-ink-secondary hover:border-border-strong hover:text-ink-primary transition-all"
                   >
-                    <Plus size={12} />
+                    <IconPlus size={12} />
                     {s}
                   </button>
                 ))}
@@ -160,7 +161,7 @@ export default function SettingsPage() {
             >
               {saved ? (
                 <>
-                  <Check size={15} />
+                  <Unread size={15} />
                   Salvo! Voltando ao feed…
                 </>
               ) : saving ? (

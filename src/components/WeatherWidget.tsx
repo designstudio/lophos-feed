@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Cloudy, SunFog, RaindropsMinimalistic, Snowflake, Wind } from '@solar-icons/react-perf/Linear'
+import { Clouds, SunFog, Waterdrops, Snowflake, Wind } from '@solar-icons/react-perf/Linear'
 
 interface WeatherData {
   city: string
@@ -13,9 +13,9 @@ interface WeatherData {
 
 function WeatherIcon({ condition, size = 16 }: { condition: string; size?: number }) {
   const c = condition.toLowerCase()
-  if (c.includes('rain') || c.includes('chuva')) return <RaindropsMinimalistic size={size} className="text-blue-400" />
+  if (c.includes('rain') || c.includes('chuva')) return <Waterdrops size={size} className="text-blue-400" />
   if (c.includes('snow') || c.includes('neve')) return <Snowflake size={size} className="text-blue-200" />
-  if (c.includes('cloud') || c.includes('nublado') || c.includes('parcialmente')) return <Cloudy size={size} className="text-gray-400" />
+  if (c.includes('cloud') || c.includes('nublado') || c.includes('parcialmente')) return <Clouds size={size} className="text-gray-400" />
   if (c.includes('wind') || c.includes('vento')) return <Wind size={size} className="text-gray-400" />
   return <SunFog size={size} className="text-amber-400" />
 }
