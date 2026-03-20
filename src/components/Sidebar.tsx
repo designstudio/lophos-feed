@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, Sun, Moon, Monitor, UserRounded, Layers
+  Settings, Logout, CloseCircle, Sun, Moon, Monitor, UserRounded, Unread
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
@@ -113,6 +113,12 @@ function AccentPicker({ value, onChange }: { value: string; onChange: (v: string
 // ─── Settings Modal ────────────────────────────────────────────
 type Tab = 'geral' | 'widgets' | 'conta'
 
+const WIDGET_OPTIONS = [
+  { id: 'valorant', label: 'Partidas — Valorant' },
+  { id: 'lol', label: 'Partidas — League of Legends' },
+  { id: 'series', label: 'Próximos episódios' },
+]
+
 function SettingsModal({ onClose }: { onClose: () => void }) {
   const { user } = useUser()
   const clerk = useClerk()
@@ -123,11 +129,6 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   const [accentColor, setAccentColor] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('accent_color') || '#ca774b' : '#ca774b')
 
   // Widgets state
-  const WIDGET_OPTIONS = [
-    { id: 'valorant', label: 'Partidas — Valorant' },
-    { id: 'lol', label: 'Partidas — League of Legends' },
-    { id: 'series', label: 'Próximos episódios' },
-  ]
   const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
     if (typeof window === 'undefined') return WIDGET_OPTIONS.map(w => w.id)
     try {
@@ -143,12 +144,6 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   })
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
-
-  const saveWidgets = (order: string[], active: string[]) => {
-    const full = ['weather', ...order.filter(id => active.includes(id) || active.includes('weather'))]
-    const withActive = ['weather', ...order]
-    localStorage.setItem('lophos_widgets', JSON.stringify(withActive))
-  }
 
   const toggleWidget = (id: string) => {
     const next = activeWidgets.includes(id)
@@ -224,7 +219,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
   const TABS = [
     { id: 'geral' as Tab, label: 'Geral', icon: <Settings size={15} /> },
-    { id: 'widgets' as Tab, label: 'Widgets', icon: <Layers size={15} /> },
+    { id: 'widgets' as Tab, label: 'Widgets', icon: <Unread size={15} /> },
     { id: 'conta' as Tab, label: 'Conta', icon: <UserRounded size={15} /> },
   ]
 
