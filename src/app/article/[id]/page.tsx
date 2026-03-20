@@ -1,11 +1,11 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { NewsItem, NewsSource } from '@/lib/types'
-import { AltArrowLeft, SquareTopDown, Calendar, CloseCircle } from '@solar-icons/react-perf/Linear'
+import { SquareTopDown, Calendar, CloseCircle } from '@solar-icons/react-perf/Linear'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -78,7 +78,6 @@ function SourcesSidebar({ sources, onClose }: { sources: NewsSource[]; onClose: 
 
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>()
-  const router = useRouter()
   const [item, setItem] = useState<NewsItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAllSources, setShowAllSources] = useState(false)
@@ -92,24 +91,46 @@ export default function ArticlePage() {
 
   const shownSources = item?.sources?.slice(0, 3) || []
   const extraCount = (item?.sources?.length || 0) - 3
+  const scrollRef   = useRef<HTMLDivElement>(null)
+  const titleRef    = useRef<HTMLHeadingElement>(null)
+  const [showTitle, setShowTitle] = useState(false)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onScroll = () => {
+      if (!titleRef.current) return
+      const titleBottom = titleRef.current.getBoundingClientRect().bottom
+      setShowTitle(titleBottom < 56) // 56 = header height
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
 
   return (
     <div className="page-shell">
       <Sidebar />
 
-      <div className="flex-1 overflow-y-auto min-w-0">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
         {/* ── Sticky header — matches feed header style ── */}
         <div className="sticky top-0 z-20 border-b border-border px-8 header-blur">
-          <div className="flex items-center h-14 gap-4">
+          <div className="flex items-center h-14">
             <Link href="/feed"
-              className="text-[15px] font-semibold text-ink-primary hover:text-ink-secondary transition-colors"
-              style={{ width: '12rem', flexShrink: 0 }}>
+              className="text-[15px] font-semibold text-ink-primary hover:text-ink-secondary transition-colors flex-shrink-0"
+              style={{ width: '12rem' }}>
               Descobrir
             </Link>
-            <button onClick={() => router.back()}
-              className="flex items-center gap-1.5 text-sm text-ink-tertiary hover:text-ink-primary transition-colors">
-              <AltArrowLeft size={15} /> Voltar
-            </button>
+            {/* Article title — appears when user scrolls past the h1 */}
+            <div className="flex-1 flex justify-center overflow-hidden px-4">
+              <span
+                className="text-[13px] font-medium text-ink-primary truncate max-w-lg transition-all duration-200"
+                style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? 'translateY(0)' : 'translateY(4px)' }}
+              >
+                {item?.title}
+              </span>
+            </div>
+            {/* Spacer — mirrors title width to keep center truly centered */}
+            <div style={{ width: '12rem' }} className="flex-shrink-0" />
           </div>
         </div>
 
@@ -137,7 +158,7 @@ export default function ArticlePage() {
             <article className="animate-fade-in">
               {/* Topic + title */}
               <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-              <h1 className="text-ink-primary leading-tight mt-2 mb-3" style={{ fontSize: '2.3rem', lineHeight: '1.25' }}>{item.title}</h1>
+              <h1 ref={titleRef} className="text-ink-primary leading-tight mt-2 mb-3" style={{ fontSize: '2.3rem', lineHeight: '1.25' }}>{item.title}</h1>
 
               {/* Recency line */}
               <div className="flex items-center gap-2 text-xs text-ink-muted mb-6">

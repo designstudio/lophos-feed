@@ -134,6 +134,7 @@ export default function FeedPage() {
   const [visibleBlocks, setVisibleBlocks] = useState(4)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const abortRef    = useRef<AbortController | null>(null)
+  const scrollRef   = useRef<HTMLDivElement>(null)
 
   async function fetchFeed(force = false) {
     abortRef.current?.abort()
@@ -220,7 +221,7 @@ export default function FeedPage() {
     <div className="page-shell">
       <Sidebar onRefresh={() => fetchFeed(true)} refreshing={streaming} />
 
-      <div className="flex-1 overflow-y-auto min-w-0">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header — full width, outside feed-layout ── */}
         <div
@@ -231,7 +232,7 @@ export default function FeedPage() {
             {/* Tabs — centered in the remaining space */}
             <div className="flex flex-1 justify-center">
               <button
-                onClick={() => setActiveFilter(null)}
+                onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                 className={cn(
                   'text-[13px] px-4 h-14 border-b-2 transition-all font-medium',
                   activeFilter === null
@@ -244,7 +245,7 @@ export default function FeedPage() {
               <TopicsDropdown
                 topics={topicsInFeed}
                 activeFilter={activeFilter}
-                onSelect={setActiveFilter}
+                onSelect={(t) => { setActiveFilter(t); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
               />
             </div>
 
