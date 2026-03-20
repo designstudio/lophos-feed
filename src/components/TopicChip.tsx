@@ -1,5 +1,5 @@
 'use client'
-import { X } from 'lucide-react'
+import { IconClose } from '@/components/icons'
 import { getTopicColor } from '@/lib/topicColors'
 
 interface Props {
@@ -27,7 +27,7 @@ export function TopicChip({ topic, onRemove, size = 'md' }: Props) {
           onClick={onRemove}
           className="opacity-60 hover:opacity-100 transition-opacity ml-0.5 flex items-center"
         >
-          <X size={12} />
+          <IconClose size={12} />
         </button>
       )}
     </span>
