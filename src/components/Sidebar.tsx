@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, Sun, Moon, Monitor, UserRounded, Widget, SortVertical
+  Settings, Logout, CloseCircle, Sun, Moon, Monitor, UserRounded, Layers
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
@@ -224,7 +224,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
   const TABS = [
     { id: 'geral' as Tab, label: 'Geral', icon: <Settings size={15} /> },
-    { id: 'widgets' as Tab, label: 'Widgets', icon: <Widget size={15} /> },
+    { id: 'widgets' as Tab, label: 'Widgets', icon: <Layers size={15} /> },
     { id: 'conta' as Tab, label: 'Conta', icon: <UserRounded size={15} /> },
   ]
 
@@ -343,7 +343,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                 {/* Weather — always on, not draggable */}
                 <div className="flex items-center gap-3 py-3 px-3 rounded-xl border border-gray-100 mb-2 opacity-60">
                   <div className="w-5 h-5 text-gray-300 flex-shrink-0">
-                    <SortVertical size={16} />
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M5 4h6M5 8h6M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
                   </div>
                   <span className="text-sm text-gray-900 flex-1">Clima</span>
                   <span className="text-xs text-gray-400 px-2 py-0.5 rounded-full bg-gray-100">Sempre ativo</span>
@@ -367,7 +369,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                       )}
                     >
                       <div className="text-gray-300 flex-shrink-0 hover:text-gray-500 transition-colors">
-                        <SortVertical size={16} />
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M5 4h6M5 8h6M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
                       </div>
                       <span className="text-sm text-gray-900 flex-1">{w.label}</span>
                       {/* Toggle */}
