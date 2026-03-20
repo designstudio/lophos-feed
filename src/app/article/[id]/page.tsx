@@ -29,51 +29,7 @@ function SourceCard({ src }: { src: NewsSource }) {
   )
 }
 
-function SourcesSidebar({ sources, onClose }: { sources: NewsSource[]; onClose: () => void }) {
-  return (
-    <>
-      <div className="fixed inset-0 bg-black/20 z-40 animate-fade-in" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-80 bg-bg-primary border-l border-border z-50 flex flex-col animate-slide-in-right shadow-xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center">
-              {sources.slice(0, 3).map((src, i) => (
-                <div key={i} className="w-5 h-5 rounded-full border-2 border-white overflow-hidden bg-bg-secondary flex-shrink-0"
-                  style={{ marginLeft: i === 0 ? 0 : '-6px', zIndex: 3 - i }}>
-                  {src.favicon ? (
-                    <img src={src.favicon} alt="" width={20} height={20} className="w-full h-full object-cover"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                  ) : <span className="w-full h-full block bg-bg-tertiary" />}
-                </div>
-              ))}
-            </div>
-            <h2 className="text-[15px] font-semibold text-ink-primary">Fontes</h2>
-          </div>
-          <button onClick={onClose} className="text-ink-tertiary hover:text-ink-primary transition-colors">
-            <CloseCircle size={20} />
-          </button>
-        </div>
-        <div className="overflow-y-auto flex-1 px-4 py-3">
-          {sources.map((src, i) => (
-            <a key={i} href={src.url} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-3 py-3 border-b border-border last:border-0 hover:opacity-70 transition-opacity group"
-            >
-              {src.favicon ? (
-                <img src={src.favicon} alt="" width={20} height={20} className="rounded-md flex-shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              ) : <span className="w-5 h-5 rounded-md bg-bg-tertiary flex-shrink-0" />}
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-medium text-ink-primary group-hover:text-accent transition-colors truncate">{src.name}</p>
-                <p className="text-[11px] text-ink-muted truncate">{src.url}</p>
-              </div>
-              <SquareTopDown size={12} className="text-ink-muted flex-shrink-0" />
-            </a>
-          ))}
-        </div>
-      </div>
-    </>
-  )
-}
+
 
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>()
@@ -143,7 +99,8 @@ export default function ArticlePage() {
   }, [])
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
+    <div className="flex flex-1 min-w-0 overflow-hidden">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
         {/* ── Sticky header — matches feed header style ── */}
         <div className="sticky top-0 z-20 border-b border-border px-8 header-blur">
           <div className="flex items-center h-14">
@@ -314,9 +271,53 @@ export default function ArticlePage() {
           )}
         </div>
       </main>
-      {showAllSources && item?.sources && (
-        <SourcesSidebar sources={item.sources} onClose={() => setShowAllSources(false)} />
-      )}
+      </div>
+
+      {/* ── Sources panel — pushes content, slides in from right ── */}
+      <div
+        className="flex-shrink-0 border-l border-border overflow-hidden transition-all duration-300 ease-in-out"
+        style={{ width: showAllSources ? '20rem' : '0', opacity: showAllSources ? 1 : 0 }}
+      >
+        <div className="w-80 h-full flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0" style={{ height: '57px' }}>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center">
+                {(item?.sources || []).slice(0, 3).map((src, i) => (
+                  <div key={i} className="w-5 h-5 rounded-full border-2 border-bg-primary overflow-hidden bg-bg-secondary flex-shrink-0"
+                    style={{ marginLeft: i === 0 ? 0 : '-6px', zIndex: 3 - i }}>
+                    {src.favicon
+                      ? <img src={src.favicon} alt="" width={20} height={20} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      : <span className="w-full h-full block bg-bg-tertiary" />}
+                  </div>
+                ))}
+              </div>
+              <h2 className="text-[15px] font-semibold text-ink-primary">Fontes</h2>
+            </div>
+            <button onClick={() => setShowAllSources(false)} className="text-ink-tertiary hover:text-ink-primary transition-colors">
+              <CloseCircle size={20} />
+            </button>
+          </div>
+          {/* List */}
+          <div className="overflow-y-auto flex-1 px-4 py-3">
+            {(item?.sources || []).map((src, i) => (
+              <a key={i} href={src.url} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-3 py-3 border-b border-border last:border-0 hover:opacity-70 transition-opacity group"
+              >
+                {src.favicon
+                  ? <img src={src.favicon} alt="" width={20} height={20} className="rounded-md flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  : <span className="w-5 h-5 rounded-md bg-bg-tertiary flex-shrink-0" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-ink-primary group-hover:text-accent transition-colors truncate">{src.name}</p>
+                  <p className="text-[11px] text-ink-muted truncate">{src.url}</p>
+                </div>
+                <SquareTopDown size={12} className="text-ink-muted flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
     </div>
   )
 }
