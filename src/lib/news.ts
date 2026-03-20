@@ -48,14 +48,35 @@ function getSourceHint(topic: string): string {
 async function fetchOgImage(url: string): Promise<string | undefined> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(3000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+      signal: AbortSignal.timeout(5000),
     })
     if (!res.ok) return undefined
-    const html = await res.text()
-    const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
-      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
-    return match?.[1] ?? undefined
+    // Only read first 50KB — og:image is always in <head>
+    const reader = res.body?.getReader()
+    if (!reader) return undefined
+    let html = ''
+    while (html.length < 50000) {
+      const { done, value } = await reader.read()
+      if (done) break
+      html += new TextDecoder().decode(value)
+      if (html.includes('</head>')) break
+    }
+    reader.cancel()
+    const match =
+      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
+    const imageUrl = match?.[1]
+    if (!imageUrl) return undefined
+    try { return new URL(imageUrl, url).href } catch { return imageUrl }
   } catch {
     return undefined
   }
@@ -174,11 +195,17 @@ ${context}`
         }
       })
 
-    // Get image from primary source: Tavily per-result image field first, then og:image fetch
-    const primaryResult = results[idxs[0]] ?? results[i]
-    let imageUrl: string | undefined = primaryResult?.image ?? undefined
-    if (!imageUrl && primaryResult?.url) {
-      imageUrl = await fetchOgImage(primaryResult.url)
+    // Get image: try og:image from each source used in this article, in order
+    // Intentionally skip Tavily's own image field — it's often unrelated to the actual sources
+    const sourceResults = idxs
+      .filter((idx) => idx >= 0 && idx < results.length)
+      .map((idx) => results[idx])
+    let imageUrl: string | undefined
+    for (const r of sourceResults) {
+      if (r?.url) {
+        imageUrl = await fetchOgImage(r.url)
+        if (imageUrl) break
+      }
     }
 
     const safeId = `${topic}-${Date.now()}-${i}`
