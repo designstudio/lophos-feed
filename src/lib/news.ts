@@ -77,13 +77,15 @@ export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
 
   const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes, multi-tópico.
 
-Hoje é ${today}. Tópico: "${topic}". Fontes de referência para este tópico: ${sourceHint}.
+Hoje é ${today}. Tópico: "${topic}".
 
 REGRAS OBRIGATÓRIAS:
-1. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
-2. NÃO invente fatos. Se informação insuficiente, foque no confirmado ou escreva "ainda sem confirmação oficial".
-3. Cruzar múltiplas fontes — mencionar divergências quando existirem.
-4. Tom: neutro, jornalístico, empolgante. Sem clickbait.
+1. Use APENAS as fontes fornecidas abaixo — não invente ou substitua por outras.
+2. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
+3. NÃO invente fatos. Se informação insuficiente, foque no confirmado ou escreva "ainda sem confirmação oficial".
+4. Cruzar múltiplas fontes — mencionar divergências quando existirem.
+5. Tom editorial de referência para este tópico: ${sourceHint}. Use isso apenas como referência de nível de rigor e estilo — não como lista restrita de fontes.
+6. Tom: neutro, jornalístico, empolgante. Sem clickbait.
 
 ESTRUTURA OBRIGATÓRIA de cada notícia:
 - title: título principal direto e preciso em pt-BR
