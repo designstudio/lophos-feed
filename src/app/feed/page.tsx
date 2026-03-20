@@ -1,11 +1,11 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
-import { Sidebar } from '@/components/Sidebar'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { RightSidebar } from '@/components/RightSidebar'
 import { NewsCard } from '@/components/NewsCard'
 import { SkeletonBlock } from '@/components/SkeletonCard'
 import { Feed } from '@solar-icons/react-perf/Linear'
 import { NewsItem } from '@/lib/types'
+import { useFeedContext } from '@/components/FeedContext'
 import { cn } from '@/lib/utils'
 
 function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
@@ -81,7 +81,7 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
       <button
         onClick={() => setOpen(v => !v)}
         className={cn(
-          'flex items-center gap-1.5 text-[13px] px-4 h-14 border-b-2 transition-all font-medium',
+          'flex items-center gap-1.5 text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
           activeFilter
             ? 'border-ink-primary text-ink-primary'
             : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
@@ -126,9 +126,11 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
 }
 
 export default function FeedPage() {
+  const { setRefreshing, onRefreshCallback } = useFeedContext()
   const [items, setItems]         = useState<NewsItem[]>([])
   const [topics, setTopics]       = useState<string[]>([])
-  const [streaming, setStreaming] = useState(false)
+  const [streaming, setStreamingLocal] = useState(false)
+  const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
   const [hasData, setHasData]     = useState(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [visibleBlocks, setVisibleBlocks] = useState(4)
@@ -136,7 +138,7 @@ export default function FeedPage() {
   const abortRef    = useRef<AbortController | null>(null)
   const scrollRef   = useRef<HTMLDivElement>(null)
 
-  async function fetchFeed(force = false) {
+  const fetchFeed = useCallback(async (force = false) => {
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -194,7 +196,13 @@ export default function FeedPage() {
     } finally {
       setStreaming(false)
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Register fetchFeed with the shared layout so Sidebar can trigger it
+  useEffect(() => {
+    onRefreshCallback.current = () => fetchFeed(true)
+  }, [fetchFeed])
 
   useEffect(() => { fetchFeed() }, [])
 
@@ -218,10 +226,7 @@ export default function FeedPage() {
   const showEmpty     = !hasData && !streaming
 
   return (
-    <div className="page-shell">
-      <Sidebar onRefresh={() => fetchFeed(true)} refreshing={streaming} />
-
-      <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header — full width, outside feed-layout ── */}
         <div
@@ -234,7 +239,7 @@ export default function FeedPage() {
               <button
                 onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                 className={cn(
-                  'text-[13px] px-4 h-14 border-b-2 transition-all font-medium',
+                  'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
                   activeFilter === null
                     ? 'border-ink-primary text-ink-primary'
                     : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
@@ -297,7 +302,6 @@ export default function FeedPage() {
           </div>
         </div>
       </div>
-    </div>
   )
 }
 

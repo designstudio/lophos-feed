@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { Sidebar } from '@/components/Sidebar'
 import { NewsItem, NewsSource } from '@/lib/types'
 import { SquareTopDown, Calendar, CloseCircle } from '@solar-icons/react-perf/Linear'
 import { formatDistanceToNow } from 'date-fns'
@@ -108,10 +107,7 @@ export default function ArticlePage() {
   }, [])
 
   return (
-    <div className="page-shell">
-      <Sidebar />
-
-      <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
         {/* ── Sticky header — matches feed header style ── */}
         <div className="sticky top-0 z-20 border-b border-border px-8 header-blur">
           <div className="flex items-center h-14">
@@ -123,7 +119,7 @@ export default function ArticlePage() {
             {/* Article title — appears when user scrolls past the h1 */}
             <div className="flex-1 flex justify-center overflow-hidden px-4">
               <span
-                className="text-[13px] font-medium text-ink-primary truncate max-w-lg transition-all duration-200"
+                className="text-[0.875rem] font-medium text-ink-primary truncate max-w-lg transition-all duration-200"
                 style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? 'translateY(0)' : 'translateY(4px)' }}
               >
                 {item?.title}
@@ -240,8 +236,6 @@ export default function ArticlePage() {
           )}
         </div>
       </main>
-      </div>
-
       {showAllSources && item?.sources && (
         <SourcesSidebar sources={item.sources} onClose={() => setShowAllSources(false)} />
       )}

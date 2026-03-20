@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
 import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
@@ -86,7 +87,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
 
   if (variant === 'card') {
     return (
-      <a href={href} className={cn('group flex flex-col', className)}>
+      <Link href={href} className={cn('group flex flex-col', className)}>
         {item.imageUrl && (
           <div className="w-full h-36 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5">
             <img src={item.imageUrl} alt={item.title}
@@ -98,13 +99,13 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.topic}</span>
         <h2 className="text-card-title text-ink-primary group-hover:text-accent transition-colors">{item.title}</h2>
         <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
-      </a>
+      </Link>
     )
   }
 
   if (variant === 'full-left') {
     return (
-      <a href={href} className={cn('group flex gap-6 items-start', className)}>
+      <Link href={href} className={cn('group flex gap-6 items-start', className)}>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
           <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
@@ -119,12 +120,12 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
             />
           </div>
         )}
-      </a>
+      </Link>
     )
   }
 
   return (
-    <a href={href} className={cn('group flex gap-6 items-start', className)}>
+    <Link href={href} className={cn('group flex gap-6 items-start', className)}>
       {item.imageUrl && (
         <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
           <img src={item.imageUrl} alt={item.title}
@@ -139,6 +140,6 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
         <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
         <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
       </div>
-    </a>
+    </Link>
   )
 }

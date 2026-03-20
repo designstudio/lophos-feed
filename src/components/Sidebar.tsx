@@ -8,6 +8,7 @@ import {
   Settings, Logout, CloseCircle, UserRounded
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
+import { useFeedContext } from '@/components/FeedContext'
 
 // ─── Logo ─────────────────────────────────────────────────────
 function LophosLogo({ size = 28 }: { size?: number }) {
@@ -727,4 +728,10 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </>
   )
+}
+
+// ─── Context-aware wrapper for use in shared layout ───────────
+export function SidebarWithRefresh() {
+  const { refreshing, triggerRefresh } = useFeedContext()
+  return <Sidebar onRefresh={triggerRefresh} refreshing={refreshing} />
 }
