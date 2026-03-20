@@ -16,12 +16,12 @@ export async function POST(req: NextRequest) {
   }
 
   const allItems: NewsItem[] = []
+  const db = getSupabaseAdmin()
 
   await Promise.allSettled(
     topics.map(async (topic: string) => {
-      // Check cache first
       if (!forceRefresh) {
-        const { data: cached } = await supabaseAdmin
+        const { data: cached } = await db
           .from('news_cache')
           .select('*')
           .eq('topic', topic)
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
           .limit(2)
 
         if (cached && cached.length > 0 && !isCacheStale(cached[0].cached_at)) {
-          const items: NewsItem[] = cached.map((row: any) => ({
+          allItems.push(...cached.map((row: any) => ({
             id: row.id,
             topic: row.topic,
             title: row.title,
@@ -38,19 +38,17 @@ export async function POST(req: NextRequest) {
             imageUrl: row.image_url,
             publishedAt: row.published_at,
             cachedAt: row.cached_at,
-          }))
-          allItems.push(...items)
+          })))
           return
         }
       }
 
-      // Fetch fresh news
       try {
         const fresh = await fetchNewsForTopic(topic)
         if (fresh.length === 0) return
 
-        // Save to cache (delete old, insert new)
-        await getSupabaseAdmin().from('news_cache').delete().eq('topic', topic)
+        await db.from('news_cache').delete().eq('topic', topic)
+
         const rows = fresh.map((item) => ({
           topic: item.topic,
           title: item.title,
@@ -60,12 +58,10 @@ export async function POST(req: NextRequest) {
           published_at: item.publishedAt,
           cached_at: item.cachedAt,
         }))
-        const { data: inserted } = await supabaseAdmin
-          .from('news_cache')
-          .insert(rows)
-          .select()
 
-        const withIds: NewsItem[] = (inserted || []).map((row: any) => ({
+        const { data: inserted } = await db.from('news_cache').insert(rows).select()
+
+        allItems.push(...(inserted || []).map((row: any) => ({
           id: row.id,
           topic: row.topic,
           title: row.title,
@@ -74,8 +70,7 @@ export async function POST(req: NextRequest) {
           imageUrl: row.image_url,
           publishedAt: row.published_at,
           cachedAt: row.cached_at,
-        }))
-        allItems.push(...withIds)
+        })))
       } catch (e) {
         console.error(`Error fetching topic "${topic}":`, e)
       }
