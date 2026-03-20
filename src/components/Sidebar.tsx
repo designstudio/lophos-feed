@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, Sun, Moon, Monitor, UserRounded
+  Settings, Logout, CloseCircle, Sun, Moon, Monitor, UserRounded, Widget, SortVertical
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
@@ -66,8 +66,52 @@ const ACCENT_COLORS = [
   { label: 'Laranja', value: '#ea580c', dot: '#f97316' },
 ]
 
+// ─── Custom Accent Color Picker ───────────────────────────────
+function AccentPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = ACCENT_COLORS.find(c => c.value === value) ?? ACCENT_COLORS[0]
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors text-sm text-gray-700 bg-white">
+        <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: current.dot }} />
+        {current.label}
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={cn('transition-transform', open ? 'rotate-180' : '')}>
+          <path d="M2 4L6 8L10 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl border border-gray-100 shadow-lg z-50 py-1.5 overflow-hidden"
+          style={{ animation: 'slideUp 0.12s ease' }}>
+          {ACCENT_COLORS.map(c => (
+            <button key={c.label} onClick={() => { onChange(c.value); setOpen(false) }}
+              className="flex items-center gap-3 w-full px-3 py-2 hover:bg-gray-50 transition-colors text-sm text-gray-700">
+              <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: c.dot }} />
+              <span className="flex-1 text-left">{c.label}</span>
+              {value === c.value && (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2.5 7L5.5 10L11.5 4" stroke="#111" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Settings Modal ────────────────────────────────────────────
-type Tab = 'geral' | 'conta'
+type Tab = 'geral' | 'widgets' | 'conta'
 
 function SettingsModal({ onClose }: { onClose: () => void }) {
   const { user } = useUser()
@@ -77,6 +121,56 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   // Geral state
   const [theme, setTheme] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('theme') || 'light' : 'light')
   const [accentColor, setAccentColor] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('accent_color') || '#ca774b' : '#ca774b')
+
+  // Widgets state
+  const WIDGET_OPTIONS = [
+    { id: 'valorant', label: 'Partidas — Valorant' },
+    { id: 'lol', label: 'Partidas — League of Legends' },
+    { id: 'series', label: 'Próximos episódios' },
+  ]
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return WIDGET_OPTIONS.map(w => w.id)
+    try {
+      const saved = JSON.parse(localStorage.getItem('lophos_widgets') || '[]')
+      const ordered = saved.filter((id: string) => id !== 'weather')
+      return ordered.length > 0 ? ordered : WIDGET_OPTIONS.map(w => w.id)
+    } catch { return WIDGET_OPTIONS.map(w => w.id) }
+  })
+  const [activeWidgets, setActiveWidgets] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return ['weather']
+    try { return JSON.parse(localStorage.getItem('lophos_widgets') || '["weather"]') }
+    catch { return ['weather'] }
+  })
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+
+  const saveWidgets = (order: string[], active: string[]) => {
+    const full = ['weather', ...order.filter(id => active.includes(id) || active.includes('weather'))]
+    const withActive = ['weather', ...order]
+    localStorage.setItem('lophos_widgets', JSON.stringify(withActive))
+  }
+
+  const toggleWidget = (id: string) => {
+    const next = activeWidgets.includes(id)
+      ? activeWidgets.filter(x => x !== id)
+      : [...activeWidgets, id]
+    setActiveWidgets(next)
+    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...widgetOrder.filter(id => next.includes(id) || id === 'weather')]))
+    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...next.filter(x => x !== 'weather')]))
+  }
+
+  const onDragStart = (i: number) => setDragIdx(i)
+  const onDragOver = (e: React.DragEvent, i: number) => { e.preventDefault(); setDragOverIdx(i) }
+  const onDrop = (i: number) => {
+    if (dragIdx === null || dragIdx === i) return
+    const next = [...widgetOrder]
+    const [moved] = next.splice(dragIdx, 1)
+    next.splice(i, 0, moved)
+    setWidgetOrder(next)
+    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...next]))
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }
 
   // Conta state
   const [firstName, setFirstName] = useState(user?.firstName || '')
@@ -130,6 +224,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
   const TABS = [
     { id: 'geral' as Tab, label: 'Geral', icon: <Settings size={15} /> },
+    { id: 'widgets' as Tab, label: 'Widgets', icon: <Widget size={15} /> },
     { id: 'conta' as Tab, label: 'Conta', icon: <UserRounded size={15} /> },
   ]
 
@@ -154,7 +249,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-7 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
-            <h2 className="text-base font-semibold text-gray-900">{tab === 'geral' ? 'Geral' : 'Conta'}</h2>
+            <h2 className="text-base font-semibold text-gray-900">{tab === 'geral' ? 'Geral' : tab === 'widgets' ? 'Widgets' : 'Conta'}</h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
               <CloseCircle size={20} />
             </button>
@@ -189,22 +284,11 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </div>
                 </section>
 
-                {/* Accent color */}
+                {/* Accent color — custom dropdown like ChatGPT */}
                 <section className="py-5 border-b border-gray-100">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-900">Cor de ênfase</h3>
-                    <div className="relative inline-flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full flex-shrink-0 pointer-events-none absolute left-2.5 z-10" style={{ background: ACCENT_COLORS.find(c => c.value === accentColor)?.dot ?? '#ca774b' }} />
-                      <select value={accentColor} onChange={e => handleAccent(e.target.value)}
-                        className="text-sm pl-7 pr-7 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 outline-none focus:border-gray-400 cursor-pointer appearance-none">
-                        {ACCENT_COLORS.map(c => (
-                          <option key={c.label} value={c.value}>{c.label}</option>
-                        ))}
-                      </select>
-                      <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                        <path d="M2 4L6 8L10 4" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
+                    <AccentPicker value={accentColor} onChange={handleAccent} />
                   </div>
                 </section>
 
@@ -250,7 +334,62 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               </>
             )}
 
-            {/* ── CONTA ── */}
+
+            {/* ── WIDGETS ── */}
+            {tab === 'widgets' && (
+              <div className="py-2">
+                <p className="text-sm text-gray-500 mb-5">Ative e ordene os widgets da barra lateral. Arraste para reordenar.</p>
+                
+                {/* Weather — always on, not draggable */}
+                <div className="flex items-center gap-3 py-3 px-3 rounded-xl border border-gray-100 mb-2 opacity-60">
+                  <div className="w-5 h-5 text-gray-300 flex-shrink-0">
+                    <SortVertical size={16} />
+                  </div>
+                  <span className="text-sm text-gray-900 flex-1">Clima</span>
+                  <span className="text-xs text-gray-400 px-2 py-0.5 rounded-full bg-gray-100">Sempre ativo</span>
+                </div>
+
+                {/* Draggable widgets */}
+                {widgetOrder.map((id, i) => {
+                  const w = WIDGET_OPTIONS.find(x => x.id === id)
+                  if (!w) return null
+                  return (
+                    <div
+                      key={id}
+                      draggable
+                      onDragStart={() => onDragStart(i)}
+                      onDragOver={e => onDragOver(e, i)}
+                      onDrop={() => onDrop(i)}
+                      onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
+                      className={cn(
+                        'flex items-center gap-3 py-3 px-3 rounded-xl border mb-2 cursor-grab active:cursor-grabbing transition-all',
+                        dragOverIdx === i && dragIdx !== i ? 'border-accent bg-accent/5' : 'border-gray-100 hover:border-gray-200'
+                      )}
+                    >
+                      <div className="text-gray-300 flex-shrink-0 hover:text-gray-500 transition-colors">
+                        <SortVertical size={16} />
+                      </div>
+                      <span className="text-sm text-gray-900 flex-1">{w.label}</span>
+                      {/* Toggle */}
+                      <button
+                        onClick={() => toggleWidget(id)}
+                        className={cn(
+                          'relative w-9 h-5 rounded-full transition-colors flex-shrink-0',
+                          activeWidgets.includes(id) ? 'bg-gray-900' : 'bg-gray-200'
+                        )}
+                      >
+                        <span className={cn(
+                          'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform',
+                          activeWidgets.includes(id) ? 'translate-x-[18px]' : 'translate-x-0.5'
+                        )} />
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ── CONTA ── */
             {tab === 'conta' && (
               <>
                 {/* User info */}
