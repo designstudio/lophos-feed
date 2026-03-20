@@ -2,17 +2,40 @@ import { NewsItem, NewsSource } from './types'
 
 const TAVILY_KEY = process.env.TAVILY_API_KEY!
 const GEMINI_KEY = process.env.GEMINI_API_KEY!
-const CACHE_TTL_MINUTES = 30
+
+export const CACHE_TTL_MINUTES = 120 // 2h — reduz chamadas à API
+
+// Padrões de URLs genéricas (categoria/tag/home) — não são artigos
+const GENERIC_PATTERNS = [
+  /\/(tag|tags|category|categories|topic|topics|section|search|archive|label)\//i,
+  /\/(news|articles|latest|all|feed)\/?(\?.*)?$/i,
+  /[?&]page=\d/i,
+  /\/(author|autores?)\//i,
+]
+
+function isArticleUrl(url: string): boolean {
+  try {
+    const path = new URL(url).pathname
+    // Must have a meaningful path (not just /news/ or /)
+    if (path.length < 10) return false
+    return !GENERIC_PATTERNS.some((p) => p.test(url))
+  } catch {
+    return false
+  }
+}
 
 export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
+  // 1. Tavily — só últimos 3 dias, busca artigos específicos
+  const today = new Date().toISOString().split('T')[0]
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       api_key: TAVILY_KEY,
-      query: `${topic} latest news`,
+      query: `${topic} ${today}`,   // data no query força resultados recentes
       search_depth: 'basic',
-      max_results: 8,
+      max_results: 10,
+      days: 3,                       // só últimos 3 dias
       include_answer: false,
       include_images: true,
     }),
@@ -20,32 +43,25 @@ export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
 
   if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
   const tavilyData = await tavilyRes.json()
-  const results = tavilyData.results || []
   const images: string[] = tavilyData.images || []
+
+  // Filtra só URLs que são artigos reais
+  const results = (tavilyData.results || []).filter((r: any) =>
+    r.url && r.title && isArticleUrl(r.url)
+  )
 
   if (results.length === 0) return []
 
+  // 2. Prompt compacto pro Gemini — flash-lite é 10x mais barato que 2.5-flash
+  // Snippet curto (150 chars) — suficiente pra identificar o evento, poupa tokens
   const context = results
     .map((r: any, i: number) =>
-      `[${i + 1}] title: "${r.title}" | source: ${new URL(r.url).hostname.replace('www.','')} | snippet: ${r.content?.slice(0, 300)}`
+      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}": ${(r.content || '').slice(0, 150)}`
     )
-    .join('\n\n')
+    .join('\n')
 
-  const prompt = `Você é um editor de notícias sênior. Analise os resultados abaixo sobre "${topic}".
-
-REGRA PRINCIPAL: Agrupe TODOS os resultados que falam do MESMO evento em UMA única notícia. Só crie notícias separadas se forem eventos genuinamente diferentes (ex: patch do jogo vs torneio vs novo personagem).
-
-Se todos os resultados cobrirem o mesmo assunto, retorne APENAS 1 notícia.
-Retorne no máximo 2 notícias.
-
-Para cada notícia:
-- Título claro e único em português
-- Resumo de 3-4 frases consolidando informações de TODAS as fontes do grupo
-- sourceIndexes com os índices de todos os resultados agrupados
-
-Responda APENAS com JSON válido, sem markdown:
-[{"title":"...","summary":"...","sourceIndexes":[1,2,3]}]
-
+  const prompt = `Notícias de "${topic}". Agrupe as que falam do MESMO evento em 1 notícia (máx 2 no total).
+JSON: [{"title":"título pt-BR","summary":"resumo 2-3 frases pt-BR","sourceIndexes":[1,2,3]}]
 Resultados:
 ${context}`
 
@@ -62,29 +78,27 @@ ${context}`
   )
 
   if (!geminiRes.ok) {
-    const errBody = await geminiRes.text()
-    console.error(`Gemini error ${geminiRes.status}:`, errBody)
+    console.error(`Gemini error ${geminiRes.status}:`, await geminiRes.text())
     throw new Error(`Gemini error: ${geminiRes.status}`)
   }
 
   const geminiData = await geminiRes.json()
-  const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-  const clean = text.replace(/```json|```/g, '').trim()
-  const match = clean.match(/\[[\s\S]*\]/)
+  const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
   if (!match) return []
 
   const parsed = JSON.parse(match[0])
   const now = new Date().toISOString()
 
   return parsed.map((item: any, i: number): NewsItem => {
-    const indexes: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
-    const sources: NewsSource[] = indexes
-      .filter((idx: number) => idx >= 0 && idx < results.length)
-      .map((idx: number) => {
+    const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
+    const sources: NewsSource[] = idxs
+      .filter((idx) => idx >= 0 && idx < results.length)
+      .map((idx) => {
         const r = results[idx]
         return {
           name: new URL(r.url).hostname.replace('www.', ''),
-          url: r.url,
+          url: r.url,                  // URL exata do Tavily — sempre é o artigo
           favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
         }
       })
@@ -95,7 +109,7 @@ ${context}`
       title: item.title,
       summary: item.summary,
       sources,
-      imageUrl: images[i] || undefined,
+      imageUrl: images[i] ?? undefined,
       publishedAt: now,
       cachedAt: now,
     }
@@ -103,6 +117,5 @@ ${context}`
 }
 
 export function isCacheStale(cachedAt: string): boolean {
-  const age = Date.now() - new Date(cachedAt).getTime()
-  return age > CACHE_TTL_MINUTES * 60 * 1000
+  return Date.now() - new Date(cachedAt).getTime() > CACHE_TTL_MINUTES * 60 * 1000
 }

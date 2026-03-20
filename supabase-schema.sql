@@ -46,3 +46,20 @@ alter table user_reactions enable row level security;
 create policy "service role all" on user_topics for all using (true);
 create policy "service role all" on news_cache for all using (true);
 create policy "service role all" on user_reactions for all using (true);
+
+-- Permanent articles table — never cleared, preserves articles the user has opened
+create table if not exists articles (
+  id           text primary key,
+  topic        text not null,
+  title        text not null,
+  summary      text,
+  sources      jsonb,
+  image_url    text,
+  published_at timestamptz,
+  cached_at    timestamptz,
+  created_at   timestamptz default now()
+);
+
+create index if not exists articles_topic_idx on articles(topic);
+alter table articles enable row level security;
+create policy "service role all" on articles for all using (true);

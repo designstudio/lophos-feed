@@ -9,24 +9,45 @@ export async function GET(req: NextRequest) {
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
 
-  const { data, error } = await getSupabaseAdmin()
+  const db = getSupabaseAdmin()
+
+  // 1. Try cache first (article might still be fresh)
+  const { data: cached } = await db
     .from('news_cache')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (error || !data) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const row = cached ?? await (async () => {
+    // 2. Fallback to permanent articles table (user opened this before)
+    const { data } = await db.from('articles').select('*').eq('id', id).single()
+    return data
+  })()
+
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // 3. Persist to articles table so it survives cache clears
+  await db.from('articles').upsert({
+    id: row.id,
+    topic: row.topic,
+    title: row.title,
+    summary: row.summary,
+    sources: row.sources,
+    image_url: row.image_url,
+    published_at: row.published_at,
+    cached_at: row.cached_at,
+  }, { onConflict: 'id' })
 
   return NextResponse.json({
     item: {
-      id: data.id,
-      topic: data.topic,
-      title: data.title,
-      summary: data.summary,
-      sources: data.sources,
-      imageUrl: data.image_url,
-      publishedAt: data.published_at,
-      cachedAt: data.cached_at,
+      id: row.id,
+      topic: row.topic,
+      title: row.title,
+      summary: row.summary,
+      sources: row.sources,
+      imageUrl: row.image_url,
+      publishedAt: row.published_at,
+      cachedAt: row.cached_at,
     },
   })
 }
