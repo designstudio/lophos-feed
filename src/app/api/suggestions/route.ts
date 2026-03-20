@@ -12,46 +12,55 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ suggestions: DEFAULT_SUGGESTIONS })
   }
 
-  const prompt = `O usuário tem interesse nos seguintes tópicos: ${topics.join(', ')}.
+  const prompt = `O usuário gosta de: ${topics.join(', ')}.
 
-Sugira exatamente 12 tópicos relacionados que ele provavelmente também gostaria — baseados em:
-- Outros jogos/séries/artistas do mesmo gênero ou que fãs costumam gostar juntos
-- Tópicos complementares (ex: quem gosta de Valorant → CS2, Overwatch, esports)
-- Séries/filmes relacionados (ex: quem gosta de Stranger Things → Dark, The OA)
-- Artistas relacionados (ex: quem gosta de Taylor Swift → Olivia Rodrigo, Sabrina Carpenter)
+Sugira exatamente 12 tópicos que ele provavelmente também curtiria, sendo muito específico e relacionado ao que ele já tem. Exemplos de raciocínio:
+- Valorant, LOL, TFT → CS2, Dota 2, Overwatch 2, Fortnite, Apex Legends
+- American Horror Story → Stranger Things, The Haunting of Hill House, Black Mirror, Dark
+- Cinema → Oscar 2025, Christopher Nolan, A24, Animações Pixar
+- Música → nome de artistas ou gêneros relacionados
+- Overwatch → outros hero shooters ou jogos da Blizzard
 
-Regras:
-- NÃO repetir nenhum tópico que já está na lista do usuário
-- Nomes próprios em inglês quando aplicável (ex: "League of Legends", não "Liga das Lendas")
-- Máximo 12 sugestões
-- Responda APENAS com JSON: ["sugestão1","sugestão2",...]`
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 256 },
-      }),
-    }
-  )
-
-  if (!res.ok) return NextResponse.json({ suggestions: DEFAULT_SUGGESTIONS })
-
-  const data = await res.json()
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-  const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*?\]/)
-
-  if (!match) return NextResponse.json({ suggestions: DEFAULT_SUGGESTIONS })
+NÃO repita: ${topics.join(', ')}
+Responda SOMENTE com JSON array de strings, sem markdown, sem explicação:
+["sugestão1","sugestão2","sugestão3","sugestão4","sugestão5","sugestão6","sugestão7","sugestão8","sugestão9","sugestão10","sugestão11","sugestão12"]`
 
   try {
-    const suggestions = JSON.parse(match[0])
-      .filter((s: any) => typeof s === 'string' && !topics.includes(s))
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.8, maxOutputTokens: 300 },
+        }),
+      }
+    )
+
+    if (!res.ok) {
+      console.error('Gemini suggestions error:', res.status, await res.text())
+      return NextResponse.json({ suggestions: DEFAULT_SUGGESTIONS })
+    }
+
+    const data = await res.json()
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    const clean = raw.replace(/```json|```/g, '').trim()
+    const match = clean.match(/\[[\s\S]*?\]/)
+
+    if (!match) {
+      console.error('No JSON match in Gemini response:', raw)
+      return NextResponse.json({ suggestions: DEFAULT_SUGGESTIONS })
+    }
+
+    const parsed: string[] = JSON.parse(match[0])
+    const suggestions = parsed
+      .filter((s) => typeof s === 'string' && s.trim() && !topics.includes(s))
       .slice(0, 12)
+
     return NextResponse.json({ suggestions })
-  } catch {
+  } catch (e) {
+    console.error('Suggestions error:', e)
     return NextResponse.json({ suggestions: DEFAULT_SUGGESTIONS })
   }
 }
