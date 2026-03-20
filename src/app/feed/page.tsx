@@ -77,9 +77,19 @@ export default function FeedPage() {
             if (chunk.topics) {
               const t = chunk.topics as string[]
               setTopics(t)
-              // First load: topics come in first chunk, then items start streaming — no re-fetch needed
               continue
             }
+            // API sends {items: [...]} batches
+            if (chunk.items && Array.isArray(chunk.items)) {
+              setItems(prev => {
+                const ids = new Set(prev.map(x => x.id))
+                const newItems = chunk.items.filter((x: NewsItem) => !ids.has(x.id))
+                return newItems.length > 0 ? [...prev, ...newItems] : prev
+              })
+              setLoading(false)
+              continue
+            }
+            // Also handle single item {id:...}
             if (chunk.id) {
               setItems(prev => prev.find(x => x.id === chunk.id) ? prev : [...prev, chunk])
               setLoading(false)
