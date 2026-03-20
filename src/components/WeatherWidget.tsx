@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Clouds, SunFog, Waterdrops, Snowflake, Wind, CloudStorm, Sun } from '@solar-icons/react-perf/Bold'
+import { Sun2, SunFog, Fog, Waterdrops, Snowflake, CloudBoltMinimalistic } from '@solar-icons/react-perf/Linear'
 
 interface WeatherData {
   city: string
@@ -14,13 +14,14 @@ interface WeatherData {
 }
 
 function WeatherIcon({ code, size = 16 }: { code: number; size?: number }) {
-  if (code <= 1)  return <Sun size={size} className="text-amber-400" />
-  if (code <= 3)  return <SunFog size={size} className="text-amber-300" />
-  if (code <= 48) return <Clouds size={size} className="text-gray-400" />
-  if (code <= 67) return <Waterdrops size={size} className="text-blue-400" />
-  if (code <= 77) return <Snowflake size={size} className="text-blue-300" />
-  if (code <= 82) return <Waterdrops size={size} className="text-blue-500" />
-  return <CloudStorm size={size} className="text-purple-400" />
+  const cls = "text-ink-primary"
+  if (code <= 1)  return <Sun2 size={size} className={cls} />
+  if (code <= 3)  return <SunFog size={size} className={cls} />
+  if (code <= 48) return <Fog size={size} className={cls} />
+  if (code <= 67) return <Waterdrops size={size} className={cls} />
+  if (code <= 77) return <Snowflake size={size} className={cls} />
+  if (code <= 82) return <Waterdrops size={size} className={cls} />
+  return <CloudBoltMinimalistic size={size} className={cls} />
 }
 
 export function WeatherWidget() {
@@ -103,9 +104,9 @@ export function WeatherWidget() {
       {/* Top row — Perplexity style */}
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-1.5">
-          <WeatherIcon code={weather.currentCode} size={18} />
+          <WeatherIcon code={weather.currentCode} size={16} />
           <span className="text-[15px] font-semibold text-ink-primary">{weather.temp}°</span>
-          <span className="text-[13px] text-ink-tertiary">F/C</span>
+          <span className="text-[13px] text-ink-tertiary"><span className="text-ink-muted">F/</span><span className="font-semibold text-ink-primary">C</span></span>
         </div>
         <span className="text-[13px] text-ink-secondary">{weather.condition}</span>
       </div>
@@ -121,7 +122,7 @@ export function WeatherWidget() {
         <div className="flex justify-between pt-3 border-t border-border">
           {weather.forecast.map((f, i) => (
             <div key={i} className="flex flex-col items-center gap-1">
-              <WeatherIcon code={f.weathercode} size={18} />
+              <WeatherIcon code={f.weathercode} size={14} />
               <span className="text-[11px] text-ink-secondary font-medium">{f.temp}°</span>
               <span className="text-[10px] text-ink-tertiary">{f.day}</span>
             </div>
