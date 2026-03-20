@@ -133,7 +133,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: 'fadeIn 0.15s ease' }}>
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl flex overflow-hidden" style={{ width: '720px', maxHeight: '85vh', animation: 'slideUp 0.15s ease' }}>
+      <div className="relative bg-white rounded-2xl shadow-2xl flex overflow-hidden" style={{ width: '48rem', maxHeight: '60vh', animation: 'slideUp 0.15s ease' }}>
 
         {/* Left nav */}
         <div className="flex-shrink-0 border-r border-gray-100 pt-6 pb-4" style={{ width: '160px' }}>
@@ -157,13 +157,13 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-7 py-6 space-y-8">
+          <div className="flex-1 overflow-y-auto px-7 py-5">
 
             {/* ── GERAL ── */}
             {tab === 'geral' && (
               <>
                 {/* Appearance */}
-                <section>
+                <section className="py-5 border-b border-gray-100">
                   <h3 className="text-sm font-semibold text-gray-900 mb-1">Aparência</h3>
                   <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para você.</p>
                   <div className="grid grid-cols-3 gap-3">
@@ -187,26 +187,24 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                 </section>
 
                 {/* Accent color */}
-                <section>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Cor de ênfase</h3>
-                  <div className="space-y-0.5">
-                    {ACCENT_COLORS.map(c => (
-                      <button key={c.label} onClick={() => handleAccent(c.value)}
-                        className="flex items-center w-full px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors gap-3">
-                        <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: c.dot }} />
-                        <span className="text-sm text-gray-700 flex-1 text-left">{c.label}</span>
-                        {accentColor === c.value && (
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <path d="M3 8L6.5 11.5L13 4.5" stroke="#111" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </button>
-                    ))}
+                <section className="py-5 border-b border-gray-100">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Cor de ênfase</h3>
+                  <div className="relative inline-flex items-center gap-2">
+                    <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: ACCENT_COLORS.find(c => c.value === accentColor)?.dot ?? '#94a3b8' }} />
+                    <select value={accentColor} onChange={e => handleAccent(e.target.value)}
+                      className="text-sm pl-2 pr-8 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 outline-none focus:border-gray-400 cursor-pointer appearance-none">
+                      {ACCENT_COLORS.map(c => (
+                        <option key={c.label} value={c.value}>{c.label}</option>
+                      ))}
+                    </select>
+                    <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 4L6 8L10 4" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
                 </section>
 
                 {/* Topics */}
-                <section>
+                <section className="py-5">
                   <h3 className="text-sm font-semibold text-gray-900 mb-1">Tópicos de interesse</h3>
                   <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
@@ -251,7 +249,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             {tab === 'conta' && (
               <>
                 {/* User info */}
-                <div className="flex items-center gap-4 pb-5 border-b border-gray-100">
+                <div className="flex items-center gap-4 py-5 border-b border-gray-100">
                   <div className="relative group cursor-pointer flex-shrink-0" onClick={() => clerk.openUserProfile()}>
                     {user?.imageUrl
                       ? <img src={user.imageUrl} alt="" width={52} height={52} className="rounded-full" />
@@ -273,7 +271,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                 </div>
 
                 {/* Edit profile */}
-                <section>
+                <section className="py-5 border-b border-gray-100">
                   <h3 className="text-sm font-semibold text-gray-900 mb-4">Editar perfil</h3>
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div>
@@ -295,7 +293,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                 </section>
 
                 {/* Password */}
-                <section className="flex items-start justify-between py-4 border-t border-gray-100">
+                <div className="flex items-center justify-between py-5 border-b border-gray-100">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">Senha</h3>
                     <p className="text-sm text-gray-500 mt-0.5">Altere sua senha de acesso.</p>
@@ -304,10 +302,10 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     className="flex-shrink-0 px-4 py-2 rounded-full border border-gray-200 text-sm text-gray-700 hover:border-gray-400 transition-colors">
                     Alterar senha
                   </button>
-                </section>
+                </div>
 
                 {/* Delete account */}
-                <section className="flex items-start justify-between py-4 border-t border-gray-100">
+                <div className="flex items-center justify-between py-5">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">Excluir conta</h3>
                     <p className="text-sm text-gray-500 mt-0.5">Remove permanentemente sua conta e todos os seus dados.</p>
@@ -316,7 +314,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     className="flex-shrink-0 px-4 py-2 rounded-full border border-red-200 text-sm text-red-500 hover:bg-red-50 transition-colors">
                     Excluir
                   </button>
-                </section>
+                </div>
               </>
             )}
           </div>
