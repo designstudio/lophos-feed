@@ -583,85 +583,76 @@ interface Props { onRefresh?: () => void; refreshing?: boolean }
 export function Sidebar({ onRefresh, refreshing }: Props) {
   const path = usePathname()
   const [collapsed, setCollapsed] = useState(false)
-  const [closing, setClosing] = useState(false)
-  const [opening, setOpening] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => { if (path === '/settings') setShowSettings(true) }, [path])
 
-  const collapse = () => {
-    setClosing(true)
-    setTimeout(() => { setCollapsed(true); setClosing(false) }, 200)
-  }
-
-  const expand = () => {
-    setCollapsed(false)
-    setOpening(true)
-    setTimeout(() => setOpening(false), 220)
-  }
-
-  if (collapsed && !closing) {
-    return (
-      <>
-        <aside className="flex-shrink-0 flex flex-col h-full py-5 px-2 border-r border-border bg-bg-primary items-center" style={{ width: '3.5rem' }}>
-          <button onClick={expand} className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary transition-colors mb-3" title="Expandir">
-            <AltArrowRight size={16} />
-          </button>
-          <LophosLogo size={28} />
-          <nav className="flex flex-col items-center gap-1 mt-4 flex-1">
-            <Link href="/feed" className="w-9 h-9 flex items-center justify-center rounded-lg text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary transition-colors" title="Descobrir">
-              <NotebookMinimalistic size={16} />
-            </Link>
-            {onRefresh && (
-              <button onClick={onRefresh} disabled={refreshing} className="w-9 h-9 flex items-center justify-center rounded-lg text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50" title="Atualizar feed">
-                <Refresh size={16} className={refreshing ? 'animate-spin' : ''} />
-              </button>
-            )}
-          </nav>
-          <CollapsedUserMenu onOpenSettings={() => setShowSettings(true)} />
-        </aside>
-        {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-      </>
-    )
-  }
-
   return (
     <>
       <aside
-        className={cn(
-          'flex-shrink-0 flex flex-col h-full py-5 px-3 border-r border-border bg-bg-primary overflow-hidden',
-          closing ? 'sidebar-exit' : '',
-          opening ? 'sidebar-enter' : '',
-        )}
-        style={{ width: '16.1rem' }}>
-
-        <div className="flex items-center gap-2.5 px-2 mb-6">
-          <LophosLogo size={28} />
-          <span className="font-display text-lg text-ink-primary flex-1">Lophos</span>
-          <button onClick={collapse} className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0">
-            <AltArrowLeft size={14} />
+        className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary overflow-hidden"
+        style={{
+          width: collapsed ? '3.5rem' : '16.1rem',
+          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-2.5 px-3 pt-5 pb-0 mb-6 flex-shrink-0">
+          <div className="flex-shrink-0">
+            <LophosLogo size={28} />
+          </div>
+          <span
+            className="font-display text-lg text-ink-primary flex-1 whitespace-nowrap overflow-hidden"
+            style={{
+              opacity: collapsed ? 0 : 1,
+              transition: 'opacity 0.15s ease',
+            }}
+          >
+            Lophos
+          </span>
+          <button
+            onClick={() => setCollapsed(v => !v)}
+            className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0"
+          >
+            {collapsed
+              ? <AltArrowRight size={14} />
+              : <AltArrowLeft size={14} />
+            }
           </button>
         </div>
 
-        <nav className="flex flex-col gap-0.5 flex-1">
+        {/* Nav */}
+        <nav className="flex flex-col gap-0.5 flex-1 px-2">
           <Link href="/feed"
-            className={cn('flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+            title={collapsed ? 'Descobrir' : undefined}
+            className={cn(
+              'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+              collapsed ? 'justify-center' : '',
               path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
             )}>
-            <NotebookMinimalistic size={15} />
-            Descobrir
+            <NotebookMinimalistic size={15} className="flex-shrink-0" />
+            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Descobrir</span>}
           </Link>
+
           {onRefresh && (
             <button onClick={onRefresh} disabled={refreshing}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left">
-              <Refresh size={15} className={refreshing ? 'animate-spin' : ''} />
-              Atualizar feed
+              title={collapsed ? 'Atualizar feed' : undefined}
+              className={cn(
+                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left',
+                collapsed ? 'justify-center' : ''
+              )}>
+              <Refresh size={15} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
+              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Atualizar feed</span>}
             </button>
           )}
         </nav>
 
-        <div className="border-t border-border pt-3">
-          <UserMenu onOpenSettings={() => setShowSettings(true)} />
+        {/* Bottom user */}
+        <div className="border-t border-border pt-3 px-2 pb-5 flex-shrink-0">
+          {collapsed
+            ? <CollapsedUserMenu onOpenSettings={() => setShowSettings(true)} />
+            : <UserMenu onOpenSettings={() => setShowSettings(true)} />
+          }
         </div>
       </aside>
 

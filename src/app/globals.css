@@ -153,13 +153,13 @@ html, body {
 }
 
 @keyframes sidebarSlideIn {
-  from { opacity: 0; transform: translateX(-16px); }
+  from { opacity: 0; transform: translateX(-12px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes sidebarSlideOut {
   from { opacity: 1; transform: translateX(0); }
-  to   { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 0; transform: translateX(-12px); }
 }
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
