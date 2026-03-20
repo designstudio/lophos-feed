@@ -1,8 +1,8 @@
+import dynamicImport from 'next/dynamic'
+
 export const dynamic = 'force-dynamic'
 
-import dynamic from 'next/dynamic'
-
-const SignInClient = dynamic(
+const SignInClient = dynamicImport(
   () => import('@/components/SignInClient').then((m) => m.SignInClient),
   { ssr: false }
 )

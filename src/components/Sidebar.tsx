@@ -1,11 +1,11 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic'
 import { Newspaper, Settings, RefreshCw, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const UserButtonClient = dynamic(
+const UserButtonClient = dynamicImport(
   () => import('./UserButtonClient').then((m) => m.UserButtonClient),
   { ssr: false }
 )
