@@ -1,16 +1,15 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
-import dynamicImport from 'next/dynamic'
 import {
   NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle
+  Settings, Logout, CloseCircle, Sun, Moon
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
-// ─── Logo ───────────────────────────────────────────────────
+// ─── Logo ────────────────────────────────────────────────────
 function LophosLogo({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
@@ -38,75 +37,115 @@ function LophosLogo({ size = 28 }: { size?: number }) {
   )
 }
 
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-      <path d="M2 7L5.5 10.5L12 3.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  )
-}
-type SettingsTab = 'conta' | 'temas' | 'aparencia'
-
+// ─── Accent colors ───────────────────────────────────────────
 const ACCENT_COLORS = [
-  { label: 'Padrão', value: '#1b6ef3', dot: '#94a3b8' },
-  { label: 'Azul', value: '#1b6ef3', dot: '#3b82f6' },
-  { label: 'Verde', value: '#16a34a', dot: '#22c55e' },
-  { label: 'Amarelo', value: '#ca8a04', dot: '#eab308' },
-  { label: 'Rosa', value: '#db2777', dot: '#ec4899' },
-  { label: 'Laranja', value: '#ea580c', dot: '#f97316' },
+  { label: 'Padrão',   value: '#1b6ef3', dot: '#94a3b8' },
+  { label: 'Azul',     value: '#1b6ef3', dot: '#3b82f6' },
+  { label: 'Verde',    value: '#16a34a', dot: '#22c55e' },
+  { label: 'Amarelo',  value: '#ca8a04', dot: '#eab308' },
+  { label: 'Rosa',     value: '#db2777', dot: '#ec4899' },
+  { label: 'Laranja',  value: '#ea580c', dot: '#f97316' },
 ]
+
+function applyAccentColor(color: string) {
+  document.documentElement.style.setProperty('--color-accent', color)
+  localStorage.setItem('accent_color', color)
+}
+
+function applyTheme(t: string) {
+  localStorage.setItem('theme', t)
+  const resolved = t === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : t
+  if (resolved === 'dark') {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}
+
+// Apply saved preferences on mount
+if (typeof window !== 'undefined') {
+  const savedAccent = localStorage.getItem('accent_color')
+  if (savedAccent) document.documentElement.style.setProperty('--color-accent', savedAccent)
+  const savedTheme = localStorage.getItem('theme')
+  if (savedTheme) applyTheme(savedTheme)
+}
+
+// ─── Settings Modal ──────────────────────────────────────────
+type SettingsTab = 'conta' | 'temas' | 'aparencia'
 
 function SettingsModal({ onClose }: { onClose: () => void }) {
   const { user } = useUser()
   const clerk = useClerk()
   const [tab, setTab] = useState<SettingsTab>('conta')
+
+  // Topics state
   const [topics, setTopics] = useState<string[]>([])
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [custom, setCustom] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [accentColor, setAccentColor] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('accent_color') || '#1b6ef3' : '#1b6ef3'
+  const [savingTopics, setSavingTopics] = useState(false)
+  const [topicsSaved, setTopicsSaved] = useState(false)
+
+  // Appearance state
+  const [accentColor, setAccentColor] = useState(
+    () => (typeof window !== 'undefined' ? localStorage.getItem('accent_color') || '#1b6ef3' : '#1b6ef3')
   )
-  const [theme, setTheme] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('theme') || 'light' : 'light'
+  const [theme, setTheme] = useState(
+    () => (typeof window !== 'undefined' ? localStorage.getItem('theme') || 'light' : 'light')
   )
 
+  // Load topics
   useEffect(() => {
     fetch('/api/topics')
       .then(r => r.json())
-      .then(data => setTopics((data.topics || []).map((t: any) => t.topic)))
+      .then(data => {
+        const t = (data.topics || []).map((x: any) => x.topic)
+        setTopics(t)
+        return t
+      })
+      .then(t => fetch('/api/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topics: t }),
+      }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])))
   }, [])
 
-  const removeTopic = (t: string) => setTopics(prev => prev.filter(x => x !== t))
+  const removeTopic = (t: string) => {
+    setTopics(prev => prev.filter(x => x !== t))
+    setTopicsSaved(false)
+  }
+  const addSuggestion = (s: string) => {
+    setTopics(prev => [...prev, s])
+    setSuggestions(prev => prev.filter(x => x !== s))
+    setTopicsSaved(false)
+  }
   const addCustom = () => {
     const t = custom.trim()
     if (!t || topics.includes(t)) return
     setTopics(prev => [...prev, t])
     setCustom('')
+    setTopicsSaved(false)
   }
-
   const saveTopics = async () => {
     if (topics.length === 0) return
-    setSaving(true)
+    setSavingTopics(true)
     await fetch('/api/topics', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topics }),
     })
-    setSaving(false)
+    setSavingTopics(false)
+    setTopicsSaved(true)
   }
 
-  const applyAccent = (color: string) => {
+  const handleAccent = (color: string) => {
     setAccentColor(color)
-    document.documentElement.style.setProperty('--color-accent', color)
-    localStorage.setItem('accent_color', color)
+    applyAccentColor(color)
   }
-
-  const applyTheme = (t: string) => {
+  const handleTheme = (t: string) => {
     setTheme(t)
-    localStorage.setItem('theme', t)
-    const root = document.documentElement
-    if (t === 'dark') root.classList.add('dark')
-    else root.classList.remove('dark')
+    applyTheme(t)
   }
 
   const TABS: { id: SettingsTab; label: string }[] = [
@@ -116,156 +155,210 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex overflow-hidden animate-slide-up">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: 'fadeIn 0.2s ease' }}>
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl flex overflow-hidden"
+        style={{ width: '680px', height: '520px', animation: 'slideUp 0.2s ease' }}>
 
-        {/* Left nav */}
-        <div className="w-44 flex-shrink-0 border-r border-border p-3 flex flex-col gap-0.5 bg-bg-secondary">
-          <p className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider px-3 pt-2 pb-3">Configurações</p>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn('text-left px-3 py-2 rounded-lg text-sm transition-colors',
-                tab === t.id ? 'bg-white text-ink-primary font-medium shadow-sm' : 'text-ink-secondary hover:text-ink-primary hover:bg-white/60'
-              )}>
-              {t.label}
-            </button>
-          ))}
+        {/* Left nav — matches Grok layout */}
+        <div className="flex-shrink-0 border-r border-gray-100 flex flex-col" style={{ width: '180px' }}>
+          <div className="px-4 pt-5 pb-3">
+            <h2 className="text-[15px] font-semibold text-ink-primary">Configurações</h2>
+          </div>
+          <nav className="flex flex-col gap-0.5 px-2 flex-1">
+            {TABS.map(t => (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={cn('text-left px-3 py-2 rounded-lg text-sm transition-colors',
+                  tab === t.id
+                    ? 'bg-gray-100 text-ink-primary font-medium'
+                    : 'text-ink-secondary hover:bg-gray-50 hover:text-ink-primary'
+                )}>
+                {t.label}
+              </button>
+            ))}
+          </nav>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border">
-            <h2 className="text-[15px] font-semibold text-ink-primary">
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
+            <span className="text-[13px] font-semibold text-ink-tertiary uppercase tracking-wider">
               {TABS.find(t => t.id === tab)?.label}
-            </h2>
-            <button onClick={onClose} className="text-ink-tertiary hover:text-ink-primary transition-colors">
+            </span>
+            <button onClick={onClose} className="text-ink-muted hover:text-ink-primary transition-colors">
               <CloseCircle size={20} />
             </button>
           </div>
 
-          <div className="px-6 py-5 space-y-5">
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-6 py-5">
 
             {/* ── CONTA ── */}
             {tab === 'conta' && (
-              <>
-                {/* Avatar */}
-                <div className="flex items-center gap-4">
-                  <div className="relative group cursor-pointer" onClick={() => (clerk as any).openUserProfile?.()}>
-                    {user?.imageUrl
-                      ? <img src={user.imageUrl} alt="" width={56} height={56} className="rounded-full" />
-                      : <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center text-white font-semibold text-lg">
-                          {user?.firstName?.[0] ?? '?'}
-                        </div>
-                    }
-                    <div className="absolute inset-0 rounded-full bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white text-[10px] font-medium">Editar</span>
+              <div className="space-y-0">
+
+                {/* User row — like Grok */}
+                <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => clerk.openUserProfile()}
+                      className="relative group flex-shrink-0">
+                      {user?.imageUrl
+                        ? <img src={user.imageUrl} alt="" width={40} height={40} className="rounded-full" />
+                        : <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                            style={{ background: 'var(--color-accent)' }}>
+                            {user?.firstName?.[0] ?? '?'}
+                          </div>
+                      }
+                      <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                    <div>
+                      <p className="text-sm font-medium text-ink-primary">{user?.fullName ?? '—'}</p>
+                      <p className="text-xs text-ink-tertiary">{user?.primaryEmailAddress?.emailAddress ?? '—'}</p>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-ink-primary">{user?.fullName ?? '—'}</p>
-                    <p className="text-xs text-ink-tertiary">{user?.primaryEmailAddress?.emailAddress ?? '—'}</p>
-                  </div>
+                  <button onClick={() => clerk.openUserProfile()}
+                    className="text-xs px-3 py-1.5 rounded-lg border border-gray-200 text-ink-secondary hover:border-gray-300 hover:text-ink-primary transition-colors">
+                    Gerenciar
+                  </button>
                 </div>
 
-                <div className="space-y-3">
-                  <Row label="Nome">
-                    <button onClick={() => (clerk as any).openUserProfile?.()} className="text-xs text-accent hover:underline">Editar no perfil</button>
-                  </Row>
-                  <Row label="Senha">
-                    <button onClick={() => (clerk as any).openUserProfile?.()} className="text-xs text-accent hover:underline">
-                      {user?.passwordEnabled ? 'Alterar senha' : 'Definir senha'}
-                    </button>
-                  </Row>
-                  <Row label="Idioma">
-                    <select className="text-xs border border-border rounded-lg px-2 py-1 bg-white text-ink-primary">
-                      <option>Português (Brasil)</option>
-                      <option>English</option>
-                    </select>
-                  </Row>
-                  <Row label="Ano de nascimento">
-                    <input type="number" placeholder="Ex: 1990" min={1900} max={2010}
-                      className="text-xs border border-border rounded-lg px-2 py-1 bg-white text-ink-primary w-24 outline-none focus:border-accent" />
-                  </Row>
-                </div>
+                <SettingsRow label="Nome">
+                  <button onClick={() => clerk.openUserProfile()}
+                    className="text-xs text-accent hover:underline">
+                    {user?.fullName ?? 'Editar'}
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow label="Senha">
+                  <button onClick={() => clerk.openUserProfile()}
+                    className="text-xs text-accent hover:underline">
+                    {user?.passwordEnabled ? 'Alterar' : 'Definir senha'}
+                  </button>
+                </SettingsRow>
+
+                <SettingsRow label="Idioma">
+                  <select className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-ink-primary outline-none focus:border-accent">
+                    <option>Português (Brasil)</option>
+                    <option>English</option>
+                  </select>
+                </SettingsRow>
+
+                <SettingsRow label="Ano de nascimento">
+                  <input type="number" placeholder="Ex: 1990" min={1900} max={2010}
+                    className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 w-24 outline-none focus:border-accent bg-white text-ink-primary" />
+                </SettingsRow>
 
                 {/* Accent color */}
-                <div>
-                  <p className="text-xs font-medium text-ink-primary mb-2">Cor de ênfase</p>
-                  <div className="space-y-0.5">
-                    {ACCENT_COLORS.map(c => (
-                      <button key={c.value + c.label} onClick={() => applyAccent(c.value)}
-                        className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-bg-secondary transition-colors text-left">
-                        <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: c.dot }} />
-                        <span className="text-sm text-ink-primary flex-1">{c.label}</span>
-                        {accentColor === c.value && c.label !== 'Padrão' && (
-                          <CheckIcon />
-                        )}
-                        {c.label === 'Padrão' && accentColor === '#1b6ef3' && (
-                          <CheckIcon />
-                        )}
-                      </button>
-                    ))}
-                  </div>
+                <div className="pt-4">
+                  <p className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-2">Cor de ênfase</p>
+                  {ACCENT_COLORS.map(c => (
+                    <button key={c.label} onClick={() => handleAccent(c.value)}
+                      className="flex items-center w-full px-1 py-2 rounded-lg hover:bg-gray-50 transition-colors gap-3">
+                      <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: c.dot }} />
+                      <span className="text-sm text-ink-primary flex-1 text-left">{c.label}</span>
+                      {accentColor === c.value && (
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--color-accent)' }}>
+                          <path d="M2 7L5.5 10.5L12 3.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Danger zone */}
-                <div className="pt-2 border-t border-border">
-                  <button onClick={() => (clerk as any).openUserProfile?.()} className="text-xs text-red-500 hover:underline">
+                {/* Danger */}
+                <div className="pt-4 border-t border-gray-100 mt-2">
+                  <button onClick={() => clerk.openUserProfile()}
+                    className="text-xs text-red-500 hover:text-red-600 hover:underline transition-colors">
                     Excluir conta
                   </button>
                 </div>
-              </>
+              </div>
             )}
 
             {/* ── TEMAS ── */}
             {tab === 'temas' && (
-              <>
+              <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-medium text-ink-tertiary uppercase tracking-wider mb-3">Seus tópicos ({topics.length})</p>
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <p className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-3">
+                    Seus tópicos ({topics.length})
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-4 min-h-[32px]">
                     {topics.map(t => (
-                      <div key={t} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-ink-primary text-white text-sm">
+                      <div key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-ink-primary text-white text-[13px]">
                         {t}
-                        <button onClick={() => removeTopic(t)} className="opacity-70 hover:opacity-100 text-white leading-none">×</button>
+                        <button onClick={() => removeTopic(t)} className="opacity-60 hover:opacity-100 leading-none text-base">×</button>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-2">
+
+                {suggestions.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-2">Sugestões para você</p>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestions.slice(0, 12).filter(s => !topics.includes(s)).map(s => (
+                        <button key={s} onClick={() => addSuggestion(s)}
+                          className="flex items-center gap-1 px-3 py-1 rounded-full border border-gray-200 text-[13px] text-ink-secondary hover:border-accent hover:text-accent transition-colors">
+                          + {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
                   <input value={custom} onChange={e => setCustom(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && addCustom()}
-                    placeholder="Adicionar tópico..."
-                    className="flex-1 text-sm px-3 py-2 rounded-xl border border-border outline-none focus:border-accent bg-white" />
+                    placeholder="Adicionar tópico personalizado..."
+                    className="flex-1 text-sm px-3 py-2 rounded-xl border border-gray-200 outline-none focus:border-accent bg-white" />
                   <button onClick={addCustom}
-                    className="px-4 py-2 rounded-xl border border-border text-sm text-ink-secondary hover:border-accent hover:text-accent transition-colors">
+                    className="px-3 py-2 rounded-xl border border-gray-200 text-sm text-ink-secondary hover:border-accent hover:text-accent transition-colors whitespace-nowrap">
                     Adicionar
                   </button>
                 </div>
-                <button onClick={saveTopics} disabled={saving}
-                  className="w-full py-2.5 rounded-xl bg-ink-primary text-white text-sm font-medium hover:bg-ink-secondary transition-colors disabled:opacity-50">
-                  {saving ? 'Salvando…' : 'Salvar tópicos'}
+
+                <button onClick={saveTopics} disabled={savingTopics}
+                  className="w-full py-2.5 rounded-xl text-white text-sm font-medium transition-colors disabled:opacity-50"
+                  style={{ background: 'var(--color-accent)' }}>
+                  {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
                 </button>
-              </>
+              </div>
             )}
 
             {/* ── APARÊNCIA ── */}
             {tab === 'aparencia' && (
               <div>
-                <p className="text-xs font-medium text-ink-primary mb-3">Tema</p>
+                <p className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-4">Tema</p>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { id: 'light', label: 'Claro', preview: 'bg-white border-2' },
-                    { id: 'dark', label: 'Escuro', preview: 'bg-gray-900 border-2' },
-                    { id: 'system', label: 'Sistema', preview: 'bg-gradient-to-br from-white to-gray-900 border-2' },
+                    { id: 'light',  label: 'Claro',   icon: <Sun size={20} />, preview: 'bg-gray-50 border border-gray-200' },
+                    { id: 'dark',   label: 'Escuro',  icon: <Moon size={20} />, preview: 'bg-gray-900' },
+                    { id: 'system', label: 'Sistema', icon: (
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <rect x="2" y="2" width="16" height="16" rx="3" fill="url(#sys)" />
+                        <defs>
+                          <linearGradient id="sys" x1="2" y1="2" x2="18" y2="18">
+                            <stop offset="50%" stopColor="#f9fafb"/>
+                            <stop offset="50%" stopColor="#111827"/>
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                    ), preview: 'bg-gradient-to-br from-gray-50 to-gray-900' },
                   ].map(t => (
-                    <button key={t.id} onClick={() => applyTheme(t.id)}
-                      className={cn('flex flex-col items-center gap-2 p-3 rounded-xl border transition-all',
-                        theme === t.id ? 'border-accent' : 'border-border hover:border-border-strong'
+                    <button key={t.id} onClick={() => handleTheme(t.id)}
+                      className={cn(
+                        'flex flex-col items-center gap-3 p-4 rounded-xl border-2 transition-all',
+                        theme === t.id ? 'border-accent' : 'border-gray-200 hover:border-gray-300'
                       )}>
-                      <div className={cn('w-full h-12 rounded-lg', t.preview,
-                        theme === t.id ? 'border-accent' : 'border-border')} />
-                      <span className="text-xs text-ink-secondary">{t.label}</span>
+                      <div className={cn('w-full h-14 rounded-lg flex items-center justify-center', t.preview)}>
+                        <span className={theme === t.id && t.id !== 'dark' ? 'text-ink-primary' : t.id === 'dark' ? 'text-white' : 'text-gray-500'}>
+                          {t.icon}
+                        </span>
+                      </div>
+                      <span className={cn('text-xs font-medium', theme === t.id ? 'text-accent' : 'text-ink-secondary')}>
+                        {t.label}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -279,9 +372,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function SettingsRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+    <div className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
       <span className="text-sm text-ink-primary">{label}</span>
       {children}
     </div>
@@ -309,7 +402,8 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
         className="flex items-center gap-2.5 px-3 py-2 rounded-lg w-full hover:bg-bg-secondary transition-colors text-left">
         {user?.imageUrl
           ? <img src={user.imageUrl} alt="" width={26} height={26} className="rounded-full flex-shrink-0" />
-          : <div className="w-[26px] h-[26px] rounded-full bg-accent flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
+          : <div className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+              style={{ background: 'var(--color-accent)' }}>
               {user?.firstName?.[0] ?? '?'}
             </div>
         }
@@ -317,19 +411,22 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-52 bg-white rounded-xl border border-border shadow-lg z-50 py-1 animate-slide-up">
-          <div className="px-3 py-2 border-b border-border mb-1">
+        <div className="absolute bottom-full left-0 mb-1 w-56 bg-white rounded-xl border border-border shadow-xl z-50 py-1"
+          style={{ animation: 'slideUp 0.15s ease' }}>
+          <div className="px-3 py-2.5 border-b border-gray-100">
             <p className="text-sm font-medium text-ink-primary truncate">{user?.fullName}</p>
             <p className="text-xs text-ink-tertiary truncate">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
-          <button onClick={() => { setOpen(false); onOpenSettings() }}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors">
-            <Settings size={14} /> Configurações
-          </button>
-          <button onClick={() => signOut()}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">
-            <Logout size={14} /> Sair
-          </button>
+          <div className="py-1">
+            <button onClick={() => { setOpen(false); onOpenSettings() }}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-ink-secondary hover:text-ink-primary hover:bg-gray-50 transition-colors">
+              <Settings size={14} /> Configurações
+            </button>
+            <button onClick={() => signOut()}
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">
+              <Logout size={14} /> Sair
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -347,29 +444,28 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
-  // Open settings if navigated to /settings
   useEffect(() => {
     if (path === '/settings') setShowSettings(true)
   }, [path])
 
   if (collapsed) {
     return (
-      <aside className="flex-shrink-0 flex flex-col h-full py-5 px-2 border-r border-border bg-bg-primary items-center" style={{ width: '3.5rem' }}>
-        <button onClick={() => setCollapsed(false)}
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary transition-colors mb-4">
-          <AltArrowRight size={16} />
-        </button>
-        <LophosLogo size={28} />
+      <>
+        <aside className="flex-shrink-0 flex flex-col h-full py-5 px-2 border-r border-border bg-bg-primary items-center" style={{ width: '3.5rem' }}>
+          <button onClick={() => setCollapsed(false)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary transition-colors mb-4">
+            <AltArrowRight size={16} />
+          </button>
+          <LophosLogo size={28} />
+        </aside>
         {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-      </aside>
+      </>
     )
   }
 
   return (
     <>
       <aside className="flex-shrink-0 flex flex-col h-full py-5 px-3 border-r border-border bg-bg-primary" style={{ width: '16.1rem' }}>
-
-        {/* Header */}
         <div className="flex items-center gap-2.5 px-2 mb-6">
           <LophosLogo size={28} />
           <span className="font-display text-lg text-ink-primary flex-1">Lophos</span>
@@ -379,7 +475,6 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex flex-col gap-0.5 flex-1">
           <Link href="/feed"
             className={cn('flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
@@ -388,7 +483,6 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
             <NotebookMinimalistic size={15} />
             Descobrir
           </Link>
-
           {onRefresh && (
             <button onClick={onRefresh} disabled={refreshing}
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left">
@@ -398,11 +492,9 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
           )}
         </nav>
 
-        {/* Bottom: user menu */}
         <div className="border-t border-border pt-3">
           <UserMenu onOpenSettings={() => setShowSettings(true)} />
         </div>
-
       </aside>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}

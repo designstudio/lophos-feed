@@ -53,7 +53,24 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(26,25,22,0.12); border-radius: 3px; }
 
-/* ─── Typography classes ─────────────────────────────────── */
+/* ─── Dark mode ──────────────────────────────────────────── */
+.dark {
+  --color-bg-primary:    #0f0f0f;
+  --color-bg-secondary:  #1a1a1a;
+  --color-bg-tertiary:   #252525;
+  --color-ink-primary:   #f0efed;
+  --color-ink-secondary: #a8a5a0;
+  --color-ink-tertiary:  #6a6864;
+  --color-ink-muted:     #4a4844;
+  --color-border:        rgba(255,255,255,0.08);
+  --color-border-strong: rgba(255,255,255,0.15);
+}
+
+.dark html, .dark body, html.dark, body.dark {
+  background: var(--color-bg-primary);
+  color: var(--color-ink-primary);
+}
+
 .text-headline {
   font-size: var(--text-headline);
   line-height: var(--lh-headline);
