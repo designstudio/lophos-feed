@@ -642,7 +642,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
                 collapsed ? 'justify-center' : ''
               )}>
               <Refresh size={15} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
-              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Atualizar feed</span>}
+              {!collapsed && <span className="whitespace-nowrap overflow-hidden">{refreshing ? 'Atualizando…' : 'Atualizar feed'}</span>}
             </button>
           )}
         </nav>
