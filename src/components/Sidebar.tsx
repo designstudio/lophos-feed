@@ -513,19 +513,23 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-56 bg-white rounded-xl border border-gray-100 shadow-xl z-50 py-1"
-          style={{ animation: 'slideUp 0.12s ease' }}>
+        <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl shadow-xl z-50 py-1"
+          style={{ animation: 'slideUp 0.12s ease', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
           <div className="px-3 py-2.5 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName}</p>
             <p className="text-xs text-gray-400 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
           <div className="py-1">
             <button onClick={() => { setOpen(false); onOpenSettings() }}
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors" style={{ color: 'var(--color-ink-secondary)' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
               <Settings size={14} /> Configurações
             </button>
             <button onClick={() => signOut()}
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">
+              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 transition-colors"
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.10)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
               <Logout size={14} /> Sair
             </button>
           </div>
@@ -553,8 +557,8 @@ function FixedDropdown({ anchorRef, onClose, children }: {
 
   return (
     <div
-      className="fixed w-52 bg-white rounded-xl border border-gray-100 shadow-xl z-[999] py-1"
-      style={{ left: pos.left, bottom: pos.bottom, animation: 'slideUp 0.12s ease' }}
+      className="fixed w-52 rounded-xl shadow-xl z-[999] py-1"
+      style={{ left: pos.left, bottom: pos.bottom, animation: 'slideUp 0.12s ease', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
     >
       {children}
     </div>
@@ -589,10 +593,14 @@ function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             <p className="text-xs text-gray-400 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
           <div className="py-1">
-            <button onClick={() => { setOpen(false); onOpenSettings() }} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+            <button onClick={() => { setOpen(false); onOpenSettings() }} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors" style={{ color: 'var(--color-ink-secondary)' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
               <Settings size={14} /> Configurações
             </button>
-            <button onClick={() => signOut()} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors">
+            <button onClick={() => signOut()} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 transition-colors"
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.10)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
               <Logout size={14} /> Sair
             </button>
           </div>
