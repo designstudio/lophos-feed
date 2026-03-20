@@ -186,28 +186,31 @@ export default function FeedPage() {
 
         {/* ── Fixed header ── */}
         <div className="flex-shrink-0 border-b border-border bg-bg-primary px-8">
-          <div className="flex items-center h-14 gap-2">
-            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0 mr-4">Descobrir</h1>
+          <div className="flex items-center h-14">
+            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Descobrir</h1>
 
-            {/* Meu Feed tab */}
-            <button
-              onClick={() => { setActiveFilter(null) }}
-              className={cn(
-                'text-[13px] px-3 h-14 border-b-2 transition-all font-medium flex-shrink-0',
-                activeFilter === null
-                  ? 'border-ink-primary text-ink-primary'
-                  : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
-              )}
-            >
-              Meu Feed
-            </button>
+            {/* Tabs — centered in the remaining space */}
+            <div className="flex flex-1 justify-center">
+              <button
+                onClick={() => setActiveFilter(null)}
+                className={cn(
+                  'text-[13px] px-4 h-14 border-b-2 transition-all font-medium',
+                  activeFilter === null
+                    ? 'border-ink-primary text-ink-primary'
+                    : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
+                )}
+              >
+                Meu Feed
+              </button>
+              <TopicsDropdown
+                topics={topicsInFeed}
+                activeFilter={activeFilter}
+                onSelect={setActiveFilter}
+              />
+            </div>
 
-            {/* Topics dropdown */}
-            <TopicsDropdown
-              topics={topicsInFeed}
-              activeFilter={activeFilter}
-              onSelect={setActiveFilter}
-            />
+            {/* Spacer — matches title width to keep tabs truly centered */}
+            <div style={{ width: '12rem' }} />
           </div>
         </div>
 

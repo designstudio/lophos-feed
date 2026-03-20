@@ -167,11 +167,32 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         setTopics(t)
         return t
       })
-      .then(t => fetch('/api/suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topics: t }),
-      }).then(r => r.json()).then(d => setSuggestions(d.suggestions || [])))
+      .then(t => {
+        // Check localStorage cache — valid for 7 days
+        try {
+          const cached = localStorage.getItem('lophos_suggestions')
+          if (cached) {
+            const { suggestions: s, fetchedAt } = JSON.parse(cached)
+            const sevenDays = 7 * 24 * 60 * 60 * 1000
+            if (Date.now() - fetchedAt < sevenDays && s?.length > 0) {
+              setSuggestions(s)
+              return
+            }
+          }
+        } catch {}
+        // Fetch fresh suggestions
+        fetch('/api/suggestions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topics: t }),
+        }).then(r => r.json()).then(d => {
+          const s = d.suggestions || []
+          setSuggestions(s)
+          try {
+            localStorage.setItem('lophos_suggestions', JSON.stringify({ suggestions: s, fetchedAt: Date.now() }))
+          } catch {}
+        })
+      })
   }, [])
 
   const handleTheme = (t: string) => { setTheme(t); applyTheme(t) }
@@ -231,8 +252,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: 'fadeIn 0.15s ease' }}>
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl flex overflow-hidden" style={{ width: '48rem', height: '580px', animation: 'slideUp 0.15s ease' }}>
+      <div className="absolute inset-0" onClick={onClose} style={{ backgroundColor: "#05050533", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }} />
+      <div className="relative bg-white rounded-2xl shadow-2xl flex overflow-hidden" style={{ width: '48rem', height: '32rem', animation: 'slideUp 0.15s ease' }}>
 
         {/* Full-width header */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 h-14 border-b border-gray-100 bg-white z-10 rounded-t-2xl">
