@@ -96,7 +96,7 @@ export default function FeedPage() {
   const topicsInFeed = [...new Set(items.map((i) => i.topic))]
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-primary">
+    <div className="flex h-screen overflow-hidden bg-bg-primary" style={{ height: '100dvh' }}>
       <Sidebar onRefresh={() => fetchFeed(true)} refreshing={refreshing} />
 
       <div className="flex-1 min-w-0 overflow-y-auto">

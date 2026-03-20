@@ -26,10 +26,10 @@ export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
 
   if (results.length === 0) return []
 
-  // 2. Build context for Gemini
+  // 2. Build context for Gemini — URLs are indexed, Gemini only references indexes
   const context = results
     .map((r: any, i: number) =>
-      `[${i + 1}] title: "${r.title}" | url: ${r.url} | source: ${new URL(r.url).hostname.replace('www.','')} | snippet: ${r.content?.slice(0, 400)}`
+      `[${i + 1}] title: "${r.title}" | source: ${new URL(r.url).hostname.replace('www.','')} | snippet: ${r.content?.slice(0, 400)}`
     )
     .join('\n\n')
 
@@ -39,17 +39,14 @@ Para cada notícia:
 - Agrupe os resultados relacionados ao mesmo evento
 - Escreva um título claro em português
 - Escreva um resumo de 3-4 frases em português, detalhado e informativo
-- Liste TODAS as fontes relevantes daquele grupo
+- Liste os índices dos resultados usados (ex: [1, 3])
 
 Responda APENAS com JSON válido, sem markdown:
 [
   {
     "title": "título em português",
     "summary": "resumo 3-4 frases",
-    "sources": [
-      {"name": "nome do site", "url": "url completa do artigo"}
-    ],
-    "primaryUrl": "url do artigo mais relevante"
+    "sourceIndexes": [1, 2]
   }
 ]
 
@@ -83,20 +80,31 @@ ${context}`
   const parsed = JSON.parse(match[0])
   const now = new Date().toISOString()
 
-  return parsed.map((item: any, i: number): NewsItem => ({
-    id: `${topic}-${Date.now()}-${i}`,
-    topic,
-    title: item.title,
-    summary: item.summary,
-    sources: (item.sources || []).map((s: any) => ({
-      name: s.name,
-      url: s.url,
-      favicon: `https://www.google.com/s2/favicons?domain=${s.url}&sz=32`,
-    })),
-    imageUrl: images[i] || undefined,
-    publishedAt: now,
-    cachedAt: now,
-  }))
+  return parsed.map((item: any, i: number): NewsItem => {
+    // Use exact URLs from Tavily based on the indexes Gemini returned
+    const indexes: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
+    const sources: NewsSource[] = indexes
+      .filter((idx: number) => idx >= 0 && idx < results.length)
+      .map((idx: number) => {
+        const r = results[idx]
+        return {
+          name: new URL(r.url).hostname.replace('www.', ''),
+          url: r.url, // exact Tavily URL — always links to the article
+          favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
+        }
+      })
+
+    return {
+      id: `${topic}-${Date.now()}-${i}`,
+      topic,
+      title: item.title,
+      summary: item.summary,
+      sources,
+      imageUrl: images[i] || undefined,
+      publishedAt: now,
+      cachedAt: now,
+    }
+  })
 }
 
 export function isCacheStale(cachedAt: string): boolean {

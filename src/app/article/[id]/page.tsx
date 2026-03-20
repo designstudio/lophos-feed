@@ -29,7 +29,7 @@ export default function ArticlePage() {
       <Sidebar />
 
       <main className="flex-1 min-w-0">
-        <div className="max-w-2xl mx-auto px-8 py-6">
+        <div className="max-w-[768px] mx-auto py-6">
           {/* Back button */}
           <button
             onClick={() => router.back()}
@@ -88,7 +88,8 @@ export default function ArticlePage() {
                   <img
                     src={item.imageUrl}
                     alt={item.title}
-                    className="w-full h-64 object-cover"
+                    className="w-full object-cover"
+                    style={{ height: '23rem' }}
                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
                   />
                 </div>

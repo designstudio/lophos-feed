@@ -16,11 +16,7 @@ html, body {
   color: #1a1916;
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
-  height: 100%;
-  overflow: hidden;
 }
-
-#__next, main { height: 100%; }
 
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
