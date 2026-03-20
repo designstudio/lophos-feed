@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Clouds, SunFog, Waterdrops, Snowflake, Wind } from '@solar-icons/react-perf/Linear'
+import { Clouds, SunFog, Waterdrops, Snowflake, Wind, CloudStorm, Sun } from '@solar-icons/react-perf/Linear'
 
 interface WeatherData {
   city: string
@@ -9,16 +9,18 @@ interface WeatherData {
   condition: string
   high: number
   low: number
-  forecast: { day: string; temp: number; condition: string }[]
+  currentCode: number
+  forecast: { day: string; temp: number; weathercode: number }[]
 }
 
-function WeatherIcon({ condition, size = 16, className = '' }: { condition: string; size?: number; className?: string }) {
-  const c = condition.toLowerCase()
-  if (c.includes('rain') || c.includes('chuva')) return <Waterdrops size={size} className={className || 'text-blue-400'} />
-  if (c.includes('snow') || c.includes('neve')) return <Snowflake size={size} className={className || 'text-blue-300'} />
-  if (c.includes('cloud') || c.includes('nublado') || c.includes('parcialmente')) return <Clouds size={size} className={className || 'text-gray-400'} />
-  if (c.includes('wind') || c.includes('vento')) return <Wind size={size} className={className || 'text-gray-400'} />
-  return <SunFog size={size} className={className || 'text-amber-400'} />
+function WeatherIcon({ code, size = 16 }: { code: number; size?: number }) {
+  if (code <= 1)  return <Sun size={size} className="text-amber-400" />
+  if (code <= 3)  return <SunFog size={size} className="text-amber-300" />
+  if (code <= 48) return <Clouds size={size} className="text-gray-400" />
+  if (code <= 67) return <Waterdrops size={size} className="text-blue-400" />
+  if (code <= 77) return <Snowflake size={size} className="text-blue-300" />
+  if (code <= 82) return <Waterdrops size={size} className="text-blue-500" />
+  return <CloudStorm size={size} className="text-purple-400" />
 }
 
 export function WeatherWidget() {
@@ -36,7 +38,7 @@ export function WeatherWidget() {
   const fetchWeatherByCoords = async (lat: number, lon: number) => {
     try {
       const [weatherRes, cityRes] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=6`),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=6`),
         fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
       ])
       const data = await weatherRes.json()
@@ -73,13 +75,14 @@ export function WeatherWidget() {
       city,
       region,
       temp: Math.round(data.current?.temperature_2m ?? 0),
-      condition: getCondition(data.current?.weathercode),
+      condition: getCondition(data.current?.weather_code ?? 0),
+      currentCode: data.current?.weather_code ?? 0,
       high: Math.round(data.daily?.temperature_2m_max?.[0] ?? 0),
       low: Math.round(data.daily?.temperature_2m_min?.[0] ?? 0),
       forecast: (data.daily?.time || []).slice(1, 6).map((t: string, i: number) => ({
         day: days[new Date(t).getDay()],
         temp: Math.round(data.daily.temperature_2m_max[i + 1] ?? 0),
-        condition: getCondition(data.daily.weathercode?.[i + 1]),
+        weathercode: data.daily.weather_code?.[i + 1] ?? 0,
       })),
     })
     setLoading(false)
@@ -100,7 +103,7 @@ export function WeatherWidget() {
       {/* Top row — Perplexity style */}
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-1.5">
-          <WeatherIcon condition={weather.condition} size={16} />
+          <WeatherIcon code={weather.currentCode} size={16} />
           <span className="text-[15px] font-semibold text-ink-primary">{weather.temp}°</span>
           <span className="text-[13px] text-ink-tertiary">F/C</span>
         </div>
@@ -118,7 +121,7 @@ export function WeatherWidget() {
         <div className="flex justify-between pt-3 border-t border-border">
           {weather.forecast.map((f, i) => (
             <div key={i} className="flex flex-col items-center gap-1">
-              <WeatherIcon condition={f.condition} size={14} />
+              <WeatherIcon code={f.weathercode} size={14} />
               <span className="text-[11px] text-ink-secondary font-medium">{f.temp}°</span>
               <span className="text-[10px] text-ink-tertiary">{f.day}</span>
             </div>
