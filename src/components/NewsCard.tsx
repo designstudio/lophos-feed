@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { NewsItem } from '@/lib/types'
-import { Like, Dislike } from '@solar-icons/react-perf/Linear'
+import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -10,52 +10,56 @@ interface Props {
   className?: string
 }
 
-function Sources({ sources }: { sources: NewsItem['sources'] }) {
-  if (!sources || sources.length === 0) return null
-  const shown = sources.slice(0, 4)
+function SourcesAndReactions({ sources, reaction, onReact }: {
+  sources: NewsItem['sources']
+  reaction: 'like' | 'dislike' | null
+  onReact: (t: 'like' | 'dislike') => void
+}) {
+  const shown = (sources || []).slice(0, 4)
   return (
-    <div className="flex items-center gap-1.5 mt-2">
-      <div className="flex items-center">
-        {shown.map((src, i) => (
-          <div key={i}
-            className="w-4 h-4 rounded-full border-2 border-bg-primary overflow-hidden bg-bg-secondary flex-shrink-0"
-            style={{ marginLeft: i === 0 ? 0 : '-6px', zIndex: shown.length - i }}
-          >
-            {src.favicon ? (
-              <img src={src.favicon} alt="" width={16} height={16}
-                className="w-full h-full object-cover"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-            ) : (
-              <span className="w-full h-full block bg-bg-tertiary" />
-            )}
-          </div>
-        ))}
+    <div className="flex items-center justify-between mt-2.5">
+      {/* Sources — left */}
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center">
+          {shown.map((src, i) => (
+            <div key={i}
+              className="w-4 h-4 rounded-full border-2 border-bg-primary overflow-hidden bg-bg-secondary flex-shrink-0"
+              style={{ marginLeft: i === 0 ? 0 : '-6px', zIndex: shown.length - i }}
+            >
+              {src.favicon ? (
+                <img src={src.favicon} alt="" width={16} height={16}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                />
+              ) : (
+                <span className="w-full h-full block bg-bg-tertiary" />
+              )}
+            </div>
+          ))}
+        </div>
+        {shown.length > 0 && (
+          <span className="text-[11px] text-ink-tertiary font-medium">
+            {sources!.length} {sources!.length === 1 ? 'fonte' : 'fontes'}
+          </span>
+        )}
       </div>
-      <span className="text-[11px] text-ink-tertiary font-medium">
-        {sources.length} {sources.length === 1 ? 'fonte' : 'fontes'}
-      </span>
-    </div>
-  )
-}
-
-function Reactions({ reaction, onReact }: { reaction: 'like' | 'dislike' | null; onReact: (t: 'like' | 'dislike') => void }) {
-  return (
-    <div className="flex items-center gap-1 mt-2.5">
-      <button
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('like') }}
-        className={cn('flex items-center px-2 py-1 rounded-full transition-all',
-          reaction === 'like' ? 'bg-green-50 text-green-600' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
-        )}>
-        <Like size={12} />
-      </button>
-      <button
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
-        className={cn('flex items-center px-2 py-1 rounded-full transition-all',
-          reaction === 'dislike' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
-        )}>
-        <Dislike size={12} />
-      </button>
+      {/* Reactions — right */}
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('like') }}
+          className={cn('flex items-center px-2 py-1 rounded-full transition-all',
+            reaction === 'like' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
+          )}>
+          <HeartAngle size={13} />
+        </button>
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
+          className={cn('flex items-center px-2 py-1 rounded-full transition-all',
+            reaction === 'dislike' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
+          )}>
+          <Dislike size={13} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -93,8 +97,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
         )}
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.topic}</span>
         <h2 className="text-card-title text-ink-primary group-hover:text-accent transition-colors">{item.title}</h2>
-        <Sources sources={item.sources} />
-        <Reactions reaction={reaction} onReact={react} />
+        <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
       </a>
     )
   }
@@ -106,8 +109,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
           <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
           <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
           <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
-          <Sources sources={item.sources} />
-          <Reactions reaction={reaction} onReact={react} />
+          <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
         </div>
         {item.imageUrl && (
           <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
@@ -135,8 +137,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
         <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
         <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
-        <Sources sources={item.sources} />
-        <Reactions reaction={reaction} onReact={react} />
+        <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
       </div>
     </a>
   )
