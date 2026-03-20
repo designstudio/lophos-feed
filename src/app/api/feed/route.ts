@@ -29,8 +29,6 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: 'No topics' }), { status: 400 })
   }
 
-  const db = getSupabaseAdmin()
-
   const encoder = new TextEncoder()
   const stream = new TransformStream()
   const writer = stream.writable.getWriter()
