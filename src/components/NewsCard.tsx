@@ -7,9 +7,6 @@ import { cn } from '@/lib/utils'
 
 interface Props {
   item: NewsItem
-  // 'full-left'  = texto esquerda, imagem direita (padrão Perplexity linha 1 e 4)
-  // 'full-right' = imagem esquerda, texto direita (padrão Perplexity linha 4)
-  // 'card'       = card compacto para grid de 3
   variant?: 'full-left' | 'full-right' | 'card'
   className?: string
 }
@@ -17,7 +14,7 @@ interface Props {
 function Sources({ sources }: { sources: NewsItem['sources'] }) {
   if (!sources || sources.length === 0) return null
   return (
-    <div className="flex items-center gap-1 mt-2 flex-wrap">
+    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
       {sources.slice(0, 4).map((src, i) => (
         <a
           key={i}
@@ -25,23 +22,31 @@ function Sources({ sources }: { sources: NewsItem['sources'] }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-bg-secondary hover:bg-bg-tertiary transition-colors"
+          className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
         >
-          {src.favicon && (
+          {src.favicon ? (
             <img
               src={src.favicon}
-              alt=""
-              width={11}
-              height={11}
-              className="rounded-sm flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              alt={src.name}
+              width={14}
+              height={14}
+              className="rounded-full flex-shrink-0"
+              onError={(e) => {
+                const el = e.target as HTMLImageElement
+                el.style.display = 'none'
+                const span = document.createElement('span')
+                span.className = 'w-3.5 h-3.5 rounded-full bg-bg-tertiary flex-shrink-0'
+                el.parentNode?.insertBefore(span, el)
+              }}
             />
+          ) : (
+            <span className="w-3.5 h-3.5 rounded-full bg-bg-tertiary flex-shrink-0" />
           )}
           <span className="text-[11px] text-ink-tertiary font-medium">{src.name}</span>
         </a>
       ))}
       {sources.length > 4 && (
-        <span className="text-[11px] text-ink-muted px-1">+{sources.length - 4}</span>
+        <span className="text-[11px] text-ink-muted">+{sources.length - 4}</span>
       )}
     </div>
   )
@@ -98,44 +103,47 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
   }
 
   // Card compacto — grid de 3
+  // ordem: imagem > categoria > título > fontes > botões
   if (variant === 'card') {
     return (
       <article onClick={handleClick} className={cn('cursor-pointer group flex flex-col', className)}>
-        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.topic}</span>
-        <h2 className="text-[14px] font-semibold text-ink-primary group-hover:text-accent transition-colors leading-snug">
-          {item.title}
-        </h2>
         {item.imageUrl && (
-          <div className="mt-2.5 w-full h-36 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0">
+          <div className="w-full h-36 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5">
             <img
               src={item.imageUrl}
               alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
             />
           </div>
         )}
+        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.topic}</span>
+        <h2 style={{ fontSize: '1rem', lineHeight: '1.625' }} className="font-semibold text-ink-primary group-hover:text-accent transition-colors">
+          {item.title}
+        </h2>
         <Sources sources={item.sources} />
         <Reactions reaction={reaction} onReact={react} />
       </article>
     )
   }
 
-  // Full com imagem — texto à esquerda, imagem à direita
+  // Full-left: texto esquerda, imagem direita
   if (variant === 'full-left') {
     return (
       <article onClick={handleClick} className={cn('cursor-pointer group flex gap-6 items-start', className)}>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-          <h2 className="text-[20px] font-semibold text-ink-primary group-hover:text-accent transition-colors leading-snug mt-1">
+          <h2 style={{ fontSize: '1.75rem', lineHeight: '1.20' }} className="font-semibold text-ink-primary group-hover:text-accent transition-colors mt-1">
             {item.title}
           </h2>
-          <p className="text-ink-secondary text-[13px] leading-relaxed mt-2 line-clamp-3">{item.summary}</p>
+          <p style={{ fontSize: '1rem', lineHeight: '1.625' }} className="text-ink-secondary mt-2 line-clamp-3">
+            {item.summary}
+          </p>
           <Sources sources={item.sources} />
           <Reactions reaction={reaction} onReact={react} />
         </div>
         {item.imageUrl && (
-          <div className="flex-shrink-0 w-48 h-32 rounded-xl overflow-hidden bg-bg-secondary">
+          <div className="flex-shrink-0 w-52 h-36 rounded-xl overflow-hidden bg-bg-secondary">
             <img
               src={item.imageUrl}
               alt={item.title}
@@ -148,11 +156,11 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
     )
   }
 
-  // Full com imagem — imagem à esquerda, texto à direita
+  // Full-right: imagem esquerda, texto direita
   return (
     <article onClick={handleClick} className={cn('cursor-pointer group flex gap-6 items-start', className)}>
       {item.imageUrl && (
-        <div className="flex-shrink-0 w-48 h-32 rounded-xl overflow-hidden bg-bg-secondary">
+        <div className="flex-shrink-0 w-52 h-36 rounded-xl overflow-hidden bg-bg-secondary">
           <img
             src={item.imageUrl}
             alt={item.title}
@@ -163,10 +171,12 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
       )}
       <div className="flex-1 min-w-0">
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-        <h2 className="text-[20px] font-semibold text-ink-primary group-hover:text-accent transition-colors leading-snug mt-1">
+        <h2 style={{ fontSize: '1.75rem', lineHeight: '1.20' }} className="font-semibold text-ink-primary group-hover:text-accent transition-colors mt-1">
           {item.title}
         </h2>
-        <p className="text-ink-secondary text-[13px] leading-relaxed mt-2 line-clamp-3">{item.summary}</p>
+        <p style={{ fontSize: '1rem', lineHeight: '1.625' }} className="text-ink-secondary mt-2 line-clamp-3">
+          {item.summary}
+        </p>
         <Sources sources={item.sources} />
         <Reactions reaction={reaction} onReact={react} />
       </div>

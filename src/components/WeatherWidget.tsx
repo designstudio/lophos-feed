@@ -4,20 +4,21 @@ import { Clouds, SunFog, Waterdrops, Snowflake, Wind } from '@solar-icons/react-
 
 interface WeatherData {
   city: string
+  region: string
   temp: number
   condition: string
   high: number
   low: number
-  forecast: { day: string; temp: number; icon: string }[]
+  forecast: { day: string; temp: number; condition: string }[]
 }
 
-function WeatherIcon({ condition, size = 16 }: { condition: string; size?: number }) {
+function WeatherIcon({ condition, size = 16, className = '' }: { condition: string; size?: number; className?: string }) {
   const c = condition.toLowerCase()
-  if (c.includes('rain') || c.includes('chuva')) return <Waterdrops size={size} className="text-blue-400" />
-  if (c.includes('snow') || c.includes('neve')) return <Snowflake size={size} className="text-blue-200" />
-  if (c.includes('cloud') || c.includes('nublado') || c.includes('parcialmente')) return <Clouds size={size} className="text-gray-400" />
-  if (c.includes('wind') || c.includes('vento')) return <Wind size={size} className="text-gray-400" />
-  return <SunFog size={size} className="text-amber-400" />
+  if (c.includes('rain') || c.includes('chuva')) return <Waterdrops size={size} className={className || 'text-blue-400'} />
+  if (c.includes('snow') || c.includes('neve')) return <Snowflake size={size} className={className || 'text-blue-300'} />
+  if (c.includes('cloud') || c.includes('nublado') || c.includes('parcialmente')) return <Clouds size={size} className={className || 'text-gray-400'} />
+  if (c.includes('wind') || c.includes('vento')) return <Wind size={size} className={className || 'text-gray-400'} />
+  return <SunFog size={size} className={className || 'text-amber-400'} />
 }
 
 export function WeatherWidget() {
@@ -25,10 +26,7 @@ export function WeatherWidget() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      fetchWeatherByCity('São Paulo')
-      return
-    }
+    if (!navigator.geolocation) { fetchWeatherByCity('São Paulo'); return }
     navigator.geolocation.getCurrentPosition(
       (pos) => fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude),
       () => fetchWeatherByCity('São Paulo')
@@ -37,52 +35,26 @@ export function WeatherWidget() {
 
   const fetchWeatherByCoords = async (lat: number, lon: number) => {
     try {
-      const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=5`
-      )
-      const data = await res.json()
-      const cityRes = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
-      )
+      const [weatherRes, cityRes] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=6`),
+        fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
+      ])
+      const data = await weatherRes.json()
       const cityData = await cityRes.json()
-      const city = cityData.address?.city || cityData.address?.town || 'Sua cidade'
-      parseWeather(data, city)
-    } catch {
-      setLoading(false)
-    }
+      const city = cityData.address?.suburb || cityData.address?.city || cityData.address?.town || 'Sua cidade'
+      const region = cityData.address?.city || cityData.address?.state || ''
+      parseWeather(data, city, region)
+    } catch { setLoading(false) }
   }
 
   const fetchWeatherByCity = async (city: string) => {
     try {
-      const geoRes = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`
-      )
+      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`)
       const geoData = await geoRes.json()
       const loc = geoData.results?.[0]
       if (!loc) return setLoading(false)
       await fetchWeatherByCoords(loc.latitude, loc.longitude)
-    } catch {
-      setLoading(false)
-    }
-  }
-
-  const parseWeather = (data: any, city: string) => {
-    const code = data.current?.weathercode
-    const condition = getCondition(code)
-    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-    setWeather({
-      city,
-      temp: Math.round(data.current?.temperature_2m ?? 0),
-      condition,
-      high: Math.round(data.daily?.temperature_2m_max?.[0] ?? 0),
-      low: Math.round(data.daily?.temperature_2m_min?.[0] ?? 0),
-      forecast: (data.daily?.temperature_2m_max || []).slice(1, 5).map((t: number, i: number) => ({
-        day: days[new Date(data.daily.time[i + 1]).getDay()],
-        temp: Math.round(t),
-        icon: getCondition(data.daily.weathercode?.[i + 1]),
-      })),
-    })
-    setLoading(false)
+    } catch { setLoading(false) }
   }
 
   const getCondition = (code: number): string => {
@@ -93,6 +65,24 @@ export function WeatherWidget() {
     if (code <= 77) return 'Neve'
     if (code <= 82) return 'Chuva forte'
     return 'Tempestade'
+  }
+
+  const parseWeather = (data: any, city: string, region: string) => {
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    setWeather({
+      city,
+      region,
+      temp: Math.round(data.current?.temperature_2m ?? 0),
+      condition: getCondition(data.current?.weathercode),
+      high: Math.round(data.daily?.temperature_2m_max?.[0] ?? 0),
+      low: Math.round(data.daily?.temperature_2m_min?.[0] ?? 0),
+      forecast: (data.daily?.time || []).slice(1, 6).map((t: string, i: number) => ({
+        day: days[new Date(t).getDay()],
+        temp: Math.round(data.daily.temperature_2m_max[i + 1] ?? 0),
+        condition: getCondition(data.daily.weathercode?.[i + 1]),
+      })),
+    })
+    setLoading(false)
   }
 
   if (loading) return (
@@ -107,24 +97,30 @@ export function WeatherWidget() {
 
   return (
     <div className="rounded-2xl border border-border bg-white p-4">
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <p className="text-xs text-ink-tertiary mb-0.5">{weather.city}</p>
-          <div className="flex items-end gap-2">
-            <span className="text-3xl font-semibold text-ink-primary">{weather.temp}°</span>
-            <WeatherIcon condition={weather.condition} size={20} />
-          </div>
-          <p className="text-xs text-ink-secondary mt-0.5">{weather.condition}</p>
-          <p className="text-xs text-ink-tertiary">H: {weather.high}° L: {weather.low}°</p>
+      {/* Top row — Perplexity style */}
+      <div className="flex items-start justify-between mb-1">
+        <div className="flex items-center gap-1.5">
+          <WeatherIcon condition={weather.condition} size={16} />
+          <span className="text-[15px] font-semibold text-ink-primary">{weather.temp}°</span>
+          <span className="text-[13px] text-ink-tertiary">F/C</span>
         </div>
+        <span className="text-[13px] text-ink-secondary">{weather.condition}</span>
       </div>
+
+      {/* City + high/low */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[12px] text-ink-secondary">{weather.city}{weather.region ? `, ${weather.region}` : ''}</span>
+        <span className="text-[12px] text-ink-tertiary">H: {weather.high}° L: {weather.low}°</span>
+      </div>
+
+      {/* Forecast days */}
       {weather.forecast.length > 0 && (
-        <div className="flex gap-2 pt-3 border-t border-border">
+        <div className="flex justify-between pt-3 border-t border-border">
           {weather.forecast.map((f, i) => (
-            <div key={i} className="flex-1 text-center">
-              <p className="text-[10px] text-ink-tertiary mb-1">{f.day}</p>
-              <WeatherIcon condition={f.icon} size={13} />
-              <p className="text-[11px] font-medium text-ink-secondary mt-1">{f.temp}°</p>
+            <div key={i} className="flex flex-col items-center gap-1">
+              <WeatherIcon condition={f.condition} size={14} className="text-ink-tertiary" />
+              <span className="text-[11px] text-ink-secondary font-medium">{f.temp}°</span>
+              <span className="text-[10px] text-ink-tertiary">{f.day}</span>
             </div>
           ))}
         </div>
