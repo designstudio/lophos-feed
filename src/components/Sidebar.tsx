@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import dynamicImport from 'next/dynamic'
-import { Newspaper, Settings, RefreshCw, BookOpen } from 'lucide-react'
+import { Feed, NotebookMinimalistic, Settings, Refresh } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
 const UserButtonClient = dynamicImport(
@@ -23,7 +23,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-2 mb-6">
         <div className="w-7 h-7 rounded-lg bg-ink-primary flex items-center justify-center flex-shrink-0">
-          <Newspaper size={14} className="text-white" />
+          <Feed size={14} color="white" />
         </div>
         <span className="font-display text-lg text-ink-primary">Lophos</span>
       </div>
@@ -39,7 +39,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
               : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
           )}
         >
-          <BookOpen size={15} />
+          <NotebookMinimalistic size={15} />
           Descobrir
         </Link>
 
@@ -49,7 +49,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
             disabled={refreshing}
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left"
           >
-            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+            <Refresh size={15} className={refreshing ? 'animate-spin' : ''} />
             Atualizar feed
           </button>
         )}

@@ -1,5 +1,5 @@
 'use client'
-import { Trophy, Tv } from 'lucide-react'
+import { Cup, Tv } from '@solar-icons/react-perf/Linear'
 
 interface Match {
   team1: string
@@ -82,7 +82,7 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
       {matches.length > 0 && (
         <div className="rounded-2xl border border-border bg-white p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Trophy size={13} className="text-amber-500" />
+            <Cup size={13} className="text-amber-500" />
             <h3 className="text-[11px] font-semibold text-ink-primary uppercase tracking-wider">
               Próximas partidas
             </h3>

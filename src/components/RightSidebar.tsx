@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
-import { Plus, X, Check } from 'lucide-react'
+import { Plus, Close, Check } from '@solar-icons/react-perf/Linear'
 
 const AVAILABLE_WIDGETS = [
   { id: 'weather', label: 'Clima', always: true },
@@ -93,7 +93,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
                   onClick={() => setShowPicker(false)}
                   className="flex items-center gap-1.5 text-[12px] text-ink-tertiary hover:text-ink-secondary px-2 py-1 transition-colors"
                 >
-                  <X size={12} /> Fechar
+                  <Close size={12} /> Fechar
                 </button>
               </div>
             </div>

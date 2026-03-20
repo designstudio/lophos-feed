@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
-import { Check } from 'lucide-react'
+import { Check } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
 const SUGGESTED_TOPICS = [

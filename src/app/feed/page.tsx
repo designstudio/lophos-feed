@@ -6,7 +6,7 @@ import { RightSidebar } from '@/components/RightSidebar'
 import { NewsCard } from '@/components/NewsCard'
 import { SkeletonCard } from '@/components/SkeletonCard'
 import { NewsItem } from '@/lib/types'
-import { Rss } from 'lucide-react'
+import { Rss } from '@solar-icons/react-perf/Linear'
 
 export const dynamic = 'force-dynamic'
 

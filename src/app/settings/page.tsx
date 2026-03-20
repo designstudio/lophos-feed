@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
-import { X, Plus, Check } from 'lucide-react'
+import { Close, Plus, Check } from '@solar-icons/react-perf/Linear'
 
 const SUGGESTED_TOPICS = [
   'Valorant', 'League of Legends', 'TFT', 'Inteligência Artificial',
@@ -102,7 +102,7 @@ export default function SettingsPage() {
                         onClick={() => remove(t)}
                         className="opacity-70 hover:opacity-100 transition-opacity"
                       >
-                        <X size={12} />
+                        <Close size={12} />
                       </button>
                     </div>
                   ))}

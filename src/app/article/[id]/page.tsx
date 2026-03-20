@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { NewsItem } from '@/lib/types'
-import { ArrowLeft, ExternalLink, Calendar } from 'lucide-react'
+import { AltArrowLeft, SquareTopDown, Calendar } from '@solar-icons/react-perf/Linear'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -35,7 +35,7 @@ export default function ArticlePage() {
             onClick={() => router.back()}
             className="flex items-center gap-1.5 text-sm text-ink-tertiary hover:text-ink-primary transition-colors mb-6"
           >
-            <ArrowLeft size={15} />
+            <AltArrowLeft size={15} />
             Voltar
           </button>
 
@@ -131,7 +131,7 @@ export default function ArticlePage() {
                           </p>
                           <p className="text-xs text-ink-muted truncate">{src.url}</p>
                         </div>
-                        <ExternalLink size={13} className="text-ink-muted flex-shrink-0" />
+                        <SquareTopDown size={13} className="text-ink-muted flex-shrink-0" />
                       </a>
                     ))}
                   </div>

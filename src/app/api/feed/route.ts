@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
           .select('*')
           .eq('topic', topic)
           .order('cached_at', { ascending: false })
-          .limit(2)
+          .limit(10)
 
         if (cached && cached.length > 0 && !isCacheStale(cached[0].cached_at)) {
           allItems.push(...cached.map((row: any) => ({
@@ -45,23 +45,30 @@ export async function POST(req: NextRequest) {
 
       try {
         const fresh = await fetchNewsForTopic(topic)
-        if (fresh.length === 0) return
 
-        await db.from('news_cache').delete().eq('topic', topic)
+        // Insert new articles without deleting old ones
+        if (fresh.length > 0) {
+          const rows = fresh.map((item) => ({
+            topic: item.topic,
+            title: item.title,
+            summary: item.summary,
+            sources: item.sources,
+            image_url: item.imageUrl || null,
+            published_at: item.publishedAt,
+            cached_at: item.cachedAt,
+          }))
+          await db.from('news_cache').insert(rows)
+        }
 
-        const rows = fresh.map((item) => ({
-          topic: item.topic,
-          title: item.title,
-          summary: item.summary,
-          sources: item.sources,
-          image_url: item.imageUrl || null,
-          published_at: item.publishedAt,
-          cached_at: item.cachedAt,
-        }))
+        // Fetch all articles for this topic (new + historical), most recent first
+        const { data: all } = await db
+          .from('news_cache')
+          .select('*')
+          .eq('topic', topic)
+          .order('cached_at', { ascending: false })
+          .limit(10)
 
-        const { data: inserted } = await db.from('news_cache').insert(rows).select()
-
-        allItems.push(...(inserted || []).map((row: any) => ({
+        allItems.push(...(all || []).map((row: any) => ({
           id: row.id,
           topic: row.topic,
           title: row.title,

@@ -13,7 +13,7 @@
     "react-dom": "^18.3.1",
     "@clerk/nextjs": "^6",
     "@supabase/supabase-js": "^2",
-    "lucide-react": "^0.469.0",
+    "@solar-icons/react-perf": "^1",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.5.5",
     "date-fns": "^4.1.0",

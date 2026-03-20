@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { NewsItem } from '@/lib/types'
-import { ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Like, Dislike } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -43,7 +43,6 @@ export function NewsCard({ item, featured = false, className, style }: Props) {
       className={cn('cursor-pointer group', featured ? 'flex gap-5' : 'flex flex-col', className)}
       style={style}
     >
-      {/* Image — featured left side */}
       {featured && item.imageUrl && (
         <div className="flex-shrink-0 w-44 h-28 rounded-xl overflow-hidden bg-bg-secondary">
           <img
@@ -56,12 +55,10 @@ export function NewsCard({ item, featured = false, className, style }: Props) {
       )}
 
       <div className="flex-1 min-w-0">
-        {/* Topic tag */}
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">
           {item.topic}
         </span>
 
-        {/* Title */}
         <h2 className={cn(
           'font-semibold text-ink-primary group-hover:text-accent transition-colors leading-snug mt-1',
           featured ? 'text-[17px]' : 'text-[14px]'
@@ -69,14 +66,12 @@ export function NewsCard({ item, featured = false, className, style }: Props) {
           {item.title}
         </h2>
 
-        {/* Summary — featured only */}
         {featured && (
           <p className="text-ink-secondary text-[13px] leading-relaxed mt-1.5 line-clamp-2">
             {item.summary}
           </p>
         )}
 
-        {/* Sources — Perplexity style */}
         {item.sources && item.sources.length > 0 && (
           <div className="flex items-center gap-1 mt-2 flex-wrap">
             {item.sources.slice(0, 4).map((src, i) => (
@@ -107,7 +102,6 @@ export function NewsCard({ item, featured = false, className, style }: Props) {
           </div>
         )}
 
-        {/* Reactions */}
         <div className="flex items-center gap-1 mt-2.5">
           <button
             onClick={() => react('like')}
@@ -118,7 +112,7 @@ export function NewsCard({ item, featured = false, className, style }: Props) {
                 : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
             )}
           >
-            <ThumbsUp size={11} />
+            <Like size={11} />
           </button>
           <button
             onClick={() => react('dislike')}
@@ -129,12 +123,11 @@ export function NewsCard({ item, featured = false, className, style }: Props) {
                 : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
             )}
           >
-            <ThumbsDown size={11} />
+            <Dislike size={11} />
           </button>
         </div>
       </div>
 
-      {/* Thumbnail — non-featured cards */}
       {!featured && item.imageUrl && (
         <div className="mt-2 w-full h-32 rounded-lg overflow-hidden bg-bg-secondary">
           <img
