@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { fetchImageForSources } from '@/lib/news'
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth()
@@ -85,9 +86,14 @@ export async function PATCH(req: NextRequest) {
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   // Re-fetch image using the same cascade as news.ts
-  const { fetchImageForSources } = await import('@/lib/news')
-  const imageUrl = await fetchImageForSources(row.sources || [])
+  // Supabase JSONB may return sources as string in some configs — parse defensively
+  const sources = Array.isArray(row.sources)
+    ? row.sources
+    : (typeof row.sources === 'string' ? JSON.parse(row.sources) : [])
+  const imageUrl = await fetchImageForSources(sources)
 
+  console.log(`[PATCH article] id=${id} sources=${JSON.stringify(row.sources?.map((s:any)=>s.url))}`)
+  console.log(`[PATCH article] imageUrl=${imageUrl}`)
   if (!imageUrl) return NextResponse.json({ error: 'No image found' }, { status: 404 })
 
   // Update both tables (ignore errors if row doesn't exist in one of them)
