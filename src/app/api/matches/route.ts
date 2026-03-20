@@ -4,10 +4,11 @@ export const maxDuration = 30
 
 const PANDASCORE_KEY = process.env.PANDASCORE_API_KEY!
 
+// Confirmed slugs from PandaScore docs
 const GAME_SLUGS: Record<string, string> = {
   valorant: 'valorant',
-  lol: 'league-of-legends',
-  tft: 'league-of-legends', // TFT usa mesmo endpoint do LOL no PandaScore
+  lol: 'lol',
+  // TFT not supported by PandaScore
 }
 
 async function fetchUpcomingMatches(game: string) {
@@ -20,7 +21,7 @@ async function fetchUpcomingMatches(game: string) {
 
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${PANDASCORE_KEY}` },
-    next: { revalidate: 300 }, // cache 5 min
+    next: { revalidate: 300 },
   })
 
   if (!res.ok) {
@@ -42,11 +43,11 @@ async function fetchUpcomingMatches(game: string) {
 }
 
 export async function GET(req: NextRequest) {
-  const games = req.nextUrl.searchParams.get('games')?.split(',') || ['valorant', 'lol']
+  const games = (req.nextUrl.searchParams.get('games') || 'valorant,lol')
+    .split(',')
+    .filter((g) => GAME_SLUGS[g]) // skip unsupported games like tft
 
-  const results = await Promise.allSettled(
-    games.map((g) => fetchUpcomingMatches(g))
-  )
+  const results = await Promise.allSettled(games.map(fetchUpcomingMatches))
 
   const matches: Record<string, any[]> = {}
   games.forEach((g, i) => {

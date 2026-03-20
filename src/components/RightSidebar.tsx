@@ -9,7 +9,6 @@ const AVAILABLE_WIDGETS = [
   { id: 'weather', label: 'Clima', always: true },
   { id: 'valorant', label: 'Partidas — Valorant', topicKey: 'valorant' },
   { id: 'lol', label: 'Partidas — League of Legends', topicKey: 'league of legends' },
-  { id: 'tft', label: 'Partidas — TFT', topicKey: 'tft' },
   { id: 'series', label: 'Próximos episódios', topicKey: 'series' },
 ]
 
@@ -26,7 +25,7 @@ function topicMatchesWidget(topics: string[], widgetId: string): boolean {
   const lower = topics.map((t) => t.toLowerCase())
   if (widgetId === 'valorant') return lower.some((t) => t.includes('valorant'))
   if (widgetId === 'lol') return lower.some((t) => t.includes('league') || t === 'lol')
-  if (widgetId === 'tft') return lower.some((t) => t.includes('tft') || t.includes('teamfight'))
+  if (widgetId === 'tft') return false // not supported by PandaScore
   if (widgetId === 'series') {
     // Show if any topic is NOT a known sport/esport/news topic
     // This way "American Horror Story", "Severance", any show name will match
