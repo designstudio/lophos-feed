@@ -167,10 +167,15 @@ export default function FeedPage() {
             if (chunk.topics) { setTopics(chunk.topics); continue }
             if (chunk.items?.length) {
               setItems(prev => {
-                const ids = new Set(prev.map(x => x.id))
-                const fresh = (chunk.items as NewsItem[]).filter(x => !ids.has(x.id))
-                if (fresh.length === 0) return prev
-                const merged = [...prev, ...fresh]
+                const byId = new Map(prev.map(x => [x.id, x]))
+                for (const x of chunk.items as NewsItem[]) {
+                  const existing = byId.get(x.id)
+                  // Upsert: replace if new item has image and existing doesn't (or doesn't exist)
+                  if (!existing || (!existing.imageUrl && x.imageUrl)) {
+                    byId.set(x.id, x)
+                  }
+                }
+                const merged = Array.from(byId.values())
                 // Always keep most recent first
                 merged.sort((a, b) =>
                   new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -

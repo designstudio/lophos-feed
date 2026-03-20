@@ -185,6 +185,10 @@ html, body {
   background-size: 400px 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
+.dark .skeleton {
+  background: linear-gradient(90deg, #1a1a1a 0%, #252525 50%, #1a1a1a 100%);
+  background-size: 400px 100%;
+}
 
 .animate-fade-in  { animation: fadeIn  0.3s ease forwards; }
 .animate-slide-up { animation: slideUp 0.4s ease forwards; }

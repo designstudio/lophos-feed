@@ -1,6 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { NewsItem, NewsSource } from '@/lib/types'
@@ -96,12 +97,32 @@ export default function ArticlePage() {
     <div className="page-shell">
       <Sidebar />
 
+      <div className="flex-1 overflow-y-auto min-w-0">
+        {/* ── Sticky header — matches feed header style ── */}
+        <div
+          className="sticky top-0 z-20 border-b border-border px-8"
+          style={{
+            '--tw-backdrop-blur': 'blur(8px)',
+            WebkitBackdropFilter: 'var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)',
+            backdropFilter: 'var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
+          } as React.CSSProperties}
+        >
+          <div className="flex items-center h-14 gap-4">
+            <Link href="/feed"
+              className="text-[15px] font-semibold text-ink-primary hover:text-ink-secondary transition-colors"
+              style={{ width: '12rem', flexShrink: 0 }}>
+              Descobrir
+            </Link>
+            <button onClick={() => router.back()}
+              className="flex items-center gap-1.5 text-sm text-ink-tertiary hover:text-ink-primary transition-colors">
+              <AltArrowLeft size={15} /> Voltar
+            </button>
+          </div>
+        </div>
+
       <main className="page-scroll">
         <div className="article-layout mx-auto py-6">
-          <button onClick={() => router.back()}
-            className="flex items-center gap-1.5 text-sm text-ink-tertiary hover:text-ink-primary transition-colors mb-6">
-            <AltArrowLeft size={15} /> Voltar
-          </button>
 
           {loading && (
             <div className="space-y-4 animate-pulse">
@@ -206,6 +227,7 @@ export default function ArticlePage() {
           )}
         </div>
       </main>
+      </div>
 
       {showAllSources && item?.sources && (
         <SourcesSidebar sources={item.sources} onClose={() => setShowAllSources(false)} />
