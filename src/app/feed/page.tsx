@@ -1,53 +1,48 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
 import { RightSidebar } from '@/components/RightSidebar'
 import { NewsCard } from '@/components/NewsCard'
-import { SkeletonCard } from '@/components/SkeletonCard'
+import { SkeletonBlock } from '@/components/SkeletonCard'
 import { NewsItem } from '@/lib/types'
 import { Feed } from '@solar-icons/react-perf/Linear'
 
 export const dynamic = 'force-dynamic'
 
 const REFRESH_INTERVAL = 30 * 60 * 1000
+const ITEMS_PER_BLOCK = 4 // 1 full + 3 cards
 
-// Renders items in the Perplexity pattern:
-// [full-left] [card card card] [full-right] → repeat
-function FeedLayout({ items }: { items: NewsItem[] }) {
-  const blocks: React.ReactNode[] = []
-  let i = 0
-  let cycle = 0 // 0 = full-left, 1 = full-right
+// One complete layout block: full-left + 3 cards + full-right
+function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
+  const full = blockIndex % 2 === 0 ? 'full-left' : 'full-right'
+  const [featured, ...cards] = items
 
-  while (i < items.length) {
-    // 1 full row (alternates left/right)
-    if (i < items.length) {
-      const variant = cycle % 2 === 0 ? 'full-left' : 'full-right'
-      blocks.push(
-        <div key={`full-${i}`} className="py-6 border-b border-border">
-          <NewsCard item={items[i]} variant={variant} />
+  return (
+    <div className="animate-slide-up">
+      {featured && (
+        <div className="py-6 border-b border-border">
+          <NewsCard item={featured} variant={full} />
         </div>
-      )
-      i++
-    }
-
-    // 3 card grid
-    const cardSlice = items.slice(i, i + 3)
-    if (cardSlice.length > 0) {
-      blocks.push(
-        <div key={`cards-${i}`} className="grid grid-cols-3 gap-5 py-6 border-b border-border">
-          {cardSlice.map((item) => (
+      )}
+      {cards.length > 0 && (
+        <div className="grid grid-cols-3 gap-5 py-6 border-b border-border">
+          {cards.map((item) => (
             <NewsCard key={item.id} item={item} variant="card" />
           ))}
         </div>
-      )
-      i += cardSlice.length
-    }
+      )}
+    </div>
+  )
+}
 
-    cycle++
+// Splits flat items array into blocks of ITEMS_PER_BLOCK
+function splitIntoBlocks(items: NewsItem[]): NewsItem[][] {
+  const blocks: NewsItem[][] = []
+  for (let i = 0; i < items.length; i += ITEMS_PER_BLOCK) {
+    blocks.push(items.slice(i, i + ITEMS_PER_BLOCK))
   }
-
-  return <div>{blocks}</div>
+  return blocks
 }
 
 export default function FeedPage() {
@@ -57,6 +52,10 @@ export default function FeedPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+
+  // Lazy loading state — how many blocks are visible
+  const [visibleBlocks, setVisibleBlocks] = useState(2)
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/topics')
@@ -72,6 +71,7 @@ export default function FeedPage() {
   const fetchFeed = useCallback(async (force = false) => {
     if (topics.length === 0) return
     force ? setRefreshing(true) : setLoading(true)
+    setVisibleBlocks(2) // reset lazy loading on refresh
     try {
       const res = await fetch('/api/feed', {
         method: 'POST',
@@ -92,8 +92,29 @@ export default function FeedPage() {
     return () => clearInterval(interval)
   }, [topics, fetchFeed])
 
+  // IntersectionObserver — load more blocks when sentinel enters viewport
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleBlocks((prev) => prev + 2)
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [items])
+
   const filteredItems = activeFilter ? items.filter((i) => i.topic === activeFilter) : items
   const topicsInFeed = [...new Set(items.map((i) => i.topic))]
+  const allBlocks = splitIntoBlocks(filteredItems)
+  const shownBlocks = allBlocks.slice(0, visibleBlocks)
+  const hasMore = visibleBlocks < allBlocks.length
 
   return (
     <div className="page-shell">
@@ -135,19 +156,15 @@ export default function FeedPage() {
               )}
             </div>
 
+            {/* Initial loading — 2 full skeleton blocks */}
             {loading && (
-              <div className="space-y-0">
-                <div className="py-6 border-b border-border"><SkeletonCard featured /></div>
-                <div className="grid grid-cols-3 gap-5 py-6 border-b border-border">
-                  <SkeletonCard /><SkeletonCard /><SkeletonCard />
-                </div>
-                <div className="py-6 border-b border-border"><SkeletonCard featured /></div>
-                <div className="grid grid-cols-3 gap-5 py-6 border-b border-border">
-                  <SkeletonCard /><SkeletonCard /><SkeletonCard />
-                </div>
-              </div>
+              <>
+                <SkeletonBlock />
+                <SkeletonBlock />
+              </>
             )}
 
+            {/* Empty state */}
             {!loading && items.length === 0 && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <Feed size={32} className="text-ink-muted mb-4" />
@@ -158,8 +175,16 @@ export default function FeedPage() {
               </div>
             )}
 
+            {/* Feed blocks — lazy loaded */}
+            {!loading && shownBlocks.map((block, i) => (
+              <FeedBlock key={i} items={block} blockIndex={i} />
+            ))}
+
+            {/* Sentinel + loading more skeleton */}
             {!loading && filteredItems.length > 0 && (
-              <FeedLayout items={filteredItems} />
+              <div ref={sentinelRef}>
+                {hasMore && <SkeletonBlock />}
+              </div>
             )}
           </div>
 

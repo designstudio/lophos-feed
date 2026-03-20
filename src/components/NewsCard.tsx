@@ -13,27 +13,38 @@ interface Props {
 
 function Sources({ sources }: { sources: NewsItem['sources'] }) {
   if (!sources || sources.length === 0) return null
+  const shown = sources.slice(0, 4)
   return (
-    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-      {sources.slice(0, 4).map((src, i) => (
-        <a key={i} href={src.url} target="_blank" rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
-        >
-          {src.favicon ? (
-            <img src={src.favicon} alt={src.name} width={14} height={14}
-              className="rounded-full flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-            />
-          ) : (
-            <span className="w-3.5 h-3.5 rounded-full bg-bg-tertiary flex-shrink-0" />
-          )}
-          <span className="text-[11px] text-ink-tertiary font-medium">{src.name}</span>
-        </a>
-      ))}
-      {sources.length > 4 && (
-        <span className="text-[11px] text-ink-muted">+{sources.length - 4}</span>
-      )}
+    <div className="flex items-center gap-1.5 mt-2">
+      {/* Overlapping favicons */}
+      <div className="flex items-center">
+        {shown.map((src, i) => (
+          <div
+            key={i}
+            className="w-4 h-4 rounded-full border-2 border-bg-primary overflow-hidden bg-bg-secondary flex-shrink-0"
+            style={{ marginLeft: i === 0 ? 0 : '-6px', zIndex: shown.length - i }}
+          >
+            {src.favicon ? (
+              <img
+                src={src.favicon}
+                alt=""
+                width={16}
+                height={16}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none'
+                }}
+              />
+            ) : (
+              <span className="w-full h-full block bg-bg-tertiary" />
+            )}
+          </div>
+        ))}
+      </div>
+      {/* Source count */}
+      <span className="text-[11px] text-ink-tertiary font-medium">
+        {sources.length} {sources.length === 1 ? 'fonte' : 'fontes'}
+      </span>
     </div>
   )
 }
