@@ -36,11 +36,16 @@ export default function ArticlePage() {
   const [item, setItem] = useState<NewsItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAllSources, setShowAllSources] = useState(false)
+  const [heroImage, setHeroImage] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     fetch(`/api/article?id=${id}`)
       .then((r) => r.json())
-      .then((data) => { setItem(data.item || null); setLoading(false) })
+      .then((data) => {
+        setItem(data.item || null)
+        setHeroImage(data.item?.imageUrl)
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [id])
 
@@ -68,6 +73,7 @@ export default function ArticlePage() {
       if (res.ok) {
         const { imageUrl: newUrl } = await res.json()
         setItem(prev => prev ? { ...prev, imageUrl: newUrl } : prev)
+        setHeroImage(newUrl)
         setRefetchMsg('Imagem atualizada!')
       } else {
         setRefetchMsg('Nenhuma imagem encontrada.')
@@ -202,10 +208,10 @@ export default function ArticlePage() {
               </div>
 
               {/* Hero image with source attribution overlay */}
-              {item.imageUrl && (
+              {heroImage && (
                 <div className="rounded-xl overflow-hidden mb-6 bg-bg-secondary relative">
-                  <img src={item.imageUrl} alt={item.title} className="article-image"
-                    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
+                  <img src={heroImage} alt={item.title} className="article-image"
+                    onError={() => setHeroImage(undefined)} />
                   {item.sources?.[0] && (
                     <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
                       style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
