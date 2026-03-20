@@ -112,20 +112,20 @@ export function ArticleEditor({ item, onClose, onSaved }: Props) {
         placeholder: 'Comece a editar…',
         tools: {
           header: {
-            class: Header,
+            class: Header as any,
             config: { levels: [1, 2, 3], defaultLevel: 2 },
           },
           list: {
-            class: List,
+            class: List as any,
             inlineToolbar: true,
           },
           quote: {
-            class: Quote,
+            class: Quote as any,
             inlineToolbar: true,
           },
-          delimiter: Delimiter,
+          delimiter: Delimiter as any,
           image: {
-            class: ImageTool,
+            class: ImageTool as any,
             config: {
               // Upload via URL — use our proxy endpoint or direct
               uploader: {
