@@ -1,5 +1,5 @@
 {
-  "name": "my-feed",
+  "name": "lophos-feed",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,20 +8,24 @@
     "start": "next start"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "next": "15.2.4",
+    "react": "^19",
+    "react-dom": "^19",
+    "@clerk/nextjs": "^6",
+    "@supabase/supabase-js": "^2",
+    "lucide-react": "^0.469.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.383.0",
-    "next": "^16.2.0",
-    "react": "^18",
-    "react-dom": "^18"
+    "tailwind-merge": "^2.5.5",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0"
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5",
     "autoprefixer": "^10.0.1",
     "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "tailwindcss": "^3.4.1"
   }
 }

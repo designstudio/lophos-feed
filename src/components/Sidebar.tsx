@@ -1,112 +1,75 @@
 'use client'
-import { useState, KeyboardEvent } from 'react'
-import { Plus, RefreshCw, Newspaper } from 'lucide-react'
-import { TopicChip } from './TopicChip'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { UserButton } from '@clerk/nextjs'
+import { Newspaper, Settings, RefreshCw, BookOpen } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface Props {
-  topics: string[]
-  onTopicsChange: (topics: string[]) => void
-  onRefresh: () => void
-  loading: boolean
+  onRefresh?: () => void
+  refreshing?: boolean
 }
 
-const SUGGESTIONS = [
-  'Inteligência Artificial', 'Tecnologia', 'Política Brasil',
-  'Futebol', 'NBA', 'Formula 1', 'Cinema', 'Música',
-  'Economia', 'Startups', 'Clima', 'Ciência',
-]
-
-export function Sidebar({ topics, onTopicsChange, onRefresh, loading }: Props) {
-  const [input, setInput] = useState('')
-
-  const addTopic = (topic: string) => {
-    const t = topic.trim()
-    if (!t || topics.includes(t)) return
-    onTopicsChange([...topics, t])
-    setInput('')
-  }
-
-  const removeTopic = (topic: string) => {
-    onTopicsChange(topics.filter((t) => t !== topic))
-  }
-
-  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') addTopic(input)
-  }
-
-  const suggestions = SUGGESTIONS.filter((s) => !topics.includes(s))
+export function Sidebar({ onRefresh, refreshing }: Props) {
+  const path = usePathname()
 
   return (
-    <aside className="w-72 flex-shrink-0 flex flex-col gap-6 sticky top-6 self-start">
+    <aside className="w-56 flex-shrink-0 flex flex-col min-h-screen py-5 px-3 border-r border-border bg-bg-primary sticky top-0">
       {/* Logo */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
-          <Newspaper size={16} className="text-white" />
+      <div className="flex items-center gap-2.5 px-2 mb-6">
+        <div className="w-7 h-7 rounded-lg bg-ink-primary flex items-center justify-center flex-shrink-0">
+          <Newspaper size={14} className="text-white" />
         </div>
-        <span className="font-display text-xl text-text-primary">MyFeed</span>
+        <span className="font-display text-lg text-ink-primary">Lophos</span>
       </div>
 
-      {/* Add topic */}
-      <div className="flex flex-col gap-2">
-        <label className="text-[11px] font-medium text-text-tertiary uppercase tracking-widest">
-          Seus tópicos
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKey}
-            placeholder="Adicionar tópico…"
-            className="flex-1 bg-surface-2 border border-border-subtle rounded-xl px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-accent/50 transition-colors"
-          />
+      {/* Nav */}
+      <nav className="flex flex-col gap-0.5 flex-1">
+        <Link
+          href="/feed"
+          className={cn(
+            'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+            path === '/feed'
+              ? 'bg-bg-secondary text-ink-primary font-medium'
+              : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+          )}
+        >
+          <BookOpen size={15} />
+          Descobrir
+        </Link>
+
+        {onRefresh && (
           <button
-            onClick={() => addTopic(input)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-accent hover:bg-accent-dim transition-colors"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left"
           >
-            <Plus size={16} className="text-white" />
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+            Atualizar feed
           </button>
-        </div>
-
-        {/* Active topics */}
-        {topics.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-1">
-            {topics.map((t) => (
-              <TopicChip key={t} topic={t} onRemove={() => removeTopic(t)} />
-            ))}
-          </div>
         )}
-      </div>
 
-      {/* Refresh button */}
-      <button
-        onClick={onRefresh}
-        disabled={loading || topics.length === 0}
-        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-surface-3 border border-border-subtle text-sm text-text-secondary hover:text-text-primary hover:border-border-DEFAULT transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-        {loading ? 'Buscando…' : 'Atualizar feed'}
-      </button>
-
-      {/* Suggestions */}
-      {suggestions.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <label className="text-[11px] font-medium text-text-tertiary uppercase tracking-widest">
-            Sugestões
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {suggestions.slice(0, 8).map((s) => (
-              <button
-                key={s}
-                onClick={() => addTopic(s)}
-                className="text-xs px-3 py-1 rounded-full border border-border-subtle text-text-tertiary hover:text-text-secondary hover:border-border-DEFAULT transition-all"
-              >
-                + {s}
-              </button>
-            ))}
-          </div>
+        <div className="mt-auto pt-4 border-t border-border">
+          <Link
+            href="/settings"
+            className={cn(
+              'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
+              path === '/settings'
+                ? 'bg-bg-secondary text-ink-primary font-medium'
+                : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+            )}
+          >
+            <Settings size={15} />
+            Configurações
+          </Link>
         </div>
-      )}
+      </nav>
+
+      {/* User */}
+      <div className="flex items-center gap-2.5 px-2 mt-4">
+        <UserButton afterSignOutUrl="/login" />
+        <span className="text-xs text-ink-tertiary truncate">Minha conta</span>
+      </div>
     </aside>
   )
 }

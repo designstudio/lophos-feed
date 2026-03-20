@@ -1,63 +1,86 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { auth } from '@clerk/nextjs/server'
+import { supabaseAdmin } from '@/lib/supabase'
+import { fetchNewsForTopic, isCacheStale } from '@/lib/news'
 import { NewsItem } from '@/lib/types'
 
-export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-
-// Busca notícias de um único tópico usando Gemini + Google Search grounding
-async function fetchTopicNews(topic: string): Promise<NewsItem[]> {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
-    tools: [{ googleSearch: {} } as any],
-  })
-
-  const prompt = `Busque as 2 notícias mais recentes e relevantes sobre "${topic}" na web agora.
-
-Para cada notícia encontrada, retorne um objeto JSON com:
-- topic: "${topic}"
-- title: título em português (traduza se necessário)
-- summary: resumo de 2-3 frases em português, claro e informativo
-- source: nome do veículo/site
-- url: URL completa do artigo
-
-Responda APENAS com um array JSON válido, sem markdown, sem texto extra. Exemplo:
-[{"topic":"...","title":"...","summary":"...","source":"...","url":"..."}]`
-
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
-  const clean = text.replace(/```json|```/g, '').trim()
-
-  // Extrai o array JSON mesmo se vier com texto ao redor
-  const match = clean.match(/\[[\s\S]*\]/)
-  if (!match) return []
-
-  const items: NewsItem[] = JSON.parse(match[0])
-  return items
-}
-
 export async function POST(req: NextRequest) {
-  try {
-    const { topics } = await req.json()
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (!topics || !Array.isArray(topics) || topics.length === 0) {
-      return NextResponse.json({ error: 'Nenhum tópico fornecido.' }, { status: 400 })
-    }
-
-    // Busca todos os tópicos em paralelo
-    const results = await Promise.allSettled(
-      topics.map((topic: string) => fetchTopicNews(topic))
-    )
-
-    const items: NewsItem[] = results.flatMap((r) =>
-      r.status === 'fulfilled' ? r.value : []
-    )
-
-    return NextResponse.json({ items })
-  } catch (err: any) {
-    console.error('Feed API error:', err)
-    return NextResponse.json({ error: err.message || 'Erro interno' }, { status: 500 })
+  const { topics, forceRefresh = false } = await req.json()
+  if (!Array.isArray(topics) || topics.length === 0) {
+    return NextResponse.json({ error: 'Topics required' }, { status: 400 })
   }
+
+  const allItems: NewsItem[] = []
+
+  await Promise.allSettled(
+    topics.map(async (topic: string) => {
+      // Check cache first
+      if (!forceRefresh) {
+        const { data: cached } = await supabaseAdmin
+          .from('news_cache')
+          .select('*')
+          .eq('topic', topic)
+          .order('cached_at', { ascending: false })
+          .limit(2)
+
+        if (cached && cached.length > 0 && !isCacheStale(cached[0].cached_at)) {
+          const items: NewsItem[] = cached.map((row: any) => ({
+            id: row.id,
+            topic: row.topic,
+            title: row.title,
+            summary: row.summary,
+            sources: row.sources,
+            imageUrl: row.image_url,
+            publishedAt: row.published_at,
+            cachedAt: row.cached_at,
+          }))
+          allItems.push(...items)
+          return
+        }
+      }
+
+      // Fetch fresh news
+      try {
+        const fresh = await fetchNewsForTopic(topic)
+        if (fresh.length === 0) return
+
+        // Save to cache (delete old, insert new)
+        await supabaseAdmin.from('news_cache').delete().eq('topic', topic)
+        const rows = fresh.map((item) => ({
+          topic: item.topic,
+          title: item.title,
+          summary: item.summary,
+          sources: item.sources,
+          image_url: item.imageUrl || null,
+          published_at: item.publishedAt,
+          cached_at: item.cachedAt,
+        }))
+        const { data: inserted } = await supabaseAdmin
+          .from('news_cache')
+          .insert(rows)
+          .select()
+
+        const withIds: NewsItem[] = (inserted || []).map((row: any) => ({
+          id: row.id,
+          topic: row.topic,
+          title: row.title,
+          summary: row.summary,
+          sources: row.sources,
+          imageUrl: row.image_url,
+          publishedAt: row.published_at,
+          cachedAt: row.cached_at,
+        }))
+        allItems.push(...withIds)
+      } catch (e) {
+        console.error(`Error fetching topic "${topic}":`, e)
+      }
+    })
+  )
+
+  return NextResponse.json({ items: allItems })
 }
