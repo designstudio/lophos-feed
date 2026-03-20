@@ -103,8 +103,16 @@ ${context}`
         }
       })
 
+    // URL-safe ID — no spaces or special chars that break routing
+    const safeId = `${topic}-${Date.now()}-${i}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80)
+
     return {
-      id: `${topic}-${Date.now()}-${i}`,
+      id: safeId,
       topic,
       title: item.title,
       summary: item.summary,
