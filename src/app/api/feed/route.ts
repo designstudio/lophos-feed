@@ -41,17 +41,22 @@ export async function POST(req: NextRequest) {
         if (fresh.length > 0) {
           // Replace old cache for this topic
           await db.from('news_cache').delete().eq('topic', topic)
-          await db.from('news_cache').insert(
-            fresh.map((item) => ({
-              topic: item.topic,
-              title: item.title,
-              summary: item.summary,
-              sources: item.sources,
-              image_url: item.imageUrl || null,
-              published_at: item.publishedAt,
-              cached_at: item.cachedAt,
-            }))
-          )
+
+          const rows = fresh.map((item) => ({
+            id: item.id,
+            topic: item.topic,
+            title: item.title,
+            summary: item.summary,
+            sources: item.sources,
+            image_url: item.imageUrl || null,
+            published_at: item.publishedAt,
+            cached_at: item.cachedAt,
+          }))
+
+          await db.from('news_cache').insert(rows)
+
+          // Also upsert into permanent articles table — survives cache clears
+          await db.from('articles').upsert(rows, { onConflict: 'id' })
           allItems.push(...fresh)
         }
       } catch (e) {
