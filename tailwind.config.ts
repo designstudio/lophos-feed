@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {
@@ -10,20 +11,20 @@ const config: Config = {
       },
       colors: {
         bg: {
-          primary: '#faf9f7',
-          secondary: '#f3f1ee',
-          tertiary: '#ebe9e4',
+          primary:   'var(--color-bg-primary)',
+          secondary: 'var(--color-bg-secondary)',
+          tertiary:  'var(--color-bg-tertiary)',
         },
         ink: {
-          primary: '#1a1916',
-          secondary: '#4a4844',
-          tertiary: '#8a8784',
-          muted: '#b8b5b0',
+          primary:   'var(--color-ink-primary)',
+          secondary: 'var(--color-ink-secondary)',
+          tertiary:  'var(--color-ink-tertiary)',
+          muted:     'var(--color-ink-muted)',
         },
-        accent: '#1b6ef3',
+        accent: 'var(--color-accent)',
         border: {
-          DEFAULT: 'rgba(26,25,22,0.08)',
-          strong: 'rgba(26,25,22,0.15)',
+          DEFAULT: 'var(--color-border)',
+          strong:  'var(--color-border-strong)',
         },
       },
       animation: {
