@@ -25,11 +25,11 @@ export default function ArticlePage() {
   }, [id])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-primary" style={{ height: '100dvh' }}>
+    <div className="page-shell">
       <Sidebar />
 
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-[768px] mx-auto py-6">
+      <main className="page-scroll">
+        <div className="article-layout mx-auto py-6">
           {/* Back button */}
           <button
             onClick={() => router.back()}
@@ -89,7 +89,7 @@ export default function ArticlePage() {
                     src={item.imageUrl}
                     alt={item.title}
                     className="w-full object-cover"
-                    style={{ height: '23rem' }}
+                    
                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
                   />
                 </div>

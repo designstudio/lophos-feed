@@ -16,28 +16,14 @@ function Sources({ sources }: { sources: NewsItem['sources'] }) {
   return (
     <div className="flex items-center gap-1.5 mt-2 flex-wrap">
       {sources.slice(0, 4).map((src, i) => (
-        <a
-          key={i}
-          href={src.url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <a key={i} href={src.url} target="_blank" rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
           className="flex items-center gap-1.5 hover:opacity-70 transition-opacity"
         >
           {src.favicon ? (
-            <img
-              src={src.favicon}
-              alt={src.name}
-              width={14}
-              height={14}
+            <img src={src.favicon} alt={src.name} width={14} height={14}
               className="rounded-full flex-shrink-0"
-              onError={(e) => {
-                const el = e.target as HTMLImageElement
-                el.style.display = 'none'
-                const span = document.createElement('span')
-                span.className = 'w-3.5 h-3.5 rounded-full bg-bg-tertiary flex-shrink-0'
-                el.parentNode?.insertBefore(span, el)
-              }}
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
             />
           ) : (
             <span className="w-3.5 h-3.5 rounded-full bg-bg-tertiary flex-shrink-0" />
@@ -55,22 +41,16 @@ function Sources({ sources }: { sources: NewsItem['sources'] }) {
 function Reactions({ reaction, onReact }: { reaction: 'like' | 'dislike' | null; onReact: (t: 'like' | 'dislike') => void }) {
   return (
     <div className="flex items-center gap-1 mt-2.5">
-      <button
-        onClick={() => onReact('like')}
-        className={cn(
-          'reaction-btn flex items-center px-2 py-1 rounded-full text-[11px] transition-all',
+      <button onClick={() => onReact('like')}
+        className={cn('reaction-btn flex items-center px-2 py-1 rounded-full transition-all',
           reaction === 'like' ? 'bg-green-50 text-green-600' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
-        )}
-      >
+        )}>
         <Like size={12} />
       </button>
-      <button
-        onClick={() => onReact('dislike')}
-        className={cn(
-          'reaction-btn flex items-center px-2 py-1 rounded-full text-[11px] transition-all',
+      <button onClick={() => onReact('dislike')}
+        className={cn('reaction-btn flex items-center px-2 py-1 rounded-full transition-all',
           reaction === 'dislike' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
-        )}
-      >
+        )}>
         <Dislike size={12} />
       </button>
     </div>
@@ -102,51 +82,38 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
     setReacting(false)
   }
 
-  // Card compacto — grid de 3
-  // ordem: imagem > categoria > título > fontes > botões
   if (variant === 'card') {
     return (
       <article onClick={handleClick} className={cn('cursor-pointer group flex flex-col', className)}>
         {item.imageUrl && (
           <div className="w-full h-36 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5">
-            <img
-              src={item.imageUrl}
-              alt={item.title}
+            <img src={item.imageUrl} alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
             />
           </div>
         )}
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.topic}</span>
-        <h2 style={{ fontSize: '1rem', lineHeight: '1.625' }} className="font-semibold text-ink-primary group-hover:text-accent transition-colors">
-          {item.title}
-        </h2>
+        <h2 className="text-card-title text-ink-primary group-hover:text-accent transition-colors">{item.title}</h2>
         <Sources sources={item.sources} />
         <Reactions reaction={reaction} onReact={react} />
       </article>
     )
   }
 
-  // Full-left: texto esquerda, imagem direita
   if (variant === 'full-left') {
     return (
       <article onClick={handleClick} className={cn('cursor-pointer group flex gap-6 items-start', className)}>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-          <h2 style={{ fontSize: '1.75rem', lineHeight: '1.20' }} className="font-semibold text-ink-primary group-hover:text-accent transition-colors mt-1">
-            {item.title}
-          </h2>
-          <p style={{ fontSize: '1rem', lineHeight: '1.625' }} className="text-ink-secondary mt-2 line-clamp-3">
-            {item.summary}
-          </p>
+          <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
+          <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
           <Sources sources={item.sources} />
           <Reactions reaction={reaction} onReact={react} />
         </div>
         {item.imageUrl && (
           <div className="flex-shrink-0 w-52 h-36 rounded-xl overflow-hidden bg-bg-secondary">
-            <img
-              src={item.imageUrl}
-              alt={item.title}
+            <img src={item.imageUrl} alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
             />
@@ -156,14 +123,11 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
     )
   }
 
-  // Full-right: imagem esquerda, texto direita
   return (
     <article onClick={handleClick} className={cn('cursor-pointer group flex gap-6 items-start', className)}>
       {item.imageUrl && (
         <div className="flex-shrink-0 w-52 h-36 rounded-xl overflow-hidden bg-bg-secondary">
-          <img
-            src={item.imageUrl}
-            alt={item.title}
+          <img src={item.imageUrl} alt={item.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
           />
@@ -171,12 +135,8 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
       )}
       <div className="flex-1 min-w-0">
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-        <h2 style={{ fontSize: '1.75rem', lineHeight: '1.20' }} className="font-semibold text-ink-primary group-hover:text-accent transition-colors mt-1">
-          {item.title}
-        </h2>
-        <p style={{ fontSize: '1rem', lineHeight: '1.625' }} className="text-ink-secondary mt-2 line-clamp-3">
-          {item.summary}
-        </p>
+        <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
+        <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
         <Sources sources={item.sources} />
         <Reactions reaction={reaction} onReact={react} />
       </div>

@@ -96,11 +96,11 @@ export default function FeedPage() {
   const topicsInFeed = [...new Set(items.map((i) => i.topic))]
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-primary" style={{ height: '100dvh' }}>
+    <div className="page-shell">
       <Sidebar onRefresh={() => fetchFeed(true)} refreshing={refreshing} />
 
-      <div className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-[1136px] mx-auto px-6 py-6 flex gap-10">
+      <div className="page-scroll">
+        <div className="feed-layout mx-auto px-6 py-6 flex gap-10">
 
           {/* Feed */}
           <div className="flex-1 min-w-0">
@@ -164,7 +164,7 @@ export default function FeedPage() {
           </div>
 
           {/* Right sidebar */}
-          <div className="w-[336px] flex-shrink-0 pt-12">
+          <div className="sidebar-right pt-12">
             <RightSidebar topics={topics} />
           </div>
 
