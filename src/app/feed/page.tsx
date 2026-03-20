@@ -33,7 +33,7 @@ function splitIntoBlocks(items: NewsItem[]): FeedBlock[] {
 
 function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
   if (items.length === 1) {
-    return <NewsCard item={items[0]} variant="full" />
+    return <NewsCard item={items[0]} variant="full-left" />
   }
   return (
     <div className="grid grid-cols-3 gap-4 mb-4">
