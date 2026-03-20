@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
-  NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
+  Feed, Refresh, AltArrowLeft, AltArrowRight,
   Settings, Logout, CloseCircle, UserRounded
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
@@ -298,8 +298,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                       <button key={t.id} onClick={() => handleTheme(t.id)}
                         className={cn(
                           'flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all',
-                          theme === t.id ? 'border-gray-900 text-gray-900 bg-gray-50' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
-                        )}>
+                          theme === t.id ? 'text-gray-900 bg-gray-50' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                        )}
+                        style={theme === t.id ? { borderColor: 'var(--color-ui-strong)' } : {}}>
                         {t.icon}{t.label}
                       </button>
                     ))}
@@ -318,7 +319,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
                     {topics.map(t => (
-                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-900 text-white text-[13px]">
+                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-[13px]" style={{ background: "var(--color-ui-strong)" }}">
                         {t}
                         <button onClick={() => { setTopics(prev => prev.filter(x => x !== t)); setTopicsSaved(false) }}
                           className="opacity-60 hover:opacity-100 leading-none">×</button>
@@ -356,7 +357,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </div>
                   <button onClick={saveTopics} disabled={savingTopics}
                     className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: '#111' }}>
+                    style={{ background: 'var(--color-ui-strong)' }}>
                     {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
                   </button>
                 </section>
@@ -398,9 +399,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                         aria-checked={activeWidgets.includes(id)}
                         className={cn(
                           'relative inline-flex flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none',
-                          activeWidgets.includes(id) ? 'bg-gray-900' : 'bg-gray-200'
+                          activeWidgets.includes(id) ? '' : 'bg-gray-200'
                         )}
-                        style={{ width: '42px', height: '24px' }}
+                        style={{ width: '42px', height: '24px', background: activeWidgets.includes(id) ? 'var(--color-ui-strong)' : undefined }}
                       >
                         <span className={cn(
                           'pointer-events-none inline-block rounded-full bg-white shadow-md transform transition-transform duration-200',
@@ -421,7 +422,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <div className="relative group cursor-pointer flex-shrink-0" onClick={() => clerk.openUserProfile()}>
                     {user?.imageUrl
                       ? <img src={user.imageUrl} alt="" width={52} height={52} className="rounded-full" />
-                      : <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-white font-semibold text-xl" style={{ background: '#111' }}>{user?.firstName?.[0] ?? '?'}</div>
+                      : <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-white font-semibold text-xl" style={{ background: 'var(--color-ui-strong)' }}>{user?.firstName?.[0] ?? '?'}</div>
                     }
                     <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
@@ -452,7 +453,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </div>
                   <button onClick={saveName} disabled={savingName}
                     className="px-5 py-2.5 rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: '#111' }}>
+                    style={{ background: 'var(--color-ui-strong)' }}>
                     {nameSaved ? '✓ Salvo!' : savingName ? 'Salvando…' : 'Salvar'}
                   </button>
                 </section>
@@ -474,7 +475,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     <p className="text-sm text-gray-500 mt-0.5">Remove permanentemente sua conta e todos os seus dados.</p>
                   </div>
                   <button onClick={() => clerk.openUserProfile()}
-                    className="flex-shrink-0 px-4 py-2 rounded-full border border-red-200 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                    className="flex-shrink-0 px-4 py-2 rounded-full border border-red-200 text-sm text-red-500 transition-colors"
+                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(239,68,68,0.10)")}
+                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
                     Excluir
                   </button>
                 </div>
@@ -698,7 +701,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
               collapsed ? 'justify-center' : '',
               path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
             )}>
-            <NotebookMinimalistic size={18} className="flex-shrink-0" />
+            <Feed size={18} className="flex-shrink-0" />
             {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meu Feed</span>}
           </Link>
 

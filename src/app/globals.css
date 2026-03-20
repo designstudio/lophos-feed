@@ -10,7 +10,8 @@
   --font-display: 'Outfit', system-ui, sans-serif;
 
   /* Colors */
-  --color-bg-primary:    #faf9f7;
+  --color-bg-primary:    #fcfcfc;
+  --color-ui-strong:     #111111;
   --color-bg-secondary:  #f3f1ee;
   --color-bg-tertiary:   #ebe9e4;
 
@@ -60,6 +61,7 @@ html, body {
 
 .dark {
   --color-bg-primary:    #0f0f0f;
+  --color-ui-strong:     #111111;
   --color-bg-secondary:  #1a1a1a;
   --color-bg-tertiary:   #252525;
   --color-ink-primary:   #f0efed;
@@ -77,6 +79,7 @@ html, body {
 
 /* ─── Dark mode: override hardcoded white/gray classes ───── */
 .dark .bg-white        { background-color: var(--color-bg-secondary) !important; }
+.dark .bg-gray-900     { background-color: #111111 !important; }
 .dark .bg-gray-50      { background-color: var(--color-bg-tertiary) !important; }
 .dark .bg-gray-100     { background-color: var(--color-bg-tertiary) !important; }
 .dark .text-gray-900   { color: var(--color-ink-primary) !important; }

@@ -24,6 +24,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="pt-BR">
+        <head>
+          {/* Blocking script — applies theme+accent before first paint, eliminates flash */}
+          <script dangerouslySetInnerHTML={{ __html: `
+            (function() {
+              try {
+                var t = localStorage.getItem('theme') || 'light';
+                var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (dark) document.documentElement.classList.add('dark');
+                var accent = localStorage.getItem('accent_color');
+                if (accent) document.documentElement.style.setProperty('--color-accent', accent);
+              } catch(e) {}
+            })();
+          ` }} />
+        </head>
         <body>{children}</body>
       </html>
     </ClerkProvider>
