@@ -48,6 +48,7 @@ export default function ArticlePage() {
   const extraCount = (item?.sources?.length || 0) - 3
   const scrollRef      = useRef<HTMLDivElement>(null)
   const titleRef       = useRef<HTMLHeadingElement>(null)
+  const menuRef        = useRef<HTMLDivElement>(null)
   const [showTitle, setShowTitle]     = useState(false)
   const [menuOpen, setMenuOpen]       = useState(false)
   const [refetching, setRefetching]   = useState(false)
@@ -81,7 +82,10 @@ export default function ArticlePage() {
   // Close ... menu on outside click
   useEffect(() => {
     if (!menuOpen) return
-    const h = (e: MouseEvent) => setMenuOpen(false)
+    const h = (e: MouseEvent) => {
+      if (menuRef.current && menuRef.current.contains(e.target as Node)) return
+      setMenuOpen(false)
+    }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [menuOpen])
@@ -127,7 +131,7 @@ export default function ArticlePage() {
                 </span>
               )}
               {/* Three-dots menu button */}
-              <div className="relative">
+              <div ref={menuRef} className="relative">
                 <button
                   onClick={() => setMenuOpen(v => !v)}
                   className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-bg-secondary transition-colors text-ink-muted hover:text-ink-secondary"
