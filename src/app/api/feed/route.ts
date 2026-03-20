@@ -37,26 +37,28 @@ export async function POST(req: NextRequest) {
         .in('topic', topics)
         .order('cached_at', { ascending: false })
 
+      console.log(`[feed] cache query returned ${allCached?.length ?? 0} rows for topics: ${topics.join(', ')}`)
+
       if (allCached && allCached.length > 0) {
-        // Group by topic
         const byTopic = new Map<string, any[]>()
         for (const row of allCached) {
           if (!byTopic.has(row.topic)) byTopic.set(row.topic, [])
           byTopic.get(row.topic)!.push(row)
         }
 
-        // Send fresh cached topics immediately, collect stale ones
         staleTopics.length = 0
         for (const topic of topics) {
           const rows = byTopic.get(topic)
           if (rows && rows.length > 0 && !isCacheStale(rows[0].cached_at)) {
-            // Fresh — send immediately
+            console.log(`[feed] cache HIT for "${topic}" (${rows.length} rows, age ${Math.round((Date.now() - new Date(rows[0].cached_at).getTime()) / 60000)}min)`)
             await send(rows.slice(0, 4).map(rowToItem))
           } else {
-            // Stale or missing — needs refresh
+            console.log(`[feed] cache MISS for "${topic}" (${rows?.length ?? 0} rows, stale=${rows ? isCacheStale(rows[0]?.cached_at) : 'no rows'})`)
             staleTopics.push(topic)
           }
         }
+      } else {
+        console.log(`[feed] no cache rows found, fetching all ${topics.length} topics`)
       }
     }
 
@@ -70,7 +72,8 @@ export async function POST(req: NextRequest) {
               await db.from('news_cache').delete().eq('topic', topic)
               const rows = fresh.map(itemToRow)
               await db.from('news_cache').insert(rows)
-              await db.from('articles').upsert(rows, { onConflict: 'id' })
+              const { error: upsertErr } = await db.from('articles').upsert(rows, { onConflict: 'id' })
+              if (upsertErr) console.error(`[feed] articles upsert error for "${topic}":`, upsertErr.message)
               await send(fresh)
             }
           } catch (e) {
