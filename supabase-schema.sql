@@ -49,7 +49,7 @@ create policy "service role all" on user_reactions for all using (true);
 
 -- Permanent articles table — never cleared, preserves articles the user has opened
 create table if not exists articles (
-  id           text primary key,
+  id           uuid primary key,
   topic        text not null,
   title        text not null,
   summary      text,
