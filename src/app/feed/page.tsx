@@ -224,13 +224,7 @@ export default function FeedPage() {
 
         {/* ── Sticky header — full width, outside feed-layout ── */}
         <div
-          className="sticky top-0 z-20 border-b border-border px-8"
-          style={{
-            '--tw-backdrop-blur': 'blur(8px)',
-            WebkitBackdropFilter: 'var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)',
-            backdropFilter: 'var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)',
-            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
-          } as React.CSSProperties}>
+          className="sticky top-0 z-20 border-b border-border px-8 header-blur">
           <div className="flex items-center h-14">
             <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Descobrir</h1>
 

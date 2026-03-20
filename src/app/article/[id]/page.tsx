@@ -99,15 +99,7 @@ export default function ArticlePage() {
 
       <div className="flex-1 overflow-y-auto min-w-0">
         {/* ── Sticky header — matches feed header style ── */}
-        <div
-          className="sticky top-0 z-20 border-b border-border px-8"
-          style={{
-            '--tw-backdrop-blur': 'blur(8px)',
-            WebkitBackdropFilter: 'var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)',
-            backdropFilter: 'var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)',
-            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
-          } as React.CSSProperties}
-        >
+        <div className="sticky top-0 z-20 border-b border-border px-8 header-blur">
           <div className="flex items-center h-14 gap-4">
             <Link href="/feed"
               className="text-[15px] font-semibold text-ink-primary hover:text-ink-secondary transition-colors"

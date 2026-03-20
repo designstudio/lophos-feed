@@ -180,6 +180,13 @@ html, body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+.header-blur {
+  --tw-backdrop-blur: blur(8px);
+  -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  background-color: color-mix(in srgb, var(--color-bg-primary) 20%, transparent);
+}
+
 .skeleton {
   background: linear-gradient(90deg, #ebe9e4 0%, #f3f1ee 50%, #ebe9e4 100%);
   background-size: 400px 100%;
