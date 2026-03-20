@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { NewsItem, NewsSource } from '@/lib/types'
-import { SquareTopDown, Calendar, CloseCircle } from '@solar-icons/react-perf/Linear'
+import { SquareTopDown, ClockCircle, CloseCircle } from '@solar-icons/react-perf/Linear'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -155,6 +155,7 @@ export default function ArticlePage() {
                     style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', animation: 'slideUp 0.12s ease' }}
                   >
                     <button
+                      onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
                       onClick={refetchImage}
                       disabled={refetching}
                       className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left disabled:opacity-50"
@@ -203,7 +204,7 @@ export default function ArticlePage() {
 
               {/* Recency line */}
               <div className="flex items-center gap-2 text-xs text-ink-muted mb-6">
-                <Calendar size={12} />
+                <ClockCircle size={12} />
                 <span>Publicado {formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true, locale: ptBR })}</span>
               </div>
 
