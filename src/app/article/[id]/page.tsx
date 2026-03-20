@@ -25,10 +25,10 @@ export default function ArticlePage() {
   }, [id])
 
   return (
-    <div className="flex min-h-screen bg-bg-primary">
+    <div className="flex h-screen overflow-hidden bg-bg-primary" style={{ height: '100dvh' }}>
       <Sidebar />
 
-      <main className="flex-1 min-w-0">
+      <main className="flex-1 min-w-0 overflow-y-auto">
         <div className="max-w-[768px] mx-auto py-6">
           {/* Back button */}
           <button

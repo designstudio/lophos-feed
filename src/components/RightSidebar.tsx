@@ -7,28 +7,66 @@ import { IconClose, IconPlus } from '@/components/icons'
 
 const AVAILABLE_WIDGETS = [
   { id: 'weather', label: 'Clima', always: true },
-  { id: 'valorant', label: 'Partidas — Valorant', topic: 'valorant' },
-  { id: 'lol', label: 'Partidas — League of Legends', topic: 'league of legends' },
-  { id: 'tft', label: 'Partidas — TFT', topic: 'tft' },
-  { id: 'series', label: 'Próximos episódios', topic: 'series' },
+  { id: 'valorant', label: 'Partidas — Valorant', topicKey: 'valorant' },
+  { id: 'lol', label: 'Partidas — League of Legends', topicKey: 'league of legends' },
+  { id: 'tft', label: 'Partidas — TFT', topicKey: 'tft' },
+  { id: 'series', label: 'Próximos episódios', topicKey: 'series' },
 ]
 
 const STORAGE_KEY = 'lophos_widgets'
 
+const SPORT_ESPORT_KEYWORDS = [
+  'valorant', 'league of legends', 'lol', 'tft', 'teamfight',
+  'futebol', 'nba', 'formula 1', 'f1', 'nfl', 'cs2', 'csgo',
+  'dota', 'overwatch', 'fortnite', 'esport', 'esports',
+  'futebol americano', 'basquete', 'tênis', 'vôlei', 'natação',
+]
+
+function topicMatchesWidget(topics: string[], widgetId: string): boolean {
+  const lower = topics.map((t) => t.toLowerCase())
+  if (widgetId === 'valorant') return lower.some((t) => t.includes('valorant'))
+  if (widgetId === 'lol') return lower.some((t) => t.includes('league') || t === 'lol')
+  if (widgetId === 'tft') return lower.some((t) => t.includes('tft') || t.includes('teamfight'))
+  if (widgetId === 'series') {
+    // Show if any topic is NOT a known sport/esport/news topic
+    // This way "American Horror Story", "Severance", any show name will match
+    return lower.some((t) => !SPORT_ESPORT_KEYWORDS.some((kw) => t.includes(kw)))
+  }
+  return false
+}
+
 export function RightSidebar({ topics }: { topics: string[] }) {
   const [activeWidgets, setActiveWidgets] = useState<string[]>(['weather'])
   const [showPicker, setShowPicker] = useState(false)
+  const [initialized, setInitialized] = useState(false)
 
-  // Load from localStorage
+  // Load from localStorage, then auto-activate relevant widgets
   useEffect(() => {
+    if (topics.length === 0) return
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) setActiveWidgets(JSON.parse(saved))
+      const base: string[] = saved ? JSON.parse(saved) : ['weather']
+
+      // Auto-add widgets that match user topics but aren't saved yet
+      const autoAdded = AVAILABLE_WIDGETS
+        .filter((w) => !w.always && !base.includes(w.id) && topicMatchesWidget(topics, w.id))
+        .map((w) => w.id)
+
+      const merged = [...new Set([...base, ...autoAdded])]
+
+      if (autoAdded.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
+      }
+
+      setActiveWidgets(merged)
     } catch {}
-  }, [])
+
+    setInitialized(true)
+  }, [topics.join(',')])
 
   const toggleWidget = (id: string) => {
-    if (id === 'weather') return // always on
+    if (id === 'weather') return
     setActiveWidgets((prev) => {
       const next = prev.includes(id) ? prev.filter((w) => w !== id) : [...prev, id]
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
@@ -36,31 +74,22 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     })
   }
 
-  // Filter available widgets based on user topics
   const lowerTopics = topics.map((t) => t.toLowerCase())
   const relevantWidgets = AVAILABLE_WIDGETS.filter((w) => {
     if (w.always) return true
-    if (!w.topic) return true
-    return lowerTopics.some((t) => t.includes(w.topic!))
+    return topicMatchesWidget(topics, w.id)
   })
 
-  // Only show add button if there are relevant widgets not yet active
   const hasAddable = relevantWidgets.some((w) => !w.always && !activeWidgets.includes(w.id))
 
   return (
     <aside className="flex flex-col gap-4 py-6 h-full">
-      {/* Weather always shown */}
       <WeatherWidget />
 
-      {/* Active non-weather widgets */}
-      {activeWidgets.filter((w) => w !== 'weather').length > 0 && (
-        <SmartWidgets
-          topics={topics}
-          activeWidgets={activeWidgets}
-        />
+      {initialized && activeWidgets.filter((w) => w !== 'weather').length > 0 && (
+        <SmartWidgets topics={topics} activeWidgets={activeWidgets} />
       )}
 
-      {/* Add widget button */}
       {(hasAddable || activeWidgets.length > 1) && (
         <div className="relative">
           <button
