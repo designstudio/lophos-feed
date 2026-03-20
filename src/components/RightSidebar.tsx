@@ -100,7 +100,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
           </button>
 
           {showPicker && (
-            <div className="absolute top-7 left-0 w-64 bg-white rounded-2xl border border-border shadow-lg z-50 p-3">
+            <div className="absolute top-7 left-0 w-64 bg-bg-primary rounded-2xl border border-border shadow-lg z-50 p-3">
               <p className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-2 px-1">
                 Widgets disponíveis
               </p>

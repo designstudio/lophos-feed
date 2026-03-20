@@ -86,7 +86,7 @@ export function WeatherWidget() {
   }
 
   if (loading) return (
-    <div className="rounded-2xl border border-border bg-white p-4">
+    <div className="rounded-2xl border border-border bg-bg-primary p-4">
       <div className="skeleton h-4 w-24 rounded mb-3" />
       <div className="skeleton h-8 w-16 rounded mb-2" />
       <div className="skeleton h-3 w-32 rounded" />
@@ -96,7 +96,7 @@ export function WeatherWidget() {
   if (!weather) return null
 
   return (
-    <div className="rounded-2xl border border-border bg-white p-4">
+    <div className="rounded-2xl border border-border bg-bg-primary p-4">
       {/* Top row — Perplexity style */}
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-1.5">

@@ -107,7 +107,7 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
         if (!meta) return null
         const matches = matchesByGame[gameId] || []
         return (
-          <div key={gameId} className="rounded-2xl border border-border bg-white p-4">
+          <div key={gameId} className="rounded-2xl border border-border bg-bg-primary p-4">
             <div className="flex items-center gap-2 mb-3">
               <img src={meta.logo} alt={meta.label} width={14} height={14} className="rounded-sm" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
               <h3 className="text-[11px] font-semibold text-ink-primary uppercase tracking-wider">{meta.label}</h3>
@@ -134,7 +134,7 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
       })}
 
       {showSeries && (
-        <div className="rounded-2xl border border-border bg-white p-4">
+        <div className="rounded-2xl border border-border bg-bg-primary p-4">
           <div className="flex items-center gap-2 mb-3">
             <Tv size={13} className="text-purple-500" />
             <h3 className="text-[11px] font-semibold text-ink-primary uppercase tracking-wider">Próximos episódios</h3>

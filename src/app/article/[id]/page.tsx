@@ -33,7 +33,7 @@ function SourcesSidebar({ sources, onClose }: { sources: NewsSource[]; onClose: 
   return (
     <>
       <div className="fixed inset-0 bg-black/20 z-40 animate-fade-in" onClick={onClose} />
-      <div className="fixed top-0 right-0 h-full w-80 bg-white border-l border-border z-50 flex flex-col animate-slide-in-right shadow-xl">
+      <div className="fixed top-0 right-0 h-full w-80 bg-bg-primary border-l border-border z-50 flex flex-col animate-slide-in-right shadow-xl">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <div className="flex items-center gap-2">
             <div className="flex items-center">

@@ -19,7 +19,7 @@
   --color-ink-tertiary:  #8a8784;
   --color-ink-muted:     #b8b5b0;
 
-  --color-accent:        #1b6ef3;
+  --color-accent:        #ca774b;
 
   --color-border:        rgba(26, 25, 22, 0.08);
   --color-border-strong: rgba(26, 25, 22, 0.15);
@@ -70,6 +70,27 @@ html, body {
   background: var(--color-bg-primary);
   color: var(--color-ink-primary);
 }
+
+/* ─── Dark mode: override hardcoded white/gray classes ───── */
+.dark .bg-white        { background-color: var(--color-bg-secondary) !important; }
+.dark .bg-gray-50      { background-color: var(--color-bg-tertiary) !important; }
+.dark .bg-gray-100     { background-color: var(--color-bg-tertiary) !important; }
+.dark .text-gray-900   { color: var(--color-ink-primary) !important; }
+.dark .text-gray-700   { color: var(--color-ink-secondary) !important; }
+.dark .text-gray-600   { color: var(--color-ink-secondary) !important; }
+.dark .text-gray-500   { color: var(--color-ink-tertiary) !important; }
+.dark .text-gray-400   { color: var(--color-ink-muted) !important; }
+.dark .border-gray-100 { border-color: var(--color-border) !important; }
+.dark .border-gray-200 { border-color: var(--color-border) !important; }
+.dark .border-gray-300 { border-color: var(--color-border-strong) !important; }
+.dark .hover\:bg-gray-50:hover  { background-color: var(--color-bg-tertiary) !important; }
+.dark .hover\:bg-gray-100:hover { background-color: var(--color-bg-tertiary) !important; }
+.dark input, .dark select, .dark textarea {
+  background-color: var(--color-bg-tertiary) !important;
+  color: var(--color-ink-primary) !important;
+  border-color: var(--color-border) !important;
+}
+.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
 
 .text-headline {
   font-size: var(--text-headline);

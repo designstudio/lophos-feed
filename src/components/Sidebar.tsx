@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, Sun, Moon, Monitor
+  Settings, Logout, CloseCircle, Sun, Moon, Monitor, UserRounded
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
@@ -58,7 +58,7 @@ if (typeof window !== 'undefined') {
 }
 
 const ACCENT_COLORS = [
-  { label: 'Padrão',  value: '#1b6ef3', dot: '#94a3b8' },
+  { label: 'Padrão',  value: '#ca774b', dot: '#94a3b8' },
   { label: 'Azul',    value: '#2563eb', dot: '#3b82f6' },
   { label: 'Verde',   value: '#16a34a', dot: '#22c55e' },
   { label: 'Amarelo', value: '#ca8a04', dot: '#eab308' },
@@ -76,7 +76,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
   // Geral state
   const [theme, setTheme] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('theme') || 'light' : 'light')
-  const [accentColor, setAccentColor] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('accent_color') || '#1b6ef3' : '#1b6ef3')
+  const [accentColor, setAccentColor] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('accent_color') || '#ca774b' : '#ca774b')
 
   // Conta state
   const [firstName, setFirstName] = useState(user?.firstName || '')
@@ -128,7 +128,10 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     setTimeout(() => setTopicsSaved(false), 2000)
   }
 
-  const TABS = [{ id: 'geral' as Tab, label: 'Geral' }, { id: 'conta' as Tab, label: 'Conta' }]
+  const TABS = [
+    { id: 'geral' as Tab, label: 'Geral', icon: <Settings size={15} /> },
+    { id: 'conta' as Tab, label: 'Conta', icon: <UserRounded size={15} /> },
+  ]
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: 'fadeIn 0.15s ease' }}>
@@ -140,10 +143,10 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
           <p className="text-[13px] font-semibold text-gray-900 px-5 mb-4">Configurações</p>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn('w-full text-left px-5 py-2 text-sm transition-colors',
+              className={cn('w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2.5 rounded-lg mx-1',
                 tab === t.id ? 'bg-gray-100 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
               )}>
-              {t.label}
+              {t.icon}{t.label}
             </button>
           ))}
         </div>
@@ -188,18 +191,20 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
                 {/* Accent color */}
                 <section className="py-5 border-b border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Cor de ênfase</h3>
-                  <div className="relative inline-flex items-center gap-2">
-                    <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: ACCENT_COLORS.find(c => c.value === accentColor)?.dot ?? '#94a3b8' }} />
-                    <select value={accentColor} onChange={e => handleAccent(e.target.value)}
-                      className="text-sm pl-2 pr-8 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 outline-none focus:border-gray-400 cursor-pointer appearance-none">
-                      {ACCENT_COLORS.map(c => (
-                        <option key={c.label} value={c.value}>{c.label}</option>
-                      ))}
-                    </select>
-                    <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 4L6 8L10 4" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900">Cor de ênfase</h3>
+                    <div className="relative inline-flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full flex-shrink-0 pointer-events-none absolute left-2.5 z-10" style={{ background: ACCENT_COLORS.find(c => c.value === accentColor)?.dot ?? '#ca774b' }} />
+                      <select value={accentColor} onChange={e => handleAccent(e.target.value)}
+                        className="text-sm pl-7 pr-7 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 outline-none focus:border-gray-400 cursor-pointer appearance-none">
+                        {ACCENT_COLORS.map(c => (
+                          <option key={c.label} value={c.value}>{c.label}</option>
+                        ))}
+                      </select>
+                      <svg className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 4L6 8L10 4" stroke="#666" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
                   </div>
                 </section>
 
