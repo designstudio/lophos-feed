@@ -1,5 +1,11 @@
 export const dynamic = 'force-dynamic'
-import { SignIn } from '@clerk/nextjs'
+
+import dynamic from 'next/dynamic'
+
+const SignInClient = dynamic(
+  () => import('@/components/SignInClient').then((m) => m.SignInClient),
+  { ssr: false }
+)
 
 export default function LoginPage() {
   return (
@@ -8,16 +14,7 @@ export default function LoginPage() {
         <h1 className="font-display text-3xl text-ink-primary mb-2">Lophos Feed</h1>
         <p className="text-ink-secondary text-sm">Seu feed de notícias personalizado por IA</p>
       </div>
-      <SignIn
-        appearance={{
-          elements: {
-            rootBox: 'w-full max-w-sm',
-            card: 'shadow-none border border-border rounded-2xl bg-white',
-            headerTitle: 'font-display text-xl',
-            formButtonPrimary: 'bg-accent hover:bg-blue-700 text-white',
-          },
-        }}
-      />
+      <SignInClient />
     </div>
   )
 }

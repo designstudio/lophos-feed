@@ -1,9 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { UserButton } from '@clerk/nextjs'
+import dynamic from 'next/dynamic'
 import { Newspaper, Settings, RefreshCw, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const UserButtonClient = dynamic(
+  () => import('./UserButtonClient').then((m) => m.UserButtonClient),
+  { ssr: false }
+)
 
 interface Props {
   onRefresh?: () => void
@@ -67,7 +72,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
 
       {/* User */}
       <div className="flex items-center gap-2.5 px-2 mt-4">
-        <UserButton afterSignOutUrl="/login" />
+        <UserButtonClient />
         <span className="text-xs text-ink-tertiary truncate">Minha conta</span>
       </div>
     </aside>
