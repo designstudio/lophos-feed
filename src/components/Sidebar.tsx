@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 
 // ─── Logo ─────────────────────────────────────────────────────
-function LophosLogo({ size = 28 }: { size?: number }) {
+function LophosLogo({ size = 34 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
       <g clipPath="url(#a)">
@@ -656,7 +656,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
           >
             {/* Logo — hidden on hover when collapsed */}
             <div className={collapsed ? 'group-hover:opacity-0 transition-opacity' : ''}>
-              <LophosLogo size={28} />
+              <LophosLogo size={34} />
             </div>
             {/* Expand arrow — shown on hover when collapsed */}
             {collapsed && (

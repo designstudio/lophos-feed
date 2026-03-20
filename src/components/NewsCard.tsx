@@ -5,6 +5,11 @@ import { NewsItem } from '@/lib/types'
 import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
+function proxyImage(url: string | undefined): string | undefined {
+  if (!url) return undefined
+  return `/api/image-proxy?url=${encodeURIComponent(url)}`
+}
+
 interface Props {
   item: NewsItem
   variant?: 'full-left' | 'full-right' | 'card'
@@ -90,7 +95,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
       <Link href={href} className={cn('group flex flex-col', className)}>
         {item.imageUrl && (
           <div className="w-full h-36 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5">
-            <img src={item.imageUrl} alt={item.title}
+            <img src={proxyImage(item.imageUrl)} alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
             />
@@ -114,7 +119,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
         </div>
         {item.imageUrl && (
           <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
-            <img src={item.imageUrl} alt={item.title}
+            <img src={proxyImage(item.imageUrl)} alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
             />
@@ -128,7 +133,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
     <Link href={href} className={cn('group flex gap-6 items-start', className)}>
       {item.imageUrl && (
         <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
-          <img src={item.imageUrl} alt={item.title}
+          <img src={proxyImage(item.imageUrl)} alt={item.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
           />
