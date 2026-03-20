@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
-import { CommunityWidget } from './CommunityWidget'
 
 const STORAGE_KEY = 'lophos_widgets'
 
@@ -43,7 +42,6 @@ export function RightSidebar({ topics }: { topics: string[] }) {
 
   return (
     <aside className="flex flex-col gap-4 py-6 h-full">
-      <CommunityWidget />
       {widgetsToRender.map(id => {
         if (id === 'weather') return <WeatherWidget key="weather" />
         // Each smart widget renders only itself but has access to all topics

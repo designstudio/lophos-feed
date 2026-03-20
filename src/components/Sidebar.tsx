@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
-  Feed, Refresh, AltArrowLeft, AltArrowRight,
+  Feed, UsersGroupRounded, Refresh, AltArrowLeft, AltArrowRight,
   Settings, Logout, CloseCircle, UserRounded
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
@@ -622,11 +622,16 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [isCommunityMember, setIsCommunityMember] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar_collapsed') === 'true'
     setCollapsed(saved)
     setMounted(true)
+    // Check community membership
+    fetch('/api/community/suggestions?type=articles')
+      .then(r => { if (r.ok) setIsCommunityMember(true) })
+      .catch(() => {})
   }, [])
 
   useEffect(() => { if (path === '/settings') setShowSettings(true) }, [path])
@@ -704,6 +709,19 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
             <Feed size={18} className="flex-shrink-0" />
             {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meu Feed</span>}
           </Link>
+
+          {isCommunityMember && (
+            <Link href="/community"
+              title={collapsed ? 'Comunidade' : undefined}
+              className={cn(
+                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                collapsed ? 'justify-center' : '',
+                path === '/community' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+              )}>
+              <UsersGroupRounded size={18} className="flex-shrink-0" />
+              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Comunidade</span>}
+            </Link>
+          )}
 
           {onRefresh && (
             <button onClick={onRefresh} disabled={refreshing}
