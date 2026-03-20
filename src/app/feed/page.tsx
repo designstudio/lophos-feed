@@ -204,10 +204,9 @@ export default function FeedPage() {
       <Sidebar onRefresh={() => fetchFeed(true)} refreshing={streaming} />
 
       <div className="flex-1 overflow-y-auto min-w-0">
-        <div className="feed-layout mx-auto px-8">
 
-        {/* ── Sticky header ── */}
-        <div className="sticky top-0 z-20 bg-bg-primary border-b border-border">
+        {/* ── Sticky header — full width, outside feed-layout ── */}
+        <div className="sticky top-0 z-20 bg-bg-primary border-b border-border px-8">
           <div className="flex items-center h-14">
             <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Descobrir</h1>
 
@@ -236,7 +235,8 @@ export default function FeedPage() {
           </div>
         </div>
 
-          {/* ── Feed + Right sidebar ── */}
+        {/* ── Feed + Right sidebar ── */}
+        <div className="feed-layout mx-auto px-8">
           <div className="flex gap-10 py-6">
             <div className="flex-1 min-w-0">
 

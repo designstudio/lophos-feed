@@ -614,16 +614,20 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
       >
         {/* Header */}
         <div className="flex items-center px-3 pt-5 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
-          {/* Logo — when collapsed, hover shows expand button */}
+          {/* Logo — when collapsed, hover hides logo and shows expand button */}
           <div
             className={cn('flex-shrink-0 relative', collapsed ? 'group cursor-pointer' : '')}
+            style={{ width: 28, height: 28 }}
             onClick={collapsed ? toggle : undefined}
           >
-            <LophosLogo size={28} />
-            {/* Expand button overlay — only visible on hover when collapsed */}
+            {/* Logo — hidden on hover when collapsed */}
+            <div className={collapsed ? 'group-hover:opacity-0 transition-opacity' : ''}>
+              <LophosLogo size={28} />
+            </div>
+            {/* Expand arrow — shown on hover when collapsed */}
             {collapsed && (
-              <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-bg-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                <AltArrowRight size={14} className="text-ink-secondary" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <AltArrowRight size={16} className="text-ink-secondary" />
               </div>
             )}
           </div>
