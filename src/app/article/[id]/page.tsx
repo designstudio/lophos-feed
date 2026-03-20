@@ -64,7 +64,7 @@ export default function ArticlePage() {
   const [refetching, setRefetching]   = useState(false)
   const [refetchMsg, setRefetchMsg]   = useState<string | null>(null)
 
-  const refetchImage = async () => {
+  const refetchImage = async (sourceUrl?: string) => {
     if (refetching) return
     setMenuOpen(false)
     setRefetching(true)
@@ -73,7 +73,7 @@ export default function ArticlePage() {
       const res = await fetch('/api/article', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, sourceUrl }),
       })
       if (res.ok) {
         const { imageUrl: newUrl } = await res.json()
@@ -156,12 +156,19 @@ export default function ArticlePage() {
                 </button>
                 {menuOpen && (
                   <div
-                    className="absolute right-0 top-full mt-1 w-48 rounded-xl border shadow-xl z-50 py-1"
+                    className="absolute right-0 top-full mt-1 w-56 rounded-xl border shadow-xl z-50 py-1"
                     style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', animation: 'slideUp 0.12s ease' }}
                   >
+                    {/* Header */}
+                    <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-tertiary)' }}>
+                        Rebuscar imagem de…
+                      </p>
+                    </div>
+                    {/* Auto — tries all sources in order */}
                     <button
                       onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
-                      onClick={refetchImage}
+                      onClick={() => refetchImage()}
                       disabled={refetching}
                       className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left disabled:opacity-50"
                       style={{ color: 'var(--color-ink-secondary)' }}
@@ -169,11 +176,27 @@ export default function ArticlePage() {
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11.5 2.5A5.5 5.5 0 1 1 8 1.1" />
-                        <polyline points="8 1 11.5 1 11.5 4.5" />
+                        <path d="M11.5 2.5A5.5 5.5 0 1 1 8 1.1" /><polyline points="8 1 11.5 1 11.5 4.5" />
                       </svg>
-                      {refetching ? 'Buscando…' : 'Rebuscar imagem'}
+                      {refetching ? 'Buscando…' : 'Automático'}
                     </button>
+                    {/* Per-source buttons */}
+                    {(item?.sources || []).map((src, i) => (
+                      <button key={i}
+                        onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
+                        onClick={() => refetchImage(src.url)}
+                        disabled={refetching}
+                        className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left disabled:opacity-50 truncate"
+                        style={{ color: 'var(--color-ink-secondary)' }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        {src.favicon
+                          ? <img src={src.favicon} alt="" width={13} height={13} className="rounded-sm flex-shrink-0" />
+                          : <span className="w-3 h-3 rounded-sm bg-bg-tertiary flex-shrink-0" />}
+                        <span className="truncate">{src.name}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -209,7 +232,7 @@ export default function ArticlePage() {
 
               {/* Recency line */}
               <div className="flex items-center gap-2 text-xs text-ink-muted mb-6">
-                <ClockCircle size={12} />
+                <ClockCircle size={16} />
                 <span>Publicado {formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true, locale: ptBR })}</span>
               </div>
 

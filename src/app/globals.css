@@ -17,7 +17,7 @@
   --color-ink-primary:   #1a1916;
   --color-ink-secondary: #4a4844;
   --color-ink-tertiary:  #858585;
-  --color-ink-muted:     #b8b5b0;
+  --color-ink-muted:     #858585;
 
   --color-accent:        #ca774b;
 
@@ -65,7 +65,7 @@ html, body {
   --color-ink-primary:   #f0efed;
   --color-ink-secondary: #a8a5a0;
   --color-ink-tertiary:  #858585;
-  --color-ink-muted:     #4a4844;
+  --color-ink-muted:     #858585;
   --color-border:        rgba(255,255,255,0.08);
   --color-border-strong: rgba(255,255,255,0.15);
 }

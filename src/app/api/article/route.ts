@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { id } = await req.json()
+  const { id, sourceUrl } = await req.json()
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
 
   const db = getSupabaseAdmin()
@@ -90,7 +90,11 @@ export async function PATCH(req: NextRequest) {
   const sources = Array.isArray(row.sources)
     ? row.sources
     : (typeof row.sources === 'string' ? JSON.parse(row.sources) : [])
-  const imageUrl = await fetchImageForSources(sources)
+  // If a specific source was requested, try only that one; otherwise try all in order
+  const sourcesToTry = sourceUrl
+    ? [{ url: sourceUrl }]
+    : sources
+  const imageUrl = await fetchImageForSources(sourcesToTry)
 
   console.log(`[PATCH article] id=${id} sources=${JSON.stringify(row.sources?.map((s:any)=>s.url))}`)
   console.log(`[PATCH article] imageUrl=${imageUrl}`)

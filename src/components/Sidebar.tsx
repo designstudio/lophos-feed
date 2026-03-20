@@ -651,7 +651,6 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
           {/* Logo — when collapsed, hover hides logo and shows expand button */}
           <div
             className={cn('flex-shrink-0 relative', collapsed ? 'group cursor-pointer' : '')}
-            style={{ width: 28, height: 28 }}
             onClick={collapsed ? toggle : undefined}
           >
             {/* Logo — hidden on hover when collapsed */}
