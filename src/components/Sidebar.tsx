@@ -174,12 +174,18 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   const handleTheme = (t: string) => { setTheme(t); applyTheme(t) }
   const handleAccent = (c: string) => { setAccentColor(c); applyAccent(c) }
 
+  const saveWidgetState = (order: string[], active: string[]) => {
+    // Save as ordered list: weather first, then active widgets in user-defined order
+    const saved = ['weather', ...order.filter(id => active.includes(id))]
+    localStorage.setItem('lophos_widgets', JSON.stringify(saved))
+  }
+
   const toggleWidget = (id: string) => {
     const next = activeWidgets.includes(id)
       ? activeWidgets.filter(x => x !== id)
       : [...activeWidgets, id]
     setActiveWidgets(next)
-    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...widgetOrder.filter(x => next.includes(x))]))
+    saveWidgetState(widgetOrder, next)
   }
 
   const onDragStart = (i: number) => setDragIdx(i)
@@ -190,7 +196,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     const [moved] = next.splice(dragIdx, 1)
     next.splice(i, 0, moved)
     setWidgetOrder(next)
-    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...next.filter(x => activeWidgets.includes(x))]))
+    saveWidgetState(next, activeWidgets)
     setDragIdx(null)
     setDragOverIdx(null)
   }
