@@ -536,6 +536,31 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
 }
 
 // ─── Collapsed User Menu ───────────────────────────────────────
+// ─── Fixed Dropdown — escapes overflow:hidden parents ─────────
+function FixedDropdown({ anchorRef, onClose, children }: {
+  anchorRef: React.RefObject<HTMLElement>
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  const [pos, setPos] = useState({ left: 0, bottom: 0 })
+
+  useEffect(() => {
+    if (anchorRef.current) {
+      const r = anchorRef.current.getBoundingClientRect()
+      setPos({ left: r.left, bottom: window.innerHeight - r.top + 4 })
+    }
+  }, [])
+
+  return (
+    <div
+      className="fixed w-52 bg-white rounded-xl border border-gray-100 shadow-xl z-[999] py-1"
+      style={{ left: pos.left, bottom: pos.bottom, animation: 'slideUp 0.12s ease' }}
+    >
+      {children}
+    </div>
+  )
+}
+
 function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { user } = useUser()
   const { signOut } = useClerk()
@@ -558,7 +583,7 @@ function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
         }
       </button>
       {open && (
-        <div className="absolute bottom-full left-0 mb-1 w-52 bg-white rounded-xl border border-gray-100 shadow-xl z-50 py-1" style={{ animation: 'slideUp 0.12s ease' }}>
+        <FixedDropdown anchorRef={ref} onClose={() => setOpen(false)}>
           <div className="px-3 py-2.5 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName}</p>
             <p className="text-xs text-gray-400 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -571,7 +596,7 @@ function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
               <Logout size={14} /> Sair
             </button>
           </div>
-        </div>
+        </FixedDropdown>
       )}
     </div>
   )
@@ -605,7 +630,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
   return (
     <>
       <aside
-        className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary overflow-hidden"
+        className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
         style={{
           width: collapsed ? '3.5rem' : '16.1rem',
           transition: mounted ? 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',

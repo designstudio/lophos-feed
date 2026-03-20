@@ -9,19 +9,31 @@ import { NewsItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
-  if (items.length === 1) {
-    // Cycle of 3: 0=full-left, 1=trio(never reaches here), 2=full-right, then repeats
-    const posInCycle = blockIndex % 3
+  const posInCycle = blockIndex % 3
+
+  // Full block (positions 0 and 2 in cycle)
+  if (posInCycle !== 1) {
     const variant = posInCycle === 2 ? 'full-right' : 'full-left'
     return (
-      <div className={cn('py-6', 'border-b border-border')}>
+      <div className="py-6 border-b border-border">
         <NewsCard item={items[0]} variant={variant} />
       </div>
     )
   }
+
+  // Trio slot — 1, 2 or 3 cards
+  if (items.length === 1) {
+    // Not enough for grid, show as full-left
+    return (
+      <div className="py-6 border-b border-border">
+        <NewsCard item={items[0]} variant="full-left" />
+      </div>
+    )
+  }
+
   return (
     <div className="py-6 border-b border-border">
-      <div className="grid grid-cols-3 gap-6">
+      <div className={cn('grid gap-6', items.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
         {items.map(item => <NewsCard key={item.id} item={item} variant="card" />)}
       </div>
     </div>
@@ -31,18 +43,18 @@ function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: numbe
 function splitIntoBlocks(items: NewsItem[]): { items: NewsItem[]; isFull: boolean }[] {
   const blocks: { items: NewsItem[]; isFull: boolean }[] = []
   let i = 0
-  // Pattern: full, trio, full, full, trio, full, full, trio...
-  // Simplified: full-left, trio, full-right, full-left, trio, full-right...
+  // Strict cycle: full, trio(1-3 cards), full, full, trio, full...
+  // Position in cycle: 0=full, 1=trio, 2=full → repeat
   while (i < items.length) {
-    const blockNum = blocks.length
-    const posInCycle = blockNum % 3 // 0=full, 1=trio, 2=full
+    const pos = blocks.length % 3
 
-    if (posInCycle === 1 && i + 2 < items.length) {
-      // Trio block
-      blocks.push({ items: [items[i], items[i+1], items[i+2]], isFull: false })
-      i += 3
+    if (pos === 1) {
+      // Trio slot — take up to 3, minimum 1
+      const count = Math.min(3, items.length - i)
+      blocks.push({ items: items.slice(i, i + count), isFull: false })
+      i += count
     } else {
-      // Full block (left or right alternates)
+      // Full slot
       blocks.push({ items: [items[i]], isFull: true })
       i++
     }
