@@ -258,30 +258,3 @@ export default function FeedPage() {
   )
 }
 
-function FeedBlock({ items, isLast }: { items: NewsItem[]; isLast: boolean }) {
-  if (items.length === 1) {
-    return (
-      <div className={cn('py-6', !isLast && 'border-b border-border')}>
-        <NewsCard item={items[0]} variant="full-left" />
-      </div>
-    )
-  }
-  return (
-    <div className={cn('py-6', !isLast && 'border-b border-border')}>
-      <div className="grid grid-cols-3 gap-6">
-        {items.map(item => <NewsCard key={item.id} item={item} variant="card" />)}
-      </div>
-    </div>
-  )
-}
-
-function splitIntoBlocks(items: NewsItem[]): NewsItem[][] {
-  const blocks: NewsItem[][] = []
-  let i = 0
-  while (i < items.length) {
-    if (i % 4 === 0) { blocks.push([items[i]]); i++ }
-    else if (i + 2 < items.length) { blocks.push([items[i], items[i+1], items[i+2]]); i += 3 }
-    else { blocks.push([items[i]]); i++ }
-  }
-  return blocks
-}
