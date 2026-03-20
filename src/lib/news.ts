@@ -56,10 +56,8 @@ Responda APENAS com JSON válido, sem markdown:
 Resultados de busca:
 ${context}`
 
-console.log('GEMINI_KEY length:', GEMINI_KEY?.length ?? 'UNDEFINED')
-  
   const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key=${GEMINI_KEY}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -72,11 +70,9 @@ console.log('GEMINI_KEY length:', GEMINI_KEY?.length ?? 'UNDEFINED')
 
   if (!geminiRes.ok) {
     const errBody = await geminiRes.text()
-    console.error('Gemini response:', errBody)
+    console.error(`Gemini error ${geminiRes.status}:`, errBody)
     throw new Error(`Gemini error: ${geminiRes.status}`)
   }
-
-  if (!geminiRes.ok) throw new Error(`Gemini error: ${geminiRes.status}`)
   const geminiData = await geminiRes.json()
   const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 

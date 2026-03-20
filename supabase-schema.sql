@@ -21,15 +21,28 @@ create table if not exists news_cache (
   cached_at timestamptz default now()
 );
 
--- Index for fast topic lookups
+-- User reactions (like/dislike)
+create table if not exists user_reactions (
+  id uuid default gen_random_uuid() primary key,
+  user_id text not null,
+  article_id uuid not null,
+  topic text not null,
+  reaction text not null check (reaction in ('like', 'dislike')),
+  created_at timestamptz default now(),
+  unique(user_id, article_id)
+);
+
+-- Indexes
 create index if not exists news_cache_topic_idx on news_cache(topic);
 create index if not exists news_cache_cached_at_idx on news_cache(cached_at desc);
 create index if not exists user_topics_user_id_idx on user_topics(user_id);
+create index if not exists user_reactions_user_id_idx on user_reactions(user_id);
 
--- RLS: anyone with service role can read/write
+-- RLS
 alter table user_topics enable row level security;
 alter table news_cache enable row level security;
+alter table user_reactions enable row level security;
 
--- Allow service role full access (API routes use service role key)
 create policy "service role all" on user_topics for all using (true);
 create policy "service role all" on news_cache for all using (true);
+create policy "service role all" on user_reactions for all using (true);

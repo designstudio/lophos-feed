@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/Sidebar'
+import { RightSidebar } from '@/components/RightSidebar'
 import { NewsCard } from '@/components/NewsCard'
 import { SkeletonCard } from '@/components/SkeletonCard'
 import { NewsItem } from '@/lib/types'
@@ -24,10 +25,7 @@ export default function FeedPage() {
       .then((r) => r.json())
       .then((data) => {
         const userTopics = (data.topics || []).map((t: any) => t.topic)
-        if (userTopics.length === 0) {
-          router.push('/onboarding')
-          return
-        }
+        if (userTopics.length === 0) { router.push('/onboarding'); return }
         setTopics(userTopics)
       })
       .catch(() => setLoading(false))
@@ -44,17 +42,11 @@ export default function FeedPage() {
       })
       const data = await res.json()
       setItems(data.items || [])
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
+    } catch (e) { console.error(e) }
+    finally { setLoading(false); setRefreshing(false) }
   }, [topics])
 
-  useEffect(() => {
-    if (topics.length > 0) fetchFeed()
-  }, [topics, fetchFeed])
+  useEffect(() => { if (topics.length > 0) fetchFeed() }, [topics, fetchFeed])
 
   useEffect(() => {
     if (topics.length === 0) return
@@ -69,85 +61,96 @@ export default function FeedPage() {
   const rest = filteredItems.slice(4)
 
   return (
-    <div className="flex min-h-screen bg-bg-primary">
+    <div className="flex h-screen overflow-hidden bg-bg-primary">
+      {/* Left sidebar — fixed */}
       <Sidebar onRefresh={() => fetchFeed(true)} refreshing={refreshing} />
 
-      <main className="flex-1 min-w-0 max-w-4xl mx-auto px-8 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="font-display text-2xl text-ink-primary">Descobrir</h1>
-          {topicsInFeed.length > 1 && (
-            <div className="flex gap-1.5 flex-wrap justify-end">
-              <button
-                onClick={() => setActiveFilter(null)}
-                className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                  activeFilter === null
-                    ? 'bg-ink-primary text-white border-ink-primary'
-                    : 'border-border text-ink-secondary hover:border-border-strong'
-                }`}
-              >
-                Para Você
-              </button>
-              {topicsInFeed.map((t) => (
+      {/* Main feed — scrollable */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-6 py-6">
+          {/* Header + filters */}
+          <div className="mb-5">
+            <h1 className="text-xl font-semibold text-ink-primary mb-3">Descobrir</h1>
+            {topicsInFeed.length > 1 && (
+              <div className="flex gap-1.5 flex-wrap">
                 <button
-                  key={t}
-                  onClick={() => setActiveFilter(activeFilter === t ? null : t)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                    activeFilter === t
+                  onClick={() => setActiveFilter(null)}
+                  className={`text-[12px] px-3 py-1.5 rounded-full border transition-all ${
+                    activeFilter === null
                       ? 'bg-ink-primary text-white border-ink-primary'
                       : 'border-border text-ink-secondary hover:border-border-strong'
                   }`}
                 >
-                  {t}
+                  Para Você
                 </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {loading && (
-          <div className="space-y-8">
-            <div className="pb-8 border-b border-border"><SkeletonCard featured /></div>
-            <div className="grid grid-cols-3 gap-6">
-              <SkeletonCard /><SkeletonCard /><SkeletonCard />
-            </div>
-            <div className="space-y-6"><SkeletonCard featured /><SkeletonCard featured /></div>
-          </div>
-        )}
-
-        {!loading && items.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <Rss size={32} className="text-ink-muted mb-4" />
-            <p className="text-ink-secondary">Nenhuma notícia encontrada.</p>
-            <button onClick={() => fetchFeed(true)} className="mt-4 text-sm text-accent hover:underline">
-              Tentar novamente
-            </button>
-          </div>
-        )}
-
-        {!loading && filteredItems.length > 0 && (
-          <div className="space-y-0 stagger">
-            {featured && (
-              <div className="pb-8 border-b border-border animate-slide-up">
-                <NewsCard item={featured} featured />
-              </div>
-            )}
-            {secondary.length > 0 && (
-              <div className="grid grid-cols-3 gap-6 py-8 border-b border-border animate-slide-up">
-                {secondary.map((item) => <NewsCard key={item.id} item={item} />)}
-              </div>
-            )}
-            {rest.length > 0 && (
-              <div className="space-y-0 animate-slide-up">
-                {rest.map((item, i) => (
-                  <div key={item.id} className="py-7 border-b border-border last:border-0">
-                    <NewsCard item={item} featured={i % 2 === 0} />
-                  </div>
+                {topicsInFeed.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setActiveFilter(activeFilter === t ? null : t)}
+                    className={`text-[12px] px-3 py-1.5 rounded-full border transition-all ${
+                      activeFilter === t
+                        ? 'bg-ink-primary text-white border-ink-primary'
+                        : 'border-border text-ink-secondary hover:border-border-strong'
+                    }`}
+                  >
+                    {t}
+                  </button>
                 ))}
               </div>
             )}
           </div>
-        )}
+
+          {/* Loading */}
+          {loading && (
+            <div className="space-y-8">
+              <div className="pb-8 border-b border-border"><SkeletonCard featured /></div>
+              <div className="grid grid-cols-3 gap-4"><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>
+              <div className="space-y-6"><SkeletonCard featured /><SkeletonCard featured /></div>
+            </div>
+          )}
+
+          {/* Empty */}
+          {!loading && items.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-32 text-center">
+              <Rss size={32} className="text-ink-muted mb-4" />
+              <p className="text-ink-secondary">Nenhuma notícia encontrada.</p>
+              <button onClick={() => fetchFeed(true)} className="mt-4 text-sm text-accent hover:underline">
+                Tentar novamente
+              </button>
+            </div>
+          )}
+
+          {/* Feed */}
+          {!loading && filteredItems.length > 0 && (
+            <div className="stagger">
+              {featured && (
+                <div className="pb-6 border-b border-border mb-6 animate-slide-up">
+                  <NewsCard item={featured} featured />
+                </div>
+              )}
+              {secondary.length > 0 && (
+                <div className="grid grid-cols-3 gap-4 pb-6 border-b border-border mb-6 animate-slide-up">
+                  {secondary.map((item) => <NewsCard key={item.id} item={item} />)}
+                </div>
+              )}
+              {rest.length > 0 && (
+                <div className="animate-slide-up">
+                  {rest.map((item, i) => (
+                    <div key={item.id} className="py-6 border-b border-border last:border-0">
+                      <NewsCard item={item} featured={i % 2 === 0} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </main>
+
+      {/* Right sidebar — fixed, scrollable internally */}
+      <div className="w-72 flex-shrink-0 border-l border-border overflow-y-auto px-4">
+        <RightSidebar topics={topics} />
+      </div>
     </div>
   )
 }
