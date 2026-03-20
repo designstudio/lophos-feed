@@ -90,9 +90,45 @@ export default function ArticlePage() {
 
   const shownSources = item?.sources?.slice(0, 3) || []
   const extraCount = (item?.sources?.length || 0) - 3
-  const scrollRef   = useRef<HTMLDivElement>(null)
-  const titleRef    = useRef<HTMLHeadingElement>(null)
-  const [showTitle, setShowTitle] = useState(false)
+  const scrollRef      = useRef<HTMLDivElement>(null)
+  const titleRef       = useRef<HTMLHeadingElement>(null)
+  const [showTitle, setShowTitle]     = useState(false)
+  const [menuOpen, setMenuOpen]       = useState(false)
+  const [refetching, setRefetching]   = useState(false)
+  const [refetchMsg, setRefetchMsg]   = useState<string | null>(null)
+
+  const refetchImage = async () => {
+    if (refetching) return
+    setMenuOpen(false)
+    setRefetching(true)
+    setRefetchMsg(null)
+    try {
+      const res = await fetch('/api/article', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (res.ok) {
+        const { imageUrl: newUrl } = await res.json()
+        setItem(prev => prev ? { ...prev, imageUrl: newUrl } : prev)
+        setRefetchMsg('Imagem atualizada!')
+      } else {
+        setRefetchMsg('Nenhuma imagem encontrada.')
+      }
+    } catch {
+      setRefetchMsg('Erro ao buscar imagem.')
+    }
+    setRefetching(false)
+    setTimeout(() => setRefetchMsg(null), 3000)
+  }
+
+  // Close ... menu on outside click
+  useEffect(() => {
+    if (!menuOpen) return
+    const h = (e: MouseEvent) => setMenuOpen(false)
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [menuOpen])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -125,8 +161,50 @@ export default function ArticlePage() {
                 {item?.title}
               </span>
             </div>
-            {/* Spacer — mirrors title width to keep center truly centered */}
-            <div style={{ width: '12rem' }} className="flex-shrink-0" />
+            {/* Right side — mirrors title width, holds ... menu */}
+            <div style={{ width: '12rem' }} className="flex-shrink-0 flex items-center justify-end relative">
+              {/* Toast feedback */}
+              {refetchMsg && (
+                <span className="absolute right-10 text-[11px] text-ink-tertiary whitespace-nowrap animate-fade-in">
+                  {refetchMsg}
+                </span>
+              )}
+              {/* Three-dots menu button */}
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen(v => !v)}
+                  className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-bg-secondary transition-colors text-ink-muted hover:text-ink-secondary"
+                  title="Mais opções"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                    <circle cx="2.5" cy="7" r="1.25" />
+                    <circle cx="7"   cy="7" r="1.25" />
+                    <circle cx="11.5" cy="7" r="1.25" />
+                  </svg>
+                </button>
+                {menuOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-1 w-48 rounded-xl border shadow-xl z-50 py-1"
+                    style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', animation: 'slideUp 0.12s ease' }}
+                  >
+                    <button
+                      onClick={refetchImage}
+                      disabled={refetching}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left disabled:opacity-50"
+                      style={{ color: 'var(--color-ink-secondary)' }}
+                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
+                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M11.5 2.5A5.5 5.5 0 1 1 8 1.1" />
+                        <polyline points="8 1 11.5 1 11.5 4.5" />
+                      </svg>
+                      {refetching ? 'Buscando…' : 'Rebuscar imagem'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

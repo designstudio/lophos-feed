@@ -53,3 +53,37 @@ export async function GET(req: NextRequest) {
     },
   })
 }
+
+export async function PATCH(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id } = await req.json()
+  if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
+
+  const db = getSupabaseAdmin()
+
+  // Load article to get sources
+  const { data: row } = await db
+    .from('news_cache')
+    .select('id, sources, image_url')
+    .eq('id', id)
+    .single()
+    .then(r => r.data ? r : db.from('articles').select('id, sources, image_url').eq('id', id).single())
+
+  if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // Re-fetch image using the same cascade as news.ts
+  const { fetchImageForSources } = await import('@/lib/news')
+  const imageUrl = await fetchImageForSources(row.sources || [])
+
+  if (!imageUrl) return NextResponse.json({ error: 'No image found' }, { status: 404 })
+
+  // Update both tables
+  await Promise.all([
+    db.from('news_cache').update({ image_url: imageUrl }).eq('id', id),
+    db.from('articles').update({ image_url: imageUrl }).eq('id', id),
+  ])
+
+  return NextResponse.json({ imageUrl })
+}

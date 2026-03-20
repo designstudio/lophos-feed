@@ -106,6 +106,25 @@ async function fetchOgImage(url: string): Promise<string | undefined> {
     return undefined
   }
 }
+// Exported so PATCH /api/article can re-fetch just the image for a specific article
+export async function fetchImageForSources(sources: { url: string }[]): Promise<string | undefined> {
+  // Layer 1: direct fetch with real browser UA
+  for (const s of sources) {
+    if (s?.url) {
+      const img = await fetchOgImage(s.url)
+      if (img) return img
+    }
+  }
+  // Layer 2: Tavily Extract fallback
+  for (const s of sources) {
+    if (s?.url) {
+      const img = await fetchOgImageViaTavily(s.url)
+      if (img) return img
+    }
+  }
+  return undefined
+}
+
 function buildQuery(topic: string): string {
   const todayISO = new Date().toISOString().split('T')[0]
   // Add "news" explicitly and today's date to force recency
@@ -225,23 +244,7 @@ ${context}`
     const sourceResults = idxs
       .filter((idx) => idx >= 0 && idx < results.length)
       .map((idx) => results[idx])
-    let imageUrl: string | undefined
-    // Layer 1: direct fetch with real browser UA
-    for (const r of sourceResults) {
-      if (r?.url) {
-        imageUrl = await fetchOgImage(r.url)
-        if (imageUrl) break
-      }
-    }
-    // Layer 2: Tavily Extract — bypasses paywalls/blocks (Forbes, Bloomberg, etc.)
-    if (!imageUrl) {
-      for (const r of sourceResults) {
-        if (r?.url) {
-          imageUrl = await fetchOgImageViaTavily(r.url)
-          if (imageUrl) break
-        }
-      }
-    }
+    const imageUrl = await fetchImageForSources(sourceResults)
 
     const safeId = `${topic}-${Date.now()}-${i}`
       .toLowerCase()
