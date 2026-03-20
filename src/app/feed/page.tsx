@@ -232,7 +232,7 @@ export default function FeedPage() {
         <div
           className="sticky top-0 z-20 border-b border-border px-8 header-blur">
           <div className="flex items-center h-14">
-            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Descobrir</h1>
+            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
 
             {/* Tabs — centered in the remaining space */}
             <div className="flex flex-1 justify-center">
@@ -245,7 +245,7 @@ export default function FeedPage() {
                     : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
                 )}
               >
-                Meu Feed
+                Top
               </button>
               <TopicsDropdown
                 topics={topicsInFeed}

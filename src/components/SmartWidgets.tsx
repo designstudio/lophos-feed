@@ -48,8 +48,8 @@ function formatAirDate(dateStr: string | null): string {
 }
 
 function TeamLogo({ logo, name }: { logo: string | null; name: string }) {
-  if (!logo) return <span className="w-4 h-4 rounded-full bg-bg-tertiary flex-shrink-0 inline-block" />
-  return <img src={logo} alt={name} width={16} height={16} className="rounded-full flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+  if (!logo) return <span className="w-5 h-5 rounded-full bg-bg-tertiary flex-shrink-0 inline-block" />
+  return <img src={logo} alt={name} width={20} height={20} className="rounded-full flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
 }
 
 interface Props { topics: string[]; activeWidgets: string[] }
@@ -99,24 +99,24 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
         return (
           <div key={gameId} className="rounded-2xl border border-border bg-bg-primary p-4">
             <div className="flex items-center gap-2 mb-3">
-              <img src={meta.logo} alt={meta.label} width={14} height={14} className="rounded-sm" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              <h3 className="text-[11px] font-semibold text-ink-primary uppercase tracking-wider">{meta.label}</h3>
+              <img src={meta.logo} alt={meta.label} width={16} height={16} className="rounded-sm" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              <h3 className="text-[14px] font-semibold text-ink-primary uppercase tracking-wider">{meta.label}</h3>
             </div>
             {loadingMatches && <div className="space-y-2"><div className="skeleton h-8 rounded" /><div className="skeleton h-8 rounded" /></div>}
             {!loadingMatches && matches.length === 0 && <p className="text-[12px] text-ink-tertiary">Nenhuma partida agendada.</p>}
             {!loadingMatches && matches.map((m) => (
               <div key={m.id} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 text-[12px] font-medium text-ink-primary flex-wrap">
+                  <div className="flex items-center gap-1.5 text-[0.875rem] font-medium text-ink-primary min-w-0">
                     <TeamLogo logo={m.team1Logo} name={m.team1} />
-                    <span>{m.team1}</span>
-                    <span className="text-ink-muted font-normal text-[11px]">vs</span>
+                    <span className="truncate max-w-[4.5rem]">{m.team1}</span>
+                    <span className="text-ink-muted font-normal text-[11px] flex-shrink-0">vs</span>
                     <TeamLogo logo={m.team2Logo} name={m.team2} />
-                    <span>{m.team2}</span>
+                    <span className="truncate max-w-[4.5rem]">{m.team2}</span>
                   </div>
-                  <p className="text-[10px] text-ink-tertiary mt-0.5">{m.tournament}</p>
+                  <p className="text-[0.75rem] text-ink-tertiary mt-0.5">{m.tournament}</p>
                 </div>
-                <span className="text-[10px] text-accent font-medium ml-2 flex-shrink-0">{formatMatchDate(m.beginAt)}</span>
+                <span className="text-[0.75rem] text-accent font-medium ml-2 flex-shrink-0">{formatMatchDate(m.beginAt)}</span>
               </div>
             ))}
           </div>
@@ -126,8 +126,8 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
       {showSeries && (
         <div className="rounded-2xl border border-border bg-bg-primary p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Tv size={13} className="text-purple-500" />
-            <h3 className="text-[11px] font-semibold text-ink-primary uppercase tracking-wider">Próximos episódios</h3>
+            <Tv size={16} className="text-purple-500" />
+            <h3 className="text-[14px] font-semibold text-ink-primary uppercase tracking-wider">Próximos episódios</h3>
           </div>
           {loadingEpisodes && <div className="space-y-2"><div className="skeleton h-10 rounded" /><div className="skeleton h-10 rounded" /></div>}
           {!loadingEpisodes && episodes.length === 0 && (
@@ -142,9 +142,9 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
                 />
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-ink-primary leading-tight">{ep.showName}</p>
-                <p className="text-[11px] text-ink-secondary mt-0.5">{ep.episode}</p>
-                <p className="text-[10px] text-accent mt-0.5">{formatAirDate(ep.airDate)}</p>
+                <p className="text-[0.875rem] font-medium text-ink-primary leading-tight truncate">{ep.showName}</p>
+                <p className="text-[0.75rem] text-ink-secondary mt-0.5">{ep.episode}</p>
+                <p className="text-[0.75rem] text-accent mt-0.5">{formatAirDate(ep.airDate)}</p>
               </div>
             </div>
           ))}

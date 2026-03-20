@@ -693,14 +693,14 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
         {/* Nav */}
         <nav className="flex flex-col gap-0.5 flex-1 px-2">
           <Link href="/feed"
-            title={collapsed ? 'Descobrir' : undefined}
+            title={collapsed ? 'Meu Feed' : undefined}
             className={cn(
               'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
               collapsed ? 'justify-center' : '',
               path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
             )}>
-            <NotebookMinimalistic size={15} className="flex-shrink-0" />
-            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Descobrir</span>}
+            <NotebookMinimalistic size={18} className="flex-shrink-0" />
+            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meu Feed</span>}
           </Link>
 
           {onRefresh && (
@@ -710,7 +710,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left',
                 collapsed ? 'justify-center' : ''
               )}>
-              <Refresh size={15} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
+              <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
               {!collapsed && <span className="whitespace-nowrap overflow-hidden">{refreshing ? 'Atualizando…' : 'Atualizar feed'}</span>}
             </button>
           )}

@@ -24,11 +24,11 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
         <div className="flex items-center">
           {shown.map((src, i) => (
             <div key={i}
-              className="w-4 h-4 rounded-full border-2 border-bg-primary overflow-hidden bg-bg-secondary flex-shrink-0"
+              className="w-5 h-5 rounded-full border-2 border-bg-primary overflow-hidden bg-bg-secondary flex-shrink-0"
               style={{ marginLeft: i === 0 ? 0 : '-6px', zIndex: shown.length - i }}
             >
               {src.favicon ? (
-                <img src={src.favicon} alt="" width={16} height={16}
+                <img src={src.favicon} alt="" width={20} height={20}
                   className="w-full h-full object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                 />
@@ -51,14 +51,14 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
           className={cn('flex items-center px-2 py-1 rounded-full transition-all',
             reaction === 'like' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
           )}>
-          <HeartAngle size={13} />
+          <HeartAngle size={16} />
         </button>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
           className={cn('flex items-center px-2 py-1 rounded-full transition-all',
             reaction === 'dislike' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
           )}>
-          <Dislike size={13} />
+          <Dislike size={16} />
         </button>
       </div>
     </div>
