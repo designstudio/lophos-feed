@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { NewsItem, NewsSource } from '@/lib/types'
 import { SquareTopDown, ClockCircle, CloseCircle } from '@solar-icons/react-perf/Linear'
+import { ArticleEditor } from '@/components/ArticleEditor'
+import { useUser } from '@clerk/nextjs'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -61,34 +63,17 @@ export default function ArticlePage() {
   const menuRef        = useRef<HTMLDivElement>(null)
   const [showTitle, setShowTitle]     = useState(false)
   const [menuOpen, setMenuOpen]       = useState(false)
-  const [refetching, setRefetching]   = useState(false)
-  const [refetchMsg, setRefetchMsg]   = useState<string | null>(null)
+  const [showEditor, setShowEditor]   = useState(false)
+  const [isMember, setIsMember]       = useState(false)
+  const { user, isLoaded } = useUser()
 
-  const refetchImage = async (sourceUrl?: string) => {
-    if (refetching) return
-    setMenuOpen(false)
-    setRefetching(true)
-    setRefetchMsg(null)
-    try {
-      const res = await fetch('/api/article', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, sourceUrl }),
-      })
-      if (res.ok) {
-        const { imageUrl: newUrl } = await res.json()
-        setItem(prev => prev ? { ...prev, imageUrl: newUrl } : prev)
-        setHeroImage(newUrl)
-        setRefetchMsg('Imagem atualizada!')
-      } else {
-        setRefetchMsg('Nenhuma imagem encontrada.')
-      }
-    } catch {
-      setRefetchMsg('Erro ao buscar imagem.')
-    }
-    setRefetching(false)
-    setTimeout(() => setRefetchMsg(null), 3000)
-  }
+  // Check community membership
+  useEffect(() => {
+    if (!isLoaded) return
+    fetch('/api/community/suggestions')
+      .then(r => { if (r.ok) setIsMember(true) })
+      .catch(() => {})
+  }, [isLoaded])
 
   // Close ... menu on outside click
   useEffect(() => {
@@ -135,12 +120,6 @@ export default function ArticlePage() {
             </div>
             {/* Right side — mirrors title width, holds ... menu */}
             <div style={{ width: '12rem' }} className="flex-shrink-0 flex items-center justify-end relative">
-              {/* Toast feedback */}
-              {refetchMsg && (
-                <span className="absolute right-10 text-[11px] text-ink-tertiary whitespace-nowrap animate-fade-in">
-                  {refetchMsg}
-                </span>
-              )}
               {/* Three-dots menu button */}
               <div ref={menuRef} className="relative">
                 <button
@@ -154,55 +133,39 @@ export default function ArticlePage() {
                     <circle cx="11.5" cy="7" r="1.25" />
                   </svg>
                 </button>
-                {menuOpen && (
+                {menuOpen && isMember && (
                   <div
-                    className="absolute right-0 top-full mt-1 w-56 rounded-xl border shadow-xl z-50 py-1"
+                    className="absolute right-0 top-full mt-1 w-48 rounded-xl border shadow-xl z-50 py-1"
                     style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', animation: 'slideUp 0.12s ease' }}
                   >
-                    {/* Header */}
-                    <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-tertiary)' }}>
-                        Rebuscar imagem de…
-                      </p>
-                    </div>
-                    {/* Auto — tries all sources in order */}
                     <button
                       onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
-                      onClick={() => refetchImage()}
-                      disabled={refetching}
-                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left disabled:opacity-50"
+                      onClick={() => { setMenuOpen(false); setShowEditor(v => !v) }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left"
                       style={{ color: 'var(--color-ink-secondary)' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11.5 2.5A5.5 5.5 0 1 1 8 1.1" /><polyline points="8 1 11.5 1 11.5 4.5" />
+                        <path d="M9.5 1.5l2 2L4 11H2V9l7.5-7.5z"/>
                       </svg>
-                      {refetching ? 'Buscando…' : 'Automático'}
+                      {showEditor ? 'Fechar editor' : 'Editar artigo'}
                     </button>
-                    {/* Per-source buttons */}
-                    {(item?.sources || []).map((src, i) => (
-                      <button key={i}
-                        onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
-                        onClick={() => refetchImage(src.url)}
-                        disabled={refetching}
-                        className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left disabled:opacity-50 truncate"
-                        style={{ color: 'var(--color-ink-secondary)' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                      >
-                        {src.favicon
-                          ? <img src={src.favicon} alt="" width={13} height={13} className="rounded-sm flex-shrink-0" />
-                          : <span className="w-3 h-3 rounded-sm bg-bg-tertiary flex-shrink-0" />}
-                        <span className="truncate">{src.name}</span>
-                      </button>
-                    ))}
                   </div>
                 )}
               </div>
             </div>
           </div>
         </div>
+
+      {/* Inline editor — slides in below header for community members */}
+      {showEditor && item && (
+        <ArticleEditor
+          item={item}
+          onClose={() => setShowEditor(false)}
+          onSaved={() => setShowEditor(false)}
+        />
+      )}
 
       <main className="page-scroll">
         <div className="article-layout mx-auto py-6">
