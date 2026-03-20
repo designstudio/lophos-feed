@@ -65,91 +65,96 @@ export default function FeedPage() {
       {/* Left sidebar — fixed */}
       <Sidebar onRefresh={() => fetchFeed(true)} refreshing={refreshing} />
 
-      {/* Main feed — scrollable */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-6 py-6">
-          {/* Header + filters */}
-          <div className="mb-5">
-            <h1 className="text-xl font-semibold text-ink-primary mb-3">Descobrir</h1>
-            {topicsInFeed.length > 1 && (
-              <div className="flex gap-1.5 flex-wrap">
-                <button
-                  onClick={() => setActiveFilter(null)}
-                  className={`text-[12px] px-3 py-1.5 rounded-full border transition-all ${
-                    activeFilter === null
-                      ? 'bg-ink-primary text-white border-ink-primary'
-                      : 'border-border text-ink-secondary hover:border-border-strong'
-                  }`}
-                >
-                  Para Você
-                </button>
-                {topicsInFeed.map((t) => (
+      {/* Scrollable area — feed + right sidebar together */}
+      <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-6 py-6 flex gap-10">
+
+          {/* Feed — main column */}
+          <div className="flex-1 min-w-0">
+            {/* Header + filters */}
+            <div className="mb-5">
+              <h1 className="text-xl font-semibold text-ink-primary mb-3">Descobrir</h1>
+              {topicsInFeed.length > 1 && (
+                <div className="flex gap-1.5 flex-wrap">
                   <button
-                    key={t}
-                    onClick={() => setActiveFilter(activeFilter === t ? null : t)}
+                    onClick={() => setActiveFilter(null)}
                     className={`text-[12px] px-3 py-1.5 rounded-full border transition-all ${
-                      activeFilter === t
+                      activeFilter === null
                         ? 'bg-ink-primary text-white border-ink-primary'
                         : 'border-border text-ink-secondary hover:border-border-strong'
                     }`}
                   >
-                    {t}
+                    Para Você
                   </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Loading */}
-          {loading && (
-            <div className="space-y-8">
-              <div className="pb-8 border-b border-border"><SkeletonCard featured /></div>
-              <div className="grid grid-cols-3 gap-4"><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>
-              <div className="space-y-6"><SkeletonCard featured /><SkeletonCard featured /></div>
-            </div>
-          )}
-
-          {/* Empty */}
-          {!loading && items.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-32 text-center">
-              <Rss size={32} className="text-ink-muted mb-4" />
-              <p className="text-ink-secondary">Nenhuma notícia encontrada.</p>
-              <button onClick={() => fetchFeed(true)} className="mt-4 text-sm text-accent hover:underline">
-                Tentar novamente
-              </button>
-            </div>
-          )}
-
-          {/* Feed */}
-          {!loading && filteredItems.length > 0 && (
-            <div className="stagger">
-              {featured && (
-                <div className="pb-6 border-b border-border mb-6 animate-slide-up">
-                  <NewsCard item={featured} featured />
-                </div>
-              )}
-              {secondary.length > 0 && (
-                <div className="grid grid-cols-3 gap-4 pb-6 border-b border-border mb-6 animate-slide-up">
-                  {secondary.map((item) => <NewsCard key={item.id} item={item} />)}
-                </div>
-              )}
-              {rest.length > 0 && (
-                <div className="animate-slide-up">
-                  {rest.map((item, i) => (
-                    <div key={item.id} className="py-6 border-b border-border last:border-0">
-                      <NewsCard item={item} featured={i % 2 === 0} />
-                    </div>
+                  {topicsInFeed.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setActiveFilter(activeFilter === t ? null : t)}
+                      className={`text-[12px] px-3 py-1.5 rounded-full border transition-all ${
+                        activeFilter === t
+                          ? 'bg-ink-primary text-white border-ink-primary'
+                          : 'border-border text-ink-secondary hover:border-border-strong'
+                      }`}
+                    >
+                      {t}
+                    </button>
                   ))}
                 </div>
               )}
             </div>
-          )}
-        </div>
-      </main>
 
-      {/* Right sidebar — fixed, scrollable internally */}
-      <div className="w-72 flex-shrink-0 border-l border-border overflow-y-auto px-4">
-        <RightSidebar topics={topics} />
+            {/* Loading */}
+            {loading && (
+              <div className="space-y-8">
+                <div className="pb-8 border-b border-border"><SkeletonCard featured /></div>
+                <div className="grid grid-cols-3 gap-4"><SkeletonCard /><SkeletonCard /><SkeletonCard /></div>
+                <div className="space-y-6"><SkeletonCard featured /><SkeletonCard featured /></div>
+              </div>
+            )}
+
+            {/* Empty */}
+            {!loading && items.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-32 text-center">
+                <Rss size={32} className="text-ink-muted mb-4" />
+                <p className="text-ink-secondary">Nenhuma notícia encontrada.</p>
+                <button onClick={() => fetchFeed(true)} className="mt-4 text-sm text-accent hover:underline">
+                  Tentar novamente
+                </button>
+              </div>
+            )}
+
+            {/* Feed */}
+            {!loading && filteredItems.length > 0 && (
+              <div className="stagger">
+                {featured && (
+                  <div className="pb-6 border-b border-border mb-6 animate-slide-up">
+                    <NewsCard item={featured} featured />
+                  </div>
+                )}
+                {secondary.length > 0 && (
+                  <div className="grid grid-cols-3 gap-4 pb-6 border-b border-border mb-6 animate-slide-up">
+                    {secondary.map((item) => <NewsCard key={item.id} item={item} />)}
+                  </div>
+                )}
+                {rest.length > 0 && (
+                  <div className="animate-slide-up">
+                    {rest.map((item, i) => (
+                      <div key={item.id} className="py-6 border-b border-border last:border-0">
+                        <NewsCard item={item} featured={i % 2 === 0} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right sidebar — inline, scrolls with content */}
+          <div className="w-64 flex-shrink-0 pt-12">
+            <RightSidebar topics={topics} />
+          </div>
+
+        </div>
       </div>
     </div>
   )
