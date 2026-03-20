@@ -118,7 +118,7 @@ export function WeatherWidget() {
         <div className="flex justify-between pt-3 border-t border-border">
           {weather.forecast.map((f, i) => (
             <div key={i} className="flex flex-col items-center gap-1">
-              <WeatherIcon condition={f.condition} size={14} className="text-ink-tertiary" />
+              <WeatherIcon condition={f.condition} size={14} />
               <span className="text-[11px] text-ink-secondary font-medium">{f.temp}°</span>
               <span className="text-[10px] text-ink-tertiary">{f.day}</span>
             </div>
