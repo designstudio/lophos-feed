@@ -319,7 +319,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
                     {topics.map(t => (
-                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-[13px]" style={{ background: "var(--color-ui-strong)" }}">
+                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-[13px]" style={{ background: "var(--color-ui-strong)" }}>
                         {t}
                         <button onClick={() => { setTopics(prev => prev.filter(x => x !== t)); setTopicsSaved(false) }}
                           className="opacity-60 hover:opacity-100 leading-none">×</button>
