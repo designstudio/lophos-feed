@@ -69,3 +69,10 @@ alter table news_cache add column if not exists sections jsonb default '[]';
 alter table news_cache add column if not exists conclusion text;
 alter table articles add column if not exists sections jsonb default '[]';
 alter table articles add column if not exists conclusion text;
+
+-- Tracks last fetch time per topic — separate from articles themselves
+create table if not exists topic_fetches (
+  topic        text primary key,
+  last_fetched timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);

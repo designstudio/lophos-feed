@@ -36,7 +36,10 @@ function getSourceHint(topic: string): string {
   return 'Reuters, AP, BBC, The Guardian'
 }
 
-export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
+export async function fetchNewsForTopic(
+  topic: string,
+  existingTitles: string[] = []
+): Promise<NewsItem[]> {
   const todayISO = new Date().toISOString().split('T')[0]
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
@@ -75,10 +78,14 @@ export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
 
   const sourceHint = getSourceHint(topic)
 
+  const existingContext = existingTitles.length > 0
+    ? `\nNOTÍCIAS JÁ PUBLICADAS (não repita estes eventos):\n${existingTitles.map((t, i) => `- ${t}`).join('\n')}\n`
+    : ''
+
   const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes, multi-tópico.
 
 Hoje é ${today}. Tópico: "${topic}".
-
+${existingContext}
 REGRAS OBRIGATÓRIAS:
 1. Use APENAS as fontes fornecidas abaixo — não invente ou substitua por outras.
 2. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
@@ -86,6 +93,7 @@ REGRAS OBRIGATÓRIAS:
 4. Cruzar múltiplas fontes — mencionar divergências quando existirem.
 5. Tom editorial de referência para este tópico: ${sourceHint}. Use isso apenas como referência de nível de rigor e estilo — não como lista restrita de fontes.
 6. Tom: neutro, jornalístico, empolgante. Sem clickbait.
+7. Se TODOS os eventos das fontes já foram cobertos pelas notícias existentes acima, retorne um array vazio: []
 
 ESTRUTURA OBRIGATÓRIA de cada notícia:
 - title: título principal direto e preciso em pt-BR
