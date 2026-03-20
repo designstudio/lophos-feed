@@ -80,25 +80,34 @@ async function fetchOgImage(url: string): Promise<string | undefined> {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
       },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(8000),
     })
     if (!res.ok) return undefined
-    // Only read first 50KB — og:image is always in <head>
+    // Read up to 100KB — SPAs sometimes have og:image injected further down
     const reader = res.body?.getReader()
     if (!reader) return undefined
     let html = ''
-    while (html.length < 50000) {
+    while (html.length < 100000) {
       const { done, value } = await reader.read()
       if (done) break
       html += new TextDecoder().decode(value)
-      if (html.includes('</head>')) break
+      // Stop early if we already found og:image (common case)
+      if (html.includes('og:image') && html.includes('</head>')) break
     }
     reader.cancel()
     const match =
+      // Standard og:image variants
       html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      // Twitter card variants
       html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
-      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i) ||
+      html.match(/<meta[^>]+name=["']twitter:image:src["'][^>]+content=["']([^"']+)["']/i) ||
+      // JSON-LD image (used by SPAs like VCT, Riot)
+      html.match(/"image"\s*:\s*[{"[]?\s*"url"\s*:\s*"([^"]+)"/i) ||
+      html.match(/"image"\s*:\s*"(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp))"/i) ||
+      // Next.js / Nuxt preloaded image hint
+      html.match(/<link[^>]+rel=["']preload["'][^>]+as=["']image["'][^>]+href=["']([^"']+)["']/i)
     const imageUrl = match?.[1]
     if (!imageUrl) return undefined
     try { return new URL(imageUrl, url).href } catch { return imageUrl }
