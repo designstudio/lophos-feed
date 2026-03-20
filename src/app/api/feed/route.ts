@@ -10,9 +10,23 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
-  const { topics, forceRefresh = false } = await req.json()
-  if (!Array.isArray(topics) || topics.length === 0) {
-    return new Response(JSON.stringify({ error: 'Topics required' }), { status: 400 })
+  const body = await req.json()
+  const forceRefresh: boolean = body.forceRefresh ?? false
+  const db = getSupabaseAdmin()
+
+  // Fetch topics from DB if not provided — eliminates client waterfall
+  let topics: string[] = body.topics ?? []
+  if (topics.length === 0) {
+    const { data } = await db
+      .from('user_topics')
+      .select('topic')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+    topics = (data ?? []).map((r: any) => r.topic)
+  }
+
+  if (topics.length === 0) {
+    return new Response(JSON.stringify({ error: 'No topics' }), { status: 400 })
   }
 
   const db = getSupabaseAdmin()
@@ -27,6 +41,8 @@ export async function POST(req: NextRequest) {
   }
 
   ;(async () => {
+    // Send topics in first chunk so client can use them immediately
+    await writer.write(encoder.encode(JSON.stringify({ topics }) + '\n'))
     // 1. ONE query — fetch all cached items for all topics at once
     const staleTopics: string[] = [...topics]
 

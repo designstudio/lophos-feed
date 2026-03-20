@@ -52,20 +52,7 @@ export default function FeedPage() {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  useEffect(() => {
-    fetch('/api/topics')
-      .then((r) => r.json())
-      .then((data) => {
-        const userTopics = (data.topics || []).map((t: any) => t.topic)
-        if (userTopics.length === 0) { router.push('/onboarding'); return }
-        setTopics(userTopics)
-      })
-  }, [router])
-
-  const fetchFeed = useCallback(async (force = false) => {
-    if (topics.length === 0) return
-
-    // Cancel previous in-flight request
+  const fetchFeed = useCallback(async (force = false, topicsOverride?: string[]) => {
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -79,7 +66,7 @@ export default function FeedPage() {
       const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topics, forceRefresh: force }),
+        body: JSON.stringify({ topics: topicsOverride ?? topics, forceRefresh: force }),
         signal: ctrl.signal,
       })
 
@@ -100,16 +87,21 @@ export default function FeedPage() {
           if (!line.trim()) continue
           try {
             const chunk = JSON.parse(line)
+            // First chunk contains topics list
+            if (chunk.topics) {
+              const t = chunk.topics as string[]
+              if (t.length === 0) { router.push('/onboarding'); return }
+              setTopics(t)
+            }
             if (chunk.items?.length) {
               setItems((prev) => {
-                // Deduplicate by id
                 const ids = new Set(prev.map((i) => i.id))
                 const newItems = chunk.items.filter((i: NewsItem) => !ids.has(i.id))
                 return [...prev, ...newItems]
               })
-              setLoading(false) // first chunk arrived — hide skeleton
+              setLoading(false)
             }
-          } catch { /* malformed chunk, skip */ }
+          } catch { /* skip malformed */ }
         }
       }
     } catch (e: any) {
@@ -118,9 +110,10 @@ export default function FeedPage() {
       setLoading(false)
       setStreaming(false)
     }
-  }, [topics])
+  }, [topics, router])
 
-  useEffect(() => { if (topics.length > 0) fetchFeed() }, [topics, fetchFeed])
+  // Single call on mount — no topics waterfall
+  useEffect(() => { fetchFeed(false, []) }, [])
 
   // Lazy loading sentinel
   useEffect(() => {
