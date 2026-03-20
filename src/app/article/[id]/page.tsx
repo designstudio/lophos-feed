@@ -8,6 +8,11 @@ import { SquareTopDown, ClockCircle, CloseCircle } from '@solar-icons/react-perf
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+function proxyImage(url: string | undefined): string | undefined {
+  if (!url) return undefined
+  return `/api/image-proxy?url=${encodeURIComponent(url)}`
+}
+
 function SourceCard({ src }: { src: NewsSource }) {
   return (
     <a href={src.url} target="_blank" rel="noopener noreferrer"
@@ -211,8 +216,11 @@ export default function ArticlePage() {
               {/* Hero image with source attribution overlay */}
               {heroImage && (
                 <div className="rounded-xl overflow-hidden mb-6 bg-bg-secondary relative">
-                  <img src={heroImage} alt={item.title} className="article-image"
-                    onError={() => setHeroImage(undefined)} />
+                  <img src={proxyImage(heroImage)} alt={item.title} className="article-image"
+                    onError={(e) => {
+                      console.warn('[article] hero image failed to load:', heroImage)
+                      ;(e.target as HTMLImageElement).style.display = 'none'
+                    }} />
                   {item.sources?.[0] && (
                     <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
                       style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
