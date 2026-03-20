@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
@@ -63,13 +64,23 @@ export async function PATCH(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  // Load article to get sources
-  const { data: row } = await db
+  // Load article sources — try news_cache first, fallback to articles
+  let row: { id: string; sources: any[]; image_url: string | null } | null = null
+  const { data: cached } = await db
     .from('news_cache')
     .select('id, sources, image_url')
     .eq('id', id)
     .single()
-    .then(r => r.data ? r : db.from('articles').select('id, sources, image_url').eq('id', id).single())
+  if (cached) {
+    row = cached
+  } else {
+    const { data: permanent } = await db
+      .from('articles')
+      .select('id, sources, image_url')
+      .eq('id', id)
+      .single()
+    row = permanent
+  }
 
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -79,8 +90,8 @@ export async function PATCH(req: NextRequest) {
 
   if (!imageUrl) return NextResponse.json({ error: 'No image found' }, { status: 404 })
 
-  // Update both tables
-  await Promise.all([
+  // Update both tables (ignore errors if row doesn't exist in one of them)
+  await Promise.allSettled([
     db.from('news_cache').update({ image_url: imageUrl }).eq('id', id),
     db.from('articles').update({ image_url: imageUrl }).eq('id', id),
   ])
