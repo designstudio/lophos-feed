@@ -58,6 +58,7 @@ const ACCENT_COLORS = [
 
 function SettingsModal({ onClose }: { onClose: () => void }) {
   const { user } = useUser()
+  const clerk = useClerk()
   const [tab, setTab] = useState<SettingsTab>('conta')
   const [topics, setTopics] = useState<string[]>([])
   const [custom, setCustom] = useState('')
@@ -150,7 +151,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               <>
                 {/* Avatar */}
                 <div className="flex items-center gap-4">
-                  <div className="relative group cursor-pointer" onClick={() => user?.openUserProfile?.()}>
+                  <div className="relative group cursor-pointer" onClick={() => (clerk as any).openUserProfile?.()}>
                     {user?.imageUrl
                       ? <img src={user.imageUrl} alt="" width={56} height={56} className="rounded-full" />
                       : <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center text-white font-semibold text-lg">
@@ -169,10 +170,10 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
                 <div className="space-y-3">
                   <Row label="Nome">
-                    <button onClick={() => user?.openUserProfile?.()} className="text-xs text-accent hover:underline">Editar no perfil</button>
+                    <button onClick={() => (clerk as any).openUserProfile?.()} className="text-xs text-accent hover:underline">Editar no perfil</button>
                   </Row>
                   <Row label="Senha">
-                    <button onClick={() => user?.openUserProfile?.()} className="text-xs text-accent hover:underline">
+                    <button onClick={() => (clerk as any).openUserProfile?.()} className="text-xs text-accent hover:underline">
                       {user?.passwordEnabled ? 'Alterar senha' : 'Definir senha'}
                     </button>
                   </Row>
@@ -210,7 +211,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
                 {/* Danger zone */}
                 <div className="pt-2 border-t border-border">
-                  <button onClick={() => user?.openUserProfile?.()} className="text-xs text-red-500 hover:underline">
+                  <button onClick={() => (clerk as any).openUserProfile?.()} className="text-xs text-red-500 hover:underline">
                     Excluir conta
                   </button>
                 </div>
