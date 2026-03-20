@@ -33,7 +33,7 @@ Responda SOMENTE com JSON array de strings, sem markdown, sem explicação:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.8, maxOutputTokens: 300 },
+          generationConfig: { temperature: 0.8 },
         }),
       }
     )
@@ -45,8 +45,9 @@ Responda SOMENTE com JSON array de strings, sem markdown, sem explicação:
 
     const data = await res.json()
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    console.log('[suggestions] Gemini raw response:', raw.slice(0, 500))
     const clean = raw.replace(/```json|```/g, '').trim()
-    const match = clean.match(/\[[\s\S]*?\]/)
+    const match = clean.match(/\[[\s\S]*\]/)
 
     if (!match) {
       console.error('No JSON match in Gemini response:', raw)
