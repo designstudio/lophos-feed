@@ -132,12 +132,15 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     try {
       const saved = JSON.parse(localStorage.getItem('lophos_widgets') || '[]') as string[]
       const ordered = saved.filter(id => id !== 'weather')
-      return ordered.length > 0 ? ordered : WIDGET_OPTIONS.map(w => w.id)
+      // Always include all WIDGET_OPTIONS — merge saved order with any missing ones
+      const allIds = WIDGET_OPTIONS.map(w => w.id)
+      const merged = [...ordered, ...allIds.filter(id => !ordered.includes(id))]
+      return merged
     } catch { return WIDGET_OPTIONS.map(w => w.id) }
   })
   const [activeWidgets, setActiveWidgets] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return ['weather']
-    try { return JSON.parse(localStorage.getItem('lophos_widgets') || '["weather"]') as string[] }
+    if (typeof window === 'undefined') return ['weather', ...WIDGET_OPTIONS.map(w => w.id)]
+    try { return JSON.parse(localStorage.getItem('lophos_widgets') || JSON.stringify(['weather', ...WIDGET_OPTIONS.map(w => w.id)])) as string[] }
     catch { return ['weather'] }
   })
   const [dragIdx, setDragIdx] = useState<number | null>(null)
