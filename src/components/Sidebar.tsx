@@ -385,15 +385,27 @@ interface Props { onRefresh?: () => void; refreshing?: boolean }
 export function Sidebar({ onRefresh, refreshing }: Props) {
   const path = usePathname()
   const [collapsed, setCollapsed] = useState(false)
+  const [animating, setAnimating] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => { if (path === '/settings') setShowSettings(true) }, [path])
 
-  if (collapsed) {
+  const collapse = () => {
+    setAnimating(true)
+    setTimeout(() => { setCollapsed(true); setAnimating(false) }, 180)
+  }
+
+  const expand = () => {
+    setCollapsed(false)
+    setAnimating(true)
+    setTimeout(() => setAnimating(false), 220)
+  }
+
+  if (collapsed && !animating) {
     return (
       <>
         <aside className="flex-shrink-0 flex flex-col h-full py-5 px-2 border-r border-border bg-bg-primary items-center" style={{ width: '3.5rem' }}>
-          <button onClick={() => setCollapsed(false)}
+          <button onClick={expand}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary transition-colors mb-4">
             <AltArrowRight size={16} />
           </button>
@@ -406,11 +418,18 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
 
   return (
     <>
-      <aside className="flex-shrink-0 flex flex-col h-full py-5 px-3 border-r border-border bg-bg-primary" style={{ width: '16.1rem' }}>
+      <aside
+        className={cn(
+          'flex-shrink-0 flex flex-col h-full py-5 px-3 border-r border-border bg-bg-primary overflow-hidden',
+          animating && collapsed ? 'sidebar-exit' : '',
+          animating && !collapsed ? 'sidebar-enter' : '',
+        )}
+        style={{ width: '16.1rem' }}
+      >
         <div className="flex items-center gap-2.5 px-2 mb-6">
           <LophosLogo size={28} />
           <span className="font-display text-lg text-ink-primary flex-1">Lophos</span>
-          <button onClick={() => setCollapsed(true)}
+          <button onClick={collapse}
             className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0">
             <AltArrowLeft size={14} />
           </button>

@@ -143,7 +143,23 @@ html, body {
   overflow-y: auto;
 }
 
-/* ─── Animations ─────────────────────────────────────────── */
+/* ─── Sidebar slide animation ────────────────────────────── */
+.sidebar-enter {
+  animation: sidebarSlideIn 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.sidebar-exit {
+  animation: sidebarSlideOut 0.18s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes sidebarSlideIn {
+  from { transform: translateX(-100%); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+@keyframes sidebarSlideOut {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(-100%); opacity: 0; }
+}
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position:  400px 0; }
