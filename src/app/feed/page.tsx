@@ -10,14 +10,11 @@ import { Feed } from '@solar-icons/react-perf/Linear'
 
 export const dynamic = 'force-dynamic'
 
-const REFRESH_INTERVAL = 30 * 60 * 1000
-const ITEMS_PER_BLOCK = 4 // 1 full + 3 cards
+const ITEMS_PER_BLOCK = 4
 
-// One complete layout block: full-left + 3 cards + full-right
 function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
   const full = blockIndex % 2 === 0 ? 'full-left' : 'full-right'
   const [featured, ...cards] = items
-
   return (
     <div className="animate-slide-up">
       {featured && (
@@ -36,7 +33,6 @@ function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: numbe
   )
 }
 
-// Splits flat items array into blocks of ITEMS_PER_BLOCK
 function splitIntoBlocks(items: NewsItem[]): NewsItem[][] {
   const blocks: NewsItem[][] = []
   for (let i = 0; i < items.length; i += ITEMS_PER_BLOCK) {
@@ -49,13 +45,12 @@ export default function FeedPage() {
   const router = useRouter()
   const [topics, setTopics] = useState<string[]>([])
   const [items, setItems] = useState<NewsItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const [loading, setLoading] = useState(true)   // true = no items yet
+  const [streaming, setStreaming] = useState(false) // true = still receiving
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
-
-  // Lazy loading state — how many blocks are visible
   const [visibleBlocks, setVisibleBlocks] = useState(2)
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
     fetch('/api/topics')
@@ -65,47 +60,76 @@ export default function FeedPage() {
         if (userTopics.length === 0) { router.push('/onboarding'); return }
         setTopics(userTopics)
       })
-      .catch(() => setLoading(false))
   }, [router])
 
   const fetchFeed = useCallback(async (force = false) => {
     if (topics.length === 0) return
-    force ? setRefreshing(true) : setLoading(true)
-    setVisibleBlocks(2) // reset lazy loading on refresh
+
+    // Cancel previous in-flight request
+    abortRef.current?.abort()
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+
+    setLoading(true)
+    setItems([])
+    setVisibleBlocks(2)
+    setStreaming(true)
+
     try {
       const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topics, forceRefresh: force }),
+        signal: ctrl.signal,
       })
-      const data = await res.json()
-      setItems(data.items || [])
-    } catch (e) { console.error(e) }
-    finally { setLoading(false); setRefreshing(false) }
+
+      if (!res.body) return
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+          try {
+            const chunk = JSON.parse(line)
+            if (chunk.items?.length) {
+              setItems((prev) => {
+                // Deduplicate by id
+                const ids = new Set(prev.map((i) => i.id))
+                const newItems = chunk.items.filter((i: NewsItem) => !ids.has(i.id))
+                return [...prev, ...newItems]
+              })
+              setLoading(false) // first chunk arrived — hide skeleton
+            }
+          } catch { /* malformed chunk, skip */ }
+        }
+      }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') console.error(e)
+    } finally {
+      setLoading(false)
+      setStreaming(false)
+    }
   }, [topics])
 
   useEffect(() => { if (topics.length > 0) fetchFeed() }, [topics, fetchFeed])
 
-  useEffect(() => {
-    if (topics.length === 0) return
-    const interval = setInterval(() => fetchFeed(true), REFRESH_INTERVAL)
-    return () => clearInterval(interval)
-  }, [topics, fetchFeed])
-
-  // IntersectionObserver — load more blocks when sentinel enters viewport
+  // Lazy loading sentinel
   useEffect(() => {
     const sentinel = sentinelRef.current
     if (!sentinel) return
-
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setVisibleBlocks((prev) => prev + 2)
-        }
-      },
+      (entries) => { if (entries[0].isIntersecting) setVisibleBlocks((p) => p + 2) },
       { threshold: 0.1 }
     )
-
     observer.observe(sentinel)
     return () => observer.disconnect()
   }, [items])
@@ -118,12 +142,10 @@ export default function FeedPage() {
 
   return (
     <div className="page-shell">
-      <Sidebar onRefresh={() => fetchFeed(true)} refreshing={refreshing} />
+      <Sidebar onRefresh={() => fetchFeed(true)} refreshing={streaming} />
 
       <div className="page-scroll">
         <div className="feed-layout mx-auto px-6 py-6 flex gap-10">
-
-          {/* Feed */}
           <div className="flex-1 min-w-0">
             <div className="mb-5">
               <h1 className="text-xl font-semibold text-ink-primary mb-3">Descobrir</h1>
@@ -140,8 +162,7 @@ export default function FeedPage() {
                     Para Você
                   </button>
                   {topicsInFeed.map((t) => (
-                    <button
-                      key={t}
+                    <button key={t}
                       onClick={() => setActiveFilter(activeFilter === t ? null : t)}
                       className={`text-[12px] px-3 py-1.5 rounded-full border transition-all ${
                         activeFilter === t
@@ -156,7 +177,7 @@ export default function FeedPage() {
               )}
             </div>
 
-            {/* Initial loading — 2 full skeleton blocks */}
+            {/* Skeleton — shown until first chunk arrives */}
             {loading && (
               <>
                 <SkeletonBlock />
@@ -165,7 +186,7 @@ export default function FeedPage() {
             )}
 
             {/* Empty state */}
-            {!loading && items.length === 0 && (
+            {!loading && items.length === 0 && !streaming && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <Feed size={32} className="text-ink-muted mb-4" />
                 <p className="text-ink-secondary">Nenhuma notícia encontrada.</p>
@@ -175,24 +196,22 @@ export default function FeedPage() {
               </div>
             )}
 
-            {/* Feed blocks — lazy loaded */}
-            {!loading && shownBlocks.map((block, i) => (
+            {/* Feed blocks */}
+            {shownBlocks.map((block, i) => (
               <FeedBlock key={i} items={block} blockIndex={i} />
             ))}
 
-            {/* Sentinel + loading more skeleton */}
-            {!loading && filteredItems.length > 0 && (
+            {/* Sentinel + load more skeleton */}
+            {filteredItems.length > 0 && (
               <div ref={sentinelRef}>
-                {hasMore && <SkeletonBlock />}
+                {(hasMore || streaming) && <SkeletonBlock />}
               </div>
             )}
           </div>
 
-          {/* Right sidebar */}
           <div className="sidebar-right pt-12">
             <RightSidebar topics={topics} />
           </div>
-
         </div>
       </div>
     </div>

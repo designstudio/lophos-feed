@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { fetchNewsForTopic, isCacheStale } from '@/lib/news'
@@ -8,72 +8,96 @@ export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!userId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
   const { topics, forceRefresh = false } = await req.json()
   if (!Array.isArray(topics) || topics.length === 0) {
-    return NextResponse.json({ error: 'Topics required' }, { status: 400 })
+    return new Response(JSON.stringify({ error: 'Topics required' }), { status: 400 })
   }
 
-  const allItems: NewsItem[] = []
   const db = getSupabaseAdmin()
 
-  await Promise.allSettled(
-    topics.map(async (topic: string) => {
-      // 1. Check cache — serve if fresh
-      if (!forceRefresh) {
-        const { data: cached } = await db
-          .from('news_cache')
-          .select('*')
-          .eq('topic', topic)
-          .order('cached_at', { ascending: false })
-          .limit(4) // max 2 stories per topic
+  const encoder = new TextEncoder()
+  const stream = new TransformStream()
+  const writer = stream.writable.getWriter()
 
-        if (cached && cached.length > 0 && !isCacheStale(cached[0].cached_at)) {
-          allItems.push(...cached.map(rowToItem))
-          return
+  const send = async (items: NewsItem[]) => {
+    if (items.length === 0) return
+    await writer.write(encoder.encode(JSON.stringify({ items }) + '\n'))
+  }
+
+  ;(async () => {
+    // 1. ONE query — fetch all cached items for all topics at once
+    const staleTopics: string[] = [...topics]
+
+    if (!forceRefresh) {
+      const { data: allCached } = await db
+        .from('news_cache')
+        .select('*')
+        .in('topic', topics)
+        .order('cached_at', { ascending: false })
+
+      if (allCached && allCached.length > 0) {
+        // Group by topic
+        const byTopic = new Map<string, any[]>()
+        for (const row of allCached) {
+          if (!byTopic.has(row.topic)) byTopic.set(row.topic, [])
+          byTopic.get(row.topic)!.push(row)
+        }
+
+        // Send fresh cached topics immediately, collect stale ones
+        staleTopics.length = 0
+        for (const topic of topics) {
+          const rows = byTopic.get(topic)
+          if (rows && rows.length > 0 && !isCacheStale(rows[0].cached_at)) {
+            // Fresh — send immediately
+            await send(rows.slice(0, 4).map(rowToItem))
+          } else {
+            // Stale or missing — needs refresh
+            staleTopics.push(topic)
+          }
         }
       }
+    }
 
-      // 2. Fetch fresh — delete stale cache first, then insert new
-      try {
-        const fresh = await fetchNewsForTopic(topic)
-        if (fresh.length > 0) {
-          // Replace old cache for this topic
-          await db.from('news_cache').delete().eq('topic', topic)
+    // 2. Fetch only stale/missing topics in parallel
+    if (staleTopics.length > 0) {
+      await Promise.allSettled(
+        staleTopics.map(async (topic) => {
+          try {
+            const fresh = await fetchNewsForTopic(topic)
+            if (fresh.length > 0) {
+              await db.from('news_cache').delete().eq('topic', topic)
+              const rows = fresh.map(itemToRow)
+              await db.from('news_cache').insert(rows)
+              await db.from('articles').upsert(rows, { onConflict: 'id' })
+              await send(fresh)
+            }
+          } catch (e) {
+            console.error(`Error fetching topic "${topic}":`, e)
+            // Fallback: stale cache is better than nothing
+            const { data: stale } = await db
+              .from('news_cache')
+              .select('*')
+              .eq('topic', topic)
+              .order('cached_at', { ascending: false })
+              .limit(4)
+            if (stale?.length) await send(stale.map(rowToItem))
+          }
+        })
+      )
+    }
 
-          const rows = fresh.map((item) => ({
-            id: item.id,
-            topic: item.topic,
-            title: item.title,
-            summary: item.summary,
-            sources: item.sources,
-            image_url: item.imageUrl || null,
-            published_at: item.publishedAt,
-            cached_at: item.cachedAt,
-          }))
+    await writer.close()
+  })()
 
-          await db.from('news_cache').insert(rows)
-
-          // Also upsert into permanent articles table — survives cache clears
-          await db.from('articles').upsert(rows, { onConflict: 'id' })
-          allItems.push(...fresh)
-        }
-      } catch (e) {
-        console.error(`Error fetching topic "${topic}":`, e)
-        // Fallback: serve stale cache rather than empty
-        const { data: stale } = await db
-          .from('news_cache')
-          .select('*')
-          .eq('topic', topic)
-          .order('cached_at', { ascending: false })
-          .limit(4)
-        if (stale) allItems.push(...stale.map(rowToItem))
-      }
-    })
-  )
-
-  return NextResponse.json({ items: allItems })
+  return new Response(stream.readable, {
+    headers: {
+      'Content-Type': 'application/x-ndjson',
+      'Transfer-Encoding': 'chunked',
+      'Cache-Control': 'no-cache',
+    },
+  })
 }
 
 function rowToItem(row: any): NewsItem {
@@ -86,5 +110,18 @@ function rowToItem(row: any): NewsItem {
     imageUrl: row.image_url,
     publishedAt: row.published_at,
     cachedAt: row.cached_at,
+  }
+}
+
+function itemToRow(item: NewsItem) {
+  return {
+    id: item.id,
+    topic: item.topic,
+    title: item.title,
+    summary: item.summary,
+    sources: item.sources,
+    image_url: item.imageUrl || null,
+    published_at: item.publishedAt,
+    cached_at: item.cachedAt,
   }
 }
