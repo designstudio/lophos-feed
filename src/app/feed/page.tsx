@@ -67,7 +67,7 @@ export default function FeedPage() {
 
       {/* Scrollable area — feed + right sidebar together */}
       <div className="flex-1 min-w-0 overflow-y-auto">
-        <div className="max-w-5xl mx-auto px-6 py-6 flex gap-10">
+        <div className="max-w-[1136px] mx-auto px-6 py-6 flex gap-10">
 
           {/* Feed — main column */}
           <div className="flex-1 min-w-0">
@@ -150,7 +150,7 @@ export default function FeedPage() {
           </div>
 
           {/* Right sidebar — inline, scrolls with content */}
-          <div className="w-64 flex-shrink-0 pt-12">
+          <div className="w-[336px] flex-shrink-0 pt-12">
             <RightSidebar topics={topics} />
           </div>
 
