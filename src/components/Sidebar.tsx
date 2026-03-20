@@ -582,11 +582,15 @@ interface Props { onRefresh?: () => void; refreshing?: boolean }
 
 export function Sidebar({ onRefresh, refreshing }: Props) {
   const path = usePathname()
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem('sidebar_collapsed') === 'true'
-  })
+  const [collapsed, setCollapsed] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar_collapsed') === 'true'
+    setCollapsed(saved)
+    setMounted(true)
+  }, [])
 
   useEffect(() => { if (path === '/settings') setShowSettings(true) }, [path])
 
@@ -604,27 +608,34 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
         className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary overflow-hidden"
         style={{
           width: collapsed ? '3.5rem' : '16.1rem',
-          transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: mounted ? 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
           willChange: 'width',
         }}
       >
         {/* Header */}
-        <div className="flex items-center gap-2.5 px-3 pt-5 pb-0 mb-6 flex-shrink-0">
+        <div className="flex items-center px-3 pt-5 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
+          {/* Logo — always visible */}
           <div className="flex-shrink-0">
             <LophosLogo size={28} />
           </div>
+
+          {/* Name — fades out when collapsed */}
           <span
-            className="font-display text-lg text-ink-primary flex-1 whitespace-nowrap overflow-hidden"
+            className="font-display text-lg text-ink-primary flex-1 whitespace-nowrap overflow-hidden ml-2.5"
             style={{
               opacity: collapsed ? 0 : 1,
+              width: collapsed ? 0 : 'auto',
               transition: 'opacity 0.15s ease',
+              pointerEvents: 'none',
             }}
           >
             Lophos
           </span>
+
+          {/* Toggle — always visible, floats right */}
           <button
             onClick={toggle}
-            className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0"
+            className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0 ml-auto"
           >
             {collapsed
               ? <AltArrowRight size={14} />
