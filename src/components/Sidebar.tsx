@@ -582,10 +582,21 @@ interface Props { onRefresh?: () => void; refreshing?: boolean }
 
 export function Sidebar({ onRefresh, refreshing }: Props) {
   const path = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('sidebar_collapsed') === 'true'
+  })
   const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => { if (path === '/settings') setShowSettings(true) }, [path])
+
+  const toggle = () => {
+    setCollapsed(v => {
+      const next = !v
+      localStorage.setItem('sidebar_collapsed', String(next))
+      return next
+    })
+  }
 
   return (
     <>
@@ -594,6 +605,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
         style={{
           width: collapsed ? '3.5rem' : '16.1rem',
           transition: 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+          willChange: 'width',
         }}
       >
         {/* Header */}
@@ -611,7 +623,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
             Lophos
           </span>
           <button
-            onClick={() => setCollapsed(v => !v)}
+            onClick={toggle}
             className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0"
           >
             {collapsed
