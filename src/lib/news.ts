@@ -93,7 +93,7 @@ ESTRUTURA OBRIGATÓRIA de cada notícia:
 - sections: array de 2-4 seções temáticas, cada uma com:
   - heading: subtítulo curto e chamativo (ex: "Detalhes do anúncio", "Reação dos fãs", "Impacto no mercado")
   - body: 2-4 frases factuais sintetizando informações específicas das fontes
-- conclusion: seção final opcional (2-4 linhas) com título "O que esperar", "Contexto maior" ou "Próximos passos" — só inclua se houver informação relevante
+- conclusion: string simples (não objeto) com 2-4 linhas sobre "O que esperar", "Contexto maior" ou "Próximos passos" — só inclua se houver informação relevante, senão omita ou use null
 - sourceIndexes: índices de todos os resultados usados
 
 Responda APENAS com JSON válido:
@@ -101,7 +101,7 @@ Responda APENAS com JSON válido:
   "title": "...",
   "summary": "...",
   "sections": [{"heading": "...", "body": "..."}, ...],
-  "conclusion": "..." ,
+  "conclusion": "texto simples aqui, sem objeto",
   "sourceIndexes": [1, 2, 3]
 }]
 
@@ -159,7 +159,9 @@ ${context}`
       title: item.title,
       summary: item.summary,
       sections: (item.sections || []) as ArticleSection[],
-      conclusion: item.conclusion || undefined,
+      conclusion: typeof item.conclusion === 'string'
+        ? item.conclusion
+        : item.conclusion?.body || undefined,
       sources,
       imageUrl: images[i] ?? undefined,
       publishedAt: now,
