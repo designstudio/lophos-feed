@@ -6,7 +6,7 @@ import { useUser, useClerk } from '@clerk/nextjs'
 import dynamicImport from 'next/dynamic'
 import {
   NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, ArrowLeft, Check
+  Settings, Logout, CloseCircle
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
@@ -38,7 +38,13 @@ function LophosLogo({ size = 28 }: { size?: number }) {
   )
 }
 
-// ─── Settings Modal ──────────────────────────────────────────
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M2 7L5.5 10.5L12 3.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
 type SettingsTab = 'conta' | 'temas' | 'aparencia'
 
 const ACCENT_COLORS = [
@@ -192,10 +198,10 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                         <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: c.dot }} />
                         <span className="text-sm text-ink-primary flex-1">{c.label}</span>
                         {accentColor === c.value && c.label !== 'Padrão' && (
-                          <Check size={14} className="text-accent" />
+                          <CheckIcon />
                         )}
                         {c.label === 'Padrão' && accentColor === '#1b6ef3' && (
-                          <Check size={14} className="text-accent" />
+                          <CheckIcon />
                         )}
                       </button>
                     ))}
