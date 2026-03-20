@@ -44,6 +44,8 @@ export async function GET(req: NextRequest) {
       topic: row.topic,
       title: row.title,
       summary: row.summary,
+      sections: row.sections || [],
+      conclusion: row.conclusion || undefined,
       sources: row.sources,
       imageUrl: row.image_url,
       publishedAt: row.published_at,

@@ -63,3 +63,9 @@ create table if not exists articles (
 create index if not exists articles_topic_idx on articles(topic);
 alter table articles enable row level security;
 create policy "service role all" on articles for all using (true);
+
+-- Add sections and conclusion columns to news_cache and articles
+alter table news_cache add column if not exists sections jsonb default '[]';
+alter table news_cache add column if not exists conclusion text;
+alter table articles add column if not exists sections jsonb default '[]';
+alter table articles add column if not exists conclusion text;
