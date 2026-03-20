@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 import { fetchNewsForTopic, isCacheStale } from '@/lib/news'
 import { NewsItem } from '@/lib/types'
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         if (fresh.length === 0) return
 
         // Save to cache (delete old, insert new)
-        await supabaseAdmin.from('news_cache').delete().eq('topic', topic)
+        await getSupabaseAdmin().from('news_cache').delete().eq('topic', topic)
         const rows = fresh.map((item) => ({
           topic: item.topic,
           title: item.title,

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { getSupabaseAdmin } from '@/lib/supabase'
 
 // GET — fetch user's topics
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await getSupabaseAdmin()
     .from('user_topics')
     .select('*')
     .eq('user_id', userId)
@@ -28,11 +28,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Delete existing topics for this user
-  await supabaseAdmin.from('user_topics').delete().eq('user_id', userId)
+  await getSupabaseAdmin().from('user_topics').delete().eq('user_id', userId)
 
   // Insert new topics
   const rows = topics.map((topic: string) => ({ user_id: userId, topic }))
-  const { error } = await supabaseAdmin.from('user_topics').insert(rows)
+  const { error } = await getSupabaseAdmin().from('user_topics').insert(rows)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

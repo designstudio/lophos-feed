@@ -8,9 +8,9 @@
     "start": "next start"
   },
   "dependencies": {
-    "next": "15.2.4",
-    "react": "^19",
-    "react-dom": "^19",
+    "next": "15.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "@clerk/nextjs": "^6",
     "@supabase/supabase-js": "^2",
     "lucide-react": "^0.469.0",
@@ -21,8 +21,8 @@
   },
   "devDependencies": {
     "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
     "typescript": "^5",
     "autoprefixer": "^10.0.1",
     "postcss": "^8",
