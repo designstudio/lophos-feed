@@ -8,24 +8,31 @@
     "start": "next start"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6",
+    "@editorjs/delimiter": "^1.4.2",
+    "@editorjs/editorjs": "^2.31.5",
+    "@editorjs/header": "^2.8.8",
+    "@editorjs/image": "^2.10.3",
+    "@editorjs/list": "^2.0.9",
+    "@editorjs/paragraph": "^2.11.7",
+    "@editorjs/quote": "^2.7.6",
+    "@solar-icons/react-perf": "^1",
+    "@supabase/supabase-js": "^2",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "next": "15.3.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@clerk/nextjs": "^6",
-    "@supabase/supabase-js": "^2",
-    "@solar-icons/react-perf": "^1",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.5",
-    "date-fns": "^4.1.0",
-    "date-fns-tz": "^3.2.0"
+    "tailwind-merge": "^2.5.5"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "typescript": "^5",
     "autoprefixer": "^10.0.1",
     "postcss": "^8",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
   }
 }

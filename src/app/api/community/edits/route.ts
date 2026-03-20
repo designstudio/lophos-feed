@@ -87,9 +87,10 @@ export async function PATCH(req: NextRequest) {
   if (action === 'approve') {
     const changes = edit.changes as any
     const update: any = {}
-    if (changes.title)    update.title   = changes.title
-    if (changes.summary)  update.summary = changes.summary
-    if (changes.sections) update.sections = changes.sections
+    if (changes.title)    update.title     = changes.title
+    if (changes.summary)  update.summary   = changes.summary
+    if (changes.sections) update.sections  = changes.sections
+    if (changes.imageUrl) update.image_url = changes.imageUrl
 
     await Promise.allSettled([
       db.from('news_cache').update(update).eq('id', edit.article_id),
