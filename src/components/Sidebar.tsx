@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, Sun, Moon, Monitor, UserRounded, Unread
+  Settings, Logout, CloseCircle, Sun, Moon, Unread, UserRounded
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
@@ -37,7 +37,7 @@ function LophosLogo({ size = 28 }: { size?: number }) {
   )
 }
 
-// ─── Theme utilities ───────────────────────────────────────────
+// ─── Theme / Accent utilities ──────────────────────────────────
 function applyTheme(t: string) {
   localStorage.setItem('theme', t)
   const dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -49,16 +49,14 @@ function applyAccent(color: string) {
   document.documentElement.style.setProperty('--color-accent', color)
 }
 
-// Boot: restore saved preferences
 if (typeof window !== 'undefined') {
   const saved = localStorage.getItem('accent_color')
   if (saved) document.documentElement.style.setProperty('--color-accent', saved)
-  const t = localStorage.getItem('theme') || 'light'
-  applyTheme(t)
+  applyTheme(localStorage.getItem('theme') || 'light')
 }
 
 const ACCENT_COLORS = [
-  { label: 'Padrão',  value: '#ca774b', dot: '#94a3b8' },
+  { label: 'Padrão',  value: '#ca774b', dot: '#ca774b' },
   { label: 'Azul',    value: '#2563eb', dot: '#3b82f6' },
   { label: 'Verde',   value: '#16a34a', dot: '#22c55e' },
   { label: 'Amarelo', value: '#ca8a04', dot: '#eab308' },
@@ -66,7 +64,13 @@ const ACCENT_COLORS = [
   { label: 'Laranja', value: '#ea580c', dot: '#f97316' },
 ]
 
-// ─── Custom Accent Color Picker ───────────────────────────────
+const WIDGET_OPTIONS = [
+  { id: 'valorant', label: 'Partidas — Valorant' },
+  { id: 'lol',      label: 'Partidas — League of Legends' },
+  { id: 'series',   label: 'Próximos episódios' },
+]
+
+// ─── Custom Accent Picker ──────────────────────────────────────
 function AccentPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -90,7 +94,7 @@ function AccentPicker({ value, onChange }: { value: string; onChange: (v: string
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl border border-gray-100 shadow-lg z-50 py-1.5 overflow-hidden"
+        <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl border border-gray-100 shadow-lg z-50 py-1.5"
           style={{ animation: 'slideUp 0.12s ease' }}>
           {ACCENT_COLORS.map(c => (
             <button key={c.label} onClick={() => { onChange(c.value); setOpen(false) }}
@@ -113,67 +117,39 @@ function AccentPicker({ value, onChange }: { value: string; onChange: (v: string
 // ─── Settings Modal ────────────────────────────────────────────
 type Tab = 'geral' | 'widgets' | 'conta'
 
-const WIDGET_OPTIONS = [
-  { id: 'valorant', label: 'Partidas — Valorant' },
-  { id: 'lol', label: 'Partidas — League of Legends' },
-  { id: 'series', label: 'Próximos episódios' },
-]
-
 function SettingsModal({ onClose }: { onClose: () => void }) {
   const { user } = useUser()
   const clerk = useClerk()
   const [tab, setTab] = useState<Tab>('geral')
 
-  // Geral state
+  // Geral
   const [theme, setTheme] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('theme') || 'light' : 'light')
   const [accentColor, setAccentColor] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('accent_color') || '#ca774b' : '#ca774b')
 
-  // Widgets state
+  // Widgets
   const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
     if (typeof window === 'undefined') return WIDGET_OPTIONS.map(w => w.id)
     try {
-      const saved = JSON.parse(localStorage.getItem('lophos_widgets') || '[]')
-      const ordered = saved.filter((id: string) => id !== 'weather')
+      const saved = JSON.parse(localStorage.getItem('lophos_widgets') || '[]') as string[]
+      const ordered = saved.filter(id => id !== 'weather')
       return ordered.length > 0 ? ordered : WIDGET_OPTIONS.map(w => w.id)
     } catch { return WIDGET_OPTIONS.map(w => w.id) }
   })
   const [activeWidgets, setActiveWidgets] = useState<string[]>(() => {
     if (typeof window === 'undefined') return ['weather']
-    try { return JSON.parse(localStorage.getItem('lophos_widgets') || '["weather"]') }
+    try { return JSON.parse(localStorage.getItem('lophos_widgets') || '["weather"]') as string[] }
     catch { return ['weather'] }
   })
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
 
-  const toggleWidget = (id: string) => {
-    const next = activeWidgets.includes(id)
-      ? activeWidgets.filter(x => x !== id)
-      : [...activeWidgets, id]
-    setActiveWidgets(next)
-    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...widgetOrder.filter(id => next.includes(id) || id === 'weather')]))
-    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...next.filter(x => x !== 'weather')]))
-  }
-
-  const onDragStart = (i: number) => setDragIdx(i)
-  const onDragOver = (e: React.DragEvent, i: number) => { e.preventDefault(); setDragOverIdx(i) }
-  const onDrop = (i: number) => {
-    if (dragIdx === null || dragIdx === i) return
-    const next = [...widgetOrder]
-    const [moved] = next.splice(dragIdx, 1)
-    next.splice(i, 0, moved)
-    setWidgetOrder(next)
-    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...next]))
-    setDragIdx(null)
-    setDragOverIdx(null)
-  }
-
-  // Conta state
+  // Conta
   const [firstName, setFirstName] = useState(user?.firstName || '')
   const [lastName, setLastName] = useState(user?.lastName || '')
   const [savingName, setSavingName] = useState(false)
   const [nameSaved, setNameSaved] = useState(false)
 
-  // Topics state
+  // Topics
   const [topics, setTopics] = useState<string[]>([])
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [custom, setCustom] = useState('')
@@ -198,6 +174,27 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   const handleTheme = (t: string) => { setTheme(t); applyTheme(t) }
   const handleAccent = (c: string) => { setAccentColor(c); applyAccent(c) }
 
+  const toggleWidget = (id: string) => {
+    const next = activeWidgets.includes(id)
+      ? activeWidgets.filter(x => x !== id)
+      : [...activeWidgets, id]
+    setActiveWidgets(next)
+    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...widgetOrder.filter(x => next.includes(x))]))
+  }
+
+  const onDragStart = (i: number) => setDragIdx(i)
+  const onDragOver = (e: React.DragEvent, i: number) => { e.preventDefault(); setDragOverIdx(i) }
+  const onDrop = (i: number) => {
+    if (dragIdx === null || dragIdx === i) { setDragIdx(null); setDragOverIdx(null); return }
+    const next = [...widgetOrder]
+    const [moved] = next.splice(dragIdx, 1)
+    next.splice(i, 0, moved)
+    setWidgetOrder(next)
+    localStorage.setItem('lophos_widgets', JSON.stringify(['weather', ...next.filter(x => activeWidgets.includes(x))]))
+    setDragIdx(null)
+    setDragOverIdx(null)
+  }
+
   const saveName = async () => {
     if (!firstName.trim()) return
     setSavingName(true)
@@ -218,9 +215,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   }
 
   const TABS = [
-    { id: 'geral' as Tab, label: 'Geral', icon: <Settings size={15} /> },
-    { id: 'widgets' as Tab, label: 'Widgets', icon: <Unread size={15} /> },
-    { id: 'conta' as Tab, label: 'Conta', icon: <UserRounded size={15} /> },
+    { id: 'geral' as Tab,    label: 'Geral',    icon: <Settings size={15} /> },
+    { id: 'widgets' as Tab,  label: 'Widgets',  icon: <Unread size={15} /> },
+    { id: 'conta' as Tab,    label: 'Conta',    icon: <UserRounded size={15} /> },
   ]
 
   return (
@@ -244,7 +241,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-7 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
-            <h2 className="text-base font-semibold text-gray-900">{tab === 'geral' ? 'Geral' : tab === 'widgets' ? 'Widgets' : 'Conta'}</h2>
+            <h2 className="text-base font-semibold text-gray-900">
+              {tab === 'geral' ? 'Geral' : tab === 'widgets' ? 'Widgets' : 'Conta'}
+            </h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
               <CloseCircle size={20} />
             </button>
@@ -255,31 +254,26 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             {/* ── GERAL ── */}
             {tab === 'geral' && (
               <>
-                {/* Appearance */}
                 <section className="py-5 border-b border-gray-100">
                   <h3 className="text-sm font-semibold text-gray-900 mb-1">Aparência</h3>
                   <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para você.</p>
                   <div className="grid grid-cols-3 gap-3">
-                    {[
+                    {([
                       { id: 'light',  label: 'Claro',   icon: <Sun size={22} /> },
                       { id: 'dark',   label: 'Escuro',  icon: <Moon size={22} /> },
-                      { id: 'system', label: 'Sistema', icon: <Monitor size={22} /> },
-                    ].map(t => (
+                      { id: 'system', label: 'Sistema', icon: <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="18" height="18" rx="3" fill="url(#sys2)"/><defs><linearGradient id="sys2" x1="2" y1="2" x2="20" y2="20"><stop offset="50%" stopColor="#f9fafb"/><stop offset="50%" stopColor="#111827"/></linearGradient></defs></svg> },
+                    ] as { id: string; label: string; icon: React.ReactNode }[]).map(t => (
                       <button key={t.id} onClick={() => handleTheme(t.id)}
                         className={cn(
                           'flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all',
-                          theme === t.id
-                            ? 'border-gray-900 text-gray-900 bg-gray-50'
-                            : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                          theme === t.id ? 'border-gray-900 text-gray-900 bg-gray-50' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
                         )}>
-                        {t.icon}
-                        {t.label}
+                        {t.icon}{t.label}
                       </button>
                     ))}
                   </div>
                 </section>
 
-                {/* Accent color — custom dropdown like ChatGPT */}
                 <section className="py-5 border-b border-gray-100">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-900">Cor de ênfase</h3>
@@ -287,7 +281,6 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </div>
                 </section>
 
-                {/* Topics */}
                 <section className="py-5">
                   <h3 className="text-sm font-semibold text-gray-900 mb-1">Tópicos de interesse</h3>
                   <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
@@ -312,7 +305,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   )}
                   <div className="flex gap-2">
                     <input value={custom} onChange={e => setCustom(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && (() => { if (custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } })()}
+                      onKeyDown={e => { if (e.key === 'Enter' && custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
                       placeholder="Adicionar tópico..."
                       className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-gray-400 bg-white text-gray-900" />
                     <button onClick={() => { if (custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
@@ -329,58 +322,38 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               </>
             )}
 
-
             {/* ── WIDGETS ── */}
             {tab === 'widgets' && (
               <div className="py-2">
                 <p className="text-sm text-gray-500 mb-5">Ative e ordene os widgets da barra lateral. Arraste para reordenar.</p>
-                
-                {/* Weather — always on, not draggable */}
-                <div className="flex items-center gap-3 py-3 px-3 rounded-xl border border-gray-100 mb-2 opacity-60">
-                  <div className="w-5 h-5 text-gray-300 flex-shrink-0">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M5 4h6M5 8h6M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
-                  </div>
+
+                {/* Clima — always on */}
+                <div className="flex items-center gap-3 py-3 px-3 rounded-xl border border-gray-100 mb-2 opacity-50 select-none">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 4h6M5 8h6M5 12h6" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/></svg>
                   <span className="text-sm text-gray-900 flex-1">Clima</span>
                   <span className="text-xs text-gray-400 px-2 py-0.5 rounded-full bg-gray-100">Sempre ativo</span>
                 </div>
 
-                {/* Draggable widgets */}
                 {widgetOrder.map((id, i) => {
                   const w = WIDGET_OPTIONS.find(x => x.id === id)
                   if (!w) return null
                   return (
-                    <div
-                      key={id}
-                      draggable
+                    <div key={id} draggable
                       onDragStart={() => onDragStart(i)}
                       onDragOver={e => onDragOver(e, i)}
                       onDrop={() => onDrop(i)}
                       onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
                       className={cn(
-                        'flex items-center gap-3 py-3 px-3 rounded-xl border mb-2 cursor-grab active:cursor-grabbing transition-all',
-                        dragOverIdx === i && dragIdx !== i ? 'border-accent bg-accent/5' : 'border-gray-100 hover:border-gray-200'
-                      )}
-                    >
-                      <div className="text-gray-300 flex-shrink-0 hover:text-gray-500 transition-colors">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        'flex items-center gap-3 py-3 px-3 rounded-xl border mb-2 cursor-grab active:cursor-grabbing transition-all select-none',
+                        dragOverIdx === i && dragIdx !== i ? 'border-accent bg-accent/5 scale-[1.02]' : 'border-gray-100 hover:border-gray-200'
+                      )}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0">
                         <path d="M5 4h6M5 8h6M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
-                      </div>
                       <span className="text-sm text-gray-900 flex-1">{w.label}</span>
-                      {/* Toggle */}
-                      <button
-                        onClick={() => toggleWidget(id)}
-                        className={cn(
-                          'relative w-9 h-5 rounded-full transition-colors flex-shrink-0',
-                          activeWidgets.includes(id) ? 'bg-gray-900' : 'bg-gray-200'
-                        )}
-                      >
-                        <span className={cn(
-                          'absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform',
-                          activeWidgets.includes(id) ? 'translate-x-[18px]' : 'translate-x-0.5'
-                        )} />
+                      <button onClick={() => toggleWidget(id)}
+                        className={cn('relative w-9 h-5 rounded-full transition-colors flex-shrink-0', activeWidgets.includes(id) ? 'bg-gray-900' : 'bg-gray-200')}>
+                        <span className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform', activeWidgets.includes(id) ? 'translate-x-[18px]' : 'translate-x-0.5')} />
                       </button>
                     </div>
                   )
@@ -388,17 +361,14 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            {/* ── CONTA ── */
+            {/* ── CONTA ── */}
             {tab === 'conta' && (
               <>
-                {/* User info */}
                 <div className="flex items-center gap-4 py-5 border-b border-gray-100">
                   <div className="relative group cursor-pointer flex-shrink-0" onClick={() => clerk.openUserProfile()}>
                     {user?.imageUrl
                       ? <img src={user.imageUrl} alt="" width={52} height={52} className="rounded-full" />
-                      : <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-white font-semibold text-xl" style={{ background: '#111' }}>
-                          {user?.firstName?.[0] ?? '?'}
-                        </div>
+                      : <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-white font-semibold text-xl" style={{ background: '#111' }}>{user?.firstName?.[0] ?? '?'}</div>
                     }
                     <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
@@ -413,7 +383,6 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
 
-                {/* Edit profile */}
                 <section className="py-5 border-b border-gray-100">
                   <h3 className="text-sm font-semibold text-gray-900 mb-4">Editar perfil</h3>
                   <div className="grid grid-cols-2 gap-3 mb-4">
@@ -435,7 +404,6 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </button>
                 </section>
 
-                {/* Password */}
                 <div className="flex items-center justify-between py-5 border-b border-gray-100">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">Senha</h3>
@@ -447,7 +415,6 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </button>
                 </div>
 
-                {/* Delete account */}
                 <div className="flex items-center justify-between py-5">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">Excluir conta</h3>
@@ -460,6 +427,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                 </div>
               </>
             )}
+
           </div>
         </div>
       </div>
@@ -486,10 +454,7 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
         className="flex items-center gap-2.5 px-3 py-2 rounded-lg w-full hover:bg-bg-secondary transition-colors text-left">
         {user?.imageUrl
           ? <img src={user.imageUrl} alt="" width={26} height={26} className="rounded-full flex-shrink-0" />
-          : <div className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
-              style={{ background: 'var(--color-accent)' }}>
-              {user?.firstName?.[0] ?? '?'}
-            </div>
+          : <div className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0" style={{ background: 'var(--color-accent)' }}>{user?.firstName?.[0] ?? '?'}</div>
         }
         <span className="text-sm text-ink-secondary truncate flex-1">{user?.firstName ?? 'Minha conta'}</span>
       </button>
@@ -543,8 +508,7 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
     return (
       <>
         <aside className="flex-shrink-0 flex flex-col h-full py-5 px-2 border-r border-border bg-bg-primary items-center" style={{ width: '3.5rem' }}>
-          <button onClick={expand}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary transition-colors mb-4">
+          <button onClick={expand} className="w-8 h-8 flex items-center justify-center rounded-lg text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary transition-colors mb-4">
             <AltArrowRight size={16} />
           </button>
           <LophosLogo size={28} />
@@ -562,13 +526,12 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
           animating && collapsed ? 'sidebar-exit' : '',
           animating && !collapsed ? 'sidebar-enter' : '',
         )}
-        style={{ width: '16.1rem' }}
-      >
+        style={{ width: '16.1rem' }}>
+
         <div className="flex items-center gap-2.5 px-2 mb-6">
           <LophosLogo size={28} />
           <span className="font-display text-lg text-ink-primary flex-1">Lophos</span>
-          <button onClick={collapse}
-            className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0">
+          <button onClick={collapse} className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0">
             <AltArrowLeft size={14} />
           </button>
         </div>
