@@ -44,7 +44,22 @@ function getSourceHint(topic: string): string {
   return 'Reuters, AP, BBC, The Guardian'
 }
 
-// Build a more specific query to get news articles, not guides/wikis
+// Extract og:image from a URL — used as fallback when Tavily has no image
+async function fetchOgImage(url: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(3000),
+    })
+    if (!res.ok) return undefined
+    const html = await res.text()
+    const match = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+      || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
+    return match?.[1] ?? undefined
+  } catch {
+    return undefined
+  }
+}
 function buildQuery(topic: string): string {
   const todayISO = new Date().toISOString().split('T')[0]
   // Add "news" explicitly and today's date to force recency
@@ -63,16 +78,14 @@ export async function fetchNewsForTopic(
       query: buildQuery(topic),
       search_depth: 'advanced', // better quality results
       max_results: 10,
-      days: 2, // tighter window — only last 2 days
+      days: 2,
       include_answer: false,
-      include_images: true,
       include_raw_content: false,
     }),
   })
 
   if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
   const tavilyData = await tavilyRes.json()
-  const images: string[] = tavilyData.images || []
 
   // Filter — keep only real articles from quality domains
   const results = (tavilyData.results || []).filter((r: any) =>
@@ -148,7 +161,7 @@ ${context}`
   const parsed = JSON.parse(match[0])
   const now = new Date().toISOString()
 
-  return parsed.map((item: any, i: number): NewsItem => {
+  return Promise.all(parsed.map(async (item: any, i: number): Promise<NewsItem> => {
     const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
     const sources: NewsSource[] = idxs
       .filter((idx) => idx >= 0 && idx < results.length)
@@ -160,6 +173,13 @@ ${context}`
           favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
         }
       })
+
+    // Get image from primary source: Tavily per-result image field first, then og:image fetch
+    const primaryResult = results[idxs[0]] ?? results[i]
+    let imageUrl: string | undefined = primaryResult?.image ?? undefined
+    if (!imageUrl && primaryResult?.url) {
+      imageUrl = await fetchOgImage(primaryResult.url)
+    }
 
     const safeId = `${topic}-${Date.now()}-${i}`
       .toLowerCase()
@@ -180,11 +200,11 @@ ${context}`
       sections: (item.sections || []) as ArticleSection[],
       conclusion,
       sources,
-      imageUrl: images[i] ?? undefined,
+      imageUrl,
       publishedAt: now,
       cachedAt: now,
     }
-  })
+  }))
 }
 
 export function isCacheStale(cachedAt: string): boolean {
