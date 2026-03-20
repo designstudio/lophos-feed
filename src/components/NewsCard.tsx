@@ -110,7 +110,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
           <Reactions reaction={reaction} onReact={react} />
         </div>
         {item.imageUrl && (
-          <div className="flex-shrink-0 w-52 h-36 rounded-xl overflow-hidden bg-bg-secondary">
+          <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
             <img src={item.imageUrl} alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
@@ -124,7 +124,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
   return (
     <a href={href} className={cn('group flex gap-6 items-start', className)}>
       {item.imageUrl && (
-        <div className="flex-shrink-0 w-52 h-36 rounded-xl overflow-hidden bg-bg-secondary">
+        <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
           <img src={item.imageUrl} alt={item.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}

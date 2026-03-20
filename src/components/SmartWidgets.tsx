@@ -26,12 +26,10 @@ interface Episode {
 const GAME_META: Record<string, { label: string; logo: string }> = {
   valorant: { label: 'Valorant', logo: 'https://www.google.com/s2/favicons?domain=playvalorant.com&sz=32' },
   lol: { label: 'League of Legends', logo: 'https://www.google.com/s2/favicons?domain=leagueoflegends.com&sz=32' },
-  tft: { label: 'TFT', logo: 'https://www.google.com/s2/favicons?domain=teamfighttactics.leagueoflegends.com&sz=32' },
 }
 
 const ESPORTS_MAP: Record<string, string> = {
   'valorant': 'valorant', 'league of legends': 'lol', 'lol': 'lol',
-  'tft': 'tft', 'teamfight tactics': 'tft',
 }
 
 const SERIES_KEYWORDS = [

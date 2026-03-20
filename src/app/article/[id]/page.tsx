@@ -124,7 +124,7 @@ export default function ArticlePage() {
             <article className="animate-fade-in">
               {/* Topic + title */}
               <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-              <h1 className="text-headline text-ink-primary leading-tight mt-2 mb-3">{item.title}</h1>
+              <h1 className="text-ink-primary leading-tight mt-2 mb-3" style={{ fontSize: '2.3rem', lineHeight: '1.25' }}>{item.title}</h1>
 
               {/* Recency line */}
               <div className="flex items-center gap-2 text-xs text-ink-muted mb-6">
@@ -132,11 +132,21 @@ export default function ArticlePage() {
                 <span>Publicado {formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true, locale: ptBR })}</span>
               </div>
 
-              {/* Hero image */}
+              {/* Hero image with source attribution overlay */}
               {item.imageUrl && (
-                <div className="rounded-xl overflow-hidden mb-6 bg-bg-secondary">
+                <div className="rounded-xl overflow-hidden mb-6 bg-bg-secondary relative">
                   <img src={item.imageUrl} alt={item.title} className="article-image"
                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
+                  {item.sources?.[0] && (
+                    <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
+                      style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
+                      {item.sources[0].favicon && (
+                        <img src={item.sources[0].favicon} alt="" width={12} height={12} className="rounded-sm opacity-90"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      )}
+                      <span className="text-[11px] text-white/80 font-medium">{item.sources[0].name}</span>
+                    </div>
+                  )}
                 </div>
               )}
 

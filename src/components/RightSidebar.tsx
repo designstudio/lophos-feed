@@ -15,7 +15,7 @@ const AVAILABLE_WIDGETS = [
 const STORAGE_KEY = 'lophos_widgets'
 
 const SPORT_ESPORT_KEYWORDS = [
-  'valorant', 'league of legends', 'lol', 'tft', 'teamfight',
+  'valorant', 'league of legends', 'lol',
   'futebol', 'nba', 'formula 1', 'f1', 'nfl', 'cs2', 'csgo',
   'dota', 'overwatch', 'fortnite', 'esport', 'esports',
   'futebol americano', 'basquete', 'tênis', 'vôlei', 'natação',
