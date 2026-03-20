@@ -5,7 +5,6 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY!
 const CACHE_TTL_MINUTES = 30
 
 export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
-  // 1. Search with Tavily
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -13,7 +12,7 @@ export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
       api_key: TAVILY_KEY,
       query: `${topic} latest news`,
       search_depth: 'basic',
-      max_results: 6,
+      max_results: 8,
       include_answer: false,
       include_images: true,
     }),
@@ -26,31 +25,28 @@ export async function fetchNewsForTopic(topic: string): Promise<NewsItem[]> {
 
   if (results.length === 0) return []
 
-  // 2. Build context for Gemini — URLs are indexed, Gemini only references indexes
   const context = results
     .map((r: any, i: number) =>
-      `[${i + 1}] title: "${r.title}" | source: ${new URL(r.url).hostname.replace('www.','')} | snippet: ${r.content?.slice(0, 400)}`
+      `[${i + 1}] title: "${r.title}" | source: ${new URL(r.url).hostname.replace('www.','')} | snippet: ${r.content?.slice(0, 300)}`
     )
     .join('\n\n')
 
-  const prompt = `Você é um editor de notícias. Analise os resultados de busca abaixo sobre "${topic}" e agrupe-os em 2 notícias distintas.
+  const prompt = `Você é um editor de notícias sênior. Analise os resultados abaixo sobre "${topic}".
+
+REGRA PRINCIPAL: Agrupe TODOS os resultados que falam do MESMO evento em UMA única notícia. Só crie notícias separadas se forem eventos genuinamente diferentes (ex: patch do jogo vs torneio vs novo personagem).
+
+Se todos os resultados cobrirem o mesmo assunto, retorne APENAS 1 notícia.
+Retorne no máximo 2 notícias.
 
 Para cada notícia:
-- Agrupe os resultados relacionados ao mesmo evento
-- Escreva um título claro em português
-- Escreva um resumo de 3-4 frases em português, detalhado e informativo
-- Liste os índices dos resultados usados (ex: [1, 3])
+- Título claro e único em português
+- Resumo de 3-4 frases consolidando informações de TODAS as fontes do grupo
+- sourceIndexes com os índices de todos os resultados agrupados
 
 Responda APENAS com JSON válido, sem markdown:
-[
-  {
-    "title": "título em português",
-    "summary": "resumo 3-4 frases",
-    "sourceIndexes": [1, 2]
-  }
-]
+[{"title":"...","summary":"...","sourceIndexes":[1,2,3]}]
 
-Resultados de busca:
+Resultados:
 ${context}`
 
   const geminiRes = await fetch(
@@ -60,7 +56,7 @@ ${context}`
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2 },
+        generationConfig: { temperature: 0.1 },
       }),
     }
   )
@@ -70,9 +66,9 @@ ${context}`
     console.error(`Gemini error ${geminiRes.status}:`, errBody)
     throw new Error(`Gemini error: ${geminiRes.status}`)
   }
+
   const geminiData = await geminiRes.json()
   const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-
   const clean = text.replace(/```json|```/g, '').trim()
   const match = clean.match(/\[[\s\S]*\]/)
   if (!match) return []
@@ -81,7 +77,6 @@ ${context}`
   const now = new Date().toISOString()
 
   return parsed.map((item: any, i: number): NewsItem => {
-    // Use exact URLs from Tavily based on the indexes Gemini returned
     const indexes: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
     const sources: NewsSource[] = indexes
       .filter((idx: number) => idx >= 0 && idx < results.length)
@@ -89,7 +84,7 @@ ${context}`
         const r = results[idx]
         return {
           name: new URL(r.url).hostname.replace('www.', ''),
-          url: r.url, // exact Tavily URL — always links to the article
+          url: r.url,
           favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
         }
       })
