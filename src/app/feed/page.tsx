@@ -8,16 +8,19 @@ import { Feed } from '@solar-icons/react-perf/Linear'
 import { NewsItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-function FeedBlock({ items, isLast }: { items: NewsItem[]; isLast: boolean }) {
+function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
   if (items.length === 1) {
+    // Cycle of 3: 0=full-left, 1=trio(never reaches here), 2=full-right, then repeats
+    const posInCycle = blockIndex % 3
+    const variant = posInCycle === 2 ? 'full-right' : 'full-left'
     return (
-      <div className={cn('py-6', !isLast && 'border-b border-border')}>
-        <NewsCard item={items[0]} variant="full-left" />
+      <div className={cn('py-6', 'border-b border-border')}>
+        <NewsCard item={items[0]} variant={variant} />
       </div>
     )
   }
   return (
-    <div className={cn('py-6', !isLast && 'border-b border-border')}>
+    <div className="py-6 border-b border-border">
       <div className="grid grid-cols-3 gap-6">
         {items.map(item => <NewsCard key={item.id} item={item} variant="card" />)}
       </div>
@@ -25,13 +28,24 @@ function FeedBlock({ items, isLast }: { items: NewsItem[]; isLast: boolean }) {
   )
 }
 
-function splitIntoBlocks(items: NewsItem[]): NewsItem[][] {
-  const blocks: NewsItem[][] = []
+function splitIntoBlocks(items: NewsItem[]): { items: NewsItem[]; isFull: boolean }[] {
+  const blocks: { items: NewsItem[]; isFull: boolean }[] = []
   let i = 0
+  // Pattern: full, trio, full, full, trio, full, full, trio...
+  // Simplified: full-left, trio, full-right, full-left, trio, full-right...
   while (i < items.length) {
-    if (i % 4 === 0) { blocks.push([items[i]]); i++ }
-    else if (i + 2 < items.length) { blocks.push([items[i], items[i+1], items[i+2]]); i += 3 }
-    else { blocks.push([items[i]]); i++ }
+    const blockNum = blocks.length
+    const posInCycle = blockNum % 3 // 0=full, 1=trio, 2=full
+
+    if (posInCycle === 1 && i + 2 < items.length) {
+      // Trio block
+      blocks.push({ items: [items[i], items[i+1], items[i+2]], isFull: false })
+      i += 3
+    } else {
+      // Full block (left or right alternates)
+      blocks.push({ items: [items[i]], isFull: true })
+      i++
+    }
   }
   return blocks
 }
@@ -143,7 +157,14 @@ export default function FeedPage() {
               setItems(prev => {
                 const ids = new Set(prev.map(x => x.id))
                 const fresh = (chunk.items as NewsItem[]).filter(x => !ids.has(x.id))
-                return fresh.length > 0 ? [...prev, ...fresh] : prev
+                if (fresh.length === 0) return prev
+                const merged = [...prev, ...fresh]
+                // Always keep most recent first
+                merged.sort((a, b) =>
+                  new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
+                  new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
+                )
+                return merged
               })
               setHasData(true)
             }
@@ -182,10 +203,11 @@ export default function FeedPage() {
     <div className="page-shell">
       <Sidebar onRefresh={() => fetchFeed(true)} refreshing={streaming} />
 
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-w-0">
+        <div className="feed-layout mx-auto px-8">
 
-        {/* ── Fixed header ── */}
-        <div className="flex-shrink-0 border-b border-border bg-bg-primary px-8">
+        {/* ── Sticky header ── */}
+        <div className="sticky top-0 z-20 bg-bg-primary border-b border-border">
           <div className="flex items-center h-14">
             <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Descobrir</h1>
 
@@ -214,9 +236,8 @@ export default function FeedPage() {
           </div>
         </div>
 
-        {/* ── Scrollable body ── */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="feed-layout mx-auto px-8 py-6 flex gap-10">
+          {/* ── Feed + Right sidebar ── */}
+          <div className="flex gap-10 py-6">
             <div className="flex-1 min-w-0">
 
               {showSkeleton && <><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></>}
@@ -241,7 +262,7 @@ export default function FeedPage() {
               )}
 
               {shownBlocks.map((block, i) => (
-                <FeedBlock key={i} items={block} isLast={i === shownBlocks.length - 1} />
+                <FeedBlock key={i} items={block.items} blockIndex={i} />
               ))}
 
               {hasData && (

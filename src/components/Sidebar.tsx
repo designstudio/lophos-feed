@@ -614,9 +614,18 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
       >
         {/* Header */}
         <div className="flex items-center px-3 pt-5 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
-          {/* Logo — always visible */}
-          <div className="flex-shrink-0">
+          {/* Logo — when collapsed, hover shows expand button */}
+          <div
+            className={cn('flex-shrink-0 relative', collapsed ? 'group cursor-pointer' : '')}
+            onClick={collapsed ? toggle : undefined}
+          >
             <LophosLogo size={28} />
+            {/* Expand button overlay — only visible on hover when collapsed */}
+            {collapsed && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-bg-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                <AltArrowRight size={14} className="text-ink-secondary" />
+              </div>
+            )}
           </div>
 
           {/* Name — fades out when collapsed */}
@@ -632,16 +641,15 @@ export function Sidebar({ onRefresh, refreshing }: Props) {
             Lophos
           </span>
 
-          {/* Toggle — always visible, floats right */}
-          <button
-            onClick={toggle}
-            className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0 ml-auto"
-          >
-            {collapsed
-              ? <AltArrowRight size={14} />
-              : <AltArrowLeft size={14} />
-            }
-          </button>
+          {/* Collapse button — only visible when expanded */}
+          {!collapsed && (
+            <button
+              onClick={toggle}
+              className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0 ml-auto"
+            >
+              <AltArrowLeft size={14} />
+            </button>
+          )}
         </div>
 
         {/* Nav */}

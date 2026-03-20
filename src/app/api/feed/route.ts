@@ -73,12 +73,15 @@ export async function POST(req: NextRequest) {
       lastFetchByTopic.set(row.topic, row.last_fetched)
     }
 
-    // 2. Stream existing articles immediately — user sees content right away
-    for (const topic of topics) {
-      const existing = byTopic.get(topic) ?? []
-      if (existing.length > 0) {
-        await send(existing.map(rowToItem))
-      }
+    // 2. Stream all existing articles sorted by recency — user sees content right away
+    const allExisting = (allArticles ?? [])
+      .map(rowToItem)
+      .sort((a, b) =>
+        new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
+        new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
+      )
+    if (allExisting.length > 0) {
+      await send(allExisting)
     }
 
     // 3. Determine which topics need a fresh search
