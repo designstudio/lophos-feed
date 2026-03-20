@@ -129,6 +129,12 @@ html, body {
 
 .animate-fade-in  { animation: fadeIn  0.3s ease forwards; }
 .animate-slide-up { animation: slideUp 0.4s ease forwards; }
+.animate-slide-in-right { animation: slideInRight 0.25s ease forwards; }
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
 
 .stagger > *:nth-child(1) { animation-delay:   0ms; opacity: 0; }
 .stagger > *:nth-child(2) { animation-delay:  80ms; opacity: 0; }
