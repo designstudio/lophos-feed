@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   NotebookMinimalistic, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, Sun, Moon, Unread, UserRounded
+  Settings, Logout, CloseCircle, UserRounded
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
@@ -222,7 +222,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
   const TABS = [
     { id: 'geral' as Tab,    label: 'Geral',    icon: <Settings size={15} /> },
-    { id: 'widgets' as Tab,  label: 'Widgets',  icon: <Unread size={15} /> },
+    { id: 'widgets' as Tab,  label: 'Widgets',  icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/></svg> },
     { id: 'conta' as Tab,    label: 'Conta',    icon: <UserRounded size={15} /> },
   ]
 
@@ -265,9 +265,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para você.</p>
                   <div className="grid grid-cols-3 gap-3">
                     {([
-                      { id: 'light',  label: 'Claro',   icon: <Sun size={22} /> },
-                      { id: 'dark',   label: 'Escuro',  icon: <Moon size={22} /> },
-                      { id: 'system', label: 'Sistema', icon: <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="18" height="18" rx="3" fill="url(#sys2)"/><defs><linearGradient id="sys2" x1="2" y1="2" x2="20" y2="20"><stop offset="50%" stopColor="#f9fafb"/><stop offset="50%" stopColor="#111827"/></linearGradient></defs></svg> },
+                      { id: 'light',  label: 'Claro',   icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                      { id: 'dark',   label: 'Escuro',  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M17 4l1 2M21 6l-1 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+                      { id: 'system', label: 'Sistema', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 21h8M12 17v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
                     ] as { id: string; label: string; icon: React.ReactNode }[]).map(t => (
                       <button key={t.id} onClick={() => handleTheme(t.id)}
                         className={cn(
@@ -357,9 +357,21 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                         <path d="M5 4h6M5 8h6M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                       </svg>
                       <span className="text-sm text-gray-900 flex-1">{w.label}</span>
-                      <button onClick={() => toggleWidget(id)}
-                        className={cn('relative w-9 h-5 rounded-full transition-colors flex-shrink-0', activeWidgets.includes(id) ? 'bg-gray-900' : 'bg-gray-200')}>
-                        <span className={cn('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform', activeWidgets.includes(id) ? 'translate-x-[18px]' : 'translate-x-0.5')} />
+                      <button
+                        onClick={() => toggleWidget(id)}
+                        role="switch"
+                        aria-checked={activeWidgets.includes(id)}
+                        className={cn(
+                          'relative inline-flex flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none',
+                          activeWidgets.includes(id) ? 'bg-gray-900' : 'bg-gray-200'
+                        )}
+                        style={{ width: '42px', height: '24px' }}
+                      >
+                        <span className={cn(
+                          'pointer-events-none inline-block rounded-full bg-white shadow-md transform transition-transform duration-200',
+                          activeWidgets.includes(id) ? 'translate-x-[18px]' : 'translate-x-0'
+                        )}
+                        style={{ width: '20px', height: '20px' }} />
                       </button>
                     </div>
                   )
