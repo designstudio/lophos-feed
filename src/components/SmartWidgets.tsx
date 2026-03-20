@@ -32,18 +32,6 @@ const ESPORTS_MAP: Record<string, string> = {
   'valorant': 'valorant', 'league of legends': 'lol', 'lol': 'lol',
 }
 
-const SERIES_KEYWORDS = [
-  'american horror story', 'ahs', 'série', 'series', 'netflix', 'hbo',
-  'disney', 'streaming', 'tv', 'show', 'temporada', 'episódio',
-  'the last of us', 'house of the dragon', 'stranger things', 'severance',
-  'the bear', 'andor', 'white lotus', 'yellowstone', 'succession',
-]
-
-function isSeriesTopic(topic: string): boolean {
-  const lower = topic.toLowerCase()
-  return SERIES_KEYWORDS.some((kw) => lower.includes(kw))
-}
-
 function formatMatchDate(dateStr: string): string {
   const date = new Date(dateStr)
   if (isToday(date)) return `Hoje ${format(date, 'HH:mm')}`
@@ -80,7 +68,6 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
   )]
 
   const showSeries = activeWidgets.includes('series')
-  const seriesTopics = topics.filter((t) => isSeriesTopic(t))
 
   useEffect(() => {
     if (activeGames.length === 0) return
