@@ -296,8 +296,6 @@ export default function FeedPage() {
               )}
             </div>
 
-          </div>
-        </div>
             <div className="sidebar-right">
               <RightSidebar topics={topics} />
             </div>
