@@ -138,17 +138,10 @@ export default function FeedPage() {
   const [loadingMsg, setLoadingMsg]       = useState(0)
   const [newItemsReady, setNewItemsReady] = useState(false)
   const [pendingItems, setPendingItems]   = useState<NewsItem[]>([])
+  const bgAbortRef  = useRef<AbortController | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const abortRef    = useRef<AbortController | null>(null)
   const scrollRef   = useRef<HTMLDivElement>(null)
-  const bgAbortRef  = useRef<AbortController | null>(null)
-
-  const LOADING_MESSAGES = [
-    'Preparando seu feed personalizado…',
-    'Buscando as melhores notícias para você…',
-    'Ajustando tudo com base nos seus tópicos…',
-    'Quase lá, organizando o conteúdo…',
-  ]
 
   const fetchFeed = useCallback(async (force = false) => {
     abortRef.current?.abort()
@@ -168,7 +161,6 @@ export default function FeedPage() {
       const reader  = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
-      let receivedCache = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -182,16 +174,17 @@ export default function FeedPage() {
             const chunk = JSON.parse(line)
             if (chunk.topics) { setTopics(chunk.topics); continue }
             if (chunk.items?.length) {
-              receivedCache = true
               setItems(prev => {
                 const byId = new Map(prev.map(x => [x.id, x]))
                 for (const x of chunk.items as NewsItem[]) {
                   const existing = byId.get(x.id)
+                  // Upsert: replace if new item has image and existing doesn't (or doesn't exist)
                   if (!existing || (!existing.imageUrl && x.imageUrl)) {
                     byId.set(x.id, x)
                   }
                 }
                 const merged = Array.from(byId.values())
+                // Always keep most recent first
                 merged.sort((a, b) =>
                   new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
                   new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
@@ -202,10 +195,8 @@ export default function FeedPage() {
             }
           } catch {}
         }
-      }
-
-      // First load: cache was empty, start background polling
-      if (!receivedCache && !force) {
+      // First load: cache was empty → start background polling
+      if (!hasData && !force) {
         setIsFirstLoad(true)
         startBackgroundPoll()
       }
@@ -217,22 +208,20 @@ export default function FeedPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Background poll: after initial load, poll every 10s until we get items
-  const startBackgroundPoll = useCallback(() => {
+  const startBackgroundPoll = () => {
     bgAbortRef.current?.abort()
     const ctrl = new AbortController()
     bgAbortRef.current = ctrl
     let attempts = 0
-    const MAX_ATTEMPTS = 18 // 3 minutes max
+    const msgTimer = setInterval(() => setLoadingMsg(p => (p + 1) % 4), 4000)
 
     const poll = async () => {
-      if (ctrl.signal.aborted || attempts >= MAX_ATTEMPTS) {
+      if (ctrl.signal.aborted || attempts >= 18) {
+        clearInterval(msgTimer)
         setIsFirstLoad(false)
         return
       }
       attempts++
-      setLoadingMsg(prev => (prev + 1) % 4)
-
       try {
         const res = await fetch('/api/feed', {
           method: 'POST',
@@ -243,23 +232,21 @@ export default function FeedPage() {
         if (!res.body) { setTimeout(poll, 10000); return }
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
-        let buffer = ''
-        let gotItems = false
-
+        let buf = '', got = false
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() ?? ''
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n'); buf = lines.pop() ?? ''
           for (const line of lines) {
             if (!line.trim()) continue
             try {
               const chunk = JSON.parse(line)
               if (chunk.items?.length) {
-                gotItems = true
+                got = true
                 setItems(chunk.items)
                 setHasData(true)
+                clearInterval(msgTimer)
                 setIsFirstLoad(false)
                 ctrl.abort()
                 return
@@ -267,61 +254,13 @@ export default function FeedPage() {
             } catch {}
           }
         }
-        if (!gotItems) setTimeout(poll, 10000)
+        if (!got) setTimeout(poll, 10000)
       } catch (e: any) {
         if (e?.name !== 'AbortError') setTimeout(poll, 10000)
       }
     }
-    setTimeout(poll, 8000) // first poll after 8s
-  }, [])
-
-  // Background refresh: check for new items periodically when feed has data
-  useEffect(() => {
-    if (!hasData) return
-    const REFRESH_INTERVAL = 2 * 60 * 60 * 1000 // 2 hours
-    const timer = setInterval(async () => {
-      try {
-        const res = await fetch('/api/feed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topics: [], forceRefresh: false }),
-        })
-        if (!res.body) return
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
-        const newItems: NewsItem[] = []
-
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() ?? ''
-          for (const line of lines) {
-            if (!line.trim()) continue
-            try {
-              const chunk = JSON.parse(line)
-              if (chunk.items?.length) newItems.push(...chunk.items)
-            } catch {}
-          }
-        }
-
-        // Check if there are items newer than what we have
-        if (newItems.length === 0) return
-        const currentNewest = items[0]?.cachedAt ?? ''
-        const hasNewer = newItems.some(i =>
-          (i.cachedAt ?? '') > currentNewest && !items.find(x => x.id === i.id)
-        )
-        if (hasNewer) {
-          setPendingItems(newItems)
-          setNewItemsReady(true)
-        }
-      } catch {}
-    }, REFRESH_INTERVAL)
-    return () => clearInterval(timer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasData])
+    setTimeout(poll, 8000)
+  }
 
   // Register fetchFeed with the shared layout so Sidebar can trigger it
   useEffect(() => {
@@ -409,6 +348,24 @@ export default function FeedPage() {
                 </div>
               )}
 
+              {newItemsReady && (
+                <div className="sticky top-14 z-10 flex justify-center py-2 pointer-events-none">
+                  <button
+                    className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white shadow-lg hover:opacity-90 transition-opacity"
+                    style={{ backgroundColor: 'var(--color-ui-strong)', animation: 'slideDown 0.3s ease' }}
+                    onClick={() => {
+                      setItems(pendingItems)
+                      setNewItemsReady(false)
+                      setPendingItems([])
+                      scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v6M6.5 1L4 3.5M6.5 1L9 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M1 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    Novas notícias disponíveis
+                  </button>
+                </div>
+              )}
+
               {shownBlocks.map((block, i) => (
                 <FeedBlock key={i} items={block.items} blockIndex={i} />
               ))}
@@ -420,8 +377,6 @@ export default function FeedPage() {
               )}
             </div>
 
-          </div>
-        </div>
             <div className="sidebar-right">
               <RightSidebar topics={topics} />
             </div>
