@@ -125,10 +125,18 @@ export async function synthesizeTopicFromRSS(
   const now = new Date().toISOString()
 
   // Score and rank raw_items for this topic
-  const scored = rawItems
+  const allScored = rawItems
     .map(item => ({ item, score: relevanceScore(item, topic) }))
-    .filter(({ score }) => score >= 3)
     .sort((a, b) => b.score - a.score)
+
+  // Debug: log top 3 scores for this topic
+  console.log(`[rss-synth] topic="${topic}" top scores:`,
+    allScored.slice(0, 3).map(({ item, score }) => 
+      `score=${score} topic=${item.topic} title="${(item.title||'').slice(0,50)}"`)
+  )
+
+  const scored = allScored
+    .filter(({ score }) => score >= 3)
     .slice(0, 8)
     .map(({ item }) => item)
 
