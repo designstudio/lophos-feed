@@ -1,53 +1,31 @@
 import { NewsItem, NewsSource, ArticleSection } from './types'
 
-const ASKNEWS_CLIENT_ID     = process.env.ASKNEWS_CLIENT_ID!
-const ASKNEWS_CLIENT_SECRET = process.env.ASKNEWS_CLIENT_SECRET!
-const GEMINI_KEY            = process.env.GEMINI_API_KEY!
+const TAVILY_KEY = process.env.TAVILY_API_KEY!
+const GEMINI_KEY = process.env.GEMINI_API_KEY!
 
 export const CACHE_TTL_MINUTES = 120
 
-// ─── AskNews OAuth2 token (cached in memory) ──────────────────
-let tokenCache: { token: string; expiresAt: number } | null = null
+const LOW_QUALITY_DOMAINS = [
+  'reddit.com', 'twitter.com', 'x.com', 'facebook.com', 'instagram.com',
+  'youtube.com', 'twitch.tv', 'tiktok.com', 'discord.com',
+  'fandom.com', 'wikia.com', 'forums.', 'forum.',
+  'mobafire.com', 'op.gg', 'u.gg', 'lolalytics.com',
+]
 
-async function getAskNewsToken(): Promise<string> {
-  if (tokenCache && Date.now() < tokenCache.expiresAt - 60000) {
-    return tokenCache.token
-  }
-  const res = await fetch('https://auth.asknews.app/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type:    'client_credentials',
-      client_id:     ASKNEWS_CLIENT_ID,
-      client_secret: ASKNEWS_CLIENT_SECRET,
-    }),
-  })
-  if (!res.ok) throw new Error(`AskNews auth error: ${res.status}`)
-  const data = await res.json()
-  tokenCache = {
-    token:     data.access_token,
-    expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000,
-  }
-  return tokenCache.token
-}
+const GENERIC_PATTERNS = [
+  /\/(tag|tags|category|categories|topic|topics|section|search|archive|label)\//i,
+  /\/(news|articles|latest|all|feed)\/(\?.*)?$/i,
+  /[?&]page=\d/i,
+  /\/(author|autores?)\//i,
+]
 
-// ─── Search AskNews ───────────────────────────────────────────
-async function searchAskNews(query: string): Promise<any[]> {
-  const token = await getAskNewsToken()
-  const params = new URLSearchParams({
-    query,
-    n_articles:   '8',
-    return_type:  'dicts',
-    method:       'nl',
-    hours_back:   '48',
-  })
-  const res = await fetch(`https://api.asknews.app/v1/news/search?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(10000),
-  })
-  if (!res.ok) throw new Error(`AskNews search error: ${res.status}`)
-  const data = await res.json()
-  return data.articles ?? []
+function isArticleUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    if (u.pathname.length < 10) return false
+    if (LOW_QUALITY_DOMAINS.some(d => u.hostname.includes(d))) return false
+    return !GENERIC_PATTERNS.some(p => p.test(url))
+  } catch { return false }
 }
 
 function getSourceHint(topic: string): string {
@@ -65,39 +43,135 @@ function getSourceHint(topic: string): string {
   return 'Reuters, AP, BBC, The Guardian'
 }
 
+// ─── Cosine similarity for dedup ──────────────────────────────
+function cosineSimilarity(a: number[], b: number[]): number {
+  const dot = a.reduce((sum, v, i) => sum + v * b[i], 0)
+  const magA = Math.sqrt(a.reduce((sum, v) => sum + v * v, 0))
+  const magB = Math.sqrt(b.reduce((sum, v) => sum + v * v, 0))
+  return magA && magB ? dot / (magA * magB) : 0
+}
+
+// ─── Quick embedding for clustering (title only, cheap) ───────
+async function embedTitle(title: string): Promise<number[] | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/text-embedding-004',
+          content: { parts: [{ text: title }] },
+        }),
+      }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.embedding?.values ?? null
+  } catch { return null }
+}
+
+// ─── Cluster similar results and keep best per cluster ─────────
+async function deduplicateResults(results: any[]): Promise<any[]> {
+  if (results.length <= 3) return results
+
+  // Generate embeddings for titles
+  const embeddings = await Promise.all(
+    results.map(r => embedTitle(r.title))
+  )
+
+  const used = new Set<number>()
+  const clusters: any[][] = []
+
+  for (let i = 0; i < results.length; i++) {
+    if (used.has(i)) continue
+    const cluster = [results[i]]
+    used.add(i)
+
+    if (embeddings[i]) {
+      for (let j = i + 1; j < results.length; j++) {
+        if (used.has(j) || !embeddings[j]) continue
+        const sim = cosineSimilarity(embeddings[i]!, embeddings[j]!)
+        if (sim > 0.82) {
+          cluster.push(results[j])
+          used.add(j)
+        }
+      }
+    }
+    clusters.push(cluster)
+  }
+
+  // From each cluster, pick the result with highest Tavily score
+  return clusters.map(cluster =>
+    cluster.reduce((best, r) => (r.score ?? 0) > (best.score ?? 0) ? r : best)
+  )
+}
+
+// ─── Main fetch function ──────────────────────────────────────
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = []
 ): Promise<NewsItem[]> {
-  const articles = await searchAskNews(topic)
-  if (articles.length === 0) return []
+  const today = new Date().toISOString().split('T')[0]
 
-  const today = new Date().toLocaleDateString('pt-BR', {
+  const tavilyRes = await fetch('https://api.tavily.com/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key:             TAVILY_KEY,
+      query:               `${topic} news ${today}`,
+      search_depth:        'advanced',
+      topic:               'news',           // força fontes jornalísticas
+      time_range:          'week',           // últimos 7 dias
+      days:                3,               // preferência por últimos 3 dias
+      max_results:         10,
+      include_answer:      false,
+      include_raw_content: false,
+      include_images:      true,            // pede imagens ao Tavily
+    }),
+  })
+
+  if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
+  const tavilyData = await tavilyRes.json()
+
+  // Filter quality articles
+  const rawResults = (tavilyData.results || []).filter((r: any) =>
+    r.url && r.title && r.content && r.content.length > 100 && isArticleUrl(r.url)
+  )
+
+  if (rawResults.length === 0) return []
+
+  // Deduplicate similar stories via embedding clustering
+  const results = await deduplicateResults(rawResults)
+
+  const todayFormatted = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
 
-  const context = articles.map((a: any, i: number) =>
-    `[${i + 1}] ${a.source_id ?? a.domain ?? 'unknown'} — "${a.eng_title ?? a.title}"\n${(a.summary ?? a.body ?? '').slice(0, 600)}`
-  ).join('\n\n')
+  const context = results
+    .map((r: any, i: number) =>
+      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
+    )
+    .join('\n\n')
 
   const sourceHint = getSourceHint(topic)
   const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
+    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
     : ''
 
-  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover.
+  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes.
 
-Hoje é ${today}. Tópico: "${topic}".
+Hoje é ${todayFormatted}. Tópico: "${topic}".
 ${existingContext}
 REGRAS OBRIGATÓRIAS:
 1. Use APENAS as fontes fornecidas. NÃO invente fatos.
 2. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
-3. IGNORE resultados irrelevantes: guias de meta, fóruns, wikis, apostas.
-4. Só crie notícias sobre eventos noticiáveis reais.
-5. Se não houver evento noticiável, retorne [].
-6. Se todos os eventos já foram cobertos, retorne [].
-7. Tom de referência: ${sourceHint}.
-8. Tom: neutro, jornalístico, sem clickbait. Escreva em pt-BR.
+3. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas.
+4. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades.
+5. Se não houver nenhum evento noticiável real, retorne [].
+6. Tom editorial de referência: ${sourceHint}.
+7. Tom: neutro, jornalístico, sem clickbait. Escreva em pt-BR.
+8. Se todos os eventos já foram cobertos, retorne [].
 
 ESTRUTURA:
 [{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2]}]
@@ -128,23 +202,30 @@ ${context}`
   const parsed = JSON.parse(match[0])
   const now = new Date().toISOString()
 
+  // Build image map from Tavily images (indexed by result position)
+  const tavilyImages: string[] = tavilyData.images ?? []
+
   return parsed.map((item: any, i: number): NewsItem => {
     const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
     const sources: NewsSource[] = idxs
-      .filter(idx => idx >= 0 && idx < articles.length)
+      .filter(idx => idx >= 0 && idx < results.length)
       .map(idx => {
-        const a = articles[idx]
-        const domain = a.domain ?? a.source_id ?? 'unknown'
+        const r = results[idx]
         return {
-          name: a.source_id ?? domain,
-          url:  a.article_url ?? `https://${domain}`,
-          favicon: `https://www.google.com/s2/favicons?domain=${domain}&sz=32`,
+          name: new URL(r.url).hostname.replace('www.', ''),
+          url:  r.url,
+          favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
         }
       })
 
-    // AskNews already provides image_url — no need to scrape
-    const primaryArticle = articles[idxs[0]] ?? articles[0]
-    const imageUrl = primaryArticle?.image_url ?? primaryArticle?.photo_url ?? undefined
+    // Image priority: Tavily image field on primary result → Tavily images array → null
+    const primaryResult = results[idxs[0]] ?? results[0]
+    const imageUrl =
+      primaryResult?.images?.[0] ??
+      primaryResult?.image ??
+      tavilyImages[idxs[0]] ??
+      tavilyImages[0] ??
+      null
 
     return {
       id:          crypto.randomUUID(),
