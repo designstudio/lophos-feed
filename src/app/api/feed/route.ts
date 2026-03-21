@@ -73,47 +73,54 @@ export async function POST(req: NextRequest) {
     const topicsToFetch = topics.filter(t =>
       forceRefresh || isSearchStale(lastFetchByTopic.get(t) ?? null)
     )
-    if (topicsToFetch.length === 0) { await writer.close(); return }
 
-    // 4. Mark as fetching immediately to prevent duplicate requests
-    const now = new Date().toISOString()
-    await db.from('topic_fetches').upsert(
-      topicsToFetch.map(topic => ({ topic, last_fetched: now, updated_at: now })),
-      { onConflict: 'topic' }
-    )
-
-    // 5. Close stream — fetch in background
-    await writer.close()
-
-    // 6. Background fetch — won't block the response
-    const fetchAll = async () => {
-      const concurrency = 3
-      for (let i = 0; i < topicsToFetch.length; i += concurrency) {
-        const batch = topicsToFetch.slice(i, i + concurrency)
-        await Promise.allSettled(batch.map(async (topic) => {
-          try {
-            const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
-            const fresh = await fetchNewsForTopic(topic, existingTitles)
-            if (fresh.length === 0) return
-
-            const rows = fresh.map(itemToRow)
-            const { error } = await db.from('news_cache').insert(rows)
-            if (error) { console.error(`[feed] insert error "${topic}":`, error.message); return }
-
-            const { data: inserted } = await db
-              .from('news_cache').select('*').eq('topic', topic)
-              .order('cached_at', { ascending: false }).limit(rows.length)
-            if (inserted?.length) {
-              await db.from('articles').upsert(inserted, { onConflict: 'id' })
-            }
-          } catch (e) {
-            console.error(`[feed] error "${topic}":`, e)
-          }
-        }))
-      }
+    if (topicsToFetch.length === 0) {
+      await writer.close()
+      return
     }
 
-    fetchAll().catch(e => console.error('[feed] background fetch error:', e))
+    // 4. Fetch fresh news for stale topics — stream results as they come
+    const now = new Date().toISOString()
+    const concurrency = 3
+
+    for (let i = 0; i < topicsToFetch.length; i += concurrency) {
+      const batch = topicsToFetch.slice(i, i + concurrency)
+      await Promise.allSettled(batch.map(async (topic) => {
+        try {
+          console.log(`[feed] fetching "${topic}"`)
+          const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
+          const fresh = await fetchNewsForTopic(topic, existingTitles)
+
+          // Mark as fetched regardless of result
+          await db.from('topic_fetches').upsert(
+            { topic, last_fetched: now, updated_at: now },
+            { onConflict: 'topic' }
+          )
+
+          if (fresh.length === 0) {
+            console.log(`[feed] no results for "${topic}"`)
+            return
+          }
+
+          const rows = fresh.map(itemToRow)
+          const { error } = await db.from('news_cache').insert(rows)
+          if (error) {
+            console.error(`[feed] insert error "${topic}":`, error.message)
+            return
+          }
+
+          await db.from('articles').upsert(rows, { onConflict: 'id' })
+
+          // Stream new items to client
+          await send(fresh)
+          console.log(`[feed] sent ${fresh.length} items for "${topic}"`)
+        } catch (e) {
+          console.error(`[feed] error "${topic}":`, e)
+        }
+      }))
+    }
+
+    await writer.close()
   })()
 
   return new Response(stream.readable, {
