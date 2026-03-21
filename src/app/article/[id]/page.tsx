@@ -63,17 +63,40 @@ export default function ArticlePage() {
   const menuRef        = useRef<HTMLDivElement>(null)
   const [showTitle, setShowTitle]     = useState(false)
   const [menuOpen, setMenuOpen]       = useState(false)
-  const [showEditor, setShowEditor]   = useState(false)
-  const [isMember, setIsMember]       = useState(false)
-  const { user, isLoaded } = useUser()
+  const [editMode, setEditMode]         = useState(false)
+  const [isMember, setIsMember]         = useState(false)
+  const [editorSaving, setEditorSaving] = useState(false)
+  const [editorMsg, setEditorMsg]       = useState<{ text: string; ok: boolean } | null>(null)
+  const editorSaveRef = useRef<(() => void) | null>(null)
+  const { isLoaded } = useUser()
+  const [refetching, setRefetching]   = useState(false)
+  const [refetchMsg, setRefetchMsg]   = useState<string | null>(null)
 
-  // Check community membership
-  useEffect(() => {
-    if (!isLoaded) return
-    fetch('/api/community/suggestions')
-      .then(r => { if (r.ok) setIsMember(true) })
-      .catch(() => {})
-  }, [isLoaded])
+  const refetchImage = async (sourceUrl?: string) => {
+    if (refetching) return
+    setMenuOpen(false)
+    setRefetching(true)
+    setRefetchMsg(null)
+    try {
+      const res = await fetch('/api/article', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, sourceUrl }),
+      })
+      if (res.ok) {
+        const { imageUrl: newUrl } = await res.json()
+        setItem(prev => prev ? { ...prev, imageUrl: newUrl } : prev)
+        setHeroImage(newUrl)
+        setRefetchMsg('Imagem atualizada!')
+      } else {
+        setRefetchMsg('Nenhuma imagem encontrada.')
+      }
+    } catch {
+      setRefetchMsg('Erro ao buscar imagem.')
+    }
+    setRefetching(false)
+    setTimeout(() => setRefetchMsg(null), 3000)
+  }
 
   // Close ... menu on outside click
   useEffect(() => {
@@ -85,6 +108,14 @@ export default function ArticlePage() {
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [menuOpen])
+
+  // Check community membership
+  useEffect(() => {
+    if (!isLoaded) return
+    fetch('/api/community/suggestions')
+      .then(r => { if (r.ok) setIsMember(true) })
+      .catch(() => {})
+  }, [isLoaded])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -118,9 +149,28 @@ export default function ArticlePage() {
                 {item?.title}
               </span>
             </div>
-            {/* Right side — mirrors title width, holds ... menu */}
-            <div style={{ width: '12rem' }} className="flex-shrink-0 flex items-center justify-end relative">
-              {/* Three-dots menu button */}
+            {/* Right side */}
+            <div style={{ width: '12rem' }} className="flex-shrink-0 flex items-center justify-end gap-2 relative">
+              {editMode ? (
+                <>
+                  {editorMsg && (
+                    <span className={`text-[11px] whitespace-nowrap ${editorMsg.ok ? 'text-green-500' : 'text-red-400'}`}>
+                      {editorMsg.text}
+                    </span>
+                  )}
+                  <button onClick={() => setEditMode(false)}
+                    className="text-[13px] text-ink-muted hover:text-ink-secondary transition-colors">
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => editorSaveRef.current?.()}
+                    disabled={editorSaving}
+                    className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-white transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-ui-strong)' }}>
+                    {editorSaving ? 'Enviando…' : 'Enviar revisão'}
+                  </button>
+                </>
+              ) : (
               <div ref={menuRef} className="relative">
                 <button
                   onClick={() => setMenuOpen(v => !v)}
@@ -133,24 +183,49 @@ export default function ArticlePage() {
                     <circle cx="11.5" cy="7" r="1.25" />
                   </svg>
                 </button>
-                {menuOpen && isMember && (
+                {menuOpen && (
                   <div
-                    className="absolute right-0 top-full mt-1 w-48 rounded-xl border shadow-xl z-50 py-1"
+                    className="absolute right-0 top-full mt-1 w-56 rounded-xl border shadow-xl z-50 py-1"
                     style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', animation: 'slideUp 0.12s ease' }}
                   >
+                    {/* Header */}
+                    <div className="px-3 py-2 border-b" style={{ borderColor: 'var(--color-border)' }}>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--color-ink-tertiary)' }}>
+                        Rebuscar imagem de…
+                      </p>
+                    </div>
+                    {/* Auto — tries all sources in order */}
                     <button
                       onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
-                      onClick={() => { setMenuOpen(false); setShowEditor(v => !v) }}
-                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left"
+                      onClick={() => refetchImage()}
+                      disabled={refetching}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left disabled:opacity-50"
                       style={{ color: 'var(--color-ink-secondary)' }}
                       onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
                       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9.5 1.5l2 2L4 11H2V9l7.5-7.5z"/>
+                        <path d="M11.5 2.5A5.5 5.5 0 1 1 8 1.1" /><polyline points="8 1 11.5 1 11.5 4.5" />
                       </svg>
-                      {showEditor ? 'Fechar editor' : 'Editar artigo'}
+                      {refetching ? 'Buscando…' : 'Automático'}
                     </button>
+                    {/* Per-source buttons */}
+                    {(item?.sources || []).map((src, i) => (
+                      <button key={i}
+                        onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
+                        onClick={() => refetchImage(src.url)}
+                        disabled={refetching}
+                        className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left disabled:opacity-50 truncate"
+                        style={{ color: 'var(--color-ink-secondary)' }}
+                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
+                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        {src.favicon
+                          ? <img src={src.favicon} alt="" width={13} height={13} className="rounded-sm flex-shrink-0" />
+                          : <span className="w-3 h-3 rounded-sm bg-bg-tertiary flex-shrink-0" />}
+                        <span className="truncate">{src.name}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -158,17 +233,18 @@ export default function ArticlePage() {
           </div>
         </div>
 
-      {/* Inline editor — slides in below header for community members */}
-      {showEditor && item && (
-        <ArticleEditor
-          item={item}
-          onClose={() => setShowEditor(false)}
-          onSaved={() => setShowEditor(false)}
-        />
-      )}
-
       <main className="page-scroll">
-        <div className="article-layout mx-auto py-6">
+        {editMode && item ? (
+          <ArticleEditor
+            item={item}
+            onClose={() => setEditMode(false)}
+            onSaved={() => setEditMode(false)}
+            onSavingChange={setEditorSaving}
+            onMsgChange={setEditorMsg}
+            saveRef={editorSaveRef}
+          />
+        ) : null}
+        <div className="article-layout mx-auto py-6" style={{ display: editMode ? 'none' : undefined }}>
 
           {loading && (
             <div className="space-y-4 animate-pulse">
