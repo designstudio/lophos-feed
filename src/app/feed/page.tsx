@@ -143,6 +143,61 @@ export default function FeedPage() {
   const abortRef    = useRef<AbortController | null>(null)
   const scrollRef   = useRef<HTMLDivElement>(null)
 
+  const startBackgroundPoll = () => {
+    bgAbortRef.current?.abort()
+    const ctrl = new AbortController()
+    bgAbortRef.current = ctrl
+    let attempts = 0
+    const msgTimer = setInterval(() => setLoadingMsg(p => (p + 1) % 4), 4000)
+
+    const poll = async () => {
+      if (ctrl.signal.aborted || attempts >= 18) {
+        clearInterval(msgTimer)
+        setIsFirstLoad(false)
+        return
+      }
+      attempts++
+      try {
+        const res = await fetch('/api/feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topics: [], forceRefresh: false }),
+          signal: ctrl.signal,
+        })
+        if (!res.body) { setTimeout(poll, 10000); return }
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = '', got = false
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n'); buf = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+              const chunk = JSON.parse(line)
+              if (chunk.items?.length) {
+                got = true
+                setItems(chunk.items)
+                setHasData(true)
+                clearInterval(msgTimer)
+                setIsFirstLoad(false)
+                ctrl.abort()
+                return
+              }
+            } catch {}
+          }
+        }
+        if (!got) setTimeout(poll, 10000)
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') setTimeout(poll, 10000)
+      }
+    }
+    setTimeout(poll, 8000)
+  }
+
+
   const fetchFeed = useCallback(async (force = false) => {
     abortRef.current?.abort()
     const ctrl = new AbortController()
@@ -209,61 +264,7 @@ export default function FeedPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const startBackgroundPoll = () => {
-    bgAbortRef.current?.abort()
-    const ctrl = new AbortController()
-    bgAbortRef.current = ctrl
-    let attempts = 0
-    const msgTimer = setInterval(() => setLoadingMsg(p => (p + 1) % 4), 4000)
-
-    const poll = async () => {
-      if (ctrl.signal.aborted || attempts >= 18) {
-        clearInterval(msgTimer)
-        setIsFirstLoad(false)
-        return
-      }
-      attempts++
-      try {
-        const res = await fetch('/api/feed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topics: [], forceRefresh: false }),
-          signal: ctrl.signal,
-        })
-        if (!res.body) { setTimeout(poll, 10000); return }
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let buf = '', got = false
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += decoder.decode(value, { stream: true })
-          const lines = buf.split('\n'); buf = lines.pop() ?? ''
-          for (const line of lines) {
-            if (!line.trim()) continue
-            try {
-              const chunk = JSON.parse(line)
-              if (chunk.items?.length) {
-                got = true
-                setItems(chunk.items)
-                setHasData(true)
-                clearInterval(msgTimer)
-                setIsFirstLoad(false)
-                ctrl.abort()
-                return
-              }
-            } catch {}
-          }
-        }
-        if (!got) setTimeout(poll, 10000)
-      } catch (e: any) {
-        if (e?.name !== 'AbortError') setTimeout(poll, 10000)
-      }
-    }
-    setTimeout(poll, 8000)
-  }
-
-  // Register fetchFeed with the shared layout so Sidebar can trigger it
+    // Register fetchFeed with the shared layout so Sidebar can trigger it
   useEffect(() => {
     onRefreshCallback.current = () => fetchFeed(true)
   }, [fetchFeed])
