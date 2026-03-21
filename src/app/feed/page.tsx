@@ -134,9 +134,21 @@ export default function FeedPage() {
   const [hasData, setHasData]     = useState(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [visibleBlocks, setVisibleBlocks] = useState(4)
+  const [isFirstLoad, setIsFirstLoad]     = useState(false)
+  const [loadingMsg, setLoadingMsg]       = useState(0)
+  const [newItemsReady, setNewItemsReady] = useState(false)
+  const [pendingItems, setPendingItems]   = useState<NewsItem[]>([])
   const sentinelRef = useRef<HTMLDivElement>(null)
   const abortRef    = useRef<AbortController | null>(null)
   const scrollRef   = useRef<HTMLDivElement>(null)
+  const bgAbortRef  = useRef<AbortController | null>(null)
+
+  const LOADING_MESSAGES = [
+    'Preparando seu feed personalizado…',
+    'Buscando as melhores notícias para você…',
+    'Ajustando tudo com base nos seus tópicos…',
+    'Quase lá, organizando o conteúdo…',
+  ]
 
   const fetchFeed = useCallback(async (force = false) => {
     abortRef.current?.abort()
@@ -156,6 +168,7 @@ export default function FeedPage() {
       const reader  = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
+      let receivedCache = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -169,17 +182,16 @@ export default function FeedPage() {
             const chunk = JSON.parse(line)
             if (chunk.topics) { setTopics(chunk.topics); continue }
             if (chunk.items?.length) {
+              receivedCache = true
               setItems(prev => {
                 const byId = new Map(prev.map(x => [x.id, x]))
                 for (const x of chunk.items as NewsItem[]) {
                   const existing = byId.get(x.id)
-                  // Upsert: replace if new item has image and existing doesn't (or doesn't exist)
                   if (!existing || (!existing.imageUrl && x.imageUrl)) {
                     byId.set(x.id, x)
                   }
                 }
                 const merged = Array.from(byId.values())
-                // Always keep most recent first
                 merged.sort((a, b) =>
                   new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
                   new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
@@ -191,6 +203,12 @@ export default function FeedPage() {
           } catch {}
         }
       }
+
+      // First load: cache was empty, start background polling
+      if (!receivedCache && !force) {
+        setIsFirstLoad(true)
+        startBackgroundPoll()
+      }
     } catch (e: any) {
       if (e?.name !== 'AbortError') console.error(e)
     } finally {
@@ -198,6 +216,112 @@ export default function FeedPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Background poll: after initial load, poll every 10s until we get items
+  const startBackgroundPoll = useCallback(() => {
+    bgAbortRef.current?.abort()
+    const ctrl = new AbortController()
+    bgAbortRef.current = ctrl
+    let attempts = 0
+    const MAX_ATTEMPTS = 18 // 3 minutes max
+
+    const poll = async () => {
+      if (ctrl.signal.aborted || attempts >= MAX_ATTEMPTS) {
+        setIsFirstLoad(false)
+        return
+      }
+      attempts++
+      setLoadingMsg(prev => (prev + 1) % 4)
+
+      try {
+        const res = await fetch('/api/feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topics: [], forceRefresh: false }),
+          signal: ctrl.signal,
+        })
+        if (!res.body) { setTimeout(poll, 10000); return }
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let gotItems = false
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+              const chunk = JSON.parse(line)
+              if (chunk.items?.length) {
+                gotItems = true
+                setItems(chunk.items)
+                setHasData(true)
+                setIsFirstLoad(false)
+                ctrl.abort()
+                return
+              }
+            } catch {}
+          }
+        }
+        if (!gotItems) setTimeout(poll, 10000)
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') setTimeout(poll, 10000)
+      }
+    }
+    setTimeout(poll, 8000) // first poll after 8s
+  }, [])
+
+  // Background refresh: check for new items periodically when feed has data
+  useEffect(() => {
+    if (!hasData) return
+    const REFRESH_INTERVAL = 2 * 60 * 60 * 1000 // 2 hours
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch('/api/feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topics: [], forceRefresh: false }),
+        })
+        if (!res.body) return
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        const newItems: NewsItem[] = []
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+              const chunk = JSON.parse(line)
+              if (chunk.items?.length) newItems.push(...chunk.items)
+            } catch {}
+          }
+        }
+
+        // Check if there are items newer than what we have
+        if (newItems.length === 0) return
+        const currentNewest = items[0]?.cachedAt ?? ''
+        const hasNewer = newItems.some(i =>
+          (i.cachedAt ?? '') > currentNewest && !items.find(x => x.id === i.id)
+        )
+        if (hasNewer) {
+          setPendingItems(newItems)
+          setNewItemsReady(true)
+        }
+      } catch {}
+    }, REFRESH_INTERVAL)
+    return () => clearInterval(timer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasData])
 
   // Register fetchFeed with the shared layout so Sidebar can trigger it
   useEffect(() => {
@@ -222,8 +346,8 @@ export default function FeedPage() {
   const allBlocks     = splitIntoBlocks(filteredItems)
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
   const hasMore       = visibleBlocks < allBlocks.length
-  const showSkeleton  = !hasData && streaming
-  const showEmpty     = !hasData && !streaming
+  const showSkeleton  = !hasData && streaming && !isFirstLoad
+  const showEmpty     = !hasData && !streaming && !isFirstLoad
 
   return (
     <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
@@ -296,6 +420,8 @@ export default function FeedPage() {
               )}
             </div>
 
+          </div>
+        </div>
             <div className="sidebar-right">
               <RightSidebar topics={topics} />
             </div>

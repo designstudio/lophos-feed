@@ -43,71 +43,116 @@ function getSourceHint(topic: string): string {
   return 'Reuters, AP, BBC, The Guardian'
 }
 
-// ─── Cosine similarity for dedup ──────────────────────────────
-function cosineSimilarity(a: number[], b: number[]): number {
-  const dot = a.reduce((sum, v, i) => sum + v * b[i], 0)
-  const magA = Math.sqrt(a.reduce((sum, v) => sum + v * v, 0))
-  const magB = Math.sqrt(b.reduce((sum, v) => sum + v * v, 0))
-  return magA && magB ? dot / (magA * magB) : 0
-}
-
-// ─── Quick embedding for clustering (title only, cheap) ───────
-async function embedTitle(title: string): Promise<number[] | null> {
+// ─── Extract og:image from article URL ───────────────────────
+async function extractOgImage(url: string): Promise<string | null> {
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'models/text-embedding-004',
-          content: { parts: [{ text: title }] },
-        }),
-      }
-    )
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)',
+        'Accept': 'text/html',
+      },
+      signal: AbortSignal.timeout(6000),
+    })
     if (!res.ok) return null
-    const data = await res.json()
-    return data.embedding?.values ?? null
-  } catch { return null }
+    // Read only first 50KB — og:image is always in <head>
+    const reader = res.body?.getReader()
+    if (!reader) return null
+    let html = ''
+    while (html.length < 50000) {
+      const { done, value } = await reader.read()
+      if (done) break
+      html += new TextDecoder().decode(value)
+      if (html.includes('</head>')) break
+    }
+    reader.cancel()
+
+    const match =
+      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
+
+    const imageUrl = match?.[1]
+    if (!imageUrl) return null
+    return new URL(imageUrl, url).href
+  } catch {
+    return null
+  }
 }
 
-// ─── Cluster similar results and keep best per cluster ─────────
-async function deduplicateResults(results: any[]): Promise<any[]> {
-  if (results.length <= 3) return results
+// ─── Cosine similarity ────────────────────────────────────────
+function cosineSim(a: number[], b: number[]): number {
+  let dot = 0, magA = 0, magB = 0
+  for (let i = 0; i < a.length; i++) {
+    dot  += a[i] * b[i]
+    magA += a[i] * a[i]
+    magB += b[i] * b[i]
+  }
+  return magA && magB ? dot / (Math.sqrt(magA) * Math.sqrt(magB)) : 0
+}
 
-  // Generate embeddings for titles
-  const embeddings = await Promise.all(
-    results.map(r => embedTitle(r.title))
-  )
+// ─── Embed titles for clustering ──────────────────────────────
+async function embedTitles(titles: string[]): Promise<(number[] | null)[]> {
+  return Promise.all(titles.map(async (title) => {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'models/text-embedding-004',
+            content: { parts: [{ text: title }] },
+          }),
+          signal: AbortSignal.timeout(5000),
+        }
+      )
+      if (!res.ok) return null
+      const data = await res.json()
+      return data.embedding?.values ?? null
+    } catch { return null }
+  }))
+}
 
+// ─── Cluster and deduplicate results ─────────────────────────
+async function clusterAndDedup(results: any[]): Promise<any[]> {
+  if (results.length <= 2) return results
+
+  const embeddings = await embedTitles(results.map(r => r.title))
   const used = new Set<number>()
-  const clusters: any[][] = []
+  const output: any[] = []
 
   for (let i = 0; i < results.length; i++) {
     if (used.has(i)) continue
-    const cluster = [results[i]]
     used.add(i)
 
+    // Find all similar results
+    const cluster = [results[i]]
     if (embeddings[i]) {
       for (let j = i + 1; j < results.length; j++) {
-        if (used.has(j) || !embeddings[j]) continue
-        const sim = cosineSimilarity(embeddings[i]!, embeddings[j]!)
-        if (sim > 0.82) {
+        if (used.has(j)) continue
+        // Also check title similarity without embedding as fallback
+        const sim = embeddings[j]
+          ? cosineSim(embeddings[i]!, embeddings[j]!)
+          : 0
+        if (sim > 0.80) {
           cluster.push(results[j])
           used.add(j)
         }
       }
     }
-    clusters.push(cluster)
+
+    // Keep highest-scored result from cluster, merge sources info
+    const best = cluster.reduce((b, r) => (r.score ?? 0) > (b.score ?? 0) ? r : b)
+    // Attach all cluster URLs so Gemini gets context from all sources
+    best._clusterUrls = cluster.map(r => r.url)
+    output.push(best)
   }
 
-  // From each cluster, pick the result with highest Tavily score
-  return clusters.map(cluster =>
-    cluster.reduce((best, r) => (r.score ?? 0) > (best.score ?? 0) ? r : best)
-  )
+  return output
 }
 
-// ─── Main fetch function ──────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = []
@@ -119,59 +164,54 @@ export async function fetchNewsForTopic(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       api_key:             TAVILY_KEY,
-      query:               `${topic} news ${today}`,
+      query:               `${topic} ${today}`,
       search_depth:        'advanced',
-      topic:               'news',           // força fontes jornalísticas
-      time_range:          'week',           // últimos 7 dias
-      days:                3,               // preferência por últimos 3 dias
+      topic:               'news',
+      time_range:          'week',
+      days:                3,
       max_results:         10,
       include_answer:      false,
       include_raw_content: false,
-      include_images:      true,            // pede imagens ao Tavily
+      include_images:      false, // we fetch og:image ourselves
     }),
   })
 
   if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
   const tavilyData = await tavilyRes.json()
 
-  // Filter quality articles
   const rawResults = (tavilyData.results || []).filter((r: any) =>
-    r.url && r.title && r.content && r.content.length > 100 && isArticleUrl(r.url)
+    r.url && r.title && r.content?.length > 100 && isArticleUrl(r.url)
   )
-
   if (rawResults.length === 0) return []
 
-  // Deduplicate similar stories via embedding clustering
-  const results = await deduplicateResults(rawResults)
+  // Cluster similar stories — removes duplicates before sending to Gemini
+  const results = await clusterAndDedup(rawResults)
 
   const todayFormatted = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
 
-  const context = results
-    .map((r: any, i: number) =>
-      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
-    )
-    .join('\n\n')
+  const context = results.map((r: any, i: number) =>
+    `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
+  ).join('\n\n')
 
   const sourceHint = getSourceHint(topic)
   const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
+    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
     : ''
 
-  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes.
+  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover.
 
 Hoje é ${todayFormatted}. Tópico: "${topic}".
 ${existingContext}
 REGRAS OBRIGATÓRIAS:
 1. Use APENAS as fontes fornecidas. NÃO invente fatos.
 2. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
-3. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas.
-4. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades.
-5. Se não houver nenhum evento noticiável real, retorne [].
-6. Tom editorial de referência: ${sourceHint}.
-7. Tom: neutro, jornalístico, sem clickbait. Escreva em pt-BR.
-8. Se todos os eventos já foram cobertos, retorne [].
+3. IGNORE resultados que não são notícias reais: guias, fóruns, wikis, apostas.
+4. Só crie notícias sobre eventos noticiáveis reais.
+5. Se não houver evento noticiável, retorne [].
+6. Se todos os eventos já foram cobertos, retorne [].
+7. Tom de referência: ${sourceHint}. Escreva em pt-BR.
 
 ESTRUTURA:
 [{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2]}]
@@ -202,30 +242,24 @@ ${context}`
   const parsed = JSON.parse(match[0])
   const now = new Date().toISOString()
 
-  // Build image map from Tavily images (indexed by result position)
-  const tavilyImages: string[] = tavilyData.images ?? []
-
-  return parsed.map((item: any, i: number): NewsItem => {
+  return Promise.all(parsed.map(async (item: any, i: number): Promise<NewsItem> => {
     const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
     const sources: NewsSource[] = idxs
       .filter(idx => idx >= 0 && idx < results.length)
       .map(idx => {
         const r = results[idx]
         return {
-          name: new URL(r.url).hostname.replace('www.', ''),
-          url:  r.url,
+          name:    new URL(r.url).hostname.replace('www.', ''),
+          url:     r.url,
           favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
         }
       })
 
-    // Image priority: Tavily image field on primary result → Tavily images array → null
+    // Extract og:image from primary source
     const primaryResult = results[idxs[0]] ?? results[0]
-    const imageUrl =
-      primaryResult?.images?.[0] ??
-      primaryResult?.image ??
-      tavilyImages[idxs[0]] ??
-      tavilyImages[0] ??
-      null
+    const imageUrl = primaryResult?.url
+      ? await extractOgImage(primaryResult.url)
+      : null
 
     return {
       id:          crypto.randomUUID(),
@@ -235,11 +269,11 @@ ${context}`
       sections:    (item.sections || []) as ArticleSection[],
       conclusion:  typeof item.conclusion === 'string' ? item.conclusion : undefined,
       sources,
-      imageUrl,
+      imageUrl:    imageUrl ?? undefined,
       publishedAt: now,
       cachedAt:    now,
     }
-  })
+  }))
 }
 
 export function isCacheStale(cachedAt: string): boolean {
