@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { fetchNewsForTopic } from '@/lib/news'
-import { synthesizeTopicFromRSS } from '@/lib/rss-synth'
 import { NewsItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -61,7 +60,7 @@ export async function POST(req: NextRequest) {
     const lastFetchByTopic = new Map<string, string>()
     for (const row of fetchTimes) lastFetchByTopic.set(row.topic, row.last_fetched)
 
-    // 2. Stream existing cache immediately — user sees content right away
+    // 2. Stream existing cache immediately
     const allExisting = (allArticles ?? [])
       .map(rowToItem)
       .sort((a, b) =>
@@ -74,42 +73,27 @@ export async function POST(req: NextRequest) {
     const topicsToFetch = topics.filter(t =>
       forceRefresh || isSearchStale(lastFetchByTopic.get(t) ?? null)
     )
+    if (topicsToFetch.length === 0) { await writer.close(); return }
 
-    if (topicsToFetch.length === 0) {
-      await writer.close()
-      return
-    }
-
-    // 4. Mark all topics as fetching NOW — prevents parallel requests from re-fetching
+    // 4. Mark as fetching immediately to prevent duplicate requests
     const now = new Date().toISOString()
     await db.from('topic_fetches').upsert(
       topicsToFetch.map(topic => ({ topic, last_fetched: now, updated_at: now })),
       { onConflict: 'topic' }
     )
 
-    // 5. Close stream immediately — fire synthesis in background
+    // 5. Close stream — fetch in background
     await writer.close()
 
-    // 6. Background synthesis — runs after stream is closed
-    const synthesize = async () => {
+    // 6. Background fetch — won't block the response
+    const fetchAll = async () => {
       const concurrency = 3
       for (let i = 0; i < topicsToFetch.length; i += concurrency) {
         const batch = topicsToFetch.slice(i, i + concurrency)
         await Promise.allSettled(batch.map(async (topic) => {
           try {
-            const existing = byTopic.get(topic) ?? []
-            const existingTitles = existing.map((r: any) => r.title)
-
-            // Try RSS semantic search first
-            const rssItems = await synthesizeTopicFromRSS(topic, existingTitles)
-            if (rssItems.length > 0) {
-              console.log(`[feed] RSS synthesized ${rssItems.length} items for "${topic}"`)
-              return
-            }
-
-            // Fallback to Tavily
-            console.log(`[feed] RSS found nothing for "${topic}", falling back to Tavily`)
-            const fresh = await fetchNewsForTopic(topic, (byTopic.get(topic) ?? []).map((r: any) => r.title))
+            const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
+            const fresh = await fetchNewsForTopic(topic, existingTitles)
             if (fresh.length === 0) return
 
             const rows = fresh.map(itemToRow)
@@ -129,9 +113,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Fire and forget — don't await
-    synthesize().catch(e => console.error('[feed] background synthesis error:', e))
-
+    fetchAll().catch(e => console.error('[feed] background fetch error:', e))
   })()
 
   return new Response(stream.readable, {
@@ -154,7 +136,7 @@ function rowToItem(row: any): NewsItem {
 
 function itemToRow(item: NewsItem) {
   return {
-    topic: item.topic, title: item.title, summary: item.summary,
+    id: item.id, topic: item.topic, title: item.title, summary: item.summary,
     sections: item.sections || [], conclusion: item.conclusion || null,
     sources: item.sources, image_url: item.imageUrl || null,
     published_at: item.publishedAt, cached_at: item.cachedAt,
