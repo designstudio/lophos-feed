@@ -301,8 +301,7 @@ export default function FeedPage() {
         </div>
       </div>
     </div>
-    {/* Sidebar right — outside scroll container so sticky works correctly */}
-    <div className="sidebar-right flex-shrink-0 overflow-y-auto" style={{ height: '100vh', position: 'sticky', top: 0, scrollbarWidth: 'none' }}>
+    <div className="sidebar-right flex-shrink-0 overflow-y-auto" style={{ height: '100vh', position: 'sticky', top: 0, scrollbarWidth: 'none' as any }}>
       <RightSidebar topics={topics} />
     </div>
     </div>
