@@ -145,6 +145,8 @@ export default function FeedPage() {
   const scrollRef   = useRef<HTMLDivElement>(null)
 
   const startBackgroundPoll = () => {
+    // Don't start if already polling
+    if (bgAbortRef.current && !bgAbortRef.current.signal.aborted) return
     bgAbortRef.current?.abort()
     const ctrl = new AbortController()
     bgAbortRef.current = ctrl

@@ -177,9 +177,12 @@ export async function fetchNewsForTopic(
   if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
   const tavilyData = await tavilyRes.json()
 
+  console.log(`[news] Tavily for "${topic}": ${tavilyData.results?.length ?? 0} results`)
+
   const rawResults = (tavilyData.results || []).filter((r: any) =>
     r.url && r.title && r.content?.length > 100 && isArticleUrl(r.url)
   )
+  console.log(`[news] after filter: ${rawResults.length} results`)
   if (rawResults.length === 0) return []
 
   // Cluster similar stories — removes duplicates before sending to Gemini
