@@ -21,17 +21,20 @@ function relevanceScore(item: any, topic: string): number {
   const content = (item.content || '').toLowerCase()
   const itemTopic = (item.topic || '').toLowerCase()
 
-  // Keywords from topic name
-  const words = needle.split(/\s+/).filter((w: string) => w.length > 2)
+  // Keywords: use full phrase + specific abbreviations only
+  // Don't split into short words — "lo" from "league of legends" matches everything
   const abbrevMap: Record<string, string[]> = {
-    'league of legends': ['lol', 'league', 'first stand', 'lec', 'lck', 'lpl'],
-    'teamfight tactics': ['tft', 'teamfight'],
-    'american horror story': ['ahs'],
-    'monarch legacy of monsters': ['monarch'],
-    'valorant': ['vct', 'vcl', 'vrl', 'masters', 'champions'],
-    'overwatch': ['owl', 'owcs'],
+    'league of legends': ['league of legends', 'lol', 'first stand', 'lec', 'lck', 'lpl', 'worlds'],
+    'teamfight tactics': ['teamfight tactics', 'tft'],
+    'american horror story': ['american horror story', 'ahs'],
+    'monarch legacy of monsters': ['monarch legacy', 'monarch'],
+    'valorant': ['valorant', 'vct', 'vcl', 'vrl'],
+    'overwatch': ['overwatch', 'owcs', 'owl'],
+    'música': ['música', 'music', 'album', 'álbum', 'single', 'show', 'tour'],
+    'cinema': ['cinema', 'filme', 'movie', 'film', 'streaming'],
   }
-  const keywords = [...words, needle, ...(abbrevMap[needle] || [])]
+  // Use specific keywords if defined, otherwise just the full topic phrase
+  const keywords = abbrevMap[needle] || [needle]
 
   let score = 0
 
@@ -125,18 +128,10 @@ export async function synthesizeTopicFromRSS(
   const now = new Date().toISOString()
 
   // Score and rank raw_items for this topic
-  const allScored = rawItems
+  const scored = rawItems
     .map(item => ({ item, score: relevanceScore(item, topic) }))
+    .filter(({ score }) => score >= 5)
     .sort((a, b) => b.score - a.score)
-
-  // Debug: log top 3 scores for this topic
-  console.log(`[rss-synth] topic="${topic}" top scores:`,
-    allScored.slice(0, 3).map(({ item, score }) => 
-      `score=${score} topic=${item.topic} title="${(item.title||'').slice(0,50)}"`)
-  )
-
-  const scored = allScored
-    .filter(({ score }) => score >= 3)
     .slice(0, 8)
     .map(({ item }) => item)
 
