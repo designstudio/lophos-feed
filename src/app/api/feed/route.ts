@@ -87,9 +87,11 @@ export async function POST(req: NextRequest) {
 
     const hasRawItems = (rawItems?.length ?? 0) > 0
 
-    // 5. Process each topic sequentially to avoid Gemini 503
-    for (const topic of topicsToFetch) {
-      await (async () => {
+    // 5. Process topics with limited concurrency (max 3 at once) to avoid Gemini 503
+    const concurrency = 3
+    for (let i = 0; i < topicsToFetch.length; i += concurrency) {
+      const batch = topicsToFetch.slice(i, i + concurrency)
+      await Promise.allSettled(batch.map(async (topic) => {
         try {
           const existing = byTopic.get(topic) ?? []
           const existingTitles = existing.map((r: any) => r.title)
@@ -129,7 +131,7 @@ export async function POST(req: NextRequest) {
         } catch (e) {
           console.error(`[feed] error "${topic}":`, e)
         }
-      })()
+      }))
     }
 
     await writer.close()
