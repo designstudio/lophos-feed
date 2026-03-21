@@ -163,16 +163,14 @@ export async function fetchNewsForTopic(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      api_key:             TAVILY_KEY,
-      query:               `${topic} ${today}`,
-      search_depth:        'advanced',
-      topic:               'news',
-      time_range:          'week',
-      days:                3,
-      max_results:         10,
+      api_key:      TAVILY_KEY,
+      query:        `${topic} news`,
+      search_depth: 'advanced',
+      days:         3,
+      max_results:  10,
       include_answer:      false,
       include_raw_content: false,
-      include_images:      false, // we fetch og:image ourselves
+      include_images:      false,
     }),
   })
 

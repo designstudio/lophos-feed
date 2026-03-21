@@ -132,6 +132,7 @@ export default function FeedPage() {
   const [streaming, setStreamingLocal] = useState(false)
   const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
   const [hasData, setHasData]     = useState(false)
+  const hasDataRef = useRef(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [visibleBlocks, setVisibleBlocks] = useState(4)
   const [isFirstLoad, setIsFirstLoad]     = useState(false)
@@ -247,12 +248,13 @@ export default function FeedPage() {
                 return merged
               })
               setHasData(true)
+              hasDataRef.current = true
             }
           } catch {}
         }
       } // end while loop
       // First load: cache was empty → start background polling
-      if (!hasData && !force) {
+      if (!hasDataRef.current && !force) {
         setIsFirstLoad(true)
         startBackgroundPoll()
       }
