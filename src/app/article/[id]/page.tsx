@@ -86,7 +86,6 @@ export default function ArticlePage() {
             {/* Spacer */}
             <div style={{ width: '12rem' }} className="flex-shrink-0" />
           </div>
-          </div>
         </div>
 
       <main className="page-scroll">
