@@ -12,7 +12,8 @@
   /* Colors */
   --color-bg-primary:    #fcfcfc;
   --color-ui-strong:     #111111;
-  --color-bg-secondary:  #f3f1ee;
+  --color-hover-subtle:  #0505050a;
+  --color-bg-secondary:  #f2f2f2;
   --color-bg-tertiary:   #ebe9e4;
 
   --color-ink-primary:   #1a1916;
@@ -62,6 +63,7 @@ html, body {
 .dark {
   --color-bg-primary:    #0f0f0f;
   --color-ui-strong:     #111111;
+  --color-hover-subtle:  #0505050a;
   --color-bg-secondary:  #1a1a1a;
   --color-bg-tertiary:   #252525;
   --color-ink-primary:   #f0efed;
@@ -81,6 +83,7 @@ html, body {
 .dark .bg-white        { background-color: var(--color-bg-secondary) !important; }
 .dark .bg-gray-900     { background-color: #111111 !important; }
 .dark .bg-gray-50      { background-color: var(--color-bg-tertiary) !important; }
+.bg-gray-50            { background-color: #f2f2f2 !important; }
 .dark .bg-gray-100     { background-color: var(--color-bg-tertiary) !important; }
 .dark .text-gray-900   { color: var(--color-ink-primary) !important; }
 .dark .text-gray-700   { color: var(--color-ink-secondary) !important; }

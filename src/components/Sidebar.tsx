@@ -95,7 +95,7 @@ function AccentPicker({ value, onChange }: { value: string; onChange: (v: string
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl border border-gray-100 shadow-lg z-50 py-1.5"
+        <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl border border-border shadow-lg z-50 py-1.5"
           style={{ animation: 'slideUp 0.12s ease' }}>
           {ACCENT_COLORS.map(c => (
             <button key={c.label} onClick={() => { onChange(c.value); setOpen(false) }}
@@ -254,11 +254,11 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: 'fadeIn 0.15s ease' }}>
       <div className="absolute inset-0" onClick={onClose} style={{ backgroundColor: "#05050533", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }} />
-      <div className="relative bg-white rounded-2xl shadow-2xl flex overflow-hidden" style={{ width: '48rem', height: '32rem', animation: 'slideUp 0.15s ease' }}>
+      <div className="relative rounded-[1.5rem] shadow-2xl flex overflow-hidden" style={{ width: '48rem', height: '32rem', animation: 'slideUp 0.15s ease', backgroundColor: 'var(--color-bg-primary)' }}>
 
         {/* Full-width header */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 h-14 border-b border-gray-100 bg-white z-10 rounded-t-2xl">
-          <h2 className="text-[15px] font-semibold text-gray-900">Configurações</h2>
+        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 h-14 border-b z-10 rounded-t-[1.5rem]" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}>
+          <h2 className="font-semibold text-gray-900" style={{ fontSize: '20px' }}>Configurações</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <CloseCircle size={20} />
           </button>
@@ -268,12 +268,15 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         <div className="flex flex-1 overflow-hidden mt-14">
 
         {/* Left nav */}
-        <div className="flex-shrink-0 border-r border-gray-100 pt-4 pb-4" style={{ width: '12rem' }}>
+        <div className="flex-shrink-0 pt-4 pb-4 pl-3" style={{ width: '12rem' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={cn('w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2.5 rounded-lg mx-1',
-                tab === t.id ? 'bg-gray-100 font-medium text-gray-900' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-              )}>
+                tab === t.id ? 'font-medium text-gray-900' : 'text-gray-500 hover:text-gray-900'
+              )}
+              style={{ backgroundColor: tab === t.id ? '#0505050a' : undefined }}
+              onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0505050a' }}
+              onMouseLeave={e => { if (tab !== t.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}>
               {t.icon}{t.label}
             </button>
           ))}
@@ -281,12 +284,12 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
         {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-7 py-5">
+          <div className="flex-1 overflow-y-auto px-7 pt-4 pb-5">
 
             {/* ── GERAL ── */}
             {tab === 'geral' && (
               <>
-                <section className="py-5 border-b border-gray-100">
+                <section className="pb-5 border-b border-border">
                   <h3 className="text-sm font-semibold text-gray-900 mb-1">Aparência</h3>
                   <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para você.</p>
                   <div className="grid grid-cols-3 gap-3">
@@ -298,16 +301,16 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                       <button key={t.id} onClick={() => handleTheme(t.id)}
                         className={cn(
                           'flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all',
-                          theme === t.id ? 'text-gray-900 bg-gray-50' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                          theme === t.id ? 'text-gray-900' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
                         )}
-                        style={theme === t.id ? { borderColor: 'var(--color-ui-strong)' } : {}}>
+                        style={theme === t.id ? { borderColor: 'var(--color-ui-strong)', backgroundColor: '#f2f2f2' } : {}}>
                         {t.icon}{t.label}
                       </button>
                     ))}
                   </div>
                 </section>
 
-                <section className="py-5 border-b border-gray-100">
+                <section className="py-5 border-b border-border">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-900">Cor de ênfase</h3>
                     <AccentPicker value={accentColor} onChange={handleAccent} />
@@ -370,7 +373,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                 <p className="text-sm text-gray-500 mb-5">Ative e ordene os widgets da barra lateral. Arraste para reordenar.</p>
 
                 {/* Clima — always on */}
-                <div className="flex items-center gap-3 py-3 px-3 rounded-xl border border-gray-100 mb-2 opacity-50 select-none">
+                <div className="flex items-center gap-3 py-3 px-3 rounded-xl border border-border mb-2 opacity-50 select-none">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 4h6M5 8h6M5 12h6" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/></svg>
                   <span className="text-sm text-gray-900 flex-1">Clima</span>
                   <span className="text-xs text-gray-400 px-2 py-0.5 rounded-full bg-gray-100">Sempre ativo</span>
@@ -387,7 +390,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                       onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
                       className={cn(
                         'flex items-center gap-3 py-3 px-3 rounded-xl border mb-2 cursor-grab active:cursor-grabbing transition-all select-none',
-                        dragOverIdx === i && dragIdx !== i ? 'border-accent bg-accent/5 scale-[1.02]' : 'border-gray-100 hover:border-gray-200'
+                        dragOverIdx === i && dragIdx !== i ? 'border-accent bg-accent/5 scale-[1.02]' : 'border-border hover:border-gray-200'
                       )}>
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0">
                         <path d="M5 4h6M5 8h6M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -418,7 +421,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             {/* ── CONTA ── */}
             {tab === 'conta' && (
               <>
-                <div className="flex items-center gap-4 py-5 border-b border-gray-100">
+                <div className="flex items-center gap-4 py-5 border-b border-border">
                   <div className="relative group cursor-pointer flex-shrink-0" onClick={() => clerk.openUserProfile()}>
                     {user?.imageUrl
                       ? <img src={user.imageUrl} alt="" width={52} height={52} className="rounded-full" />
@@ -437,7 +440,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
 
-                <section className="py-5 border-b border-gray-100">
+                <section className="py-5 border-b border-border">
                   <h3 className="text-sm font-semibold text-gray-900 mb-4">Editar perfil</h3>
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div>
@@ -458,7 +461,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   </button>
                 </section>
 
-                <div className="flex items-center justify-between py-5 border-b border-gray-100">
+                <div className="flex items-center justify-between py-5 border-b border-border">
                   <div>
                     <h3 className="text-sm font-semibold text-gray-900">Senha</h3>
                     <p className="text-sm text-gray-500 mt-0.5">Altere sua senha de acesso.</p>
@@ -519,7 +522,7 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
       {open && (
         <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl shadow-xl z-50 py-1"
           style={{ animation: 'slideUp 0.12s ease', backgroundColor: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
-          <div className="px-3 py-2.5 border-b border-gray-100">
+          <div className="px-3 py-2.5 border-b border-border">
             <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName}</p>
             <p className="text-xs text-gray-400 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
@@ -592,7 +595,7 @@ function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
       </button>
       {open && (
         <FixedDropdown anchorRef={ref} onClose={() => setOpen(false)}>
-          <div className="px-3 py-2.5 border-b border-gray-100">
+          <div className="px-3 py-2.5 border-b border-border">
             <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName}</p>
             <p className="text-xs text-gray-400 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
