@@ -3,38 +3,55 @@ import { NewsItem } from '@/lib/types'
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY!
 
+// Map user topics to feed topic categories
+const TOPIC_TO_FEED_TOPICS: Record<string, string[]> = {
+  'valorant': ['valorant', 'e-sports', 'esports', 'games'],
+  'league of legends': ['league of legends', 'lol', 'e-sports', 'esports', 'games'],
+  'tft': ['tft', 'teamfight tactics', 'e-sports', 'esports', 'games'],
+  'teamfight tactics': ['tft', 'teamfight tactics', 'e-sports', 'esports', 'games'],
+  'overwatch': ['overwatch', 'e-sports', 'esports', 'games'],
+  'american horror story': ['séries', 'series', 'cinema', 'entretenimento'],
+  'monarch legacy of monsters': ['séries', 'series', 'cinema', 'entretenimento'],
+}
+
 function relevanceScore(item: any, topic: string): number {
   const needle = topic.toLowerCase()
   const title = (item.title || '').toLowerCase()
   const summary = (item.summary || '').toLowerCase()
   const content = (item.content || '').toLowerCase()
+  const itemTopic = (item.topic || '').toLowerCase()
 
-  // Expand keywords: "league of legends" → ["league", "legends", "lol", "league of legends"]
-  // "american horror story" → ["american", "horror", "story", "ahs", ...]
+  // Keywords from topic name
   const words = needle.split(/\s+/).filter((w: string) => w.length > 2)
-  const keywords = [...words, needle]
-  // Add common abbreviations
   const abbrevMap: Record<string, string[]> = {
-    'league of legends': ['lol', 'league'],
-    'teamfight tactics': ['tft'],
+    'league of legends': ['lol', 'league', 'first stand', 'lec', 'lck', 'lpl'],
+    'teamfight tactics': ['tft', 'teamfight'],
     'american horror story': ['ahs'],
     'monarch legacy of monsters': ['monarch'],
-    'valorant': ['vct', 'valorant'],
-    'overwatch': ['owl', 'overwatch'],
+    'valorant': ['vct', 'vcl', 'vrl', 'masters', 'champions'],
+    'overwatch': ['owl', 'owcs'],
   }
-  const extra = abbrevMap[needle] || []
-  keywords.push(...extra)
+  const keywords = [...words, needle, ...(abbrevMap[needle] || [])]
 
   let score = 0
+
+  // Strong match: topic of the feed item matches user topic category
+  const feedTopicsForUserTopic = TOPIC_TO_FEED_TOPICS[needle] || []
+  if (feedTopicsForUserTopic.some(ft => itemTopic.includes(ft))) {
+    score += 8  // Feed is categorized under a relevant topic
+  }
+
+  // Text matches
   for (const kw of keywords) {
     if (title.includes(kw))   score += 10
     if (summary.includes(kw)) score += 4
     if (content.includes(kw)) score += 1
   }
 
+  // Recency boost
   if (item.pub_date) {
     const age = Date.now() - new Date(item.pub_date).getTime()
-    if (age < 86400000)   score += 3
+    if (age < 86400000)       score += 3
     else if (age < 259200000) score += 1
   }
 

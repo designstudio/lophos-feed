@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     // 4. Pre-load unprocessed raw_items once (shared across all topics)
     const { data: rawItems } = await db
       .from('raw_items')
-      .select('id, title, url, image_url, summary, content, source_name, pub_date')
+      .select('id, topic, title, url, image_url, summary, content, source_name, pub_date')
       .eq('processed', false)
       .gte('pub_date', new Date(Date.now() - 72 * 3600 * 1000).toISOString())
       .order('pub_date', { ascending: false })
