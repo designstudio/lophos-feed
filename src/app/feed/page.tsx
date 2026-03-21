@@ -226,7 +226,6 @@ export default function FeedPage() {
   const showEmpty     = !hasData && !streaming
 
   return (
-    <div className="flex flex-1 min-w-0 overflow-hidden">
     <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header — full width, outside feed-layout ── */}
@@ -299,12 +298,12 @@ export default function FeedPage() {
 
           </div>
         </div>
+            <div className="sidebar-right">
+              <RightSidebar topics={topics} />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-    <div className="sidebar-right flex-shrink-0 overflow-y-auto" style={{ height: '100vh', position: 'sticky', top: 0, scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'] }}>
-      <RightSidebar topics={topics} />
-    </div>
-  </div>
   )
 }
 
