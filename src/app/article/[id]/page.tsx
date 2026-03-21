@@ -229,6 +229,7 @@ export default function ArticlePage() {
                   </div>
                 )}
               </div>
+              )}
             </div>
           </div>
         </div>
