@@ -301,10 +301,10 @@ export default function FeedPage() {
         </div>
       </div>
     </div>
-    <div className="sidebar-right flex-shrink-0 overflow-y-auto" style={{ height: '100vh', position: 'sticky', top: 0, scrollbarWidth: 'none' as any }}>
+    <div className="sidebar-right flex-shrink-0 overflow-y-auto" style={{ height: '100vh', position: 'sticky', top: 0, scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'] }}>
       <RightSidebar topics={topics} />
     </div>
-    </div>
+  </div>
   )
 }
 
