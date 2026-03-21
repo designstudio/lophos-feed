@@ -195,6 +195,7 @@ export default function FeedPage() {
             }
           } catch {}
         }
+      } // end while loop
       // First load: cache was empty → start background polling
       if (!hasData && !force) {
         setIsFirstLoad(true)
