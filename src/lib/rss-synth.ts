@@ -3,106 +3,31 @@ import { NewsItem } from '@/lib/types'
 
 const GEMINI_KEY = process.env.GEMINI_API_KEY!
 
-// Map user topics to feed topic categories
-const TOPIC_TO_FEED_TOPICS: Record<string, string[]> = {
-  // Esports/Games — Dot Esports stores all under first topic of feed
-  'valorant':           ['valorant', 'e-sports', 'esports', 'games'],
-  'league of legends':  ['valorant', 'e-sports', 'esports', 'games', 'league of legends'],
-  'tft':                ['valorant', 'e-sports', 'esports', 'games', 'tft'],
-  'teamfight tactics':  ['valorant', 'e-sports', 'esports', 'games', 'tft'],
-  'overwatch':          ['valorant', 'e-sports', 'esports', 'games', 'overwatch'],
-  'cs2':                ['valorant', 'e-sports', 'esports', 'games'],
-  'dota 2':             ['valorant', 'e-sports', 'esports', 'games'],
-  // Series/Cinema
-  'american horror story':        ['séries', 'series', 'cinema', 'entretenimento', 'filmes'],
-  'monarch legacy of monsters':   ['séries', 'series', 'cinema', 'entretenimento', 'filmes'],
-  // Generic fallbacks — broad topics match their own category
-  'música':      ['música', 'pop', 'entretenimento'],
-  'cinema':      ['cinema', 'filmes', 'séries', 'entretenimento'],
-  'filmes':      ['cinema', 'filmes', 'séries'],
-  'séries':      ['séries', 'cinema', 'filmes', 'entretenimento'],
-  'tecnologia':  ['tecnologia', 'inovação', 'smartphones'],
-  'games':       ['games', 'e-sports', 'esports'],
-  'esportes':    ['esportes'],
+// ─── Generate embedding for a topic query ─────────────────────
+async function generateQueryEmbedding(topic: string): Promise<number[] | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/text-embedding-004',
+          content: { parts: [{ text: topic }] },
+          taskType: 'RETRIEVAL_QUERY',
+        }),
+      }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.embedding?.values ?? null
+  } catch {
+    return null
+  }
 }
 
-function relevanceScore(item: any, topic: string): number {
-  const needle = topic.toLowerCase()
-  const title = (item.title || '').toLowerCase()
-  const summary = (item.summary || '').toLowerCase()
-  const content = (item.content || '').toLowerCase()
-  const itemTopic = (item.topic || '').toLowerCase()
-
-  // Keywords: use full phrase + specific abbreviations only
-  // Don't split into short words — "lo" from "league of legends" matches everything
-  const abbrevMap: Record<string, string[]> = {
-    'league of legends': ['league of legends', 'lol', 'first stand', 'lec', 'lck', 'lpl', 'worlds'],
-    'teamfight tactics': ['teamfight tactics', 'tft'],
-    'american horror story': ['american horror story', 'ahs'],
-    'monarch legacy of monsters': ['monarch legacy', 'monarch'],
-    'valorant': ['valorant', 'vct', 'vcl', 'vrl'],
-    'overwatch': ['overwatch', 'owcs', 'owl'],
-    'música': ['música', 'music', 'album', 'álbum', 'single', 'show', 'tour'],
-    'cinema': ['cinema', 'filme', 'movie', 'film', 'streaming'],
-  }
-  // Use specific keywords if defined, otherwise just the full topic phrase
-  const keywords = abbrevMap[needle] || [needle]
-
-  let score = 0
-
-  // Strong match: topic of the feed item matches user topic category
-  const feedTopicsForUserTopic = TOPIC_TO_FEED_TOPICS[needle] || []
-  if (feedTopicsForUserTopic.some(ft => itemTopic.includes(ft))) {
-    score += 8  // Feed is categorized under a relevant topic
-  }
-
-  // Text matches
-  for (const kw of keywords) {
-    if (title.includes(kw))   score += 10
-    if (summary.includes(kw)) score += 4
-    if (content.includes(kw)) score += 1
-  }
-
-  // Source boost — known sources for specific topics
-  const SOURCE_TOPIC_MAP: Record<string, string[]> = {
-    'VLR.gg':       ['valorant'],
-    'Dot Esports':  ['valorant', 'league of legends', 'tft', 'overwatch', 'cs2', 'dota 2', 'games', 'e-sports'],
-    'ONE Esports':  ['valorant', 'league of legends', 'tft', 'overwatch', 'games', 'e-sports'],
-    'Game Rant':    ['league of legends', 'tft', 'overwatch', 'games'],
-    'IGN':          ['games', 'filmes', 'séries'],
-    'IGN Brasil':   ['games', 'filmes', 'séries'],
-    'Kotaku':       ['games'],
-    'Eurogamer':    ['games'],
-    'GameSpot':     ['games'],
-    'GamesRadar':   ['games'],
-    'Deadline':     ['cinema', 'filmes', 'séries', 'entretenimento'],
-    'Variety':      ['cinema', 'filmes', 'séries', 'música'],
-    'Collider':     ['cinema', 'filmes', 'séries'],
-    'Screen Rant':  ['filmes', 'séries', 'games'],
-    'Billboard':    ['música'],
-    'Rolling Stone': ['música', 'pop'],
-  }
-  const sourceName = (item.source_name || '').toLowerCase()
-  const sourceTopics = SOURCE_TOPIC_MAP[item.source_name] || []
-  if (sourceTopics.some(st => needle.includes(st) || st.includes(needle))) {
-    score += 6
-  }
-
-  // Recency boost
-  if (item.pub_date) {
-    const age = Date.now() - new Date(item.pub_date).getTime()
-    if (age < 86400000)       score += 3
-    else if (age < 259200000) score += 1
-  }
-
-  return score
-}
-
-async function synthesizeWithGemini(
-  topic: string,
-  items: any[],
-  existingTitles: string[]
-): Promise<any[]> {
+// ─── Gemini synthesis ─────────────────────────────────────────
+async function synthesizeWithGemini(topic: string, items: any[], existingTitles: string[]): Promise<any[]> {
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
@@ -112,7 +37,7 @@ async function synthesizeWithGemini(
   ).join('\n\n')
 
   const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map((t: string) => `- ${t}`).join('\n')}\n`
+    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
     : ''
 
   const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover.
@@ -125,14 +50,12 @@ REGRAS:
 3. IGNORE resultados irrelevantes ao tópico.
 4. Só crie notícias sobre eventos noticiáveis reais.
 5. Se não houver evento noticiável, retorne [].
-6. Se todos os eventos já foram cobertos, retorne [].
-7. Tom: neutro, jornalístico, sem clickbait. Escreva em pt-BR.
+6. Tom: neutro, jornalístico, sem clickbait. Escreva em pt-BR.
 
 ESTRUTURA:
-- title, summary (4-5 frases), sections (2-4 com heading+body), conclusion, sourceIndexes
-
-Responda APENAS com JSON válido:
 [{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2]}]
+
+Responda APENAS com JSON válido.
 
 FONTES:
 ${context}`
@@ -156,66 +79,92 @@ ${context}`
   return JSON.parse(match[0])
 }
 
+// ─── Main export ──────────────────────────────────────────────
 export async function synthesizeTopicFromRSS(
   topic: string,
-  existingTitles: string[],
-  rawItems: any[]
+  existingTitles: string[]
 ): Promise<NewsItem[]> {
   const db = getSupabaseAdmin()
   const now = new Date().toISOString()
 
-  // Score and rank raw_items for this topic
-  const scored = rawItems
-    .map(item => ({ item, score: relevanceScore(item, topic) }))
-    .filter(({ score }) => score >= 5)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 8)
-    .map(({ item }) => item)
+  // 1. Generate embedding for the topic
+  const queryEmbedding = await generateQueryEmbedding(topic)
 
-  if (scored.length === 0) return []
+  let items: any[] = []
 
-  const synthesized = await synthesizeWithGemini(topic, scored, existingTitles)
+  if (queryEmbedding) {
+    // 2a. Semantic search via pgvector
+    const { data, error } = await db.rpc('match_raw_items', {
+      query_embedding: `[${queryEmbedding.join(',')}]`,
+      match_threshold: 0.45,
+      match_count: 8,
+      only_unprocessed: true,
+    })
+    if (!error && data?.length) {
+      items = data
+      console.log(`[rss-synth] semantic search for "${topic}": ${items.length} items (top similarity: ${items[0]?.similarity?.toFixed(3)})`)
+    }
+  }
+
+  // 2b. Fallback: keyword search if no embedding results
+  if (items.length === 0) {
+    console.log(`[rss-synth] no embedding results for "${topic}", trying keyword fallback`)
+    const { data } = await db
+      .from('raw_items')
+      .select('id, topic, title, url, image_url, summary, content, source_name, pub_date')
+      .eq('processed', false)
+      .gte('pub_date', new Date(Date.now() - 72 * 3600 * 1000).toISOString())
+      .ilike('title', `%${topic.split(' ')[0]}%`)
+      .order('pub_date', { ascending: false })
+      .limit(8)
+    items = data || []
+  }
+
+  if (items.length === 0) return []
+
+  // 3. Synthesize with Gemini
+  const synthesized = await synthesizeWithGemini(topic, items, existingTitles)
   if (!synthesized.length) return []
 
+  // 4. Build rows
   const rows = synthesized.map((item: any) => {
     const idxs: number[] = (item.sourceIndexes || []).map((n: number) => n - 1)
     const sources = idxs
-      .filter((i: number) => i >= 0 && i < scored.length)
-      .map((i: number) => ({
-        name: scored[i].source_name,
-        url: scored[i].url,
-        favicon: `https://www.google.com/s2/favicons?domain=${scored[i].url}&sz=32`,
+      .filter(i => i >= 0 && i < items.length)
+      .map(i => ({
+        name: items[i].source_name,
+        url: items[i].url,
+        favicon: `https://www.google.com/s2/favicons?domain=${items[i].url}&sz=32`,
       }))
 
-    const primaryItem = scored[idxs[0]] ?? scored[0]
-    const imageUrl = primaryItem?.image_url || null
-
-    const safeId = crypto.randomUUID()
+    const primaryItem = items[idxs[0]] ?? items[0]
 
     return {
-      id: safeId,
+      id: crypto.randomUUID(),
       topic,
       title: item.title,
       summary: item.summary,
       sections: item.sections || [],
       conclusion: typeof item.conclusion === 'string' ? item.conclusion : null,
       sources,
-      image_url: imageUrl,
+      image_url: primaryItem?.image_url || null,
       published_at: now,
       cached_at: now,
     }
   })
 
-  // Insert into news_cache
+  // 5. Insert into news_cache
   const { error } = await db.from('news_cache').insert(rows)
   if (error) { console.error(`[rss-synth] insert error "${topic}":`, error.message); return [] }
 
-  // Mark raw_items as processed
-  await db.from('raw_items').update({ processed: true }).in('id', scored.map((i: any) => i.id))
+  // 6. Mark used raw_items as processed
+  await db.from('raw_items').update({ processed: true }).in('id', items.map(i => i.id))
+
+  console.log(`[rss-synth] synthesized ${rows.length} articles for "${topic}"`)
 
   return rows.map((row: any) => ({
     id: row.id, topic: row.topic, title: row.title, summary: row.summary,
-    sections: row.sections || [], conclusion: row.conclusion || undefined,
+    sections: row.sections, conclusion: row.conclusion || undefined,
     sources: row.sources, imageUrl: row.image_url,
     publishedAt: row.published_at, cachedAt: row.cached_at,
   }))

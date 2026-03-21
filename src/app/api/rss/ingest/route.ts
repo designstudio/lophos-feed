@@ -5,7 +5,8 @@ import crypto from 'crypto'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// ─── Types ────────────────────────────────────────────────────
+const GEMINI_KEY = process.env.GEMINI_API_KEY!
+
 interface FeedItem {
   title: string
   url: string
@@ -24,11 +25,10 @@ interface Feed {
   last_modified: string | null
 }
 
-// ─── Normalize title for dedup hash ──────────────────────────
 function normalizeTitle(title: string): string {
   return title
     .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\b(the|a|an|de|da|do|das|dos|o|a|os|as|e|em|no|na|nos|nas|por|para|com|que|se|um|uma)\b/g, '')
     .replace(/\s+/g, ' ')
@@ -39,42 +39,32 @@ function dedupHash(title: string): string {
   return crypto.createHash('md5').update(normalizeTitle(title)).digest('hex').slice(0, 16)
 }
 
-// ─── Extract image from RSS item ─────────────────────────────
 function extractImage(item: any): string | undefined {
-  // media:content or media:thumbnail
   if (item['media:content']?.['@_url']) return item['media:content']['@_url']
   if (item['media:thumbnail']?.['@_url']) return item['media:thumbnail']['@_url']
   if (Array.isArray(item['media:content'])) {
     const img = item['media:content'].find((m: any) => m['@_medium'] === 'image' || m['@_url']?.match(/\.(jpg|jpeg|png|webp)/i))
     if (img?.['@_url']) return img['@_url']
   }
-  // enclosure
   if (item.enclosure?.['@_url'] && item.enclosure?.['@_type']?.startsWith('image')) {
     return item.enclosure['@_url']
   }
-  // og:image from content
-  const content = item['content:encoded'] || item.content || item.description || ''
+  const content = (typeof item['content:encoded'] === 'string' ? item['content:encoded'] : '') ||
+    (typeof item.description === 'string' ? item.description : '') || ''
   const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i)
   if (imgMatch) return imgMatch[1]
   return undefined
 }
 
-// ─── Parse RSS/Atom feed ──────────────────────────────────────
-async function parseFeed(feedUrl: string, etag?: string | null, lastModified?: string | null): Promise<{
-  items: FeedItem[]
-  etag?: string
-  lastModified?: string
-  notModified?: boolean
-}> {
+async function parseFeed(feedUrl: string, etag?: string | null, lastModified?: string | null) {
   const headers: Record<string, string> = {
-    'User-Agent': 'LophosFeed/1.0 (+https://lophos.app)',
+    'User-Agent': 'LophosFeed/1.0',
     'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml',
   }
   if (etag) headers['If-None-Match'] = etag
   if (lastModified) headers['If-Modified-Since'] = lastModified
 
   const res = await fetch(feedUrl, { headers, signal: AbortSignal.timeout(10000) })
-
   if (res.status === 304) return { items: [], notModified: true }
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
@@ -82,28 +72,19 @@ async function parseFeed(feedUrl: string, etag?: string | null, lastModified?: s
   const newEtag = res.headers.get('etag') || undefined
   const newLastModified = res.headers.get('last-modified') || undefined
 
-  // Dynamic import of fast-xml-parser (must be installed)
   const { XMLParser } = await import('fast-xml-parser')
-  const parser = new XMLParser({
-    ignoreAttributes: false,
-    attributeNamePrefix: '@_',
-    allowBooleanAttributes: true,
-  })
+  const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', allowBooleanAttributes: true })
   const parsed = parser.parse(xml)
 
   const channel = parsed?.rss?.channel || parsed?.feed || parsed?.['rdf:RDF']?.channel
   if (!channel) throw new Error('Invalid feed format')
 
-  // RSS 2.0
-  const rawItems: any[] = Array.isArray(channel.item)
-    ? channel.item
+  const rawItems: any[] = Array.isArray(channel.item) ? channel.item
     : channel.item ? [channel.item]
-    // Atom
     : Array.isArray(channel.entry) ? channel.entry
     : channel.entry ? [channel.entry] : []
 
   const items: FeedItem[] = rawItems.slice(0, 20).map((item: any) => {
-    // Atom uses link.@_href, RSS uses link (text)
     const url = item.link?.['@_href'] || item.link || item.guid?.['#text'] || item.guid || ''
     const title = item.title?.['#text'] || item.title || ''
     const pubDate = item.pubDate || item.updated || item.published || undefined
@@ -115,7 +96,7 @@ async function parseFeed(feedUrl: string, etag?: string | null, lastModified?: s
       title: typeof title === 'string' ? title.trim() : String(title).trim(),
       url: typeof url === 'string' ? url.trim() : String(url).trim(),
       imageUrl: extractImage(item),
-      content: content?.slice(0, 2000),
+      content: content?.replace(/<[^>]+>/g, '').slice(0, 1000),
       summary: typeof summary === 'string' ? summary.replace(/<[^>]+>/g, '').slice(0, 500) : undefined,
       pubDate,
     }
@@ -124,9 +105,46 @@ async function parseFeed(feedUrl: string, etag?: string | null, lastModified?: s
   return { items, etag: newEtag, lastModified: newLastModified }
 }
 
-// ─── Main handler ─────────────────────────────────────────────
+// ─── Generate embedding via Gemini ────────────────────────────
+async function generateEmbedding(text: string): Promise<number[] | null> {
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'models/text-embedding-004',
+          content: { parts: [{ text: text.slice(0, 2000) }] },
+        }),
+      }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.embedding?.values ?? null
+  } catch {
+    return null
+  }
+}
+
+// ─── Generate embeddings in batches ──────────────────────────
+async function embedItems(items: any[]): Promise<Map<string, number[]>> {
+  const results = new Map<string, number[]>()
+  // Process 5 at a time to avoid rate limits
+  for (let i = 0; i < items.length; i += 5) {
+    const batch = items.slice(i, i + 5)
+    await Promise.all(batch.map(async (item) => {
+      const text = `${item.title}. ${item.summary || item.content || ''}`.slice(0, 2000)
+      const embedding = await generateEmbedding(text)
+      if (embedding) results.set(item.url, embedding)
+    }))
+    // Small delay between batches
+    if (i + 5 < items.length) await new Promise(r => setTimeout(r, 200))
+  }
+  return results
+}
+
 export async function POST(req: NextRequest) {
-  // Simple auth: internal secret or service role
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.RSS_INGEST_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -136,11 +154,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const topicFilter: string | null = body.topic || null
 
-  // Load active feeds (optionally filtered by topic)
   let query = db.from('rss_feeds').select('*').eq('active', true)
-  if (topicFilter) {
-    query = query.contains('topics', [topicFilter])
-  }
+  if (topicFilter) query = query.contains('topics', [topicFilter])
+
   const { data: feeds, error } = await query
   if (error || !feeds?.length) {
     return NextResponse.json({ error: 'No feeds found', detail: error?.message })
@@ -148,22 +164,17 @@ export async function POST(req: NextRequest) {
 
   let totalNew = 0
   let totalSkipped = 0
+  let totalEmbedded = 0
   const errors: string[] = []
 
-  // Fetch feeds in parallel (max 5 at a time)
   const chunks = []
   for (let i = 0; i < feeds.length; i += 5) chunks.push(feeds.slice(i, i + 5))
 
   for (const chunk of chunks) {
     await Promise.allSettled(chunk.map(async (feed: Feed) => {
       try {
-        const { items, etag, lastModified, notModified } = await parseFeed(
-          feed.url,
-          feed.last_etag,
-          feed.last_modified
-        )
+        const { items, etag, lastModified, notModified } = await parseFeed(feed.url, feed.last_etag, feed.last_modified)
 
-        // Update last_fetched (and etag/lastModified if changed)
         await db.from('rss_feeds').update({
           last_fetched: new Date().toISOString(),
           ...(etag ? { last_etag: etag } : {}),
@@ -172,27 +183,24 @@ export async function POST(req: NextRequest) {
 
         if (notModified || items.length === 0) return
 
-        // Compute dedup hashes for incoming items
         const hashes = items.map(item => dedupHash(item.title))
-
-        // Check which hashes already exist
-        const { data: existing } = await db
-          .from('raw_items')
-          .select('dedup_hash')
-          .in('dedup_hash', hashes)
+        const { data: existing } = await db.from('raw_items').select('dedup_hash').in('dedup_hash', hashes)
         const existingHashes = new Set((existing || []).map((r: any) => r.dedup_hash))
-
-        // Filter to only new items
         const newItems = items.filter((_, i) => !existingHashes.has(hashes[i]))
 
-        if (newItems.length === 0) {
-          totalSkipped += items.length
-          return
-        }
+        if (newItems.length === 0) { totalSkipped += items.length; return }
 
-        // Insert new items
+        // Generate embeddings for new items
+        const embeddings = await embedItems(newItems.map((item, i) => ({
+          url: item.url,
+          title: item.title,
+          summary: item.summary,
+          content: item.content,
+        })))
+        totalEmbedded += embeddings.size
+
         const rows = newItems.map((item, i) => ({
-          topic: feed.topics[0] || 'Geral', // primary topic of the feed
+          topic: feed.topics[0] || 'Geral',
           title: item.title,
           url: item.url,
           image_url: item.imageUrl || null,
@@ -202,15 +210,13 @@ export async function POST(req: NextRequest) {
           source_url: feed.url,
           pub_date: item.pubDate ? new Date(item.pubDate).toISOString() : null,
           dedup_hash: hashes[items.indexOf(item)],
+          embedding: embeddings.get(item.url) ? `[${embeddings.get(item.url)!.join(',')}]` : null,
           processed: false,
         }))
 
         const { error: insertErr } = await db.from('raw_items').insert(rows)
         if (insertErr) {
-          // Ignore unique constraint violations (url already exists)
-          if (!insertErr.message.includes('unique')) {
-            errors.push(`${feed.name}: ${insertErr.message}`)
-          }
+          if (!insertErr.message.includes('unique')) errors.push(`${feed.name}: ${insertErr.message}`)
         } else {
           totalNew += newItems.length
         }
@@ -222,21 +228,18 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    ok: true,
-    feeds: feeds.length,
-    new: totalNew,
-    skipped: totalSkipped,
+    ok: true, feeds: feeds.length,
+    new: totalNew, skipped: totalSkipped, embedded: totalEmbedded,
     errors: errors.length > 0 ? errors : undefined,
   })
 }
 
-// GET: quick health check + stats
 export async function GET() {
   const db = getSupabaseAdmin()
-  const [{ count: total }, { count: unprocessed }, { data: recentFeeds }] = await Promise.all([
+  const [{ count: total }, { count: unprocessed }, { count: withEmbedding }] = await Promise.all([
     db.from('raw_items').select('*', { count: 'exact', head: true }),
     db.from('raw_items').select('*', { count: 'exact', head: true }).eq('processed', false),
-    db.from('rss_feeds').select('name, last_fetched, active').order('last_fetched', { ascending: false }).limit(5),
+    db.from('raw_items').select('*', { count: 'exact', head: true }).not('embedding', 'is', null),
   ])
-  return NextResponse.json({ total, unprocessed, recentFeeds })
+  return NextResponse.json({ total, unprocessed, withEmbedding })
 }
