@@ -5,13 +5,25 @@ const GEMINI_KEY = process.env.GEMINI_API_KEY!
 
 // Map user topics to feed topic categories
 const TOPIC_TO_FEED_TOPICS: Record<string, string[]> = {
-  'valorant': ['valorant', 'e-sports', 'esports', 'games'],
-  'league of legends': ['league of legends', 'lol', 'e-sports', 'esports', 'games'],
-  'tft': ['tft', 'teamfight tactics', 'e-sports', 'esports', 'games'],
-  'teamfight tactics': ['tft', 'teamfight tactics', 'e-sports', 'esports', 'games'],
-  'overwatch': ['overwatch', 'e-sports', 'esports', 'games'],
-  'american horror story': ['séries', 'series', 'cinema', 'entretenimento'],
-  'monarch legacy of monsters': ['séries', 'series', 'cinema', 'entretenimento'],
+  // Esports/Games — Dot Esports stores all under first topic of feed
+  'valorant':           ['valorant', 'e-sports', 'esports', 'games'],
+  'league of legends':  ['valorant', 'e-sports', 'esports', 'games', 'league of legends'],
+  'tft':                ['valorant', 'e-sports', 'esports', 'games', 'tft'],
+  'teamfight tactics':  ['valorant', 'e-sports', 'esports', 'games', 'tft'],
+  'overwatch':          ['valorant', 'e-sports', 'esports', 'games', 'overwatch'],
+  'cs2':                ['valorant', 'e-sports', 'esports', 'games'],
+  'dota 2':             ['valorant', 'e-sports', 'esports', 'games'],
+  // Series/Cinema
+  'american horror story':        ['séries', 'series', 'cinema', 'entretenimento', 'filmes'],
+  'monarch legacy of monsters':   ['séries', 'series', 'cinema', 'entretenimento', 'filmes'],
+  // Generic fallbacks — broad topics match their own category
+  'música':      ['música', 'pop', 'entretenimento'],
+  'cinema':      ['cinema', 'filmes', 'séries', 'entretenimento'],
+  'filmes':      ['cinema', 'filmes', 'séries'],
+  'séries':      ['séries', 'cinema', 'filmes', 'entretenimento'],
+  'tecnologia':  ['tecnologia', 'inovação', 'smartphones'],
+  'games':       ['games', 'e-sports', 'esports'],
+  'esportes':    ['esportes'],
 }
 
 function relevanceScore(item: any, topic: string): number {
@@ -49,6 +61,31 @@ function relevanceScore(item: any, topic: string): number {
     if (title.includes(kw))   score += 10
     if (summary.includes(kw)) score += 4
     if (content.includes(kw)) score += 1
+  }
+
+  // Source boost — known sources for specific topics
+  const SOURCE_TOPIC_MAP: Record<string, string[]> = {
+    'VLR.gg':       ['valorant'],
+    'Dot Esports':  ['valorant', 'league of legends', 'tft', 'overwatch', 'cs2', 'dota 2', 'games', 'e-sports'],
+    'ONE Esports':  ['valorant', 'league of legends', 'tft', 'overwatch', 'games', 'e-sports'],
+    'Game Rant':    ['league of legends', 'tft', 'overwatch', 'games'],
+    'IGN':          ['games', 'filmes', 'séries'],
+    'IGN Brasil':   ['games', 'filmes', 'séries'],
+    'Kotaku':       ['games'],
+    'Eurogamer':    ['games'],
+    'GameSpot':     ['games'],
+    'GamesRadar':   ['games'],
+    'Deadline':     ['cinema', 'filmes', 'séries', 'entretenimento'],
+    'Variety':      ['cinema', 'filmes', 'séries', 'música'],
+    'Collider':     ['cinema', 'filmes', 'séries'],
+    'Screen Rant':  ['filmes', 'séries', 'games'],
+    'Billboard':    ['música'],
+    'Rolling Stone': ['música', 'pop'],
+  }
+  const sourceName = (item.source_name || '').toLowerCase()
+  const sourceTopics = SOURCE_TOPIC_MAP[item.source_name] || []
+  if (sourceTopics.some(st => needle.includes(st) || st.includes(needle))) {
+    score += 6
   }
 
   // Recency boost
