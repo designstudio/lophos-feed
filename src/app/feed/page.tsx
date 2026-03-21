@@ -296,7 +296,7 @@ export default function FeedPage() {
               )}
             </div>
 
-            <div className="sidebar-right">
+            <div className="sidebar-right" style={{ position: 'sticky', top: '57px', height: 'calc(100vh - 57px)', overflowY: 'auto', scrollbarWidth: 'none' }}>
               <RightSidebar topics={topics} />
             </div>
           </div>
