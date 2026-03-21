@@ -5,8 +5,6 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { NewsItem, NewsSource } from '@/lib/types'
 import { SquareTopDown, ClockCircle, CloseCircle } from '@solar-icons/react-perf/Linear'
-import { ArticleEditor } from '@/components/ArticleEditor'
-import { useUser } from '@clerk/nextjs'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -50,35 +48,8 @@ export default function ArticlePage() {
   const extraCount = (item?.sources?.length || 0) - 3
   const scrollRef      = useRef<HTMLDivElement>(null)
   const titleRef       = useRef<HTMLHeadingElement>(null)
-  const menuRef        = useRef<HTMLDivElement>(null)
   const [showTitle, setShowTitle]     = useState(false)
-  const [menuOpen, setMenuOpen]       = useState(false)
-  const [editMode, setEditMode]         = useState(false)
-  const [isMember, setIsMember]         = useState(false)
-  const [editorSaving, setEditorSaving] = useState(false)
-  const [editorMsg, setEditorMsg]       = useState<{ text: string; ok: boolean } | null>(null)
-  const editorSaveRef = useRef<(() => void) | null>(null)
-  const { isLoaded } = useUser()
 
-
-  // Close ... menu on outside click
-  useEffect(() => {
-    if (!menuOpen) return
-    const h = (e: MouseEvent) => {
-      if (menuRef.current && menuRef.current.contains(e.target as Node)) return
-      setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', h)
-    return () => document.removeEventListener('mousedown', h)
-  }, [menuOpen])
-
-  // Check community membership
-  useEffect(() => {
-    if (!isLoaded) return
-    fetch('/api/community/suggestions')
-      .then(r => { if (r.ok) setIsMember(true) })
-      .catch(() => {})
-  }, [isLoaded])
 
   useEffect(() => {
     const el = scrollRef.current
@@ -112,78 +83,14 @@ export default function ArticlePage() {
                 {item?.title}
               </span>
             </div>
-            {/* Right side */}
-            <div style={{ width: '12rem' }} className="flex-shrink-0 flex items-center justify-end gap-2 relative">
-              {editMode ? (
-                <>
-                  {editorMsg && (
-                    <span className={`text-[11px] whitespace-nowrap ${editorMsg.ok ? 'text-green-500' : 'text-red-400'}`}>
-                      {editorMsg.text}
-                    </span>
-                  )}
-                  <button onClick={() => setEditMode(false)}
-                    className="text-[13px] text-ink-muted hover:text-ink-secondary transition-colors">
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={() => editorSaveRef.current?.()}
-                    disabled={editorSaving}
-                    className="px-3 py-1.5 rounded-lg text-[13px] font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)' }}>
-                    {editorSaving ? 'Enviando…' : 'Enviar revisão'}
-                  </button>
-                </>
-              ) : (
-              <div ref={menuRef} className="relative">
-                <button
-                  onClick={() => setMenuOpen(v => !v)}
-                  className="flex items-center justify-center w-7 h-7 rounded-full hover:bg-bg-secondary transition-colors text-ink-muted hover:text-ink-secondary"
-                  title="Mais opções"
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-                    <circle cx="2.5" cy="7" r="1.25" />
-                    <circle cx="7"   cy="7" r="1.25" />
-                    <circle cx="11.5" cy="7" r="1.25" />
-                  </svg>
-                </button>
-                {menuOpen && isMember && (
-                  <div
-                    className="absolute right-0 top-full mt-1 w-48 rounded-xl border shadow-xl z-50 py-1"
-                    style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)', animation: 'slideUp 0.12s ease' }}
-                  >
-                    <button
-                      onPointerDown={e => { e.stopPropagation(); e.preventDefault() }}
-                      onClick={() => { setMenuOpen(false); setEditMode(true) }}
-                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors text-left"
-                      style={{ color: 'var(--color-ink-secondary)' }}
-                      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
-                      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M1.5 9.5L9 2l2 2-7.5 7.5H1.5v-2z"/>
-                      </svg>
-                      Editar artigo
-                    </button>
-                  </div>
-                )}
-              </div>
-              )}
-            </div>
+            {/* Spacer */}
+            <div style={{ width: '12rem' }} className="flex-shrink-0" />
+          </div>
           </div>
         </div>
 
       <main className="page-scroll">
-        {editMode && item ? (
-          <ArticleEditor
-            item={item}
-            onClose={() => setEditMode(false)}
-            onSaved={() => setEditMode(false)}
-            onSavingChange={setEditorSaving}
-            onMsgChange={setEditorMsg}
-            saveRef={editorSaveRef}
-          />
-        ) : null}
-        <div className="article-layout mx-auto py-6" style={{ display: editMode ? 'none' : undefined }}>
+        <div className="article-layout mx-auto py-6">
 
           {loading && (
             <div className="space-y-4 animate-pulse">
