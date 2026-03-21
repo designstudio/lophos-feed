@@ -9,10 +9,21 @@ function relevanceScore(item: any, topic: string): number {
   const summary = (item.summary || '').toLowerCase()
   const content = (item.content || '').toLowerCase()
 
-  const keywords = needle
-    .split(/\s+/)
-    .filter((w: string) => w.length > 2)
-    .concat([needle])
+  // Expand keywords: "league of legends" → ["league", "legends", "lol", "league of legends"]
+  // "american horror story" → ["american", "horror", "story", "ahs", ...]
+  const words = needle.split(/\s+/).filter((w: string) => w.length > 2)
+  const keywords = [...words, needle]
+  // Add common abbreviations
+  const abbrevMap: Record<string, string[]> = {
+    'league of legends': ['lol', 'league'],
+    'teamfight tactics': ['tft'],
+    'american horror story': ['ahs'],
+    'monarch legacy of monsters': ['monarch'],
+    'valorant': ['vct', 'valorant'],
+    'overwatch': ['owl', 'overwatch'],
+  }
+  const extra = abbrevMap[needle] || []
+  keywords.push(...extra)
 
   let score = 0
   for (const kw of keywords) {
@@ -99,7 +110,7 @@ export async function synthesizeTopicFromRSS(
   // Score and rank raw_items for this topic
   const scored = rawItems
     .map(item => ({ item, score: relevanceScore(item, topic) }))
-    .filter(({ score }) => score >= 5)
+    .filter(({ score }) => score >= 3)
     .sort((a, b) => b.score - a.score)
     .slice(0, 8)
     .map(({ item }) => item)
@@ -122,8 +133,7 @@ export async function synthesizeTopicFromRSS(
     const primaryItem = scored[idxs[0]] ?? scored[0]
     const imageUrl = primaryItem?.image_url || null
 
-    const safeId = `${topic}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-      .toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').slice(0, 80)
+    const safeId = crypto.randomUUID()
 
     return {
       id: safeId,
