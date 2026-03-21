@@ -87,23 +87,10 @@ export async function POST(req: NextRequest) {
       { onConflict: 'topic' }
     )
 
-    // 5. Load unprocessed raw_items once
-    const { data: rawItems } = await db
-      .from('raw_items')
-      .select('id, topic, title, url, image_url, summary, content, source_name, pub_date')
-      .eq('processed', false)
-      .gte('pub_date', new Date(Date.now() - 72 * 3600 * 1000).toISOString())
-      .order('pub_date', { ascending: false })
-      .limit(500)
-
-    const hasRawItems = (rawItems?.length ?? 0) > 0
-
-    // 6. Close stream immediately after sending cache
-    //    Fire synthesis in background (non-blocking)
+    // 5. Close stream immediately — fire synthesis in background
     await writer.close()
 
-    // 7. Background synthesis — runs after stream is closed
-    //    Results will appear on next feed refresh
+    // 6. Background synthesis — runs after stream is closed
     const synthesize = async () => {
       const concurrency = 3
       for (let i = 0; i < topicsToFetch.length; i += concurrency) {
@@ -113,13 +100,11 @@ export async function POST(req: NextRequest) {
             const existing = byTopic.get(topic) ?? []
             const existingTitles = existing.map((r: any) => r.title)
 
-            // Try RSS first
-            if (hasRawItems) {
-              const rssItems = await synthesizeTopicFromRSS(topic, existingTitles, rawItems!)
-              if (rssItems.length > 0) {
-                console.log(`[feed] RSS synthesized ${rssItems.length} items for "${topic}"`)
-                return
-              }
+            // Try RSS semantic search first
+            const rssItems = await synthesizeTopicFromRSS(topic, existingTitles)
+            if (rssItems.length > 0) {
+              console.log(`[feed] RSS synthesized ${rssItems.length} items for "${topic}"`)
+              return
             }
 
             // Fallback to Tavily
