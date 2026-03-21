@@ -199,7 +199,10 @@ export async function POST(req: NextRequest) {
         })))
         totalEmbedded += embeddings.size
 
-        const rows = newItems.map((item, i) => ({
+        // Build index map: url -> position in original items array
+        const itemIndexMap = new Map(items.map((it, idx) => [it.url, idx]))
+
+        const rows = newItems.map((item) => ({
           topic: feed.topics[0] || 'Geral',
           title: item.title,
           url: item.url,
@@ -209,7 +212,7 @@ export async function POST(req: NextRequest) {
           source_name: feed.name,
           source_url: feed.url,
           pub_date: item.pubDate ? new Date(item.pubDate).toISOString() : null,
-          dedup_hash: hashes[items.indexOf(item)],
+          dedup_hash: hashes[itemIndexMap.get(item.url) ?? 0],
           embedding: embeddings.get(item.url) ? `[${embeddings.get(item.url)!.join(',')}]` : null,
           processed: false,
         }))
