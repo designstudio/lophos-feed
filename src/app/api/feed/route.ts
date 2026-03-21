@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   ;(async () => {
     await writer.write(encoder.encode(JSON.stringify({ topics }) + '\n'))
 
-    // 1. Load existing cache + fetch times in parallel
+    // 1. Load existing cache + fetch times
     const [{ data: allArticles }, fetchResult] = await Promise.all([
       db.from('news_cache').select('*').in('topic', topics).order('cached_at', { ascending: false }),
       db.from('topic_fetches').select('*').in('topic', topics),
@@ -59,9 +59,9 @@ export async function POST(req: NextRequest) {
       byTopic.get(row.topic)!.push(row)
     }
     const lastFetchByTopic = new Map<string, string>()
-    for (const row of fetchTimes ?? []) lastFetchByTopic.set(row.topic, row.last_fetched)
+    for (const row of fetchTimes) lastFetchByTopic.set(row.topic, row.last_fetched)
 
-    // 2. Stream existing articles immediately
+    // 2. Stream existing cache immediately — user sees content right away
     const allExisting = (allArticles ?? [])
       .map(rowToItem)
       .sort((a, b) =>
@@ -74,9 +74,20 @@ export async function POST(req: NextRequest) {
     const topicsToFetch = topics.filter(t =>
       forceRefresh || isSearchStale(lastFetchByTopic.get(t) ?? null)
     )
-    if (topicsToFetch.length === 0) { await writer.close(); return }
 
-    // 4. Pre-load unprocessed raw_items once (shared across all topics)
+    if (topicsToFetch.length === 0) {
+      await writer.close()
+      return
+    }
+
+    // 4. Mark all topics as fetching NOW — prevents parallel requests from re-fetching
+    const now = new Date().toISOString()
+    await db.from('topic_fetches').upsert(
+      topicsToFetch.map(topic => ({ topic, last_fetched: now, updated_at: now })),
+      { onConflict: 'topic' }
+    )
+
+    // 5. Load unprocessed raw_items once
     const { data: rawItems } = await db
       .from('raw_items')
       .select('id, topic, title, url, image_url, summary, content, source_name, pub_date')
@@ -87,54 +98,55 @@ export async function POST(req: NextRequest) {
 
     const hasRawItems = (rawItems?.length ?? 0) > 0
 
-    // 5. Process topics with limited concurrency (max 3 at once) to avoid Gemini 503
-    const concurrency = 3
-    for (let i = 0; i < topicsToFetch.length; i += concurrency) {
-      const batch = topicsToFetch.slice(i, i + concurrency)
-      await Promise.allSettled(batch.map(async (topic) => {
-        try {
-          const existing = byTopic.get(topic) ?? []
-          const existingTitles = existing.map((r: any) => r.title)
+    // 6. Close stream immediately after sending cache
+    //    Fire synthesis in background (non-blocking)
+    await writer.close()
 
-          // Update fetch timestamp
-          await db.from('topic_fetches').upsert(
-            { topic, last_fetched: new Date().toISOString(), updated_at: new Date().toISOString() },
-            { onConflict: 'topic' }
-          )
+    // 7. Background synthesis — runs after stream is closed
+    //    Results will appear on next feed refresh
+    const synthesize = async () => {
+      const concurrency = 3
+      for (let i = 0; i < topicsToFetch.length; i += concurrency) {
+        const batch = topicsToFetch.slice(i, i + concurrency)
+        await Promise.allSettled(batch.map(async (topic) => {
+          try {
+            const existing = byTopic.get(topic) ?? []
+            const existingTitles = existing.map((r: any) => r.title)
 
-          // Try RSS synthesis first
-          if (hasRawItems) {
-            const rssItems = await synthesizeTopicFromRSS(topic, existingTitles, rawItems!)
-            if (rssItems.length > 0) {
-              await send(rssItems)
-              return // RSS worked — skip Tavily
+            // Try RSS first
+            if (hasRawItems) {
+              const rssItems = await synthesizeTopicFromRSS(topic, existingTitles, rawItems!)
+              if (rssItems.length > 0) {
+                console.log(`[feed] RSS synthesized ${rssItems.length} items for "${topic}"`)
+                return
+              }
             }
+
+            // Fallback to Tavily
+            console.log(`[feed] RSS found nothing for "${topic}", falling back to Tavily`)
+            const fresh = await fetchNewsForTopic(topic, (byTopic.get(topic) ?? []).map((r: any) => r.title))
+            if (fresh.length === 0) return
+
+            const rows = fresh.map(itemToRow)
+            const { error } = await db.from('news_cache').insert(rows)
+            if (error) { console.error(`[feed] insert error "${topic}":`, error.message); return }
+
+            const { data: inserted } = await db
+              .from('news_cache').select('*').eq('topic', topic)
+              .order('cached_at', { ascending: false }).limit(rows.length)
+            if (inserted?.length) {
+              await db.from('articles').upsert(inserted, { onConflict: 'id' })
+            }
+          } catch (e) {
+            console.error(`[feed] error "${topic}":`, e)
           }
-
-          // Fallback to Tavily
-          console.log(`[feed] RSS found nothing for "${topic}", falling back to Tavily`)
-          const fresh = await fetchNewsForTopic(topic, existingTitles)
-          if (fresh.length === 0) return
-
-          const rows = fresh.map(itemToRow)
-          const { error: insertErr } = await db.from('news_cache').insert(rows)
-          if (insertErr) { console.error(`[feed] insert error "${topic}":`, insertErr.message); return }
-
-          const { data: inserted } = await db
-            .from('news_cache').select('*').eq('topic', topic)
-            .order('cached_at', { ascending: false }).limit(rows.length)
-
-          if (inserted?.length) {
-            await db.from('articles').upsert(inserted, { onConflict: 'id' })
-            await send(inserted.map(rowToItem))
-          }
-        } catch (e) {
-          console.error(`[feed] error "${topic}":`, e)
-        }
-      }))
+        }))
+      }
     }
 
-    await writer.close()
+    // Fire and forget — don't await
+    synthesize().catch(e => console.error('[feed] background synthesis error:', e))
+
   })()
 
   return new Response(stream.readable, {
