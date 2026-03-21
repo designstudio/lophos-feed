@@ -226,6 +226,7 @@ export default function FeedPage() {
   const showEmpty     = !hasData && !streaming
 
   return (
+    <div className="flex flex-1 min-w-0 overflow-hidden">
     <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header — full width, outside feed-layout ── */}
@@ -296,12 +297,15 @@ export default function FeedPage() {
               )}
             </div>
 
-            <div className="sidebar-right" style={{ position: 'sticky', top: '57px', height: 'calc(100vh - 57px)', overflowY: 'auto', scrollbarWidth: 'none' }}>
-              <RightSidebar topics={topics} />
-            </div>
           </div>
         </div>
       </div>
+    </div>
+    {/* Sidebar right — outside scroll container so sticky works correctly */}
+    <div className="sidebar-right flex-shrink-0 overflow-y-auto" style={{ height: '100vh', position: 'sticky', top: 0, scrollbarWidth: 'none' }}>
+      <RightSidebar topics={topics} />
+    </div>
+    </div>
   )
 }
 
