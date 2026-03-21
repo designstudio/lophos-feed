@@ -41,7 +41,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const activeNonWeather = widgetsToRender.filter(id => id !== 'weather')
 
   return (
-    <aside className="flex flex-col gap-4 py-6 h-full">
+    <aside className="flex flex-col gap-4 py-6 sticky" style={{ top: '57px', maxHeight: 'calc(100vh - 57px)' }}>
       {widgetsToRender.map(id => {
         if (id === 'weather') return <WeatherWidget key="weather" />
         // Each smart widget renders only itself but has access to all topics

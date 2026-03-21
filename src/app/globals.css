@@ -131,10 +131,6 @@ html, body {
 .sidebar-right {
   width: var(--sidebar-right-width);
   flex-shrink: 0;
-  position: sticky;
-  top: 57px; /* height of sticky header */
-  height: calc(100vh - 57px);
-  overflow-y: auto;
 }
 
 .article-image {

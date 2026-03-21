@@ -104,7 +104,7 @@ export function WeatherWidget() {
       {/* Top row — Perplexity style */}
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-1.5">
-          <WeatherIcon code={weather.currentCode} size={16} />
+          <WeatherIcon code={weather.currentCode} size={18} />
           <span className="text-[15px] font-semibold text-ink-primary">{weather.temp}°</span>
           <span className="text-[13px] text-ink-tertiary"><span className="text-ink-muted">F/</span><span className="font-semibold text-ink-primary">C</span></span>
         </div>
@@ -122,7 +122,7 @@ export function WeatherWidget() {
         <div className="flex justify-between pt-3 border-t border-border">
           {weather.forecast.map((f, i) => (
             <div key={i} className="flex flex-col items-center gap-1">
-              <WeatherIcon code={f.weathercode} size={14} />
+              <WeatherIcon code={f.weathercode} size={18} />
               <span className="text-[11px] text-ink-secondary font-medium">{f.temp}°</span>
               <span className="text-[10px] text-ink-tertiary">{f.day}</span>
             </div>
