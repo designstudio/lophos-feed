@@ -91,7 +91,7 @@ async function parseFeed(feedUrl: string, etag?: string | null, lastModified?: s
   })
   const parsed = parser.parse(xml)
 
-  const channel = parsed?.rss?.channel || parsed?.feed
+  const channel = parsed?.rss?.channel || parsed?.feed || parsed?.['rdf:RDF']?.channel
   if (!channel) throw new Error('Invalid feed format')
 
   // RSS 2.0
@@ -108,7 +108,8 @@ async function parseFeed(feedUrl: string, etag?: string | null, lastModified?: s
     const title = item.title?.['#text'] || item.title || ''
     const pubDate = item.pubDate || item.updated || item.published || undefined
     const summary = item.description || item.summary?.['#text'] || item.summary || undefined
-    const content = item['content:encoded'] || item.content?.['#text'] || undefined
+    const content = (typeof item['content:encoded'] === 'string' ? item['content:encoded'] : item['content:encoded']?.['#text']) ||
+      (typeof item.content === 'string' ? item.content : item.content?.['#text']) || undefined
 
     return {
       title: typeof title === 'string' ? title.trim() : String(title).trim(),
