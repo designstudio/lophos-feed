@@ -274,8 +274,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               className={cn('w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2.5 rounded-lg mx-1',
                 tab === t.id ? 'font-medium text-gray-900' : 'text-gray-500 hover:text-gray-900'
               )}
-              style={{ backgroundColor: tab === t.id ? '#0505050a' : undefined }}
-              onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0505050a' }}
+              style={{ backgroundColor: tab === t.id ? 'var(--color-hover-subtle)' : undefined }}
+              onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-hover-subtle)' }}
               onMouseLeave={e => { if (tab !== t.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}>
               {t.icon}{t.label}
             </button>

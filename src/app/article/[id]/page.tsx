@@ -70,9 +70,11 @@ export default function ArticlePage() {
         <div className="sticky top-0 z-20 border-b border-border px-8 header-blur">
           <div className="flex items-center h-14">
             <Link href="/feed"
-              className="text-[15px] font-semibold text-ink-primary hover:text-ink-secondary transition-colors flex-shrink-0"
-              style={{ width: '12rem' }}>
-              Descobrir
+              className="text-[15px] font-semibold text-ink-primary transition-colors flex-shrink-0"
+              style={{ width: '12rem' }}
+              onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
+              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+              Meu Feed
             </Link>
             {/* Article title — appears when user scrolls past the h1 */}
             <div className="flex-1 flex justify-center overflow-hidden px-4">
