@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { fetchNewsForTopic } from '@/lib/news'
+import { fetchNewsForTopic, fetchImageForSources } from '@/lib/news'
 import { NewsItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -40,6 +40,24 @@ export async function POST(req: NextRequest) {
   const send = async (items: NewsItem[]) => {
     if (items.length === 0) return
     await writer.write(encoder.encode(JSON.stringify({ items }) + '\n'))
+  }
+
+  const backfillImages = async (rows: any[]) => {
+    const candidates = rows
+      .filter(r => !r.image_url && Array.isArray(r.sources) && r.sources.length > 0)
+      .slice(0, 12)
+    if (candidates.length === 0) return
+
+    await Promise.allSettled(candidates.map(async (row) => {
+      try {
+        const imageUrl = await fetchImageForSources(row.sources)
+        if (!imageUrl) return
+        await db.from('news_cache').update({ image_url: imageUrl }).eq('id', row.id)
+        await db.from('articles').update({ image_url: imageUrl }).eq('id', row.id)
+      } catch (e) {
+        console.error('[feed] image backfill error:', e)
+      }
+    }))
   }
 
   const fetchAndStore = async (topic: string, existingTitles: string[]) => {
@@ -90,6 +108,8 @@ export async function POST(req: NextRequest) {
         new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
       )
     if (allExisting.length > 0) await send(allExisting)
+    // Backfill missing images in background for cached items
+    backfillImages(allArticles ?? []).catch(e => console.error('[feed] image backfill error:', e))
 
     const isColdStart = allExisting.length === 0
     if (isColdStart) {
