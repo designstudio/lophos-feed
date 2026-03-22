@@ -1,53 +1,32 @@
 import { NewsItem, NewsSource, ArticleSection } from './types'
 
-const ASKNEWS_CLIENT_ID     = process.env.ASKNEWS_CLIENT_ID!
-const ASKNEWS_CLIENT_SECRET = process.env.ASKNEWS_CLIENT_SECRET!
-const GEMINI_KEY            = process.env.GEMINI_API_KEY!
+const TAVILY_KEY = process.env.TAVILY_API_KEY!
+const GEMINI_KEY = process.env.GEMINI_API_KEY!
 
 export const CACHE_TTL_MINUTES = 120
 
-// ─── AskNews OAuth2 token (cached in memory) ──────────────────
-let tokenCache: { token: string; expiresAt: number } | null = null
+// Domains to exclude — low quality sources
+const LOW_QUALITY_DOMAINS = [
+  'reddit.com', 'twitter.com', 'x.com', 'facebook.com', 'instagram.com',
+  'youtube.com', 'twitch.tv', 'tiktok.com', 'discord.com',
+  'fandom.com', 'wikia.com', 'wiki.', 'forums.', 'forum.',
+  'mobafire.com', 'op.gg', 'u.gg', 'lolalytics.com',
+]
 
-async function getAskNewsToken(): Promise<string> {
-  if (tokenCache && Date.now() < tokenCache.expiresAt - 60000) {
-    return tokenCache.token
-  }
-  const res = await fetch('https://auth.asknews.app/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type:    'client_credentials',
-      client_id:     ASKNEWS_CLIENT_ID,
-      client_secret: ASKNEWS_CLIENT_SECRET,
-    }),
-  })
-  if (!res.ok) throw new Error(`AskNews auth error: ${res.status}`)
-  const data = await res.json()
-  tokenCache = {
-    token:     data.access_token,
-    expiresAt: Date.now() + (data.expires_in ?? 3600) * 1000,
-  }
-  return tokenCache.token
-}
+const GENERIC_PATTERNS = [
+  /\/(tag|tags|category|categories|topic|topics|section|search|archive|label)\//i,
+  /\/(news|articles|latest|all|feed)\/?(\?.*)?$/i,
+  /[?&]page=\d/i,
+  /\/(author|autores?)\//i,
+]
 
-// ─── Search AskNews ───────────────────────────────────────────
-async function searchAskNews(query: string): Promise<any[]> {
-  const token = await getAskNewsToken()
-  const params = new URLSearchParams({
-    query,
-    n_articles:   '8',
-    return_type:  'dicts',
-    method:       'nl',
-    hours_back:   '48',
-  })
-  const res = await fetch(`https://api.asknews.app/v1/news/search?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(10000),
-  })
-  if (!res.ok) throw new Error(`AskNews search error: ${res.status}`)
-  const data = await res.json()
-  return data.articles ?? []
+function isArticleUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    if (u.pathname.length < 10) return false
+    if (LOW_QUALITY_DOMAINS.some(d => u.hostname.includes(d))) return false
+    return !GENERIC_PATTERNS.some((p) => p.test(url))
+  } catch { return false }
 }
 
 function getSourceHint(topic: string): string {
@@ -61,48 +40,84 @@ function getSourceHint(topic: string): string {
   if (/tech|ia|inteligência artificial|startup|software/.test(t))
     return 'TechCrunch, The Verge, Wired, Ars Technica'
   if (/esport|valorant|league|lol|overwatch|gaming|game|tft|teamfight/.test(t))
-    return 'Dot Esports, The Esports Observer, Liquipedia, HLTV, VLR.gg'
+    return 'Dot Esports, The Esports Observer, Liquipedia, HLTV, VLR.gg, Lolesports'
   return 'Reuters, AP, BBC, The Guardian'
+}
+
+
+function buildQuery(topic: string): string {
+  const todayISO = new Date().toISOString().split('T')[0]
+  // Add "news" explicitly and today's date to force recency
+  return `"${topic}" news ${todayISO}`
 }
 
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = []
 ): Promise<NewsItem[]> {
-  const articles = await searchAskNews(topic)
-  if (articles.length === 0) return []
+  const tavilyRes = await fetch('https://api.tavily.com/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: TAVILY_KEY,
+      query: buildQuery(topic),
+      search_depth: 'advanced', // better quality results
+      max_results: 10,
+      days: 2,
+      include_answer: false,
+      include_raw_content: false,
+      include_images: true,
+    }),
+  })
+
+  if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
+  const tavilyData = await tavilyRes.json()
+
+  // Filter — keep only real articles from quality domains
+  const results = (tavilyData.results || []).filter((r: any) =>
+    r.url && r.title && r.content && r.content.length > 100 && isArticleUrl(r.url)
+  )
+
+  if (results.length === 0) return []
 
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
-
-  const context = articles.map((a: any, i: number) =>
-    `[${i + 1}] ${a.source_id ?? a.domain ?? 'unknown'} — "${a.eng_title ?? a.title}"\n${(a.summary ?? a.body ?? '').slice(0, 600)}`
-  ).join('\n\n')
+  const context = results
+    .map((r: any, i: number) =>
+      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
+    )
+    .join('\n\n')
 
   const sourceHint = getSourceHint(topic)
+
   const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
+    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
     : ''
 
-  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover.
+  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes.
 
 Hoje é ${today}. Tópico: "${topic}".
 ${existingContext}
 REGRAS OBRIGATÓRIAS:
 1. Use APENAS as fontes fornecidas. NÃO invente fatos.
 2. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
-3. IGNORE resultados irrelevantes: guias de meta, fóruns, wikis, apostas.
-4. Só crie notícias sobre eventos noticiáveis reais.
-5. Se não houver evento noticiável, retorne [].
-6. Se todos os eventos já foram cobertos, retorne [].
-7. Tom de referência: ${sourceHint}.
-8. Tom: neutro, jornalístico, sem clickbait. Escreva em pt-BR.
+3. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
+4. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo.
+5. Se não houver nenhum evento noticiável real nas fontes, retorne [].
+6. Tom editorial de referência: ${sourceHint}.
+7. Tom: neutro, jornalístico, sem clickbait.
+8. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
 
-ESTRUTURA:
+ESTRUTURA de cada notícia:
+- title: título preciso em pt-BR
+- summary: parágrafo introdutório de 4-5 frases, factual e empolgante
+- sections: array de 2-4 seções com heading e body
+- conclusion: "O que esperar" ou null
+- sourceIndexes: índices das fontes usadas
+
+Responda APENAS com JSON válido:
 [{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2]}]
-
-Responda APENAS com JSON válido.
 
 FONTES:
 ${context}`
@@ -119,7 +134,11 @@ ${context}`
     }
   )
 
-  if (!geminiRes.ok) throw new Error(`Gemini error: ${geminiRes.status}`)
+  if (!geminiRes.ok) {
+    console.error(`Gemini error ${geminiRes.status}:`, await geminiRes.text())
+    throw new Error(`Gemini error: ${geminiRes.status}`)
+  }
+
   const geminiData = await geminiRes.json()
   const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
   const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
@@ -131,32 +150,42 @@ ${context}`
   return parsed.map((item: any, i: number): NewsItem => {
     const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
     const sources: NewsSource[] = idxs
-      .filter(idx => idx >= 0 && idx < articles.length)
-      .map(idx => {
-        const a = articles[idx]
-        const domain = a.domain ?? a.source_id ?? 'unknown'
+      .filter((idx) => idx >= 0 && idx < results.length)
+      .map((idx) => {
+        const r = results[idx]
         return {
-          name: a.source_id ?? domain,
-          url:  a.article_url ?? `https://${domain}`,
-          favicon: `https://www.google.com/s2/favicons?domain=${domain}&sz=32`,
+          name: new URL(r.url).hostname.replace('www.', ''),
+          url: r.url,
+          favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
         }
       })
 
-    // AskNews already provides image_url — no need to scrape
-    const primaryArticle = articles[idxs[0]] ?? articles[0]
-    const imageUrl = primaryArticle?.image_url ?? primaryArticle?.photo_url ?? undefined
+    // Use Tavily's image field directly
+    const primaryResult = results[idxs[0]] ?? results[0]
+    const imageUrl = primaryResult?.image ?? undefined
+
+    const safeId = `${topic}-${Date.now()}-${i}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80)
+
+    const conclusion = typeof item.conclusion === 'string'
+      ? item.conclusion
+      : item.conclusion?.body || undefined
 
     return {
-      id:          crypto.randomUUID(),
+      id: safeId,
       topic,
-      title:       item.title,
-      summary:     item.summary,
-      sections:    (item.sections || []) as ArticleSection[],
-      conclusion:  typeof item.conclusion === 'string' ? item.conclusion : undefined,
+      title: item.title,
+      summary: item.summary,
+      sections: (item.sections || []) as ArticleSection[],
+      conclusion,
       sources,
       imageUrl,
       publishedAt: now,
-      cachedAt:    now,
+      cachedAt: now,
     }
   })
 }
