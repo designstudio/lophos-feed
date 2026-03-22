@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const FETCH_INTERVAL_MINUTES = 120
-const RSS_FEEDS_PER_TOPIC = 3
+const RSS_FEEDS_PER_TOPIC = 4
 const RSS_ITEMS_PER_FEED = 3
 const RSS_TIMEOUT_MS = 4000
 const CATEGORY_CACHE_DAYS = 30
@@ -144,7 +144,6 @@ Responda APENAS com JSON válido no formato:
       .select('url,name,topics,active')
       .eq('active', true)
       .contains('topics', [topic])
-      .order('priority', { ascending: false })
       .limit(RSS_FEEDS_PER_TOPIC)
     if (exactFeeds && exactFeeds.length > 0) {
       return await fetchRssFromFeeds(exactFeeds)
@@ -174,7 +173,6 @@ Responda APENAS com JSON válido no formato:
         .select('url,name,topics,active')
         .eq('active', true)
         .contains('topics', [cat])
-        .order('priority', { ascending: false })
         .limit(RSS_FEEDS_PER_TOPIC)
       if (data && data.length > 0) {
         for (const f of data) {
