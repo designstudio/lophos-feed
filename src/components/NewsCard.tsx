@@ -5,8 +5,11 @@ import { NewsItem } from '@/lib/types'
 import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 
+const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
+
 function proxyImage(url: string | undefined): string | undefined {
   if (!url) return undefined
+  if (LAZY_PATTERNS.some(p => url.toLowerCase().includes(p))) return undefined
   return `/api/image-proxy?url=${encodeURIComponent(url)}`
 }
 
@@ -81,7 +84,10 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
 export function NewsCard({ item, variant = 'card', className }: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(null)
   const [reacting, setReacting] = useState(false)
+  const [imgFailed, setImgFailed] = useState(false)
   const href = `/article/${item.id}`
+  const proxiedImage = proxyImage(item.imageUrl)
+  const showImage = !!proxiedImage && !imgFailed
 
   const react = async (type: 'like' | 'dislike') => {
     if (reacting) return
@@ -101,11 +107,11 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
   if (variant === 'card') {
     return (
       <Link href={href} className={cn('group flex flex-col', className)}>
-        {item.imageUrl ? (
+        {showImage ? (
           <div className="w-full h-36 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5">
-            <img src={proxyImage(item.imageUrl)} alt={item.title}
+            <img src={proxiedImage} alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
+              onError={() => setImgFailed(true)}
             />
           </div>
         ) : (
@@ -132,11 +138,11 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
           <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
           <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
         </div>
-        {item.imageUrl ? (
+        {showImage ? (
           <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
-            <img src={proxyImage(item.imageUrl)} alt={item.title}
+            <img src={proxiedImage} alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
+              onError={() => setImgFailed(true)}
             />
           </div>
         ) : (
@@ -153,11 +159,11 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
 
   return (
     <Link href={href} className={cn('group flex gap-6 items-start', className)}>
-      {item.imageUrl ? (
+      {showImage ? (
         <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
-          <img src={proxyImage(item.imageUrl)} alt={item.title}
+          <img src={proxiedImage} alt={item.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
+            onError={() => setImgFailed(true)}
           />
         </div>
       ) : (

@@ -34,6 +34,12 @@ export async function GET(req: NextRequest) {
     }
 
     const contentType = res.headers.get('content-type') ?? 'image/jpeg'
+
+    // GIFs são quase sempre lazy-load placeholders em sites de notícia
+    if (contentType.includes('image/gif')) {
+      return new Response('Lazy-load placeholder detected', { status: 422 })
+    }
+
     return new Response(res.body, {
       status: 200,
       headers: {
