@@ -156,7 +156,7 @@ export default function ArticlePage() {
               )}
 
               {/* Conclusion / O que esperar */}
-              {item.conclusion && !/^o que esperar$/i.test(item.conclusion.trim()) && (
+              {item.conclusion && (
                 <div className="rounded-xl border border-border bg-bg-secondary p-4 mb-8">
                   <h2 className="text-[13px] font-semibold text-ink-primary mb-1.5">O que esperar</h2>
                   <p className="text-[14px] text-ink-secondary leading-relaxed">{item.conclusion}</p>
