@@ -141,6 +141,7 @@ export default function FeedPage() {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const abortRef    = useRef<AbortController | null>(null)
   const scrollRef   = useRef<HTMLDivElement>(null)
+  const initialCacheAppliedRef = useRef(false)
   const pendingRef = useRef<NewsItem[]>([])
   const coldStartRef = useRef(false)
 
@@ -206,7 +207,7 @@ export default function FeedPage() {
     setUpdatesReady(false)
     setPending([])
     setColdStart(false)
-    // We will collect items and only render after refreshComplete.
+    initialCacheAppliedRef.current = false
     if (force) { setItems([]); setHasData(false) }
 
     try {
@@ -247,37 +248,55 @@ export default function FeedPage() {
               continue
             }
             if (chunk.refreshComplete) {
-              if (pendingRef.current.length > 0) {
-                if (coldStartRef.current || !hasData) {
+              if (coldStartRef.current) {
+                if (pendingRef.current.length > 0) {
                   setItems(pendingRef.current)
                   setHasData(true)
-                  setError(null)
-                  setPending([])
-                  setColdStart(false)
-                } else {
-                  setUpdatesReady(true)
                 }
-              } else if (coldStartRef.current) {
+                setPending([])
                 setColdStart(false)
+              } else if (pendingRef.current.length > 0) {
+                setUpdatesReady(true)
               }
               continue
             }
             if (chunk.items?.length) {
-              setPending(prev => {
-                const byId = new Map(prev.map(x => [x.id, x]))
-                for (const x of chunk.items as NewsItem[]) {
-                  const existing = byId.get(x.id)
-                  if (!existing || (!existing.imageUrl && x.imageUrl)) {
-                    byId.set(x.id, x)
+              if (!initialCacheAppliedRef.current && !coldStartLoading) {
+                setItems(prev => {
+                  const byId = new Map(prev.map(x => [x.id, x]))
+                  for (const x of chunk.items as NewsItem[]) {
+                    const existing = byId.get(x.id)
+                    if (!existing || (!existing.imageUrl && x.imageUrl)) {
+                      byId.set(x.id, x)
+                    }
                   }
-                }
-                const merged = Array.from(byId.values())
-                merged.sort((a, b) =>
-                  new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
-                  new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
-                )
-                return merged
-              })
+                  const merged = Array.from(byId.values())
+                  merged.sort((a, b) =>
+                    new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
+                    new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
+                  )
+                  return merged
+                })
+                setHasData(true)
+                setError(null)
+                initialCacheAppliedRef.current = true
+              } else {
+                setPending(prev => {
+                  const byId = new Map(prev.map(x => [x.id, x]))
+                  for (const x of chunk.items as NewsItem[]) {
+                    const existing = byId.get(x.id)
+                    if (!existing || (!existing.imageUrl && x.imageUrl)) {
+                      byId.set(x.id, x)
+                    }
+                  }
+                  const merged = Array.from(byId.values())
+                  merged.sort((a, b) =>
+                    new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
+                    new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
+                  )
+                  return merged
+                })
+              }
             }
           } catch {}
         }
