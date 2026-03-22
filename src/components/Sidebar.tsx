@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
@@ -10,7 +10,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 
-// ─── Logo ─────────────────────────────────────────────────────
+// â”€â”€â”€ Logo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function LophosLogo({ size = 34 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
@@ -38,7 +38,7 @@ function LophosLogo({ size = 34 }: { size?: number }) {
   )
 }
 
-// ─── Theme / Accent utilities ──────────────────────────────────
+// â”€â”€â”€ Theme / Accent utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function applyTheme(t: string) {
   localStorage.setItem('theme', t)
   const dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -57,7 +57,7 @@ if (typeof window !== 'undefined') {
 }
 
 const ACCENT_COLORS = [
-  { label: 'Padrão',  value: '#ca774b', dot: '#ca774b' },
+  { label: 'PadrÃ£o',  value: '#ca774b', dot: '#ca774b' },
   { label: 'Azul',    value: '#2563eb', dot: '#3b82f6' },
   { label: 'Verde',   value: '#16a34a', dot: '#22c55e' },
   { label: 'Amarelo', value: '#ca8a04', dot: '#eab308' },
@@ -66,12 +66,12 @@ const ACCENT_COLORS = [
 ]
 
 const WIDGET_OPTIONS = [
-  { id: 'valorant', label: 'Partidas — Valorant' },
-  { id: 'lol',      label: 'Partidas — League of Legends' },
-  { id: 'series',   label: 'Próximos episódios' },
+  { id: 'valorant', label: 'Partidas â€” Valorant' },
+  { id: 'lol',      label: 'Partidas â€” League of Legends' },
+  { id: 'series',   label: 'PrÃ³ximos episÃ³dios' },
 ]
 
-// ─── Custom Accent Picker ──────────────────────────────────────
+// â”€â”€â”€ Custom Accent Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AccentPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -115,7 +115,7 @@ function AccentPicker({ value, onChange }: { value: string; onChange: (v: string
   )
 }
 
-// ─── Settings Modal ────────────────────────────────────────────
+// â”€â”€â”€ Settings Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type Tab = 'geral' | 'widgets' | 'conta'
 
 function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -133,7 +133,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     try {
       const saved = JSON.parse(localStorage.getItem('lophos_widgets') || '[]') as string[]
       const ordered = saved.filter(id => id !== 'weather')
-      // Always include all WIDGET_OPTIONS — merge saved order with any missing ones
+      // Always include all WIDGET_OPTIONS â€” merge saved order with any missing ones
       const allIds = WIDGET_OPTIONS.map(w => w.id)
       const merged = [...ordered, ...allIds.filter(id => !ordered.includes(id))]
       return merged
@@ -169,7 +169,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         return t
       })
       .then(t => {
-        // Check localStorage cache — valid for 7 days
+        // Check localStorage cache â€” valid for 7 days
         try {
           const cached = localStorage.getItem('lophos_suggestions')
           if (cached) {
@@ -258,7 +258,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
         {/* Full-width header */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 h-14 border-b z-10 rounded-t-[1.5rem]" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}>
-          <h2 className="font-semibold text-gray-900" style={{ fontSize: '20px' }}>Configurações</h2>
+          <h2 className="font-semibold text-gray-900" style={{ fontSize: '20px' }}>ConfiguraÃ§Ãµes</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <CloseCircle size={20} />
           </button>
@@ -286,12 +286,12 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto px-7 pt-4 pb-5">
 
-            {/* ── GERAL ── */}
+            {/* â”€â”€ GERAL â”€â”€ */}
             {tab === 'geral' && (
               <>
                 <section className="pb-5 border-b border-border">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Aparência</h3>
-                  <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para você.</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">AparÃªncia</h3>
+                  <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para vocÃª.</p>
                   <div className="grid grid-cols-3 gap-3">
                     {([
                       { id: 'light',  label: 'Claro',   icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
@@ -312,32 +312,32 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
                 <section className="py-5 border-b border-border">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-900">Cor de ênfase</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">Cor de Ãªnfase</h3>
                     <AccentPicker value={accentColor} onChange={handleAccent} />
                   </div>
                 </section>
 
                 <section className="py-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Tópicos de interesse</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">TÃ³picos de interesse</h3>
                   <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
                     {topics.map(t => (
                       <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-[13px]" style={{ background: "var(--color-ui-strong)" }}>
                         {t}
                         <button onClick={() => { setTopics(prev => prev.filter(x => x !== t)); setTopicsSaved(false) }}
-                          className="opacity-60 hover:opacity-100 leading-none">×</button>
+                          className="opacity-60 hover:opacity-100 leading-none">Ã—</button>
                       </span>
                     ))}
                   </div>
                   {suggestions.length === 0 && topics.length > 0 && (
                     <div className="flex items-center gap-2 mb-3 text-[12px] text-gray-400">
                       <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeDashoffset="12"/></svg>
-                      Gerando sugestões personalizadas…
+                      Gerando sugestÃµes personalizadasâ€¦
                     </div>
                   )}
                   {suggestions.filter(s => !topics.includes(s)).length > 0 && (
                     <div className="mb-1.5">
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-2">Sugestões para você</p>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-2">SugestÃµes para vocÃª</p>
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {suggestions.filter(s => !topics.includes(s)).slice(0, 10).map(s => (
                           <button key={s} onClick={() => { setTopics(p => [...p, s]); setSuggestions(p => p.filter(x => x !== s)); setTopicsSaved(false) }}
@@ -351,7 +351,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <div className="flex gap-2">
                     <input value={custom} onChange={e => setCustom(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
-                      placeholder="Adicionar tópico..."
+                      placeholder="Adicionar tÃ³pico..."
                       className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-gray-400 bg-white text-gray-900" />
                     <button onClick={() => { if (custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
                       className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-gray-400 transition-colors">
@@ -361,18 +361,18 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <button onClick={saveTopics} disabled={savingTopics}
                     className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
                     style={{ background: 'var(--color-ui-strong)' }}>
-                    {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
+                    {topicsSaved ? 'âœ“ Salvo!' : savingTopics ? 'Salvandoâ€¦' : 'Salvar tÃ³picos'}
                   </button>
                 </section>
               </>
             )}
 
-            {/* ── WIDGETS ── */}
+            {/* â”€â”€ WIDGETS â”€â”€ */}
             {tab === 'widgets' && (
               <div className="py-2">
                 <p className="text-sm text-gray-500 mb-5">Ative e ordene os widgets da barra lateral. Arraste para reordenar.</p>
 
-                {/* Clima — always on */}
+                {/* Clima â€” always on */}
                 <div className="flex items-center gap-3 py-3 px-3 rounded-xl border border-border mb-2 opacity-50 select-none">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 4h6M5 8h6M5 12h6" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/></svg>
                   <span className="text-sm text-gray-900 flex-1">Clima</span>
@@ -418,7 +418,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
               </div>
             )}
 
-            {/* ── CONTA ── */}
+            {/* â”€â”€ CONTA â”€â”€ */}
             {tab === 'conta' && (
               <>
                 <div className="flex items-center gap-4 py-5 border-b border-border">
@@ -457,7 +457,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <button onClick={saveName} disabled={savingName}
                     className="px-5 py-2.5 rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
                     style={{ background: 'var(--color-ui-strong)' }}>
-                    {nameSaved ? '✓ Salvo!' : savingName ? 'Salvando…' : 'Salvar'}
+                    {nameSaved ? 'âœ“ Salvo!' : savingName ? 'Salvandoâ€¦' : 'Salvar'}
                   </button>
                 </section>
 
@@ -495,7 +495,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-// ─── User Menu ─────────────────────────────────────────────────
+// â”€â”€â”€ User Menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { user } = useUser()
   const { signOut } = useClerk()
@@ -531,7 +531,7 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors" style={{ color: 'var(--color-ink-secondary)' }}
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-              <Settings size={14} /> Configurações
+              <Settings size={14} /> ConfiguraÃ§Ãµes
             </button>
             <button onClick={() => signOut()}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 transition-colors"
@@ -546,8 +546,8 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   )
 }
 
-// ─── Collapsed User Menu ───────────────────────────────────────
-// ─── Fixed Dropdown — escapes overflow:hidden parents ─────────
+// â”€â”€â”€ Collapsed User Menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ Fixed Dropdown â€” escapes overflow:hidden parents â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function FixedDropdown({ anchorRef, onClose, children }: {
   anchorRef: React.RefObject<HTMLElement>
   onClose: () => void
@@ -603,7 +603,7 @@ function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             <button onClick={() => { setOpen(false); onOpenSettings() }} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors" style={{ color: 'var(--color-ink-secondary)' }}
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-              <Settings size={14} /> Configurações
+              <Settings size={14} /> ConfiguraÃ§Ãµes
             </button>
             <button onClick={() => signOut()} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 transition-colors"
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.10)')}
@@ -617,7 +617,7 @@ function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   )
 }
 
-// ─── Sidebar ───────────────────────────────────────────────────
+// â”€â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface Props {
   onRefresh?: () => void
   refreshing?: boolean
@@ -659,16 +659,16 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       >
         {/* Header */}
         <div className="flex items-center px-3 pt-5 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
-          {/* Logo — when collapsed, hover hides logo and shows expand button */}
+          {/* Logo â€” when collapsed, hover hides logo and shows expand button */}
           <div
             className={cn('flex-shrink-0 relative', collapsed ? 'group cursor-pointer' : '')}
             onClick={collapsed ? toggle : undefined}
           >
-            {/* Logo — hidden on hover when collapsed */}
+            {/* Logo â€” hidden on hover when collapsed */}
             <div className={collapsed ? 'group-hover:opacity-0 transition-opacity' : ''}>
               <LophosLogo size={34} />
             </div>
-            {/* Expand arrow — shown on hover when collapsed */}
+            {/* Expand arrow â€” shown on hover when collapsed */}
             {collapsed && (
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <AltArrowRight size={16} className="text-ink-secondary" />
@@ -676,7 +676,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             )}
           </div>
 
-          {/* Name — fades out when collapsed */}
+          {/* Name â€” fades out when collapsed */}
           <span
             className="font-display text-lg text-ink-primary flex-1 whitespace-nowrap overflow-hidden ml-2.5"
             style={{
@@ -689,7 +689,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             Lophos
           </span>
 
-          {/* Collapse button — only visible when expanded */}
+          {/* Collapse button â€” only visible when expanded */}
           {!collapsed && (
             <button
               onClick={toggle}
@@ -723,7 +723,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
               {!collapsed && (
                 <span className="whitespace-nowrap overflow-hidden">
-                  {refreshing ? 'Atualizando…' : (refreshLabel ?? 'Atualizar feed')}
+                  {refreshing ? 'Atualizandoâ€¦' : (refreshLabel ?? 'Atualizar feed')}
                 </span>
               )}
             </button>
@@ -744,7 +744,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   )
 }
 
-// ─── Context-aware wrapper for use in shared layout ───────────
+// â”€â”€â”€ Context-aware wrapper for use in shared layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function SidebarWithRefresh() {
   const { refreshing, updatesReady, triggerApplyUpdates } = useFeedContext()
   return (
@@ -752,10 +752,11 @@ export function SidebarWithRefresh() {
       onRefresh={updatesReady ? triggerApplyUpdates : undefined}
       refreshing={refreshing}
       refreshLabel="Seu feed tem novidades"
-      refreshTitle="Ver novas not�cias"
+      refreshTitle="Ver novas notícias"
     />
   )
 }
+
 
 
 
