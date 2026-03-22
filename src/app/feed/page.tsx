@@ -1,11 +1,11 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { Sidebar } from '@/components/Sidebar'
 import { RightSidebar } from '@/components/RightSidebar'
 import { NewsCard } from '@/components/NewsCard'
 import { SkeletonBlock } from '@/components/SkeletonCard'
 import { Feed } from '@solar-icons/react-perf/Linear'
 import { NewsItem } from '@/lib/types'
-import { useFeedContext } from '@/components/FeedContext'
 import { cn } from '@/lib/utils'
 
 function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
@@ -81,7 +81,7 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
       <button
         onClick={() => setOpen(v => !v)}
         className={cn(
-          'flex items-center gap-1.5 text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
+          'flex items-center gap-1.5 text-[13px] px-4 h-14 border-b-2 transition-all font-medium',
           activeFilter
             ? 'border-ink-primary text-ink-primary'
             : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
@@ -126,82 +126,16 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
 }
 
 export default function FeedPage() {
-  const { setRefreshing, onRefreshCallback } = useFeedContext()
   const [items, setItems]         = useState<NewsItem[]>([])
   const [topics, setTopics]       = useState<string[]>([])
-  const [streaming, setStreamingLocal] = useState(false)
-  const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
+  const [streaming, setStreaming] = useState(false)
   const [hasData, setHasData]     = useState(false)
-  const hasDataRef = useRef(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [visibleBlocks, setVisibleBlocks] = useState(4)
-  const [isFirstLoad, setIsFirstLoad]     = useState(false)
-  const [loadingMsg, setLoadingMsg]       = useState(0)
-  const [newItemsReady, setNewItemsReady] = useState(false)
-  const [pendingItems, setPendingItems]   = useState<NewsItem[]>([])
-  const bgAbortRef  = useRef<AbortController | null>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const abortRef    = useRef<AbortController | null>(null)
-  const scrollRef   = useRef<HTMLDivElement>(null)
 
-  const startBackgroundPoll = () => {
-    // Don't start if already polling
-    if (bgAbortRef.current && !bgAbortRef.current.signal.aborted) return
-    bgAbortRef.current?.abort()
-    const ctrl = new AbortController()
-    bgAbortRef.current = ctrl
-    let attempts = 0
-    const msgTimer = setInterval(() => setLoadingMsg(p => (p + 1) % 4), 4000)
-
-    const poll = async () => {
-      if (ctrl.signal.aborted || attempts >= 18) {
-        clearInterval(msgTimer)
-        setIsFirstLoad(false)
-        return
-      }
-      attempts++
-      try {
-        const res = await fetch('/api/feed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topics: [], forceRefresh: false }),
-          signal: ctrl.signal,
-        })
-        if (!res.body) { setTimeout(poll, 10000); return }
-        const reader = res.body.getReader()
-        const decoder = new TextDecoder()
-        let buf = '', got = false
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buf += decoder.decode(value, { stream: true })
-          const lines = buf.split('\n'); buf = lines.pop() ?? ''
-          for (const line of lines) {
-            if (!line.trim()) continue
-            try {
-              const chunk = JSON.parse(line)
-              if (chunk.items?.length) {
-                got = true
-                setItems(chunk.items)
-                setHasData(true)
-                clearInterval(msgTimer)
-                setIsFirstLoad(false)
-                ctrl.abort()
-                return
-              }
-            } catch {}
-          }
-        }
-        if (!got) setTimeout(poll, 10000)
-      } catch (e: any) {
-        if (e?.name !== 'AbortError') setTimeout(poll, 10000)
-      }
-    }
-    setTimeout(poll, 8000)
-  }
-
-
-  const fetchFeed = useCallback(async (force = false) => {
+  async function fetchFeed(force = false) {
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -233,15 +167,10 @@ export default function FeedPage() {
             if (chunk.topics) { setTopics(chunk.topics); continue }
             if (chunk.items?.length) {
               setItems(prev => {
-                const byId = new Map(prev.map(x => [x.id, x]))
-                for (const x of chunk.items as NewsItem[]) {
-                  const existing = byId.get(x.id)
-                  // Upsert: replace if new item has image and existing doesn't (or doesn't exist)
-                  if (!existing || (!existing.imageUrl && x.imageUrl)) {
-                    byId.set(x.id, x)
-                  }
-                }
-                const merged = Array.from(byId.values())
+                const ids = new Set(prev.map(x => x.id))
+                const fresh = (chunk.items as NewsItem[]).filter(x => !ids.has(x.id))
+                if (fresh.length === 0) return prev
+                const merged = [...prev, ...fresh]
                 // Always keep most recent first
                 merged.sort((a, b) =>
                   new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
@@ -250,28 +179,16 @@ export default function FeedPage() {
                 return merged
               })
               setHasData(true)
-              hasDataRef.current = true
             }
           } catch {}
         }
-      } // end while loop
-      // First load: cache was empty → start background polling
-      if (!hasDataRef.current && !force) {
-        setIsFirstLoad(true)
-        startBackgroundPoll()
       }
     } catch (e: any) {
       if (e?.name !== 'AbortError') console.error(e)
     } finally {
       setStreaming(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-    // Register fetchFeed with the shared layout so Sidebar can trigger it
-  useEffect(() => {
-    onRefreshCallback.current = () => fetchFeed(true)
-  }, [fetchFeed])
+  }
 
   useEffect(() => { fetchFeed() }, [])
 
@@ -291,35 +208,44 @@ export default function FeedPage() {
   const allBlocks     = splitIntoBlocks(filteredItems)
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
   const hasMore       = visibleBlocks < allBlocks.length
-  const showSkeleton  = !hasData && streaming && !isFirstLoad
-  const showEmpty     = !hasData && !streaming && !isFirstLoad
+  const showSkeleton  = !hasData && streaming
+  const showEmpty     = !hasData && !streaming
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
+    <div className="page-shell">
+      <Sidebar onRefresh={() => fetchFeed(true)} refreshing={streaming} />
+
+      <div className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header — full width, outside feed-layout ── */}
         <div
-          className="sticky top-0 z-20 border-b border-border px-8 header-blur">
+          className="sticky top-0 z-20 border-b border-border px-8"
+          style={{
+            '--tw-backdrop-blur': 'blur(8px)',
+            WebkitBackdropFilter: 'var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)',
+            backdropFilter: 'var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
+          } as React.CSSProperties}>
           <div className="flex items-center h-14">
-            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
+            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Descobrir</h1>
 
             {/* Tabs — centered in the remaining space */}
             <div className="flex flex-1 justify-center">
               <button
-                onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                onClick={() => setActiveFilter(null)}
                 className={cn(
-                  'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
+                  'text-[13px] px-4 h-14 border-b-2 transition-all font-medium',
                   activeFilter === null
                     ? 'border-ink-primary text-ink-primary'
                     : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
                 )}
               >
-                Top
+                Meu Feed
               </button>
               <TopicsDropdown
                 topics={topicsInFeed}
                 activeFilter={activeFilter}
-                onSelect={(t) => { setActiveFilter(t); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                onSelect={setActiveFilter}
               />
             </div>
 
@@ -354,24 +280,6 @@ export default function FeedPage() {
                 </div>
               )}
 
-              {newItemsReady && (
-                <div className="sticky top-14 z-10 flex justify-center py-2 pointer-events-none">
-                  <button
-                    className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-white shadow-lg hover:opacity-90 transition-opacity"
-                    style={{ backgroundColor: 'var(--color-ui-strong)', animation: 'slideDown 0.3s ease' }}
-                    onClick={() => {
-                      setItems(pendingItems)
-                      setNewItemsReady(false)
-                      setPendingItems([])
-                      scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-                    }}
-                  >
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v6M6.5 1L4 3.5M6.5 1L9 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M1 10.5h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                    Novas notícias disponíveis
-                  </button>
-                </div>
-              )}
-
               {shownBlocks.map((block, i) => (
                 <FeedBlock key={i} items={block.items} blockIndex={i} />
               ))}
@@ -389,6 +297,7 @@ export default function FeedPage() {
           </div>
         </div>
       </div>
+    </div>
   )
 }
 

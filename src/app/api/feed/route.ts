@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   const forceRefresh: boolean = body.forceRefresh ?? false
+  console.log(`[feed] POST received — userId=${userId} forceRefresh=${forceRefresh}`)
   const db = getSupabaseAdmin()
 
   let topics: string[] = body.topics ?? []
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
     topics = (data ?? []).map((r: any) => r.topic)
   }
 
+  console.log(`[feed] topics: ${topics.join(', ')}`)
   if (topics.length === 0)
     return new Response(JSON.stringify({ error: 'No topics' }), { status: 400 })
 
