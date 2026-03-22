@@ -20,6 +20,7 @@ export interface NewsItem {
   imageUrl?: string
   publishedAt: string
   cachedAt: string
+  tavilyRaw?: { url: string; title: string; content: string; image?: string }[]  // original Tavily results
 }
 
 export interface UserTopic {

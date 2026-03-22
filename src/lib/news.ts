@@ -412,6 +412,19 @@ ${context}`
       ? item.conclusion
       : item.conclusion?.body || undefined
 
+    // Extract tavily raw data for the sources used in this article
+    const tavilyRaw = idxs
+      .filter((idx) => idx >= 0 && idx < results.length)
+      .map((idx) => {
+        const r = results[idx]
+        return {
+          url: r.url,
+          title: r.title,
+          content: r.content,
+          image: r.image,
+        }
+      })
+
     items.push({
       id: safeId,
       topic,
@@ -423,6 +436,7 @@ ${context}`
       imageUrl,
       publishedAt: now,
       cachedAt: now,
+      tavilyRaw,
     })
   }
 

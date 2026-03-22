@@ -187,6 +187,7 @@ function rowToItem(row: any): NewsItem {
     sections: row.sections || [], conclusion: row.conclusion || undefined,
     sources: row.sources, imageUrl: row.image_url,
     publishedAt: row.published_at, cachedAt: row.cached_at,
+    tavilyRaw: row.tavily_raw,
   }
 }
 
@@ -196,6 +197,7 @@ function itemToRow(item: NewsItem) {
     sections: item.sections || [], conclusion: item.conclusion || null,
     sources: item.sources, image_url: item.imageUrl || null,
     published_at: item.publishedAt, cached_at: item.cachedAt,
+    tavily_raw: item.tavilyRaw || null,
   }
 }
 

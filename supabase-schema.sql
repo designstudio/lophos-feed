@@ -70,6 +70,10 @@ alter table news_cache add column if not exists conclusion text;
 alter table articles add column if not exists sections jsonb default '[]';
 alter table articles add column if not exists conclusion text;
 
+-- Add tavily_raw to preserve original Tavily response data
+alter table news_cache add column if not exists tavily_raw jsonb;
+alter table articles add column if not exists tavily_raw jsonb;
+
 -- Tracks last fetch time per topic — separate from articles themselves
 create table if not exists topic_fetches (
   topic        text primary key,
