@@ -347,21 +347,44 @@ export default function FeedPage() {
     <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header ── */}
-        <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
-          {/* Mobile: title row */}
-          <div className="flex items-center h-12 md:hidden">
+        <div className="sticky top-0 z-20 border-b border-border header-blur">
+
+          {/* Mobile: title */}
+          <div className="flex items-center h-12 px-4 md:hidden">
             <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
           </div>
-          {/* Tabs row */}
-          <div className="flex items-center h-10 md:h-14">
-            {/* Desktop: title left */}
-            <h1 className="hidden md:block text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
 
-            <div className="flex flex-1 md:justify-center">
+          {/* Mobile: horizontal scrollable tabs */}
+          <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pb-3"
+            style={{ WebkitOverflowScrolling: 'touch' }}>
+            {(['Top', ...topicsInFeed] as (string | null)[]).map((t, i) => {
+              const val = i === 0 ? null : t as string
+              const active = activeFilter === val
+              return (
+                <button
+                  key={t ?? 'top'}
+                  onClick={() => { setActiveFilter(val); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  className={cn(
+                    'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
+                    active
+                      ? 'bg-ink-primary text-bg-primary border-ink-primary'
+                      : 'border-border text-ink-tertiary hover:text-ink-secondary'
+                  )}
+                >
+                  {t ?? 'Top'}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Desktop: title + dropdown tabs */}
+          <div className="hidden md:flex items-center h-14 px-8">
+            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
+            <div className="flex flex-1 justify-center">
               <button
                 onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                 className={cn(
-                  'text-[0.875rem] px-4 h-10 md:h-14 border-b-2 transition-all font-medium',
+                  'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
                   activeFilter === null
                     ? 'border-ink-primary text-ink-primary'
                     : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
@@ -375,9 +398,7 @@ export default function FeedPage() {
                 onSelect={(t) => { setActiveFilter(t); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
               />
             </div>
-
-            {/* Desktop spacer */}
-            <div className="hidden md:block" style={{ width: '12rem' }} />
+            <div style={{ width: '12rem' }} />
           </div>
         </div>
 
