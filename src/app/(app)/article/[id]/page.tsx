@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { NewsItem, NewsSource } from '@/lib/types'
 import { SquareTopDown, ClockCircle, CloseCircle } from '@solar-icons/react-perf/Linear'
+import { LophosLogo } from '@/components/LophosLogo'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -69,9 +70,10 @@ export default function ArticlePage() {
         <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
           <div className="flex items-center h-12 md:h-14">
             <Link href="/feed"
-              className="text-[15px] font-semibold text-ink-primary transition-colors flex-shrink-0 md:w-48"
+              className="flex items-center gap-2 text-[15px] font-semibold text-ink-primary transition-colors flex-shrink-0 md:w-48"
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
+              <LophosLogo size={26} />
               Meu Feed
             </Link>
             {/* Article title — appears when user scrolls past the h1 */}
