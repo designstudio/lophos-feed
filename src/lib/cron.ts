@@ -1,7 +1,9 @@
 import cron from 'node-cron'
 import { getSupabaseAdmin } from './supabase'
-import { collectRawForTopic, fetchNewsForTopic, processRawBatch } from './news'
+import { collectRawForTopic, fetchNewsForTopic, processRawBatch, fetchImageForSources } from './news'
 import { NewsItem } from './types'
+
+const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
 
 const COLLECT_INTERVAL = '0 */6 * * *'       // 00:00, 06:00, 12:00, 18:00 — Tavily only
 const PROCESS_INTERVAL = '0 1,7,13,19 * * *' // 01:00, 07:00, 13:00, 19:00 — Gemini only
@@ -142,4 +144,44 @@ export async function processRawFeeds() {
 
 export async function refreshAllFeeds() {
   await collectAllFeeds()
+}
+
+// Fix: re-busca og:image real dos artigos que têm lazy-load placeholder ou sem imagem
+export async function fixCachedImages() {
+  const db = getSupabaseAdmin()
+
+  const { data: rows, error } = await db
+    .from('news_cache')
+    .select('id, image_url, sources')
+
+  if (error) { console.error('[fix-images] error loading news_cache:', error); return }
+  if (!rows?.length) { console.log('[fix-images] nothing to fix'); return }
+
+  const toFix = rows.filter((r: any) => {
+    if (!r.image_url) return true
+    return LAZY_IMAGE_PATTERNS.some((p: string) => r.image_url.toLowerCase().includes(p))
+  })
+
+  console.log(`[fix-images] ${toFix.length} of ${rows.length} articles need image fix`)
+  if (toFix.length === 0) return
+
+  let fixed = 0
+  for (const row of toFix) {
+    try {
+      const sources = (row.sources ?? []).map((s: any) => ({ url: s.url }))
+      const imageUrl = await fetchImageForSources(sources)
+      if (imageUrl) {
+        await db.from('news_cache').update({ image_url: imageUrl }).eq('id', row.id)
+        await db.from('articles').update({ image_url: imageUrl }).eq('id', row.id)
+        fixed++
+        console.log(`[fix-images] ✓ ${row.id} → ${imageUrl.slice(0, 80)}`)
+      } else {
+        console.log(`[fix-images] — ${row.id}: no image found`)
+      }
+    } catch (err) {
+      console.error(`[fix-images] ✗ ${row.id}:`, err)
+    }
+  }
+
+  console.log(`[fix-images] done — ${fixed}/${toFix.length} fixed`)
 }
