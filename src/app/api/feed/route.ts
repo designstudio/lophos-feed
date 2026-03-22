@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
   const forceRefresh: boolean = body.forceRefresh ?? false
-  console.log(`[feed] POST received — userId=${userId} forceRefresh=${forceRefresh}`)
   const db = getSupabaseAdmin()
 
   let topics: string[] = body.topics ?? []
@@ -31,7 +30,6 @@ export async function POST(req: NextRequest) {
     topics = (data ?? []).map((r: any) => r.topic)
   }
 
-  console.log(`[feed] topics: ${topics.join(', ')}`)
   if (topics.length === 0)
     return new Response(JSON.stringify({ error: 'No topics' }), { status: 400 })
 
@@ -75,57 +73,47 @@ export async function POST(req: NextRequest) {
     const topicsToFetch = topics.filter(t =>
       forceRefresh || isSearchStale(lastFetchByTopic.get(t) ?? null)
     )
+    if (topicsToFetch.length === 0) { await writer.close(); return }
 
-    console.log(`[feed] stale topics: ${topicsToFetch.join(', ') || 'none'}`)
-    console.log(`[feed] cache size: ${allArticles?.length ?? 0} articles`)
-
-    if (topicsToFetch.length === 0) {
-      await writer.close()
-      return
-    }
-
-    // 4. Fetch fresh news for stale topics — stream results as they come
+    // 4. Mark as fetching immediately to prevent duplicate requests
     const now = new Date().toISOString()
-    const concurrency = 3
+    await db.from('topic_fetches').upsert(
+      topicsToFetch.map(topic => ({ topic, last_fetched: now, updated_at: now })),
+      { onConflict: 'topic' }
+    )
 
-    for (let i = 0; i < topicsToFetch.length; i += concurrency) {
-      const batch = topicsToFetch.slice(i, i + concurrency)
-      await Promise.allSettled(batch.map(async (topic) => {
-        try {
-          console.log(`[feed] fetching "${topic}"`)
-          const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
-          const fresh = await fetchNewsForTopic(topic, existingTitles)
+    // 5. Close stream — fetch in background
+    await writer.close()
 
-          // Mark as fetched regardless of result
-          await db.from('topic_fetches').upsert(
-            { topic, last_fetched: now, updated_at: now },
-            { onConflict: 'topic' }
-          )
+    // 6. Background fetch — won't block the response
+    const fetchAll = async () => {
+      const concurrency = 3
+      for (let i = 0; i < topicsToFetch.length; i += concurrency) {
+        const batch = topicsToFetch.slice(i, i + concurrency)
+        await Promise.allSettled(batch.map(async (topic) => {
+          try {
+            const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
+            const fresh = await fetchNewsForTopic(topic, existingTitles)
+            if (fresh.length === 0) return
 
-          if (fresh.length === 0) {
-            console.log(`[feed] no results for "${topic}"`)
-            return
+            const rows = fresh.map(itemToRow)
+            const { error } = await db.from('news_cache').insert(rows)
+            if (error) { console.error(`[feed] insert error "${topic}":`, error.message); return }
+
+            const { data: inserted } = await db
+              .from('news_cache').select('*').eq('topic', topic)
+              .order('cached_at', { ascending: false }).limit(rows.length)
+            if (inserted?.length) {
+              await db.from('articles').upsert(inserted, { onConflict: 'id' })
+            }
+          } catch (e) {
+            console.error(`[feed] error "${topic}":`, e)
           }
-
-          const rows = fresh.map(itemToRow)
-          const { error } = await db.from('news_cache').insert(rows)
-          if (error) {
-            console.error(`[feed] insert error "${topic}":`, error.message)
-            return
-          }
-
-          await db.from('articles').upsert(rows, { onConflict: 'id' })
-
-          // Stream new items to client
-          await send(fresh)
-          console.log(`[feed] sent ${fresh.length} items for "${topic}"`)
-        } catch (e) {
-          console.error(`[feed] error "${topic}":`, e)
-        }
-      }))
+        }))
+      }
     }
 
-    await writer.close()
+    fetchAll().catch(e => console.error('[feed] background fetch error:', e))
   })()
 
   return new Response(stream.readable, {

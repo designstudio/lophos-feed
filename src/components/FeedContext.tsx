@@ -6,15 +6,12 @@ interface FeedContextType {
   setRefreshing: (v: boolean) => void
   triggerRefresh: () => void
   onRefreshCallback: React.MutableRefObject<(() => void) | null>
-  newItemsReady: boolean
-  setNewItemsReady: (v: boolean) => void
 }
 
 const FeedContext = createContext<FeedContextType | null>(null)
 
 export function FeedProvider({ children }: { children: React.ReactNode }) {
   const [refreshing, setRefreshing] = useState(false)
-  const [newItemsReady, setNewItemsReady] = useState(false)
   const onRefreshCallback = { current: null } as React.MutableRefObject<(() => void) | null>
 
   const triggerRefresh = useCallback(() => {
@@ -22,7 +19,7 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <FeedContext.Provider value={{ refreshing, setRefreshing, triggerRefresh, onRefreshCallback, newItemsReady, setNewItemsReady }}>
+    <FeedContext.Provider value={{ refreshing, setRefreshing, triggerRefresh, onRefreshCallback }}>
       {children}
     </FeedContext.Provider>
   )

@@ -618,9 +618,9 @@ function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
 }
 
 // ─── Sidebar ───────────────────────────────────────────────────
-interface Props { onRefresh?: () => void; refreshing?: boolean; newItemsReady?: boolean }
+interface Props { onRefresh?: () => void; refreshing?: boolean }
 
-export function Sidebar({ onRefresh, refreshing, newItemsReady }: Props) {
+export function Sidebar({ onRefresh, refreshing }: Props) {
   const path = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -710,18 +710,13 @@ export function Sidebar({ onRefresh, refreshing, newItemsReady }: Props) {
 
           {onRefresh && (
             <button onClick={onRefresh} disabled={refreshing}
-              title={collapsed ? 'Novas notícias disponíveis' : undefined}
+              title={collapsed ? 'Atualizar feed' : undefined}
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left',
                 collapsed ? 'justify-center' : ''
               )}>
-              <span className="relative flex-shrink-0">
-                <Refresh size={18} className={cn(refreshing ? 'animate-spin' : '')} />
-                {newItemsReady && !refreshing && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent" />
-                )}
-              </span>
-              {!collapsed && <span className="whitespace-nowrap overflow-hidden">{refreshing ? 'Atualizando…' : 'Novas notícias'}</span>}
+              <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
+              {!collapsed && <span className="whitespace-nowrap overflow-hidden">{refreshing ? 'Atualizando…' : 'Atualizar feed'}</span>}
             </button>
           )}
         </nav>
@@ -742,7 +737,6 @@ export function Sidebar({ onRefresh, refreshing, newItemsReady }: Props) {
 
 // ─── Context-aware wrapper for use in shared layout ───────────
 export function SidebarWithRefresh() {
-  const { refreshing, triggerRefresh, newItemsReady } = useFeedContext()
-  // Only show refresh button when there are new items ready
-  return <Sidebar onRefresh={newItemsReady ? triggerRefresh : undefined} refreshing={refreshing} newItemsReady={newItemsReady} />
+  const { refreshing, triggerRefresh } = useFeedContext()
+  return <Sidebar onRefresh={triggerRefresh} refreshing={refreshing} />
 }
