@@ -20,11 +20,10 @@ export function startFeedCron() {
 async function refreshAllFeeds() {
   const db = getSupabaseAdmin()
 
-  // Get all unique topics
+  // Get all topics (dedup in memory)
   const { data: topics, error: topicsError } = await db
     .from('user_topics')
     .select('topic')
-    .distinct()
 
   if (topicsError) {
     console.error('[cron] Error fetching topics:', topicsError)
@@ -36,6 +35,7 @@ async function refreshAllFeeds() {
     return
   }
 
+  // Remove duplicates
   const uniqueTopics = Array.from(new Set(topics.map((t: any) => t.topic)))
   console.log(`[cron] Refreshing ${uniqueTopics.length} topics`)
 
