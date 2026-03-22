@@ -80,3 +80,21 @@ create table if not exists topic_fetches (
   last_fetched timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
+
+-- Phase 2: Raw articles staging — stores Tavily raw results before Gemini processing
+create table if not exists raw_articles (
+  id             uuid default gen_random_uuid() primary key,
+  topic          text not null,
+  tavily_results jsonb not null,  -- filtered Tavily results [{url, title, content, image}]
+  query          text,            -- query sent to Tavily
+  fetched_at     timestamptz default now(),
+  status         text default 'raw' check (status in ('raw', 'processed', 'dedup', 'low_quality')),
+  created_at     timestamptz default now()
+);
+
+create index if not exists raw_articles_topic_idx      on raw_articles(topic);
+create index if not exists raw_articles_fetched_at_idx on raw_articles(fetched_at desc);
+create index if not exists raw_articles_status_idx     on raw_articles(status);
+
+alter table raw_articles enable row level security;
+create policy "service role all" on raw_articles for all using (true);

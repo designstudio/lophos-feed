@@ -29,3 +29,18 @@ export interface UserTopic {
   topic: string
   created_at: string
 }
+
+export interface RawArticleRow {
+  id: string
+  topic: string
+  tavily_results: {
+    url: string
+    title: string
+    content: string
+    image?: string
+  }[]
+  query?: string
+  fetched_at: string
+  status: 'raw' | 'processed' | 'dedup' | 'low_quality'
+  created_at: string
+}

@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto'
 import { NewsItem, NewsSource, ArticleSection } from './types'
+import { getSupabaseAdmin } from './supabase'
 
 const TAVILY_KEY = process.env.TAVILY_API_KEY!
 const GEMINI_KEY = process.env.GEMINI_API_KEY!
@@ -261,6 +262,21 @@ export async function fetchNewsForTopic(
     onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0, rejected })
     return []
   }
+
+  // Save raw Tavily results before Gemini processing (Phase 2 staging)
+  const db = getSupabaseAdmin()
+  const { error: rawError } = await db.from('raw_articles').insert({
+    topic,
+    tavily_results: results.map((r: any) => ({
+      url: r.url,
+      title: r.title,
+      content: r.content,
+      image: r.image,
+    })),
+    query: buildQuery(topic),
+    status: 'raw',
+  })
+  if (rawError) console.warn('[news] Failed to save raw_articles:', rawError.message)
 
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
