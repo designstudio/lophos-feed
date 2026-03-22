@@ -150,7 +150,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-          <h2 className="text-card-title md:text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
+          <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
           <div className="hidden md:block">
             <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
           </div>
