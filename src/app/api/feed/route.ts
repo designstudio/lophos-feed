@@ -72,38 +72,12 @@ export async function POST(req: NextRequest) {
   }
 
   const fetchRssResults = async (topic: string) => {
-    const normalize = (s: string) =>
-      s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-    const t = normalize(topic)
-    const fallbackTopics = (() => {
-      if (/valorant|league|lol|tft|overwatch|esport/.test(t)) return ['E-sports','Games']
-      if (/game|gaming/.test(t)) return ['Games']
-      if (/cinema|filme|serie|série|tv|stream/.test(t)) return ['Cinema','Filmes','Séries','Entretenimento']
-      if (/musica|música|album|show|turne|turnê/.test(t)) return ['Música']
-      if (/politic|politica|brasil|mundo|election|eleic/.test(t)) return ['Política','Brasil','Mundo']
-      if (/tech|tecnologia|ia|inteligencia|inovacao|startup|software/.test(t)) return ['Tecnologia','Inovação']
-      if (/smartphone|android|iphone|ios|mobile/.test(t)) return ['Smartphones']
-      if (/negocio|economia|financa|finance|business|market/.test(t)) return ['Negócios','Economia','Finanças']
-      if (/ciencia|science|saude|health/.test(t)) return ['Ciência']
-      if (/educacao|carreira|trabalho/.test(t)) return ['Educação','Carreira']
-      if (/viagem|turismo|travel/.test(t)) return ['Turismo','Viagem']
-      if (/ambiente|clima|climate|environment/.test(t)) return ['Meio Ambiente']
-      if (/arte|cultura/.test(t)) return ['Arte','Cultura']
-      if (/esporte|sport|futebol|nba/.test(t)) return ['Esportes']
-      return []
-    })()
-
-    const topicsToTry = [topic, ...fallbackTopics]
-    let feeds: any[] = []
-    for (const tp of topicsToTry) {
-      const { data } = await db
-        .from('rss_feeds')
-        .select('url,name,topics,active')
-        .eq('active', true)
-        .contains('topics', [tp])
-        .limit(RSS_FEEDS_PER_TOPIC)
-      if (data && data.length > 0) { feeds = data; break }
-    }
+    const { data: feeds } = await db
+      .from('rss_feeds')
+      .select('url,name,topics,active')
+      .eq('active', true)
+      .contains('topics', [topic])
+      .limit(RSS_FEEDS_PER_TOPIC)
 
     if (!feeds || feeds.length === 0) return []
 
