@@ -11,5 +11,8 @@ const nextConfig = {
     NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: '/feed',
     NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: '/onboarding',
   },
+  experimental: {
+    instrumentationHook: true,
+  },
 }
 module.exports = nextConfig
