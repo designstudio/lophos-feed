@@ -34,6 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 if (dark) document.documentElement.classList.add('dark');
                 var accent = localStorage.getItem('accent_color');
                 if (accent) document.documentElement.style.setProperty('--color-accent', accent);
+                var sc = localStorage.getItem('sidebar_collapsed');
+                var isCollapsed = sc === 'true';
+                document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '3.5rem' : '16.1rem');
               } catch(e) {}
             })();
           ` }} />

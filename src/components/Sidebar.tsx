@@ -661,6 +661,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
 
   const isCollapsed = collapsed ?? true
   const isReady = collapsed !== null
+  const resolvedWidth = collapsed === null ? 'var(--sidebar-width, 3.5rem)' : (isCollapsed ? '3.5rem' : '16.1rem')
 
   return (
     <>
@@ -668,7 +669,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         <aside
           className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
           style={{
-            width: '3.5rem',
+            width: resolvedWidth,
             transition: 'none',
           }}
         >
@@ -688,7 +689,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       <aside
         className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
         style={{
-          width: isCollapsed ? '3.5rem' : '16.1rem',
+          width: resolvedWidth,
           transition: mounted ? 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
           opacity: isReady ? 1 : 0,
           pointerEvents: isReady ? 'auto' : 'none',
