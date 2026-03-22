@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { NewsItem, NewsSource, ArticleSection } from './types'
 
 const TAVILY_KEY = process.env.TAVILY_API_KEY!
@@ -253,12 +254,7 @@ ${context}`
     const primaryResult = results[idxs[0]] ?? results[0]
     const imageUrl: string | undefined = primaryResult?.image ?? (tavilyData.images?.[idxs[0]] ?? undefined)
 
-    const safeId = `${topic}-${Date.now()}-${i}`
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 80)
+    const safeId = randomUUID()
 
     const conclusion = typeof item.conclusion === 'string'
       ? item.conclusion
