@@ -76,6 +76,9 @@ export async function POST(req: NextRequest) {
       forceRefresh || isSearchStale(lastFetchByTopic.get(t) ?? null)
     )
 
+    console.log(`[feed] stale topics: ${topicsToFetch.join(', ') || 'none'}`)
+    console.log(`[feed] cache size: ${allArticles?.length ?? 0} articles`)
+
     if (topicsToFetch.length === 0) {
       await writer.close()
       return

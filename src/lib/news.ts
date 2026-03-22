@@ -45,6 +45,31 @@ function getSourceHint(topic: string): string {
 }
 
 // Extract og:image from a URL — used as fallback when Tavily has no image
+// Fallback: use Tavily Extract to get og:image from sites that block direct fetch (Forbes, Bloomberg, etc.)
+async function fetchOgImageViaTavily(url: string): Promise<string | undefined> {
+  try {
+    const res = await fetch('https://api.tavily.com/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: TAVILY_KEY, urls: [url] }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) return undefined
+    const data = await res.json()
+    const raw = data?.results?.[0]?.raw_content ?? ''
+    const match =
+      raw.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+      raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      raw.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
+      raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
+    const imageUrl = match?.[1]
+    if (!imageUrl) return undefined
+    try { return new URL(imageUrl, url).href } catch { return imageUrl }
+  } catch {
+    return undefined
+  }
+}
+
 async function fetchOgImage(url: string): Promise<string | undefined> {
   try {
     const res = await fetch(url, {
@@ -201,10 +226,20 @@ ${context}`
       .filter((idx) => idx >= 0 && idx < results.length)
       .map((idx) => results[idx])
     let imageUrl: string | undefined
+    // Layer 1: direct fetch with real browser UA
     for (const r of sourceResults) {
       if (r?.url) {
         imageUrl = await fetchOgImage(r.url)
         if (imageUrl) break
+      }
+    }
+    // Layer 2: Tavily Extract — bypasses paywalls/blocks (Forbes, Bloomberg, etc.)
+    if (!imageUrl) {
+      for (const r of sourceResults) {
+        if (r?.url) {
+          imageUrl = await fetchOgImageViaTavily(r.url)
+          if (imageUrl) break
+        }
       }
     }
 
