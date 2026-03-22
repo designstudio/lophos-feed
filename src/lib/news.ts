@@ -206,13 +206,21 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
     .join(' ')
 
   const score = textOverlapScore(genText, sourceText)
+  const singleSource = sources.length <= 1
+  if (singleSource) {
+    const sourceTitle = sources[0]?.url
+      ? (results.find((rr: any) => rr?.url === sources[0].url)?.title || '')
+      : ''
+    const titleScore = textOverlapScore(title, sourceTitle)
+    return score >= 0.35 && titleScore >= 0.2
+  }
   return score >= 0.18
 }
 
 type ResultItem = { url: string; title: string; content: string }
 type Cluster = { indices: number[]; text: string }
 
-function buildClusters(results: ResultItem[]): Cluster[] {
+function buildClusters(results: ResultItem[], onDiagCluster?: (info: { clusters: number; sizes: number[] }) => void): Cluster[] {
   const clusters: Cluster[] = []
   const maxClusters = 6
   const threshold = 0.35
@@ -244,6 +252,9 @@ function buildClusters(results: ResultItem[]): Cluster[] {
         clusters.push({ indices: [i], text: t })
       }
     }
+  }
+  if (onDiagCluster) {
+    onDiagCluster({ clusters: clusters.length, sizes: clusters.map(c => c.indices.length) })
   }
   return clusters
 }
@@ -286,7 +297,8 @@ export async function fetchNewsForTopic(
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
-  const clusters = buildClusters(results as ResultItem[])
+  let clusterDiag: { clusters: number; sizes: number[] } | undefined
+  const clusters = buildClusters(results as ResultItem[], (info) => { clusterDiag = info })
   const context = clusters.map((cluster, ci) => {
     const items = cluster.indices.map((idx, j) => {
       const r = results[idx]
@@ -429,7 +441,15 @@ ${context}`
     })
   }
 
-  onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: parsed.length, kept: items.length, dropped })
+  onDiag?.({
+    tavily: allResults.length,
+    filtered: results.length,
+    gemini: parsed.length,
+    kept: items.length,
+    dropped,
+    clusters: clusterDiag?.clusters,
+    clusterSizes: clusterDiag?.sizes,
+  } as any)
   return items
 }
 
