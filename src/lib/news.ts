@@ -188,6 +188,10 @@ function textOverlapScore(a: string, b: string): number {
   return overlap / Math.max(1, Math.min(aWords.size, bWords.size))
 }
 
+function isSimilarTitle(a: string, b: string): boolean {
+  return textOverlapScore(a, b) >= 0.6
+}
+
 function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[]): boolean {
   const title = item?.title || ''
   const summary = item?.summary || ''
@@ -203,6 +207,45 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
 
   const score = textOverlapScore(genText, sourceText)
   return score >= 0.18
+}
+
+type ResultItem = { url: string; title: string; content: string }
+type Cluster = { indices: number[]; text: string }
+
+function buildClusters(results: ResultItem[]): Cluster[] {
+  const clusters: Cluster[] = []
+  const maxClusters = 6
+  const threshold = 0.35
+
+  const texts = results.map((r) => normalizeText(`${r.title} ${r.content}`))
+  for (let i = 0; i < results.length; i++) {
+    const t = texts[i]
+    let placed = false
+    for (const c of clusters) {
+      const score = textOverlapScore(t, c.text)
+      if (score >= threshold) {
+        c.indices.push(i)
+        c.text = `${c.text} ${t}`.slice(0, 2000)
+        placed = true
+        break
+      }
+    }
+    if (!placed) {
+      if (clusters.length >= maxClusters) {
+        let best = 0
+        let bestScore = -1
+        for (let ci = 0; ci < clusters.length; ci++) {
+          const score = textOverlapScore(t, clusters[ci].text)
+          if (score > bestScore) { bestScore = score; best = ci }
+        }
+        clusters[best].indices.push(i)
+        clusters[best].text = `${clusters[best].text} ${t}`.slice(0, 2000)
+      } else {
+        clusters.push({ indices: [i], text: t })
+      }
+    }
+  }
+  return clusters
 }
 
 export async function fetchNewsForTopic(
@@ -243,12 +286,14 @@ export async function fetchNewsForTopic(
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
-  const context = results
-    .map((r: any, i: number) =>
-      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
-    )
-    .join('\n\n')
-
+  const clusters = buildClusters(results as ResultItem[])
+  const context = clusters.map((cluster, ci) => {
+    const items = cluster.indices.map((idx, j) => {
+      const r = results[idx]
+      return `[${j + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
+    }).join('\n\n')
+    return `GRUPO ${ci + 1}\n${items}`
+  }).join('\n\n')
   const sourceHint = getSourceHint(topic)
 
   const existingContext = existingTitles.length > 0
@@ -262,7 +307,7 @@ ${existingContext}
 REGRAS OBRIGATÓRIAS:
 1. Use APENAS as fontes fornecidas. NÃO invente fatos.
 2. O TÍTULO e o RESUMO devem usar termos presentes nas fontes. Se não for possível, retorne [].
-3. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
+3. Cada GRUPO já é um evento. Gere NO MÁXIMO 1 notícia por GRUPO.
 3. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
 4. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo.
 5. Se não houver nenhum evento noticiável real nas fontes, retorne [].
@@ -275,10 +320,11 @@ ESTRUTURA de cada notícia:
 - summary: parágrafo introdutório de 4-5 frases, factual e empolgante
 - sections: array de 2-4 seções com heading e body
 - conclusion: "O que esperar" ou null
-- sourceIndexes: índices das fontes usadas
+- sourceIndexes: índices das fontes usadas dentro do GRUPO
+- groupIndex: número do GRUPO (1, 2, 3...)
 
 Responda APENAS com JSON válido:
-[{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2]}]
+[{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2],"groupIndex":1}]
 
 FONTES:
 ${context}`
@@ -312,17 +358,29 @@ ${context}`
   const items: NewsItem[] = []
   for (let i = 0; i < parsed.length; i++) {
     const item = parsed[i]
-    const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
-    const sources: NewsSource[] = idxs
-      .filter((idx) => idx >= 0 && idx < results.length)
-      .map((idx) => {
-        const r = results[idx]
-        return {
-          name: new URL(r.url).hostname.replace('www.', ''),
-          url: r.url,
-          favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
-        }
+    const groupIndex = Math.max(1, Number(item.groupIndex || 1))
+    const cluster = clusters[groupIndex - 1]
+    if (!cluster) { dropped++; continue }
+    const idxs: number[] = (item.sourceIndexes || [1]).map((n: number) => n - 1)
+    const resolvedIdxs = idxs
+      .filter((idx) => idx >= 0 && idx < cluster.indices.length)
+      .map((idx) => cluster.indices[idx])
+    const sources: NewsSource[] = resolvedIdxs.map((idx) => {
+      const r = results[idx]
+      return {
+        name: new URL(r.url).hostname.replace('www.', ''),
+        url: r.url,
+        favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
+      }
+    })
+    if (sources.length === 0 && cluster.indices.length > 0) {
+      const r = results[cluster.indices[0]]
+      sources.push({
+        name: new URL(r.url).hostname.replace('www.', ''),
+        url: r.url,
+        favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
       })
+    }
 
     if (!isGeneratedItemRelevant(item, sources, results)) {
       dropped++
@@ -330,8 +388,8 @@ ${context}`
     }
 
     // Prefer og:image from the actual sources; fallback to Tavily image if needed
-    const primaryResult = results[idxs[0]] ?? results[0]
-    const tavilyImage: string | undefined = primaryResult?.image ?? (tavilyData.images?.[idxs[0]] ?? undefined)
+    const primaryResult = results[resolvedIdxs[0]] ?? results[cluster.indices[0]] ?? results[0]
+    const tavilyImage: string | undefined = primaryResult?.image ?? (tavilyData.images?.[resolvedIdxs[0]] ?? undefined)
     let imageUrl: string | undefined = tavilyImage
     if (!imageUrl || !isImageFromSources(imageUrl, sources)) {
       const ogImage = await fetchImageForSources(sources)
@@ -343,6 +401,14 @@ ${context}`
     const conclusion = typeof item.conclusion === 'string'
       ? item.conclusion
       : item.conclusion?.body || undefined
+
+    const title = item?.title || ''
+    const isDupExisting = existingTitles.some((t) => isSimilarTitle(title, t))
+    const isDupInBatch = items.some((x) => isSimilarTitle(title, x.title))
+    if (isDupExisting || isDupInBatch) {
+      dropped++
+      continue
+    }
 
     items.push({
       id: safeId,
@@ -365,3 +431,4 @@ ${context}`
 export function isCacheStale(cachedAt: string): boolean {
   return Date.now() - new Date(cachedAt).getTime() > CACHE_TTL_MINUTES * 60 * 1000
 }
+
