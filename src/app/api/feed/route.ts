@@ -13,6 +13,7 @@ const RSS_FEEDS_PER_TOPIC = 4
 const RSS_ITEMS_PER_FEED = 3
 const RSS_TIMEOUT_MS = 4000
 const CATEGORY_CACHE_DAYS = 30
+const MAX_RUN_MS = 50000
 
 function isSearchStale(lastFetched: string | null): boolean {
   if (!lastFetched) return true
@@ -277,10 +278,12 @@ Responda APENAS com JSON válido no formato:
   }
 
   ;(async () => {
-    await writer.write(encoder.encode(JSON.stringify({ topics }) + '\n'))
-    if (debug) {
-      await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'start' } }) + '\n'))
-    }
+    const startedAt = Date.now()
+    try {
+      await writer.write(encoder.encode(JSON.stringify({ topics }) + '\n'))
+      if (debug) {
+        await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'start' } }) + '\n'))
+      }
 
     // 1. Load existing cache + fetch times
     const [{ data: allArticles }, fetchResult] = await Promise.all([
@@ -353,6 +356,11 @@ Responda APENAS com JSON válido no formato:
     const fetchAll = async (streamResults: boolean) => {
       // Process sequentially to preserve specificity-based priority and avoid cross-topic duplicates.
       for (const topic of topicsToFetch) {
+        const elapsed = Date.now() - startedAt
+        if (elapsed > MAX_RUN_MS) {
+          if (debug) emitDebug({ phase: 'cutoff', reason: 'time_budget', elapsedMs: elapsed })
+          break
+        }
         try {
           const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
           const inserted = await fetchAndStore(topic, existingTitles, globalExistingTitles)
@@ -372,6 +380,14 @@ Responda APENAS com JSON válido no formato:
     }
     await writer.write(encoder.encode(JSON.stringify({ refreshComplete: true, newItemsCount }) + '\n'))
     await writer.close()
+    } catch (e) {
+      if (debug) {
+        const message = e instanceof Error ? e.message : String(e)
+        await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'error', message } }) + '\n'))
+      }
+      console.error('[feed] stream error:', e)
+      await writer.close()
+    }
   })()
 
   return new Response(stream.readable, {
