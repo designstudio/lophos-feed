@@ -11,7 +11,7 @@ export const maxDuration = 60
 const FETCH_INTERVAL_MINUTES = 120
 const RSS_FEEDS_PER_TOPIC = 4
 const RSS_ITEMS_PER_FEED = 3
-const RSS_TIMEOUT_MS = 4000
+const RSS_TIMEOUT_MS = 7000
 const CATEGORY_CACHE_DAYS = 30
 
 function isSearchStale(lastFetched: string | null): boolean {
