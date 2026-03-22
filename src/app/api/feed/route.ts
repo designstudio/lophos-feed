@@ -173,6 +173,7 @@ export async function POST(req: NextRequest) {
             if (inserted.length > 0) newItemsCount += inserted.length
             if (streamResults && inserted.length > 0) await send(inserted)
           } catch (e) {
+            if (debug) emitDebug({ topic, error: e instanceof Error ? e.message : String(e) })
             console.error(`[feed] error "${topic}":`, e)
           }
         }))
