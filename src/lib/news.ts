@@ -286,33 +286,44 @@ REGRAS OBRIGATÓRIAS:
 1. Use APENAS as fontes fornecidas. NÃO invente fatos.
 2. O TÍTULO deve incluir palavras-chave LITERAIS das fontes (nomes de bandas, artistas, eventos, números, datas).
 3. O RESUMO deve incorporar frases e termos DIRETOS dos artigos das fontes. Reutilize a linguagem original.
-4. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
-5. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
-6. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo, lançamentos, turnês.
-7. Se não houver nenhum evento noticiável real nas fontes, retorne [].
-8. Tom editorial de referência: ${sourceHint}.
-9. Tom: neutro, jornalístico, sem clickbait.
-10. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
-11. **CRÍTICO: sourceIndexes deve incluir APENAS fontes que realmente falam sobre o assunto da notícia**. Leia cada fonte completamente antes de incluir seu índice.
-12. Se uma fonte é sobre outro assunto completamente diferente, NÃO inclua seu índice, mesmo que apareça na lista.
+4. **CRÍTICO: CADA NOTÍCIA É SOBRE UM ÚNICO EVENTO**. Não agrupe eventos distintos na mesma notícia. Exemplos:
+   - ❌ "Avril Lavigne, Guns N' Roses e Harry Styles anunciam turnês" (3 eventos distintos = criar 3 notícias)
+   - ✅ "Avril Lavigne anuncia turnê europeia 2026" (1 evento = 1 notícia)
+5. Se há múltiplos eventos nas fontes, crie múltiplas notícias (uma por evento).
+6. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
+7. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo, lançamentos, turnês.
+8. Se não houver nenhum evento noticiável real nas fontes, retorne [].
+9. Tom editorial de referência: ${sourceHint}.
+10. Tom: neutro, jornalístico, sem clickbait.
+11. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
+12. **CRÍTICO: sourceIndexes deve incluir APENAS fontes que realmente falam sobre o assunto da notícia**. Máximo 2 fontes por notícia.
+13. Se uma fonte é sobre outro assunto completamente diferente, NÃO inclua seu índice, mesmo que apareça na lista.
 
 EXEMPLOS:
 
-EXEMPLO 1 — BOA ESTRUTURA:
-Se a fonte diz: "Taylor Swift announces 2026 world tour with 50 dates", seu título deve incluir "Taylor Swift" e "turnê" ou "tour", e o resumo deve reutilizar termos como "anúncio", "2026", "turnê mundial".
+EXEMPLO 1 — SEPARAÇÃO DE EVENTOS:
+Se as fontes são:
+  [1] "Avril Lavigne announces 2026 European tour dates"
+  [2] "Guns N' Roses surprises fans with 2026 Germany dates"
+  [3] "Harry Styles reveals 2026 world tour"
+Você DEVE criar 3 notícias separadas:
+  - Notícia 1: "Avril Lavigne Anuncia Turnê Europeia 2026" [sourceIndexes: [1]]
+  - Notícia 2: "Guns N' Roses Anuncia Datas na Alemanha em 2026" [sourceIndexes: [2]]
+  - Notícia 3: "Harry Styles Anuncia Turnê Mundial 2026" [sourceIndexes: [3]]
 
-EXEMPLO 2 — VALIDAÇÃO DE SOURCES:
+EXEMPLO 2 — VALIDAÇÃO DE SOURCES (MESMA NOTÍCIA):
 Se você cria uma notícia sobre "Project Hail Mary box office record" e tem 3 fontes:
   [1] "Project Hail Mary breaks Amazon box office records" ✓ Incluir
-  [2] "The Oligarch and the Art Dealer interview" ✗ NÃO incluir (assunto diferente)
+  [2] "Project Hail Mary hits $71M opening weekend" ✓ Pode incluir se for MESMA notícia
   [3] "GKIDS Animation Festival Hong Kong" ✗ NÃO incluir (assunto diferente)
-Então sourceIndexes deve ser APENAS [1], não [1,2,3].
+Então sourceIndexes seria [1] ou [1,2] se ambas falam da MESMA notícia.
 
-ANTES DE GERAR CADA NOTÍCIA:
-1. Verifique CADA fonte que você planeja usar
-2. Confirme que o título e conteúdo dela correspondem ao assunto da notícia
-3. Se uma fonte é irrelevante ou sobre outro tópico, EXCLUA-A de sourceIndexes
-4. Nunca inclua uma fonte no sourceIndexes só porque aparece na lista
+ESTRATÉGIA DE GERAÇÃO:
+1. Leia TODAS as fontes primeiro e identifique eventos DISTINTOS
+2. Para CADA evento, crie UMA notícia separada
+3. Nunca misture múltiplos eventos/artistas/projetos na mesma notícia
+4. Máximo 2 fontes por notícia, e APENAS se forem sobre o MESMO evento
+5. Se uma fonte é irrelevante ou sobre outro tópico, ignore-a completamente
 
 ESTRUTURA de cada notícia:
 - title: título preciso em pt-BR (com nomes/termos das fontes)
