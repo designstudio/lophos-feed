@@ -170,13 +170,17 @@ export async function fixCachedImages() {
     try {
       const sources = (row.sources ?? []).map((s: any) => ({ url: s.url }))
       const imageUrl = await fetchImageForSources(sources)
-      if (imageUrl) {
+      const isStillLazy = !imageUrl || LAZY_IMAGE_PATTERNS.some(p => imageUrl.toLowerCase().includes(p))
+      if (imageUrl && !isStillLazy) {
         await db.from('news_cache').update({ image_url: imageUrl }).eq('id', row.id)
         await db.from('articles').update({ image_url: imageUrl }).eq('id', row.id)
         fixed++
         console.log(`[fix-images] ✓ ${row.id} → ${imageUrl.slice(0, 80)}`)
       } else {
-        console.log(`[fix-images] — ${row.id}: no image found`)
+        // Sem imagem real encontrada — limpa o campo pra mostrar o placeholder
+        await db.from('news_cache').update({ image_url: null }).eq('id', row.id)
+        await db.from('articles').update({ image_url: null }).eq('id', row.id)
+        console.log(`[fix-images] — ${row.id}: no real image found, cleared`)
       }
     } catch (err) {
       console.error(`[fix-images] ✗ ${row.id}:`, err)

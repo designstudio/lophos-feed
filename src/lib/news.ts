@@ -17,6 +17,8 @@ const LOW_QUALITY_DOMAINS = [
   'mobafire.com', 'op.gg', 'u.gg', 'lolalytics.com',
 ]
 
+const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
+
 const GENERIC_PATTERNS = [
   /\/(tag|tags|category|categories|topic|topics|section|search|archive|label)\//i,
   /\/(news|articles|latest|all|feed)\/?(\?.*)?$/i,
@@ -68,6 +70,7 @@ async function fetchOgImageViaTavily(url: string): Promise<string | undefined> {
       raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
     const imageUrl = match?.[1]
     if (!imageUrl) return undefined
+    if (LAZY_IMAGE_PATTERNS.some(p => imageUrl.toLowerCase().includes(p))) return undefined
     try { return new URL(imageUrl, url).href } catch { return imageUrl }
   } catch {
     return undefined
@@ -114,13 +117,12 @@ async function fetchOgImage(url: string): Promise<string | undefined> {
       html.match(/<link[^>]+rel=["']preload["'][^>]+as=["']image["'][^>]+href=["']([^"']+)["']/i)
     const imageUrl = match?.[1]
     if (!imageUrl) return undefined
+    if (LAZY_IMAGE_PATTERNS.some(p => imageUrl.toLowerCase().includes(p))) return undefined
     try { return new URL(imageUrl, url).href } catch { return imageUrl }
   } catch {
     return undefined
   }
 }
-
-const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
 
 function isLazyLoadImage(url: string | undefined): boolean {
   if (!url) return false
