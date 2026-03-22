@@ -207,7 +207,8 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
 
 export async function fetchNewsForTopic(
   topic: string,
-  existingTitles: string[] = []
+  existingTitles: string[] = [],
+  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number }) => void
 ): Promise<NewsItem[]> {
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
@@ -235,7 +236,7 @@ export async function fetchNewsForTopic(
   )
 
   if (results.length === 0) {
-    console.log(`[feed][diag] topic="${topic}" tavily=${allResults.length} filtered=0 gemini=0 kept=0 dropped=0`)
+    onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0 })
     return []
   }
 
@@ -357,7 +358,7 @@ ${context}`
     })
   }
 
-  console.log(`[feed][diag] topic="${topic}" tavily=${allResults.length} filtered=${results.length} gemini=${parsed.length} kept=${items.length} dropped=${dropped}`)
+  onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: parsed.length, kept: items.length, dropped })
   return items
 }
 

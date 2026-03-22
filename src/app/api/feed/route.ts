@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
+  const debug = req.nextUrl.searchParams.get('debug') === '1'
   const body = await req.json()
   const forceRefresh: boolean = body.forceRefresh ?? false
   const db = getSupabaseAdmin()
@@ -42,6 +43,12 @@ export async function POST(req: NextRequest) {
     await writer.write(encoder.encode(JSON.stringify({ items }) + '\n'))
   }
 
+  const debugBuffer: any[] = []
+  const emitDebug = (payload: any) => {
+    if (!debug) return
+    debugBuffer.push(payload)
+  }
+
   const backfillImages = async (rows: any[]) => {
     const candidates = rows
       .filter(r => !r.image_url && Array.isArray(r.sources) && r.sources.length > 0)
@@ -61,7 +68,7 @@ export async function POST(req: NextRequest) {
   }
 
   const fetchAndStore = async (topic: string, existingTitles: string[]) => {
-    const fresh = await fetchNewsForTopic(topic, existingTitles)
+    const fresh = await fetchNewsForTopic(topic, existingTitles, (stats) => emitDebug({ topic, ...stats }))
     if (fresh.length === 0) return []
 
     const rows = fresh.map(itemToRow)
@@ -84,6 +91,9 @@ export async function POST(req: NextRequest) {
 
   ;(async () => {
     await writer.write(encoder.encode(JSON.stringify({ topics }) + '\n'))
+    if (debug) {
+      await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'start' } }) + '\n'))
+    }
 
     // 1. Load existing cache + fetch times
     const [{ data: allArticles }, fetchResult] = await Promise.all([
@@ -155,6 +165,9 @@ export async function POST(req: NextRequest) {
 
     // 5. Fetch inline so we can notify completion to the client
     await fetchAll(true)
+    if (debug) {
+      await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'done', items: debugBuffer } }) + '\n'))
+    }
     await writer.write(encoder.encode(JSON.stringify({ refreshComplete: true, newItemsCount }) + '\n'))
     await writer.close()
   })()
