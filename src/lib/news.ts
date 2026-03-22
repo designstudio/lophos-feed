@@ -165,9 +165,8 @@ export async function fetchImageForSources(sources: { url: string }[]): Promise<
 }
 
 function buildQuery(topic: string): string {
-  const todayISO = new Date().toISOString().split('T')[0]
-  // Add recency terms + today's date to bias freshness
-  return `"${topic}" news hoje OR "últimas 24h" OR "${todayISO}"`
+  // time_range: 'day' already filters by recency — keep query focused on the topic
+  return `${topic} news 2026`
 }
 
 function normalizeText(s: string): string {
