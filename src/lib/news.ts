@@ -206,18 +206,18 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
   return score >= 0.15
 }
 
-export async function fetchNewsForTopic(
-  topic: string,
-  existingTitles: string[] = [],
-  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; geminiRaw?: string; droppedItems?: { title: string; score: number }[] }) => void
-): Promise<NewsItem[]> {
+type TavilyResult = { url: string; title: string; content: string; image?: string }
+
+// Fetches Tavily, filters results, and saves to raw_articles. No Gemini call.
+// Used by the collect cron (Phase A).
+export async function collectRawForTopic(topic: string): Promise<TavilyResult[]> {
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       api_key: TAVILY_KEY,
       query: buildQuery(topic),
-      search_depth: 'advanced', // better quality results
+      search_depth: 'advanced',
       max_results: 8,
       time_range: 'day',
       topic: 'news',
@@ -230,32 +230,63 @@ export async function fetchNewsForTopic(
   if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
   const tavilyData = await tavilyRes.json()
 
-  // Filter — keep only real articles from quality domains
   const allResults = (tavilyData.results || [])
-  const results: any[] = []
+  const results: TavilyResult[] = []
+  for (const r of allResults) {
+    if (!r?.url || !r?.title || !r?.content || r.content.length <= 100) continue
+    if (!isArticleUrl(r.url)) continue
+    results.push({ url: r.url, title: r.title, content: r.content, image: r.image })
+  }
+
+  if (results.length === 0) return []
+
+  const db = getSupabaseAdmin()
+  const { error } = await db.from('raw_articles').insert({
+    topic,
+    tavily_results: results,
+    query: buildQuery(topic),
+    status: 'raw',
+  })
+  if (error) console.warn('[news] collectRawForTopic: failed to save raw_articles:', error.message)
+
+  return results
+}
+
+// Fetches Tavily + processes with Gemini in one shot. Used by POST /api/feed (on-demand).
+export async function fetchNewsForTopic(
+  topic: string,
+  existingTitles: string[] = [],
+  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; geminiRaw?: string; droppedItems?: { title: string; score: number }[] }) => void
+): Promise<NewsItem[]> {
+  const tavilyRes = await fetch('https://api.tavily.com/search', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: TAVILY_KEY,
+      query: buildQuery(topic),
+      search_depth: 'advanced',
+      max_results: 8,
+      time_range: 'day',
+      topic: 'news',
+      include_answer: false,
+      include_raw_content: true,
+      include_images: true,
+    }),
+  })
+
+  if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
+  const tavilyData = await tavilyRes.json()
+
+  const allResults = (tavilyData.results || [])
+  const results: TavilyResult[] = []
   const rejected: { url?: string; reason: string }[] = []
   for (const r of allResults) {
-    if (!r?.url) {
-      if (rejected.length < 12) rejected.push({ reason: 'missing_url' })
-      continue
-    }
-    if (!r?.title) {
-      if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_title' })
-      continue
-    }
-    if (!r?.content) {
-      if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_content' })
-      continue
-    }
-    if (r.content.length <= 100) {
-      if (rejected.length < 12) rejected.push({ url: r.url, reason: 'content_too_short' })
-      continue
-    }
-    if (!isArticleUrl(r.url)) {
-      if (rejected.length < 12) rejected.push({ url: r.url, reason: 'non_article_url' })
-      continue
-    }
-    results.push(r)
+    if (!r?.url) { if (rejected.length < 12) rejected.push({ reason: 'missing_url' }); continue }
+    if (!r?.title) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_title' }); continue }
+    if (!r?.content) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_content' }); continue }
+    if (r.content.length <= 100) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'content_too_short' }); continue }
+    if (!isArticleUrl(r.url)) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'non_article_url' }); continue }
+    results.push({ url: r.url, title: r.title, content: r.content, image: r.image })
   }
 
   if (results.length === 0) {
@@ -263,16 +294,10 @@ export async function fetchNewsForTopic(
     return []
   }
 
-  // Save raw Tavily results before Gemini processing (Phase 2 staging)
   const db = getSupabaseAdmin()
   const { error: rawError } = await db.from('raw_articles').insert({
     topic,
-    tavily_results: results.map((r: any) => ({
-      url: r.url,
-      title: r.title,
-      content: r.content,
-      image: r.image,
-    })),
+    tavily_results: results,
     query: buildQuery(topic),
     status: 'raw',
   })

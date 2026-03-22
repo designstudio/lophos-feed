@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import { getSupabaseAdmin } from './supabase'
-import { fetchNewsForTopic, processRawBatch } from './news'
+import { collectRawForTopic, fetchNewsForTopic, processRawBatch } from './news'
 import { NewsItem } from './types'
 
 const COLLECT_INTERVAL = '0 */6 * * *'       // 00:00, 06:00, 12:00, 18:00 — Tavily only
@@ -43,11 +43,7 @@ async function collectAllFeeds() {
     const batch = uniqueTopics.slice(i, i + concurrency)
     await Promise.allSettled(batch.map(async (topic) => {
       try {
-        // fetchNewsForTopic saves to raw_articles internally (Phase 2),
-        // but also calls Gemini. For pure collection we only need the Tavily part.
-        // Until we split fetchNewsForTopic further, call it and discard the result —
-        // raw_articles will still be populated as a side-effect.
-        await fetchNewsForTopic(topic, [])
+        await collectRawForTopic(topic)
         console.log(`[cron] collect ✓ ${topic}`)
       } catch (err) {
         console.error(`[cron] collect ✗ ${topic}:`, err)
