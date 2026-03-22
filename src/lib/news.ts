@@ -202,7 +202,6 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
     .join(' ')
 
   const score = textOverlapScore(genText, sourceText)
-  console.log(`[relevance-check] "${title.slice(0, 60)}..." score=${score.toFixed(3)} (threshold=0.15) -> ${score >= 0.15 ? 'PASS' : 'FAIL'}`)
   return score >= 0.15
 }
 

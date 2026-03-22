@@ -203,6 +203,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     // Save as ordered list: weather first, then active widgets in user-defined order
     const saved = ['weather', ...order.filter(id => active.includes(id))]
     localStorage.setItem('lophos_widgets', JSON.stringify(saved))
+    window.dispatchEvent(new Event('lophos_widgets_updated'))
   }
 
   const toggleWidget = (id: string) => {

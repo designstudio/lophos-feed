@@ -26,19 +26,17 @@ export function RightSidebar({ topics }: { topics: string[] }) {
 
     handler()
 
-    // Listen for changes from the settings modal
+    // Listen for cross-tab changes and same-tab custom event from Sidebar
     window.addEventListener('storage', handler)
-    // Also poll every 500ms for same-tab changes (storage event doesn't fire in same tab)
-    const interval = setInterval(handler, 500)
+    window.addEventListener('lophos_widgets_updated', handler)
     return () => {
       window.removeEventListener('storage', handler)
-      clearInterval(interval)
+      window.removeEventListener('lophos_widgets_updated', handler)
     }
   }, [])
 
   // Widgets to render in saved order
   const widgetsToRender = order.filter(id => active.includes(id))
-  const activeNonWeather = widgetsToRender.filter(id => id !== 'weather')
 
   return (
     <aside className="flex flex-col gap-4 py-6">

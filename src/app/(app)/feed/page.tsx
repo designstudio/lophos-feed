@@ -7,6 +7,7 @@ import { Feed } from '@solar-icons/react-perf/Linear'
 import { NewsItem } from '@/lib/types'
 import { useFeedContext } from '@/components/FeedContext'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@clerk/nextjs'
 
 function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
   const posInCycle = blockIndex % 3
@@ -126,6 +127,7 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
 }
 
 export default function FeedPage() {
+  const { isLoaded, isSignedIn } = useAuth()
   const { setRefreshing, onRefreshCallback, updatesReady, setUpdatesReady, onApplyUpdatesCallback } = useFeedContext()
   const [items, setItems]         = useState<NewsItem[]>([])
   const [topics, setTopics]       = useState<string[]>([])
@@ -314,7 +316,7 @@ export default function FeedPage() {
     onRefreshCallback.current = () => fetchFeed(true)
   }, [fetchFeed])
 
-  useEffect(() => { fetchFeed() }, [])
+  useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
 
   useEffect(() => {
     const el = sentinelRef.current
