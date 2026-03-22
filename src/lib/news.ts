@@ -375,13 +375,9 @@ ${context}`
     const cluster = clusters[groupIndex - 1]
     if (!cluster) { dropped++; continue }
     const idxs: number[] = (item.sourceIndexes || [1]).map((n: number) => n - 1)
-    let resolvedIdxs = idxs
+    const resolvedIdxs = idxs
       .filter((idx) => idx >= 0 && idx < cluster.indices.length)
       .map((idx) => cluster.indices[idx])
-    if (resolvedIdxs.length === 0) {
-      // Fallback to top sources in the cluster when model indices are invalid
-      resolvedIdxs = cluster.indices.slice(0, 3)
-    }
     const sources: NewsSource[] = resolvedIdxs.map((idx) => {
       const r = results[idx]
       return {
@@ -390,6 +386,14 @@ ${context}`
         favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
       }
     })
+    if (sources.length === 0 && cluster.indices.length > 0) {
+      const r = results[cluster.indices[0]]
+      sources.push({
+        name: new URL(r.url).hostname.replace('www.', ''),
+        url: r.url,
+        favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
+      })
+    }
 
     if (!isGeneratedItemRelevant(item, sources, results)) {
       dropped++
