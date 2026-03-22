@@ -165,8 +165,8 @@ export async function fetchImageForSources(sources: { url: string }[]): Promise<
 
 function buildQuery(topic: string): string {
   const todayISO = new Date().toISOString().split('T')[0]
-  // Add "news" explicitly and today's date to force recency
-  return `"${topic}" news ${todayISO}`
+  // Add recency terms + today's date to bias freshness
+  return `"${topic}" news hoje OR "últimas 24h" OR "${todayISO}"`
 }
 
 export async function fetchNewsForTopic(
@@ -180,10 +180,11 @@ export async function fetchNewsForTopic(
       api_key: TAVILY_KEY,
       query: buildQuery(topic),
       search_depth: 'advanced', // better quality results
-      max_results: 10,
-      days: 2,
+      max_results: 8,
+      time_range: 'day',
+      topic: 'news',
       include_answer: false,
-      include_raw_content: false,
+      include_raw_content: true,
       include_images: true,
     }),
   })
