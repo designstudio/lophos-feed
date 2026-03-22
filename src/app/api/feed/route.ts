@@ -19,10 +19,6 @@ function isSearchStale(lastFetched: string | null): boolean {
   return Date.now() - new Date(lastFetched).getTime() > FETCH_INTERVAL_MINUTES * 60 * 1000
 }
 
-function topicSpecificity(topic: string): number {
-  return topic.trim().split(/\s+/).filter(Boolean).length
-}
-
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
@@ -244,14 +240,13 @@ Responda APENAS com JSON válido no formato:
     return results
   }
 
-  const fetchAndStore = async (topic: string, existingTitles: string[], globalExistingTitles: string[]) => {
-    const combinedTitles = Array.from(new Set([...existingTitles, ...globalExistingTitles]))
+  const fetchAndStore = async (topic: string, existingTitles: string[]) => {
     let fresh: NewsItem[] = []
     const rssResults = await fetchRssResults(topic)
     if (rssResults.length > 0) {
-      fresh = await fetchNewsForTopicFromResults(topic, rssResults, combinedTitles, (stats) => emitDebug({ topic, source: 'rss', ...stats }))
+      fresh = await fetchNewsForTopicFromResults(topic, rssResults, existingTitles, (stats) => emitDebug({ topic, source: 'rss', ...stats }))
     } else {
-      fresh = await fetchNewsForTopic(topic, combinedTitles, (stats) => emitDebug({ topic, source: 'tavily', ...stats }))
+      fresh = await fetchNewsForTopic(topic, existingTitles, (stats) => emitDebug({ topic, source: 'tavily', ...stats }))
     }
     if (fresh.length === 0) return []
 
@@ -267,9 +262,6 @@ Responda APENAS com JSON válido no formato:
       .order('cached_at', { ascending: false }).limit(rows.length)
     if (inserted?.length) {
       await db.from('articles').upsert(inserted, { onConflict: 'id' })
-      for (const row of inserted) {
-        if (row?.title) globalExistingTitles.push(row.title)
-      }
       return inserted.map(rowToItem)
     }
 
@@ -327,7 +319,6 @@ Responda APENAS com JSON válido no formato:
         new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
         new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
       )
-    const globalExistingTitles = allExisting.map((item) => item.title).filter(Boolean)
     if (allExisting.length > 0) await send(allExisting)
     // Backfill missing images in background for cached items
     backfillImages(allArticles ?? []).catch(e => console.error('[feed] image backfill error:', e))
@@ -338,9 +329,9 @@ Responda APENAS com JSON válido no formato:
     }
 
     // 3. Which topics need refresh?
-    const topicsToFetch = topics
-      .filter(t => forceRefresh || isColdStart || isSearchStale(lastFetchByTopic.get(t) ?? null))
-      .sort((a, b) => topicSpecificity(b) - topicSpecificity(a))
+    const topicsToFetch = topics.filter(t =>
+      forceRefresh || isColdStart || isSearchStale(lastFetchByTopic.get(t) ?? null)
+    )
     if (topicsToFetch.length === 0) { await writer.close(); return }
 
     // 4. Mark as fetching immediately to prevent duplicate requests
@@ -351,17 +342,20 @@ Responda APENAS com JSON válido no formato:
     )
     let newItemsCount = 0
     const fetchAll = async (streamResults: boolean) => {
-      // Process sequentially to preserve specificity-based priority and avoid cross-topic duplicates.
-      for (const topic of topicsToFetch) {
-        try {
-          const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
-          const inserted = await fetchAndStore(topic, existingTitles, globalExistingTitles)
-          if (inserted.length > 0) newItemsCount += inserted.length
-          if (streamResults && inserted.length > 0) await send(inserted)
-        } catch (e) {
-          if (debug) emitDebug({ topic, error: e instanceof Error ? e.message : String(e) })
-          console.error(`[feed] error "${topic}":`, e)
-        }
+      const concurrency = 3
+      for (let i = 0; i < topicsToFetch.length; i += concurrency) {
+        const batch = topicsToFetch.slice(i, i + concurrency)
+        await Promise.allSettled(batch.map(async (topic) => {
+          try {
+            const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
+            const inserted = await fetchAndStore(topic, existingTitles)
+            if (inserted.length > 0) newItemsCount += inserted.length
+            if (streamResults && inserted.length > 0) await send(inserted)
+          } catch (e) {
+            if (debug) emitDebug({ topic, error: e instanceof Error ? e.message : String(e) })
+            console.error(`[feed] error "${topic}":`, e)
+          }
+        }))
       }
     }
 
