@@ -229,11 +229,15 @@ export async function fetchNewsForTopic(
   const tavilyData = await tavilyRes.json()
 
   // Filter — keep only real articles from quality domains
-  const results = (tavilyData.results || []).filter((r: any) =>
+  const allResults = (tavilyData.results || [])
+  const results = allResults.filter((r: any) =>
     r.url && r.title && r.content && r.content.length > 100 && isArticleUrl(r.url)
   )
 
-  if (results.length === 0) return []
+  if (results.length === 0) {
+    console.log(`[feed][diag] topic="${topic}" tavily=${allResults.length} filtered=0 gemini=0 kept=0 dropped=0`)
+    return []
+  }
 
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -303,6 +307,7 @@ ${context}`
   const parsed = JSON.parse(match[0])
   const now = new Date().toISOString()
 
+  let dropped = 0
   const items: NewsItem[] = []
   for (let i = 0; i < parsed.length; i++) {
     const item = parsed[i]
@@ -319,6 +324,7 @@ ${context}`
       })
 
     if (!isGeneratedItemRelevant(item, sources, results)) {
+      dropped++
       continue
     }
 
@@ -351,6 +357,7 @@ ${context}`
     })
   }
 
+  console.log(`[feed][diag] topic="${topic}" tavily=${allResults.length} filtered=${results.length} gemini=${parsed.length} kept=${items.length} dropped=${dropped}`)
   return items
 }
 
