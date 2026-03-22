@@ -278,11 +278,32 @@ export async function fetchNewsForTopic(
   })
   if (rawError) console.warn('[news] Failed to save raw_articles:', rawError.message)
 
+  const items = await processRawBatch(topic, results, existingTitles, (batchStats) => {
+    onDiag?.({ tavily: allResults.length, filtered: results.length, rejected, ...batchStats })
+  })
+  return items
+}
+
+type DiagCallback = (stats: {
+  gemini: number; kept: number; dropped: number
+  geminiRaw?: string; droppedItems?: { title: string; score: number }[]
+}) => void
+
+// Processes filtered Tavily results through Gemini and returns NewsItems.
+// Called by fetchNewsForTopic (on-demand) and processRawFeeds (cron batch).
+export async function processRawBatch(
+  topic: string,
+  results: { url: string; title: string; content: string; image?: string }[],
+  existingTitles: string[] = [],
+  onDiag?: DiagCallback
+): Promise<NewsItem[]> {
+  if (results.length === 0) return []
+
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
   const context = results
-    .map((r: any, i: number) =>
+    .map((r, i) =>
       `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
     )
     .join('\n\n')
@@ -375,7 +396,7 @@ ${context}`
   const rawPreview = raw ? raw.slice(0, 800) : ''
   const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
   if (!match) {
-    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, rejected, geminiRaw: rawPreview })
+    onDiag?.({ gemini: 0, kept: 0, dropped: 0, geminiRaw: rawPreview })
     return []
   }
 
@@ -383,7 +404,7 @@ ${context}`
   try {
     parsed = JSON.parse(match[0])
   } catch {
-    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, rejected, geminiRaw: rawPreview })
+    onDiag?.({ gemini: 0, kept: 0, dropped: 0, geminiRaw: rawPreview })
     return []
   }
   const now = new Date().toISOString()
@@ -405,13 +426,12 @@ ${context}`
         }
       })
 
-    // Calculate relevance score for diagnostics
     const title = item?.title || ''
     const summary = item?.summary || ''
     const genText = `${title} ${summary}`
     const sourceText = sources
       .map((s) => {
-        const r = results.find((rr: any) => rr?.url === s.url)
+        const r = results.find((rr) => rr?.url === s.url)
         return r ? `${r.title || ''} ${r.content || ''}` : ''
       })
       .join(' ')
@@ -423,36 +443,26 @@ ${context}`
       continue
     }
 
-    // Prefer og:image from the actual sources; fallback to Tavily image if needed
     const primaryResult = results[idxs[0]] ?? results[0]
-    const tavilyImage: string | undefined = primaryResult?.image ?? (tavilyData.images?.[idxs[0]] ?? undefined)
-    let imageUrl: string | undefined = tavilyImage
+    let imageUrl: string | undefined = primaryResult?.image
     if (!imageUrl || !isImageFromSources(imageUrl, sources)) {
       const ogImage = await fetchImageForSources(sources)
       if (ogImage) imageUrl = ogImage
     }
 
-    const safeId = randomUUID()
-
     const conclusion = typeof item.conclusion === 'string'
       ? item.conclusion
       : item.conclusion?.body || undefined
 
-    // Extract tavily raw data for the sources used in this article
     const tavilyRaw = idxs
       .filter((idx) => idx >= 0 && idx < results.length)
       .map((idx) => {
         const r = results[idx]
-        return {
-          url: r.url,
-          title: r.title,
-          content: r.content,
-          image: r.image,
-        }
+        return { url: r.url, title: r.title, content: r.content, image: r.image }
       })
 
     items.push({
-      id: safeId,
+      id: randomUUID(),
       topic,
       title: item.title,
       summary: item.summary,
@@ -466,7 +476,7 @@ ${context}`
     })
   }
 
-  onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: parsed.length, kept: items.length, dropped, rejected, geminiRaw: rawPreview, droppedItems })
+  onDiag?.({ gemini: parsed.length, kept: items.length, dropped, geminiRaw: rawPreview, droppedItems })
   return items
 }
 
