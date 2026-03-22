@@ -126,18 +126,77 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
 }
 
 export default function FeedPage() {
-  const { setRefreshing, onRefreshCallback } = useFeedContext()
+  const { setRefreshing, onRefreshCallback, updatesReady, setUpdatesReady, onApplyUpdatesCallback } = useFeedContext()
   const [items, setItems]         = useState<NewsItem[]>([])
   const [topics, setTopics]       = useState<string[]>([])
   const [streaming, setStreamingLocal] = useState(false)
   const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
   const [hasData, setHasData]     = useState(false)
   const [error, setError]         = useState<string | null>(null)
+  const [pendingItems, setPendingItems] = useState<NewsItem[]>([])
+  const [coldStartLoading, setColdStartLoading] = useState(false)
+  const [coldMsgIndex, setColdMsgIndex] = useState(0)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [visibleBlocks, setVisibleBlocks] = useState(4)
   const sentinelRef = useRef<HTMLDivElement>(null)
   const abortRef    = useRef<AbortController | null>(null)
   const scrollRef   = useRef<HTMLDivElement>(null)
+  const initialCacheAppliedRef = useRef(false)
+  const pendingRef = useRef<NewsItem[]>([])
+  const coldStartRef = useRef(false)
+
+  const coldStartMessages = [
+    'Estamos preparando o seu feed.',
+    'Primeira visita pode levar alguns segundos.',
+    'Ajustando tudo com base nos seus tópicos.',
+    'Personalizando o feed pra você.',
+  ]
+
+  useEffect(() => {
+    if (!coldStartLoading) return
+    const id = setInterval(() => {
+      setColdMsgIndex((i) => (i + 1) % coldStartMessages.length)
+    }, 2600)
+    return () => clearInterval(id)
+  }, [coldStartLoading])
+
+  const applyPendingUpdates = useCallback(() => {
+    if (pendingItems.length === 0) return
+    setItems(prev => {
+      const byId = new Map(prev.map(x => [x.id, x]))
+      for (const x of pendingItems) {
+        const existing = byId.get(x.id)
+        if (!existing || (!existing.imageUrl && x.imageUrl)) {
+          byId.set(x.id, x)
+        }
+      }
+      const merged = Array.from(byId.values())
+      merged.sort((a, b) =>
+        new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
+        new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
+      )
+      return merged
+    })
+    setPending([])
+    setUpdatesReady(false)
+  }, [pendingItems, setUpdatesReady, setPending, setItems])
+
+  useEffect(() => {
+    onApplyUpdatesCallback.current = () => applyPendingUpdates()
+  }, [onApplyUpdatesCallback, applyPendingUpdates])
+
+  const setPending = (next: NewsItem[] | ((prev: NewsItem[]) => NewsItem[])) => {
+    setPendingItems(prev => {
+      const resolved = typeof next === 'function' ? next(prev) : next
+      pendingRef.current = resolved
+      return resolved
+    })
+  }
+
+  const setColdStart = (v: boolean) => {
+    coldStartRef.current = v
+    setColdStartLoading(v)
+  }
 
   const fetchFeed = useCallback(async (force = false) => {
     abortRef.current?.abort()
@@ -145,6 +204,10 @@ export default function FeedPage() {
     abortRef.current = ctrl
     setStreaming(true)
     setError(null)
+    setUpdatesReady(false)
+    setPending([])
+    setColdStart(false)
+    initialCacheAppliedRef.current = false
     if (force) { setItems([]); setHasData(false) }
 
     try {
@@ -179,25 +242,61 @@ export default function FeedPage() {
           try {
             const chunk = JSON.parse(line)
             if (chunk.topics) { setTopics(chunk.topics); continue }
-            if (chunk.items?.length) {
-              setItems(prev => {
-                const byId = new Map(prev.map(x => [x.id, x]))
-                for (const x of chunk.items as NewsItem[]) {
-                  const existing = byId.get(x.id)
-                  // Upsert: replace if new item has image and existing doesn't (or doesn't exist)
-                  if (!existing || (!existing.imageUrl && x.imageUrl)) {
-                    byId.set(x.id, x)
-                  }
+            if (chunk.coldStart) {
+              setError(null)
+              setColdStart(true)
+              continue
+            }
+            if (chunk.refreshComplete) {
+              if (coldStartRef.current) {
+                if (pendingRef.current.length > 0) {
+                  setItems(pendingRef.current)
+                  setHasData(true)
                 }
-                const merged = Array.from(byId.values())
-                // Always keep most recent first
-                merged.sort((a, b) =>
-                  new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
-                  new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
-                )
-                return merged
-              })
-              setHasData(true)
+                setPending([])
+                setColdStart(false)
+              } else if (pendingRef.current.length > 0) {
+                setUpdatesReady(true)
+              }
+              continue
+            }
+            if (chunk.items?.length) {
+              if (!initialCacheAppliedRef.current && !coldStartLoading) {
+                setItems(prev => {
+                  const byId = new Map(prev.map(x => [x.id, x]))
+                  for (const x of chunk.items as NewsItem[]) {
+                    const existing = byId.get(x.id)
+                    if (!existing || (!existing.imageUrl && x.imageUrl)) {
+                      byId.set(x.id, x)
+                    }
+                  }
+                  const merged = Array.from(byId.values())
+                  merged.sort((a, b) =>
+                    new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
+                    new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
+                  )
+                  return merged
+                })
+                setHasData(true)
+                setError(null)
+                initialCacheAppliedRef.current = true
+              } else {
+                setPending(prev => {
+                  const byId = new Map(prev.map(x => [x.id, x]))
+                  for (const x of chunk.items as NewsItem[]) {
+                    const existing = byId.get(x.id)
+                    if (!existing || (!existing.imageUrl && x.imageUrl)) {
+                      byId.set(x.id, x)
+                    }
+                  }
+                  const merged = Array.from(byId.values())
+                  merged.sort((a, b) =>
+                    new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
+                    new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
+                  )
+                  return merged
+                })
+              }
             }
           } catch {}
         }
@@ -234,12 +333,13 @@ export default function FeedPage() {
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
   const hasMore       = visibleBlocks < allBlocks.length
   const showSkeleton  = !hasData && streaming
-  const showEmpty     = !hasData && !streaming
+  const showEmpty     = !hasData && !streaming && !coldStartLoading
   const emptyMessage  = error
     ? (error.toLowerCase().includes('no topics')
         ? 'Nenhum tópico salvo. Selecione seus tópicos no onboarding ou em Configurações.'
         : error)
     : 'Nenhuma notícia encontrada.'
+
 
   return (
     <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
@@ -280,7 +380,17 @@ export default function FeedPage() {
           <div className="flex gap-10 py-6">
             <div className="flex-1 min-w-0">
 
-              {showSkeleton && <><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></>}
+              {coldStartLoading && (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <Feed size={48} className="text-ink-muted mb-4 animate-spin" />
+                  <p className="text-ink-secondary text-sm mb-2">{coldStartMessages[coldMsgIndex]}</p>
+                  <p className="text-ink-tertiary text-xs">Isso pode levar alguns segundos.</p>
+                </div>
+              )}
+
+              {showSkeleton && !coldStartLoading && (
+                <><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></>
+              )}
 
               {hasData && streaming && (
                 <div className="flex items-center gap-2 text-xs text-ink-tertiary mb-4 px-1">
@@ -288,6 +398,17 @@ export default function FeedPage() {
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeDashoffset="12"/>
                   </svg>
                   Buscando novidades…
+                </div>
+              )}
+
+              {updatesReady && (
+                <div className="mb-4 px-1">
+                  <button
+                    onClick={applyPendingUpdates}
+                    className="text-sm text-white bg-ink-primary hover:bg-ink-secondary px-3 py-2 rounded-full transition-colors"
+                  >
+                    Seu feed tem novas notícias — ver agora
+                  </button>
                 </div>
               )}
 

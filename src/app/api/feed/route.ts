@@ -91,9 +91,14 @@ export async function POST(req: NextRequest) {
       )
     if (allExisting.length > 0) await send(allExisting)
 
+    const isColdStart = allExisting.length === 0
+    if (isColdStart) {
+      await writer.write(encoder.encode(JSON.stringify({ coldStart: true }) + '\n'))
+    }
+
     // 3. Which topics need refresh?
     const topicsToFetch = topics.filter(t =>
-      forceRefresh || isSearchStale(lastFetchByTopic.get(t) ?? null)
+      forceRefresh || isColdStart || isSearchStale(lastFetchByTopic.get(t) ?? null)
     )
     if (topicsToFetch.length === 0) { await writer.close(); return }
 
@@ -103,6 +108,7 @@ export async function POST(req: NextRequest) {
       topicsToFetch.map(topic => ({ topic, last_fetched: now, updated_at: now })),
       { onConflict: 'topic' }
     )
+    let newItemsCount = 0
     const fetchAll = async (streamResults: boolean) => {
       const concurrency = 3
       for (let i = 0; i < topicsToFetch.length; i += concurrency) {
@@ -111,6 +117,7 @@ export async function POST(req: NextRequest) {
           try {
             const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
             const inserted = await fetchAndStore(topic, existingTitles)
+            if (inserted.length > 0) newItemsCount += inserted.length
             if (streamResults && inserted.length > 0) await send(inserted)
           } catch (e) {
             console.error(`[feed] error "${topic}":`, e)
@@ -119,16 +126,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. If there is no cache yet, fetch inline so the user sees results immediately.
-    if (allExisting.length === 0) {
-      await fetchAll(true)
-      await writer.close()
-      return
-    }
-
-    // 6. Otherwise close stream and fetch in background
+    // 5. Fetch inline so we can notify completion to the client
+    await fetchAll(true)
+    await writer.write(encoder.encode(JSON.stringify({ refreshComplete: true, newItemsCount }) + '\n'))
     await writer.close()
-    fetchAll(false).catch(e => console.error('[feed] background fetch error:', e))
   })()
 
   return new Response(stream.readable, {

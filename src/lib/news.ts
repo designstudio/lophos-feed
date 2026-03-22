@@ -5,6 +5,8 @@ const TAVILY_KEY = process.env.TAVILY_API_KEY!
 const GEMINI_KEY = process.env.GEMINI_API_KEY!
 
 export const CACHE_TTL_MINUTES = 120
+const IMAGE_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+const imageCache = new Map<string, { url?: string; ts: number }>()
 
 // Domains to exclude — low quality sources
 const LOW_QUALITY_DOMAINS = [
@@ -116,19 +118,45 @@ async function fetchOgImage(url: string): Promise<string | undefined> {
     return undefined
   }
 }
+
+function isImageFromSources(imageUrl: string | undefined, sources: NewsSource[]): boolean {
+  if (!imageUrl) return false
+  try {
+    const imgHost = new URL(imageUrl).hostname.replace(/^www\./, '')
+    return sources.some((s) => {
+      if (!s?.url) return false
+      const srcHost = new URL(s.url).hostname.replace(/^www\./, '')
+      return imgHost === srcHost || imgHost.endsWith(`.${srcHost}`)
+    })
+  } catch {
+    return false
+  }
+}
 // Exported so PATCH /api/article can re-fetch just the image for a specific article
 export async function fetchImageForSources(sources: { url: string }[]): Promise<string | undefined> {
   // Layer 1: direct fetch with real browser UA
   for (const s of sources) {
     if (s?.url) {
+      const cached = imageCache.get(s.url)
+      if (cached && Date.now() - cached.ts < IMAGE_CACHE_TTL_MS) {
+        if (cached.url) return cached.url
+        continue
+      }
       const img = await fetchOgImage(s.url)
+      imageCache.set(s.url, { url: img, ts: Date.now() })
       if (img) return img
     }
   }
   // Layer 2: Tavily Extract fallback
   for (const s of sources) {
     if (s?.url) {
+      const cached = imageCache.get(s.url)
+      if (cached && Date.now() - cached.ts < IMAGE_CACHE_TTL_MS) {
+        if (cached.url) return cached.url
+        continue
+      }
       const img = await fetchOgImageViaTavily(s.url)
+      imageCache.set(s.url, { url: img, ts: Date.now() })
       if (img) return img
     }
   }
@@ -237,7 +265,9 @@ ${context}`
   const parsed = JSON.parse(match[0])
   const now = new Date().toISOString()
 
-  return parsed.map((item: any, i: number): NewsItem => {
+  const items: NewsItem[] = []
+  for (let i = 0; i < parsed.length; i++) {
+    const item = parsed[i]
     const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
     const sources: NewsSource[] = idxs
       .filter((idx) => idx >= 0 && idx < results.length)
@@ -250,9 +280,14 @@ ${context}`
         }
       })
 
-    // Use Tavily's image field directly — no external fetching needed
+    // Prefer og:image from the actual sources; fallback to Tavily image if needed
     const primaryResult = results[idxs[0]] ?? results[0]
-    const imageUrl: string | undefined = primaryResult?.image ?? (tavilyData.images?.[idxs[0]] ?? undefined)
+    const tavilyImage: string | undefined = primaryResult?.image ?? (tavilyData.images?.[idxs[0]] ?? undefined)
+    let imageUrl: string | undefined = tavilyImage
+    if (!imageUrl || !isImageFromSources(imageUrl, sources)) {
+      const ogImage = await fetchImageForSources(sources)
+      if (ogImage) imageUrl = ogImage
+    }
 
     const safeId = randomUUID()
 
@@ -260,7 +295,7 @@ ${context}`
       ? item.conclusion
       : item.conclusion?.body || undefined
 
-    return {
+    items.push({
       id: safeId,
       topic,
       title: item.title,
@@ -271,8 +306,10 @@ ${context}`
       imageUrl,
       publishedAt: now,
       cachedAt: now,
-    }
-  })
+    })
+  }
+
+  return items
 }
 
 export function isCacheStale(cachedAt: string): boolean {
