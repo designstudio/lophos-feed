@@ -17,7 +17,7 @@ export function startFeedCron() {
   })
 }
 
-async function refreshAllFeeds() {
+export async function refreshAllFeeds() {
   const db = getSupabaseAdmin()
 
   // Get all topics (dedup in memory)
