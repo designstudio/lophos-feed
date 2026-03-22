@@ -108,6 +108,22 @@ export async function POST(req: NextRequest) {
       return new Date(d).getTime() >= new Date(cutoffIso).getTime()
     }
 
+    if (debug) {
+      const { data: recentRows } = await db
+        .from('news_cache')
+        .select('topic, published_at, cached_at')
+        .in('topic', topics)
+        .or(`published_at.gte.${cutoffIso},cached_at.gte.${cutoffIso}`)
+
+      const counts: Record<string, number> = {}
+      for (const t of topics) counts[t] = 0
+      for (const row of (recentRows ?? [])) {
+        const t = row.topic as string
+        counts[t] = (counts[t] || 0) + 1
+      }
+      await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'db', recentCounts: counts } }) + '\n'))
+    }
+
     const fetchTimes = fetchResult.data ?? []
     const byTopic = new Map<string, any[]>()
     for (const row of (allArticles ?? []).filter(isRecentRow)) {
