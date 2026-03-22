@@ -132,6 +132,7 @@ export default function FeedPage() {
   const [streaming, setStreamingLocal] = useState(false)
   const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
   const [hasData, setHasData]     = useState(false)
+  const [error, setError]         = useState<string | null>(null)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [visibleBlocks, setVisibleBlocks] = useState(4)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -143,6 +144,7 @@ export default function FeedPage() {
     const ctrl = new AbortController()
     abortRef.current = ctrl
     setStreaming(true)
+    setError(null)
     if (force) { setItems([]); setHasData(false) }
 
     try {
@@ -152,6 +154,15 @@ export default function FeedPage() {
         body: JSON.stringify({ topics: [], forceRefresh: force }),
         signal: ctrl.signal,
       })
+      if (!res.ok) {
+        let msg = 'Erro ao carregar feed.'
+        try {
+          const data = await res.json()
+          if (typeof data?.error === 'string') msg = data.error
+        } catch {}
+        setError(msg)
+        return
+      }
       if (!res.body) return
       const reader  = res.body.getReader()
       const decoder = new TextDecoder()
@@ -224,6 +235,11 @@ export default function FeedPage() {
   const hasMore       = visibleBlocks < allBlocks.length
   const showSkeleton  = !hasData && streaming
   const showEmpty     = !hasData && !streaming
+  const emptyMessage  = error
+    ? (error.toLowerCase().includes('no topics')
+        ? 'Nenhum tópico salvo. Selecione seus tópicos no onboarding ou em Configurações.'
+        : error)
+    : 'Nenhuma notícia encontrada.'
 
   return (
     <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
@@ -278,7 +294,7 @@ export default function FeedPage() {
               {showEmpty && (
                 <div className="flex flex-col items-center justify-center py-32 text-center">
                   <Feed size={32} className="text-ink-muted mb-4" />
-                  <p className="text-ink-secondary">Nenhuma notícia encontrada.</p>
+                  <p className="text-ink-secondary">{emptyMessage}</p>
                   <button onClick={() => fetchFeed(true)} className="mt-4 text-sm text-accent hover:underline">
                     Tentar novamente
                   </button>

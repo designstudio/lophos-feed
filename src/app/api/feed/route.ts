@@ -42,6 +42,28 @@ export async function POST(req: NextRequest) {
     await writer.write(encoder.encode(JSON.stringify({ items }) + '\n'))
   }
 
+  const fetchAndStore = async (topic: string, existingTitles: string[]) => {
+    const fresh = await fetchNewsForTopic(topic, existingTitles)
+    if (fresh.length === 0) return []
+
+    const rows = fresh.map(itemToRow)
+    const { error } = await db.from('news_cache').insert(rows)
+    if (error) {
+      console.error(`[feed] insert error "${topic}":`, error.message)
+      return []
+    }
+
+    const { data: inserted } = await db
+      .from('news_cache').select('*').eq('topic', topic)
+      .order('cached_at', { ascending: false }).limit(rows.length)
+    if (inserted?.length) {
+      await db.from('articles').upsert(inserted, { onConflict: 'id' })
+      return inserted.map(rowToItem)
+    }
+
+    return []
+  }
+
   ;(async () => {
     await writer.write(encoder.encode(JSON.stringify({ topics }) + '\n'))
 
@@ -81,31 +103,15 @@ export async function POST(req: NextRequest) {
       topicsToFetch.map(topic => ({ topic, last_fetched: now, updated_at: now })),
       { onConflict: 'topic' }
     )
-
-    // 5. Close stream — fetch in background
-    await writer.close()
-
-    // 6. Background fetch — won't block the response
-    const fetchAll = async () => {
+    const fetchAll = async (streamResults: boolean) => {
       const concurrency = 3
       for (let i = 0; i < topicsToFetch.length; i += concurrency) {
         const batch = topicsToFetch.slice(i, i + concurrency)
         await Promise.allSettled(batch.map(async (topic) => {
           try {
             const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
-            const fresh = await fetchNewsForTopic(topic, existingTitles)
-            if (fresh.length === 0) return
-
-            const rows = fresh.map(itemToRow)
-            const { error } = await db.from('news_cache').insert(rows)
-            if (error) { console.error(`[feed] insert error "${topic}":`, error.message); return }
-
-            const { data: inserted } = await db
-              .from('news_cache').select('*').eq('topic', topic)
-              .order('cached_at', { ascending: false }).limit(rows.length)
-            if (inserted?.length) {
-              await db.from('articles').upsert(inserted, { onConflict: 'id' })
-            }
+            const inserted = await fetchAndStore(topic, existingTitles)
+            if (streamResults && inserted.length > 0) await send(inserted)
           } catch (e) {
             console.error(`[feed] error "${topic}":`, e)
           }
@@ -113,7 +119,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    fetchAll().catch(e => console.error('[feed] background fetch error:', e))
+    // 5. If there is no cache yet, fetch inline so the user sees results immediately.
+    if (allExisting.length === 0) {
+      await fetchAll(true)
+      await writer.close()
+      return
+    }
+
+    // 6. Otherwise close stream and fetch in background
+    await writer.close()
+    fetchAll(false).catch(e => console.error('[feed] background fetch error:', e))
   })()
 
   return new Response(stream.readable, {
@@ -142,3 +157,4 @@ function itemToRow(item: NewsItem) {
     published_at: item.publishedAt, cached_at: item.cachedAt,
   }
 }
+
