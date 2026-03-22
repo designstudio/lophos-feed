@@ -91,9 +91,16 @@ export async function POST(req: NextRequest) {
       db.from('topic_fetches').select('*').in('topic', topics),
     ])
 
+    const cutoffIso = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    const isRecentRow = (row: any) => {
+      const d = row.published_at ?? row.cached_at
+      if (!d) return false
+      return new Date(d).getTime() >= new Date(cutoffIso).getTime()
+    }
+
     const fetchTimes = fetchResult.data ?? []
     const byTopic = new Map<string, any[]>()
-    for (const row of allArticles ?? []) {
+    for (const row of (allArticles ?? []).filter(isRecentRow)) {
       if (!byTopic.has(row.topic)) byTopic.set(row.topic, [])
       byTopic.get(row.topic)!.push(row)
     }
@@ -101,7 +108,7 @@ export async function POST(req: NextRequest) {
     for (const row of fetchTimes) lastFetchByTopic.set(row.topic, row.last_fetched)
 
     // 2. Stream existing cache immediately
-    const allExisting = (allArticles ?? [])
+    const allExisting = (allArticles ?? []).filter(isRecentRow)
       .map(rowToItem)
       .sort((a, b) =>
         new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
