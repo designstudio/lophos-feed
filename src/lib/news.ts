@@ -293,16 +293,33 @@ REGRAS OBRIGATÓRIAS:
 8. Tom editorial de referência: ${sourceHint}.
 9. Tom: neutro, jornalístico, sem clickbait.
 10. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
+11. **CRÍTICO: sourceIndexes deve incluir APENAS fontes que realmente falam sobre o assunto da notícia**. Leia cada fonte completamente antes de incluir seu índice.
+12. Se uma fonte é sobre outro assunto completamente diferente, NÃO inclua seu índice, mesmo que apareça na lista.
 
-EXEMPLO DE BOA ESTRUTURA:
+EXEMPLOS:
+
+EXEMPLO 1 — BOA ESTRUTURA:
 Se a fonte diz: "Taylor Swift announces 2026 world tour with 50 dates", seu título deve incluir "Taylor Swift" e "turnê" ou "tour", e o resumo deve reutilizar termos como "anúncio", "2026", "turnê mundial".
+
+EXEMPLO 2 — VALIDAÇÃO DE SOURCES:
+Se você cria uma notícia sobre "Project Hail Mary box office record" e tem 3 fontes:
+  [1] "Project Hail Mary breaks Amazon box office records" ✓ Incluir
+  [2] "The Oligarch and the Art Dealer interview" ✗ NÃO incluir (assunto diferente)
+  [3] "GKIDS Animation Festival Hong Kong" ✗ NÃO incluir (assunto diferente)
+Então sourceIndexes deve ser APENAS [1], não [1,2,3].
+
+ANTES DE GERAR CADA NOTÍCIA:
+1. Verifique CADA fonte que você planeja usar
+2. Confirme que o título e conteúdo dela correspondem ao assunto da notícia
+3. Se uma fonte é irrelevante ou sobre outro tópico, EXCLUA-A de sourceIndexes
+4. Nunca inclua uma fonte no sourceIndexes só porque aparece na lista
 
 ESTRUTURA de cada notícia:
 - title: título preciso em pt-BR (com nomes/termos das fontes)
 - summary: parágrafo introdutório de 4-5 frases, usando linguagem direta das fontes
 - sections: array de 2-4 seções com heading e body
 - conclusion: "O que esperar" ou null
-- sourceIndexes: índices das fontes usadas
+- sourceIndexes: índices APENAS das fontes que realmente falam sobre o assunto
 
 Responda APENAS com JSON válido:
 [{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2]}]
