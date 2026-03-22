@@ -34,7 +34,7 @@ function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: numbe
 
   return (
     <div className="py-6 border-b border-border">
-      <div className={cn('grid gap-4 md:gap-6', items.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3')}>
+      <div className={cn('grid gap-4 md:gap-6', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
         {items.map(item => <NewsCard key={item.id} item={item} variant="card" />)}
       </div>
     </div>
