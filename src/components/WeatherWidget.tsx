@@ -198,7 +198,7 @@ export function WeatherWidget() {
             >
               C
             </button>
-          </span><span className="font-semibold text-ink-primary">C</span></span>
+          </span>
         </div>
         <span className="text-[13px] text-ink-secondary">{weather.condition}</span>
       </div>
