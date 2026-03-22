@@ -93,10 +93,13 @@ export async function processRawFeeds() {
     await Promise.allSettled(batch.map(async (row: any) => {
       try {
         const topic: string = row.topic
-        const allResults: any[] = row.tavily_results ?? []
+        // Suporte ao formato novo { results, images } e ao formato antigo (array)
+        const stored = row.tavily_results ?? []
+        const allResults: any[] = Array.isArray(stored) ? stored : stored.results ?? []
+        const tavilyImages: string[] = Array.isArray(stored) ? [] : stored.images ?? []
 
         // Dedup: skip URLs already processed
-        const freshResults = allResults.filter((r) => !processedUrls.has(r.url))
+        const freshResults = allResults.filter((r: any) => !processedUrls.has(r.url))
         if (freshResults.length === 0) {
           console.log(`[cron] process: ${topic} — all URLs already processed, skipping`)
           await db.from('raw_articles').update({ status: 'dedup' }).eq('id', row.id)
@@ -114,7 +117,7 @@ export async function processRawFeeds() {
         const existingTitles = (existing ?? []).map((r: any) => r.title)
 
         // Run Gemini processing
-        const items = await processRawBatch(topic, freshResults, existingTitles)
+        const items = await processRawBatch(topic, freshResults, existingTitles, undefined, tavilyImages)
 
         if (items.length > 0) {
           const rows = items.map(itemToRow)
@@ -152,7 +155,7 @@ export async function fixCachedImages() {
 
   const { data: rows, error } = await db
     .from('news_cache')
-    .select('id, image_url, sources')
+    .select('id, image_url, sources, tavily_raw')
 
   if (error) { console.error('[fix-images] error loading news_cache:', error); return }
   if (!rows?.length) { console.log('[fix-images] nothing to fix'); return }
@@ -169,15 +172,23 @@ export async function fixCachedImages() {
   for (const row of toFix) {
     try {
       const sources = (row.sources ?? []).map((s: any) => ({ url: s.url }))
-      const imageUrl = await fetchImageForSources(sources)
-      const isStillLazy = !imageUrl || LAZY_IMAGE_PATTERNS.some(p => imageUrl.toLowerCase().includes(p))
-      if (imageUrl && !isStillLazy) {
+      // Tenta og:image direto das fontes
+      let imageUrl = await fetchImageForSources(sources)
+      const isStillLazy = (url?: string) => !url || LAZY_IMAGE_PATTERNS.some(p => url.toLowerCase().includes(p))
+      if (isStillLazy(imageUrl)) imageUrl = undefined
+      // Fallback: imagens do tavily_raw (per-result) que não sejam lazy-load
+      if (!imageUrl) {
+        const rawImages: string[] = (row.tavily_raw ?? [])
+          .map((r: any) => r.image)
+          .filter((img: any) => img && !isStillLazy(img))
+        if (rawImages.length > 0) imageUrl = rawImages[0]
+      }
+      if (imageUrl && !isStillLazy(imageUrl)) {
         await db.from('news_cache').update({ image_url: imageUrl }).eq('id', row.id)
         await db.from('articles').update({ image_url: imageUrl }).eq('id', row.id)
         fixed++
         console.log(`[fix-images] ✓ ${row.id} → ${imageUrl.slice(0, 80)}`)
       } else {
-        // Sem imagem real encontrada — limpa o campo pra mostrar o placeholder
         await db.from('news_cache').update({ image_url: null }).eq('id', row.id)
         await db.from('articles').update({ image_url: null }).eq('id', row.id)
         console.log(`[fix-images] — ${row.id}: no real image found, cleared`)

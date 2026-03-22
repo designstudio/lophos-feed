@@ -248,10 +248,14 @@ export async function collectRawForTopic(topic: string): Promise<TavilyResult[]>
 
   if (results.length === 0) return []
 
+  const topLevelImages: string[] = (tavilyData.images ?? []).filter(
+    (img: string) => img && !isLazyLoadImage(img)
+  )
+
   const db = getSupabaseAdmin()
   const { error } = await db.from('raw_articles').insert({
     topic,
-    tavily_results: results,
+    tavily_results: { results, images: topLevelImages },
     query: buildQuery(topic),
     status: 'raw',
   })
@@ -302,10 +306,14 @@ export async function fetchNewsForTopic(
     return []
   }
 
+  const topLevelImages: string[] = (tavilyData.images ?? []).filter(
+    (img: string) => img && !isLazyLoadImage(img)
+  )
+
   const db = getSupabaseAdmin()
   const { error: rawError } = await db.from('raw_articles').insert({
     topic,
-    tavily_results: results,
+    tavily_results: { results, images: topLevelImages },
     query: buildQuery(topic),
     status: 'raw',
   })
@@ -313,7 +321,7 @@ export async function fetchNewsForTopic(
 
   const items = await processRawBatch(topic, results, existingTitles, (batchStats) => {
     onDiag?.({ tavily: allResults.length, filtered: results.length, rejected, ...batchStats })
-  })
+  }, topLevelImages)
   return items
 }
 
@@ -328,7 +336,8 @@ export async function processRawBatch(
   topic: string,
   results: { url: string; title: string; content: string; image?: string }[],
   existingTitles: string[] = [],
-  onDiag?: DiagCallback
+  onDiag?: DiagCallback,
+  tavilyImages: string[] = []
 ): Promise<NewsItem[]> {
   if (results.length === 0) return []
 
@@ -483,6 +492,10 @@ ${context}`
     if (!imageUrl || !isImageFromSources(imageUrl, sources)) {
       const ogImage = await fetchImageForSources(sources)
       if (ogImage) imageUrl = ogImage
+    }
+    // Último recurso: usar imagens do array top-level do Tavily (geralmente CDN real)
+    if (!imageUrl && tavilyImages.length > 0) {
+      imageUrl = tavilyImages.find(img => !isLazyLoadImage(img))
     }
 
     const conclusion = typeof item.conclusion === 'string'
