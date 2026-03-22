@@ -66,11 +66,10 @@ export default function ArticlePage() {
     <div className="flex flex-1 min-w-0 overflow-hidden">
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
         {/* ── Sticky header — matches feed header style ── */}
-        <div className="sticky top-0 z-20 border-b border-border px-8 header-blur">
-          <div className="flex items-center h-14">
+        <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
+          <div className="flex items-center h-12 md:h-14">
             <Link href="/feed"
-              className="text-[15px] font-semibold text-ink-primary transition-colors flex-shrink-0"
-              style={{ width: '12rem' }}
+              className="text-[15px] font-semibold text-ink-primary transition-colors flex-shrink-0 md:w-48"
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
               Meu Feed
@@ -84,13 +83,13 @@ export default function ArticlePage() {
                 {item?.title}
               </span>
             </div>
-            {/* Spacer */}
-            <div style={{ width: '12rem' }} className="flex-shrink-0" />
+            {/* Spacer — desktop only */}
+            <div className="hidden md:block md:w-48 flex-shrink-0" />
           </div>
         </div>
 
       <main className="page-scroll">
-        <div className="article-layout mx-auto py-6">
+        <div className="article-layout mx-auto py-6 px-4 md:px-8 pb-24 md:pb-8">
 
           {loading && (
             <div className="space-y-4 animate-pulse">
