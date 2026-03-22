@@ -1,5 +1,6 @@
 ﻿'use client'
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
@@ -782,10 +783,13 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         </div>
       </aside>
 
-      {showSettings && <SettingsModal onClose={() => {
-        setShowSettings(false)
-        if (path === '/settings') router.push('/feed')
-      }} />}
+      {showSettings && mounted && createPortal(
+        <SettingsModal onClose={() => {
+          setShowSettings(false)
+          if (path === '/settings') router.push('/feed')
+        }} />,
+        document.body
+      )}
     </>
   )
 }
