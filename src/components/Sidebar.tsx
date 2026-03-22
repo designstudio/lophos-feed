@@ -253,27 +253,40 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   ]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: 'fadeIn 0.15s ease' }}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4" style={{ animation: 'fadeIn 0.15s ease' }}>
       <div className="absolute inset-0" onClick={onClose} style={{ backgroundColor: "#05050533", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }} />
-      <div className="relative rounded-[1.5rem] shadow-2xl flex overflow-hidden" style={{ width: '48rem', height: '32rem', animation: 'slideUp 0.15s ease', backgroundColor: 'var(--color-bg-primary)' }}>
+      <div className="settings-modal relative shadow-2xl flex flex-col overflow-hidden" style={{ animation: 'slideUp 0.15s ease', backgroundColor: 'var(--color-bg-primary)' }}>
 
-        {/* Full-width header */}
-        <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 h-14 border-b z-10 rounded-t-[1.5rem]" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}>
-          <h2 className="font-semibold text-gray-900" style={{ fontSize: '20px' }}>Configurações</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+        {/* Header */}
+        <div className="flex-shrink-0 flex items-center justify-between px-6 h-14 border-b" style={{ borderColor: 'var(--color-border)' }}>
+          <h2 className="font-semibold text-ink-primary" style={{ fontSize: '18px' }}>Configurações</h2>
+          <button onClick={onClose} className="text-ink-tertiary hover:text-ink-secondary transition-colors">
             <CloseCircle size={20} />
           </button>
         </div>
 
-        {/* Body below header */}
-        <div className="flex flex-1 overflow-hidden mt-14">
+        {/* Mobile: horizontal tab nav */}
+        <div className="flex md:hidden border-b overflow-x-auto no-scrollbar" style={{ borderColor: 'var(--color-border)' }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={cn(
+                'flex-shrink-0 flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all',
+                tab === t.id ? 'border-ink-primary text-ink-primary' : 'border-transparent text-ink-tertiary'
+              )}>
+              {t.icon}{t.label}
+            </button>
+          ))}
+        </div>
 
-        {/* Left nav */}
-        <div className="flex-shrink-0 pt-4 pb-4 pl-3" style={{ width: '12rem' }}>
+        {/* Body */}
+        <div className="flex flex-1 overflow-hidden">
+
+        {/* Desktop: left nav */}
+        <div className="hidden md:flex flex-col flex-shrink-0 pt-4 pb-4 pl-3" style={{ width: '12rem' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={cn('w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2.5 rounded-lg mx-1',
-                tab === t.id ? 'font-medium text-gray-900' : 'text-gray-500 hover:text-gray-900'
+                tab === t.id ? 'font-medium text-ink-primary' : 'text-ink-tertiary hover:text-ink-primary'
               )}
               style={{ backgroundColor: tab === t.id ? 'var(--color-hover-subtle)' : undefined }}
               onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-hover-subtle)' }}
@@ -285,7 +298,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
         {/* Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-7 pt-4 pb-5">
+          <div className="flex-1 overflow-y-auto px-5 md:px-7 pt-4 pb-5">
 
             {/* â”€â”€ GERAL â”€â”€ */}
             {tab === 'geral' && (

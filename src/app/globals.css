@@ -147,6 +147,20 @@ html, body {
   background: var(--color-bg-primary);
 }
 
+/* Settings modal — full screen on mobile, centered card on desktop */
+.settings-modal {
+  width: 100%;
+  height: 100dvh;
+  border-radius: 0;
+}
+@media (min-width: 768px) {
+  .settings-modal {
+    width: 48rem;
+    height: 32rem;
+    border-radius: 1.5rem;
+  }
+}
+
 /* Hide scrollbar but keep scroll */
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
