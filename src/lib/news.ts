@@ -208,7 +208,7 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = [],
-  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[] }) => void
+  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; geminiRaw?: string }) => void
 ): Promise<NewsItem[]> {
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
@@ -324,10 +324,20 @@ ${context}`
 
   const geminiData = await geminiRes.json()
   const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  const rawPreview = raw ? raw.slice(0, 800) : ''
   const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
-  if (!match) return []
+  if (!match) {
+    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, rejected, geminiRaw: rawPreview })
+    return []
+  }
 
-  const parsed = JSON.parse(match[0])
+  let parsed: any[] = []
+  try {
+    parsed = JSON.parse(match[0])
+  } catch {
+    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, rejected, geminiRaw: rawPreview })
+    return []
+  }
   const now = new Date().toISOString()
 
   let dropped = 0
@@ -380,7 +390,7 @@ ${context}`
     })
   }
 
-  onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: parsed.length, kept: items.length, dropped, rejected })
+  onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: parsed.length, kept: items.length, dropped, rejected, geminiRaw: rawPreview })
   return items
 }
 
