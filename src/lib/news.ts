@@ -192,28 +192,6 @@ export function isSimilarTitle(a: string, b: string): boolean {
   return textOverlapScore(a, b) >= 0.6
 }
 
-function getTopicAcronym(topic: string): string {
-  const parts = normalizeText(topic).split(' ').filter(Boolean)
-  if (parts.length < 2) return ''
-  return parts.map(p => p[0]).join('').toLowerCase()
-}
-
-function isTopicMentioned(topic: string, text: string): boolean {
-  const topicWords = normalizeText(topic).split(' ').filter(w => w.length >= 4)
-  if (topicWords.length === 0) return false
-  const textWords = new Set(normalizeText(text).split(' ').filter(Boolean))
-  let matches = 0
-  for (const w of topicWords) {
-    if (textWords.has(w)) matches++
-  }
-  const required = topicWords.length >= 3 ? 2 : 1
-  if (matches >= required) return true
-
-  const acronym = getTopicAcronym(topic)
-  if (acronym && textWords.has(acronym)) return true
-  return false
-}
-
 function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[]): boolean {
   const title = item?.title || ''
   const summary = item?.summary || ''
@@ -508,7 +486,10 @@ export async function fetchNewsForTopicFromResults(
   const topicWords = normalizeText(topic).split(' ').filter(Boolean)
   let filteredResults = results
   if (topicWords.length >= 2) {
-    filteredResults = results.filter((r) => isTopicMentioned(topic, `${r.title || ''} ${r.content || ''}`))
+    filteredResults = results.filter((r) => {
+      const score = textOverlapScore(topic, `${r.title || ''} ${r.content || ''}`)
+      return score >= 0.6
+    })
   }
 
   if (filteredResults.length === 0) {
@@ -621,7 +602,7 @@ ${context}`
       }
     })
 
-    if (topicWords.length < 2 && !isGeneratedItemRelevant(item, sources, filteredResults)) {
+    if (!isGeneratedItemRelevant(item, sources, filteredResults)) {
       dropped++
       continue
     }
