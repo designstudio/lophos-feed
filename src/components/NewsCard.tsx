@@ -131,49 +131,49 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
 
   if (variant === 'full-left') {
     return (
-      <Link href={href} className={cn('group flex gap-6 items-start', className)}>
+      <Link href={href} className={cn('group flex flex-col md:flex-row gap-4 md:gap-6 items-start', className)}>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
           <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
           <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
           <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
         </div>
-        {showImage ? (
-          <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
+        <div className="w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative">
+          {showImage ? (
             <img src={proxiedImage} alt={item.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-48 md:h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={() => setImgFailed(true)}
             />
-          </div>
-        ) : (
-          <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary relative" style={{ width: '20rem', height: '14rem' }}>
-            <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
-            <div className="absolute bottom-3 left-3 px-2 py-1 rounded-md text-[11px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
-              {getSourceLabel(item.sources)}
-            </div>
-          </div>
-        )}
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
+              <div className="absolute bottom-3 left-3 px-2 py-1 rounded-md text-[11px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
+                {getSourceLabel(item.sources)}
+              </div>
+            </>
+          )}
+        </div>
       </Link>
     )
   }
 
   return (
-    <Link href={href} className={cn('group flex gap-6 items-start', className)}>
-      {showImage ? (
-        <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary" style={{ width: '20rem', height: '14rem' }}>
+    <Link href={href} className={cn('group flex flex-col md:flex-row gap-4 md:gap-6 items-start', className)}>
+      <div className="w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative">
+        {showImage ? (
           <img src={proxiedImage} alt={item.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-48 md:h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={() => setImgFailed(true)}
           />
-        </div>
-      ) : (
-        <div className="flex-shrink-0 rounded-xl overflow-hidden bg-bg-secondary relative" style={{ width: '20rem', height: '14rem' }}>
-          <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
-          <div className="absolute bottom-3 left-3 px-2 py-1 rounded-md text-[11px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
-            {getSourceLabel(item.sources)}
-          </div>
-        </div>
-      )}
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
+            <div className="absolute bottom-3 left-3 px-2 py-1 rounded-md text-[11px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
+              {getSourceLabel(item.sources)}
+            </div>
+          </>
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
         <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>

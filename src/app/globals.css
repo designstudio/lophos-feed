@@ -147,6 +147,11 @@ html, body {
   background: var(--color-bg-primary);
 }
 
+/* Mobile safe area */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+}
+
 .page-scroll {
   flex: 1;
   min-width: 0;

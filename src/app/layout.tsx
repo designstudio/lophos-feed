@@ -5,6 +5,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Lophos Feed',
   description: 'Seu feed de notícias personalizado por IA.',
+  viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },

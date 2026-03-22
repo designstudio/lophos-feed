@@ -34,7 +34,7 @@ function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: numbe
 
   return (
     <div className="py-6 border-b border-border">
-      <div className={cn('grid gap-6', items.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}>
+      <div className={cn('grid gap-4 md:gap-6', items.length === 2 ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3')}>
         {items.map(item => <NewsCard key={item.id} item={item} variant="card" />)}
       </div>
     </div>
@@ -346,18 +346,22 @@ export default function FeedPage() {
   return (
     <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
-        {/* ── Sticky header — full width, outside feed-layout ── */}
-        <div
-          className="sticky top-0 z-20 border-b border-border px-8 header-blur">
-          <div className="flex items-center h-14">
-            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
+        {/* ── Sticky header ── */}
+        <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
+          {/* Mobile: title row */}
+          <div className="flex items-center h-12 md:hidden">
+            <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
+          </div>
+          {/* Tabs row */}
+          <div className="flex items-center h-10 md:h-14">
+            {/* Desktop: title left */}
+            <h1 className="hidden md:block text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
 
-            {/* Tabs — centered in the remaining space */}
-            <div className="flex flex-1 justify-center">
+            <div className="flex flex-1 md:justify-center">
               <button
                 onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                 className={cn(
-                  'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
+                  'text-[0.875rem] px-4 h-10 md:h-14 border-b-2 transition-all font-medium',
                   activeFilter === null
                     ? 'border-ink-primary text-ink-primary'
                     : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
@@ -372,14 +376,14 @@ export default function FeedPage() {
               />
             </div>
 
-            {/* Spacer — matches title width to keep tabs truly centered */}
-            <div style={{ width: '12rem' }} />
+            {/* Desktop spacer */}
+            <div className="hidden md:block" style={{ width: '12rem' }} />
           </div>
         </div>
 
         {/* ── Feed + Right sidebar ── */}
-        <div className="feed-layout mx-auto px-8">
-          <div className="flex gap-10 py-6">
+        <div className="feed-layout mx-auto px-4 md:px-8">
+          <div className="flex gap-10 py-6 pb-24 md:pb-6">
             <div className="flex-1 min-w-0">
 
               {coldStartLoading && (
@@ -435,7 +439,7 @@ export default function FeedPage() {
               )}
             </div>
 
-            <div className="sidebar-right">
+            <div className="sidebar-right hidden lg:block">
               <RightSidebar topics={topics} />
             </div>
           </div>
