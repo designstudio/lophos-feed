@@ -160,6 +160,14 @@ export default function FeedPage() {
     return () => clearInterval(id)
   }, [coldStartLoading])
 
+  const setPending = (next: NewsItem[] | ((prev: NewsItem[]) => NewsItem[])) => {
+    setPendingItems(prev => {
+      const resolved = typeof next === 'function' ? next(prev) : next
+      pendingRef.current = resolved
+      return resolved
+    })
+  }
+
   const applyPendingUpdates = useCallback(() => {
     if (pendingItems.length === 0) return
     setItems(prev => {
@@ -184,14 +192,6 @@ export default function FeedPage() {
   useEffect(() => {
     onApplyUpdatesCallback.current = () => applyPendingUpdates()
   }, [onApplyUpdatesCallback, applyPendingUpdates])
-
-  const setPending = (next: NewsItem[] | ((prev: NewsItem[]) => NewsItem[])) => {
-    setPendingItems(prev => {
-      const resolved = typeof next === 'function' ? next(prev) : next
-      pendingRef.current = resolved
-      return resolved
-    })
-  }
 
   const setColdStart = (v: boolean) => {
     coldStartRef.current = v
