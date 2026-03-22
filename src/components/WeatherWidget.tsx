@@ -13,7 +13,7 @@ interface WeatherData {
   forecast: { day: string; temp: number; weathercode: number }[]
 }
 
-const WEATHER_CACHE_KEY = 'weather_cache_v1'
+const WEATHER_CACHE_KEY = 'weather_cache_v2'
 const WEATHER_CACHE_TTL_MS = 30 * 60 * 1000
 
 type WeatherCache = {
@@ -42,8 +42,8 @@ function getWeatherKind(code: number): string {
 function WeatherIcon({ code, size = 16 }: { code: number; size?: number }) {
   const cls = "text-ink-primary"
   const kind = getWeatherKind(code)
-  if (kind === 'clear') return <Sun2 size={size} className={cls} />
-  if (kind === 'mostly_clear' || kind === 'partly_cloudy' || kind === 'overcast') return <SunFog size={size} className={cls} />
+  if (kind === 'clear' || kind === 'mostly_clear' || kind === 'partly_cloudy') return <Sun2 size={size} className={cls} />
+  if (kind === 'overcast') return <SunFog size={size} className={cls} />
   if (kind === 'fog') return <Fog size={size} className={cls} />
   if (kind === 'drizzle' || kind === 'rain' || kind === 'showers') return <Waterdrops size={size} className={cls} />
   if (kind === 'snow' || kind === 'snow_showers') return <Snowflake size={size} className={cls} />
@@ -85,12 +85,6 @@ export function WeatherWidget() {
 
   useEffect(() => {
     localStorage.setItem('weather_unit', unit)
-    if (lastCoordsRef.current) {
-      fetchWeatherByCoords(lastCoordsRef.current.lat, lastCoordsRef.current.lon)
-    } else if (lastCityRef.current) {
-      fetchWeatherByCity(lastCityRef.current)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unit])
 
   const fetchWeatherByCoords = async (lat: number, lon: number) => {
@@ -98,7 +92,7 @@ export function WeatherWidget() {
       setLoading(true)
       lastCoordsRef.current = { lat, lon }
       const [weatherRes, cityRes] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=6&temperature_unit=${unit === 'f' ? 'fahrenheit' : 'celsius'}`),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&hourly=weather_code&timezone=auto&forecast_days=6&temperature_unit=celsius`),
         fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`)
       ])
       const data = await weatherRes.json()
@@ -137,9 +131,38 @@ export function WeatherWidget() {
 
   const parseWeather = (data: any, city: string, region: string) => {
     const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    const hourlyTimes: string[] = data.hourly?.time || []
+    const hourlyCodes: number[] = data.hourly?.weather_code || []
+    const codeByDay = new Map<string, number>()
+
+    if (hourlyTimes.length && hourlyCodes.length) {
+      const byDay = new Map<string, number[]>()
+      for (let i = 0; i < hourlyTimes.length; i++) {
+        const ts = hourlyTimes[i]
+        const code = hourlyCodes[i]
+        const date = ts.split('T')[0]
+        const hour = parseInt(ts.split('T')[1]?.slice(0, 2) || '0', 10)
+        if (hour < 9 || hour > 18) continue
+        if (!byDay.has(date)) byDay.set(date, [])
+        byDay.get(date)!.push(code)
+      }
+      for (const [date, codes] of byDay.entries()) {
+        if (codes.length === 0) continue
+        const counts = new Map<number, number>()
+        for (const c of codes) counts.set(c, (counts.get(c) || 0) + 1)
+        let best = codes[0]
+        let bestCount = 0
+        for (const [c, cnt] of counts.entries()) {
+          if (cnt > bestCount) { best = c; bestCount = cnt }
+        }
+        codeByDay.set(date, best)
+      }
+    }
+
     const parsed: WeatherData = {
       city,
       region,
+      // Store base values in Celsius for local unit conversion
       temp: Math.round(data.current?.temperature_2m ?? 0),
       condition: getCondition(data.current?.weather_code ?? 0),
       currentCode: data.current?.weather_code ?? 0,
@@ -148,7 +171,7 @@ export function WeatherWidget() {
       forecast: (data.daily?.time || []).slice(1, 6).map((t: string, i: number) => ({
         day: days[new Date(t).getDay()],
         temp: Math.round(data.daily.temperature_2m_max[i + 1] ?? 0),
-        weathercode: data.daily.weather_code?.[i + 1] ?? 0,
+        weathercode: codeByDay.get(t) ?? data.daily.weather_code?.[i + 1] ?? 0,
       })),
     }
     setWeather(parsed)
@@ -175,13 +198,15 @@ export function WeatherWidget() {
 
   if (!weather) return null
 
+  const toUnit = (c: number) => unit === 'f' ? Math.round(c * 9 / 5 + 32) : c
+
   return (
     <div className="rounded-2xl border border-border bg-bg-primary p-4">
       {/* Top row â€” Perplexity style */}
       <div className="flex items-start justify-between mb-1">
         <div className="flex items-center gap-1.5">
           <WeatherIcon code={weather.currentCode} size={18} />
-          <span className="text-[15px] font-semibold text-ink-primary">{weather.temp}°</span>
+          <span className="text-[15px] font-semibold text-ink-primary">{toUnit(weather.temp)}°</span>
           <span className="text-[13px] text-ink-tertiary">
             <button
               type="button"
@@ -206,7 +231,7 @@ export function WeatherWidget() {
       {/* City + high/low */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-[12px] text-ink-secondary">{weather.city}{weather.region ? `, ${weather.region}` : ''}</span>
-        <span className="text-[12px] text-ink-tertiary">H: {weather.high}° L: {weather.low}°</span>
+        <span className="text-[12px] text-ink-tertiary">H: {toUnit(weather.high)}° L: {toUnit(weather.low)}°</span>
       </div>
 
       {/* Forecast days */}
@@ -215,7 +240,7 @@ export function WeatherWidget() {
           {weather.forecast.map((f, i) => (
             <div key={i} className="flex flex-col items-center gap-1">
               <WeatherIcon code={f.weathercode} size={18} />
-              <span className="text-[11px] text-ink-secondary font-medium">{f.temp}°</span>
+              <span className="text-[11px] text-ink-secondary font-medium">{toUnit(f.temp)}°</span>
               <span className="text-[10px] text-ink-tertiary">{f.day}</span>
             </div>
           ))}
