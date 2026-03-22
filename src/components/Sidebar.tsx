@@ -1,7 +1,7 @@
 ﻿'use client'
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   Feed, Refresh, AltArrowLeft, AltArrowRight,
@@ -638,6 +638,7 @@ interface Props {
 
 export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: Props) {
   const path = usePathname()
+  const router = useRouter()
   const [collapsed, setCollapsed] = useState<boolean | null>(null)
   const [mounted, setMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -781,7 +782,10 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         </div>
       </aside>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={() => {
+        setShowSettings(false)
+        if (path === '/settings') router.push('/feed')
+      }} />}
     </>
   )
 }
