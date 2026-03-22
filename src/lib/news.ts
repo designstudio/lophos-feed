@@ -470,6 +470,180 @@ ${context}`
   return items
 }
 
+export async function fetchNewsForTopicFromResults(
+  topic: string,
+  results: ResultItem[],
+  existingTitles: string[] = [],
+  onDiag?: (stats: DiagStats) => void
+): Promise<NewsItem[]> {
+  const allResults = results
+  if (results.length === 0) {
+    onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0, reason: 'no_results' })
+    return []
+  }
+
+  const today = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+  })
+  let clusterDiag: { clusters: number; sizes: number[] } | undefined
+  const clusters = buildClusters(results as ResultItem[], (info) => { clusterDiag = info })
+  const context = clusters.map((cluster, ci) => {
+    const items = cluster.indices.map((idx, j) => {
+      const r = results[idx]
+      return `[${j + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
+    }).join('\n\n')
+    return `GRUPO ${ci + 1}\n${items}`
+  }).join('\n\n')
+  const sourceHint = getSourceHint(topic)
+
+  const existingContext = existingTitles.length > 0
+    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
+    : ''
+
+  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes.
+
+Hoje é ${today}. Tópico: "${topic}".
+${existingContext}
+REGRAS OBRIGATÓRIAS:
+1. Use APENAS as fontes fornecidas. NÃO invente fatos.
+2. O TÍTULO e o RESUMO devem usar termos presentes nas fontes. Se não for possível, retorne [].
+3. Cada GRUPO já é um evento. Gere NO MÁXIMO 1 notícia por GRUPO.
+3. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
+4. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo.
+5. Se não houver nenhum evento noticiável real nas fontes, retorne [].
+6. Tom editorial de referência: ${sourceHint}.
+7. Tom: neutro, jornalístico, sem clickbait.
+8. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
+9. "conclusion" deve ser uma frase real (não repita "O que esperar"). Se não houver algo concreto, use null.
+
+ESTRUTURA de cada notícia:
+- title: título preciso em pt-BR
+- summary: parágrafo introdutório de 4-5 frases, factual e empolgante
+- sections: array de 2-4 seções com heading e body
+- conclusion: "O que esperar" ou null
+- sourceIndexes: índices das fontes usadas dentro do GRUPO
+- groupIndex: número do GRUPO (1, 2, 3...)
+
+Responda APENAS com JSON válido:
+[{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2],"groupIndex":1}]
+
+FONTES:
+${context}`
+
+  const geminiRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1 },
+      }),
+    }
+  )
+
+  if (!geminiRes.ok) {
+    console.error(`Gemini error ${geminiRes.status}:`, await geminiRes.text())
+    throw new Error(`Gemini error: ${geminiRes.status}`)
+  }
+
+  const geminiData = await geminiRes.json()
+  const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
+  if (!match) {
+    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, reason: 'no_json' })
+    return []
+  }
+
+  let parsed: any[] = []
+  try {
+    parsed = JSON.parse(match[0])
+  } catch {
+    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, reason: 'json_parse_error' })
+    return []
+  }
+  const now = new Date().toISOString()
+
+  let dropped = 0
+  const items: NewsItem[] = []
+  for (let i = 0; i < parsed.length; i++) {
+    const item = parsed[i]
+    const groupIndex = Math.max(1, Number(item.groupIndex || 1))
+    const cluster = clusters[groupIndex - 1]
+    if (!cluster) { dropped++; continue }
+    const idxs: number[] = (item.sourceIndexes || [1]).map((n: number) => n - 1)
+    let resolvedIdxs = idxs
+      .filter((idx) => idx >= 0 && idx < cluster.indices.length)
+      .map((idx) => cluster.indices[idx])
+    if (resolvedIdxs.length === 0) {
+      resolvedIdxs = cluster.indices.slice(0, 3)
+    }
+    const sources: NewsSource[] = resolvedIdxs.map((idx) => {
+      const r = results[idx]
+      return {
+        name: new URL(r.url).hostname.replace('www.', ''),
+        url: r.url,
+        favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
+      }
+    })
+
+    if (!isGeneratedItemRelevant(item, sources, results)) {
+      dropped++
+      continue
+    }
+
+    const title = item?.title || ''
+    const isDupExisting = existingTitles.some((t) => isSimilarTitle(title, t))
+    const isDupInBatch = items.some((x) => isSimilarTitle(title, x.title))
+    if (isDupExisting || isDupInBatch) {
+      dropped++
+      continue
+    }
+
+    const primaryResult = results[resolvedIdxs[0]] ?? results[cluster.indices[0]] ?? results[0]
+    const primaryImage = (primaryResult as any)?.image
+    let imageUrl: string | undefined = primaryImage
+    if (!imageUrl || !isImageFromSources(imageUrl, sources)) {
+      const ogImage = await fetchImageForSources(sources)
+      if (ogImage) imageUrl = ogImage
+    }
+
+    const safeId = randomUUID()
+
+    let conclusion = typeof item.conclusion === 'string'
+      ? item.conclusion
+      : item.conclusion?.body || undefined
+    if (conclusion) {
+      const clean = conclusion.trim()
+      if (clean.length < 12 || /^o que esperar$/i.test(clean)) conclusion = undefined
+    }
+
+    items.push({
+      id: safeId,
+      topic,
+      title: item.title,
+      summary: item.summary,
+      sections: (item.sections || []) as ArticleSection[],
+      conclusion,
+      sources,
+      imageUrl,
+      publishedAt: now,
+      cachedAt: now,
+    })
+  }
+
+  onDiag?.({
+    tavily: allResults.length,
+    filtered: results.length,
+    gemini: parsed.length,
+    kept: items.length,
+    dropped,
+    clusters: clusterDiag?.clusters,
+    clusterSizes: clusterDiag?.sizes,
+  })
+  return items
+}
+
 export function isCacheStale(cachedAt: string): boolean {
   return Date.now() - new Date(cachedAt).getTime() > CACHE_TTL_MINUTES * 60 * 1000
 }
