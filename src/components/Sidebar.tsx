@@ -291,8 +291,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             {tab === 'geral' && (
               <>
                 <section className="pb-5 border-b border-border">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Aparência</h3>
-                  <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para você.</p>
+                  <h3 className="text-sm font-semibold text-ink-primary mb-1">Aparência</h3>
+                  <p className="text-sm text-ink-tertiary mb-4">Escolha como o Lophos aparece para você.</p>
                   <div className="grid grid-cols-3 gap-3">
                     {([
                       { id: 'light',  label: 'Claro',   icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
@@ -302,9 +302,9 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                       <button key={t.id} onClick={() => handleTheme(t.id)}
                         className={cn(
                           'flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all',
-                          theme === t.id ? 'text-gray-900' : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                          theme === t.id ? 'text-ink-primary' : 'border-border text-ink-tertiary hover:text-ink-secondary'
                         )}
-                        style={theme === t.id ? { borderColor: 'var(--color-ui-strong)', backgroundColor: '#f2f2f2' } : {}}>
+                        style={theme === t.id ? { borderColor: 'var(--color-ui-strong)', backgroundColor: 'var(--color-bg-tertiary)' } : {}}>
                         {t.icon}{t.label}
                       </button>
                     ))}
