@@ -230,9 +230,30 @@ export async function fetchNewsForTopic(
 
   // Filter — keep only real articles from quality domains
   const allResults = (tavilyData.results || [])
-  const results = allResults.filter((r: any) =>
-    r.url && r.title && r.content && r.content.length > 100 && isArticleUrl(r.url)
-  )
+  const results: any[] = []
+  for (const r of allResults) {
+    if (!r?.url) {
+      console.log(`[feed][filter] topic="${topic}" reason="missing_url"`)
+      continue
+    }
+    if (!r?.title) {
+      console.log(`[feed][filter] topic="${topic}" url="${r.url}" reason="missing_title"`)
+      continue
+    }
+    if (!r?.content) {
+      console.log(`[feed][filter] topic="${topic}" url="${r.url}" reason="missing_content"`)
+      continue
+    }
+    if (r.content.length <= 100) {
+      console.log(`[feed][filter] topic="${topic}" url="${r.url}" reason="content_too_short"`)
+      continue
+    }
+    if (!isArticleUrl(r.url)) {
+      console.log(`[feed][filter] topic="${topic}" url="${r.url}" reason="non_article_url"`)
+      continue
+    }
+    results.push(r)
+  }
 
   if (results.length === 0) {
     console.log(`[feed][diag] topic="${topic}" tavily=${allResults.length} filtered=0 gemini=0 kept=0 dropped=0`)
