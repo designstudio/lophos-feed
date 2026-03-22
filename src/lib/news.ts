@@ -169,6 +169,42 @@ function buildQuery(topic: string): string {
   return `"${topic}" news hoje OR "últimas 24h" OR "${todayISO}"`
 }
 
+function normalizeText(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function textOverlapScore(a: string, b: string): number {
+  const aWords = new Set(normalizeText(a).split(' ').filter(w => w.length >= 3))
+  const bWords = new Set(normalizeText(b).split(' ').filter(w => w.length >= 3))
+  if (aWords.size === 0 || bWords.size === 0) return 0
+  let overlap = 0
+  for (const w of aWords) if (bWords.has(w)) overlap++
+  return overlap / Math.max(1, Math.min(aWords.size, bWords.size))
+}
+
+function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[]): boolean {
+  const title = item?.title || ''
+  const summary = item?.summary || ''
+  const genText = `${title} ${summary}`
+  if (!genText.trim()) return false
+
+  const sourceText = sources
+    .map((s) => {
+      const r = results.find((rr: any) => rr?.url === s.url)
+      return r ? `${r.title || ''} ${r.content || ''}` : ''
+    })
+    .join(' ')
+
+  const score = textOverlapScore(genText, sourceText)
+  return score >= 0.18
+}
+
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = []
@@ -220,7 +256,8 @@ Hoje é ${today}. Tópico: "${topic}".
 ${existingContext}
 REGRAS OBRIGATÓRIAS:
 1. Use APENAS as fontes fornecidas. NÃO invente fatos.
-2. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
+2. O TÍTULO e o RESUMO devem usar termos presentes nas fontes. Se não for possível, retorne [].
+3. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
 3. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
 4. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo.
 5. Se não houver nenhum evento noticiável real nas fontes, retorne [].
@@ -280,6 +317,10 @@ ${context}`
           favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
         }
       })
+
+    if (!isGeneratedItemRelevant(item, sources, results)) {
+      continue
+    }
 
     // Prefer og:image from the actual sources; fallback to Tavily image if needed
     const primaryResult = results[idxs[0]] ?? results[0]
