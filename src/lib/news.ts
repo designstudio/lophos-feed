@@ -188,7 +188,7 @@ function textOverlapScore(a: string, b: string): number {
   return overlap / Math.max(1, Math.min(aWords.size, bWords.size))
 }
 
-function isSimilarTitle(a: string, b: string): boolean {
+export function isSimilarTitle(a: string, b: string): boolean {
   return textOverlapScore(a, b) >= 0.6
 }
 
@@ -482,14 +482,29 @@ export async function fetchNewsForTopicFromResults(
     return []
   }
 
+  // For specific topics (2+ words), keep only RSS items that mention the topic.
+  const topicWords = normalizeText(topic).split(' ').filter(Boolean)
+  let filteredResults = results
+  if (topicWords.length >= 2) {
+    filteredResults = results.filter((r) => {
+      const score = textOverlapScore(topic, `${r.title || ''} ${r.content || ''}`)
+      return score >= 0.6
+    })
+  }
+
+  if (filteredResults.length === 0) {
+    onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0, reason: 'no_relevant_results' })
+    return []
+  }
+
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
   })
   let clusterDiag: { clusters: number; sizes: number[] } | undefined
-  const clusters = buildClusters(results as ResultItem[], (info) => { clusterDiag = info })
+  const clusters = buildClusters(filteredResults as ResultItem[], (info) => { clusterDiag = info })
   const context = clusters.map((cluster, ci) => {
     const items = cluster.indices.map((idx, j) => {
-      const r = results[idx]
+      const r = filteredResults[idx]
       return `[${j + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
     }).join('\n\n')
     return `GRUPO ${ci + 1}\n${items}`
@@ -551,7 +566,7 @@ ${context}`
   const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
   const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
   if (!match) {
-    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, reason: 'no_json' })
+    onDiag?.({ tavily: allResults.length, filtered: filteredResults.length, gemini: 0, kept: 0, dropped: 0, reason: 'no_json' })
     return []
   }
 
@@ -559,7 +574,7 @@ ${context}`
   try {
     parsed = JSON.parse(match[0])
   } catch {
-    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, reason: 'json_parse_error' })
+    onDiag?.({ tavily: allResults.length, filtered: filteredResults.length, gemini: 0, kept: 0, dropped: 0, reason: 'json_parse_error' })
     return []
   }
   const now = new Date().toISOString()
@@ -579,7 +594,7 @@ ${context}`
       resolvedIdxs = cluster.indices.slice(0, 3)
     }
     const sources: NewsSource[] = resolvedIdxs.map((idx) => {
-      const r = results[idx]
+      const r = filteredResults[idx]
       return {
         name: new URL(r.url).hostname.replace('www.', ''),
         url: r.url,
@@ -587,7 +602,7 @@ ${context}`
       }
     })
 
-    if (!isGeneratedItemRelevant(item, sources, results)) {
+    if (!isGeneratedItemRelevant(item, sources, filteredResults)) {
       dropped++
       continue
     }
@@ -600,7 +615,7 @@ ${context}`
       continue
     }
 
-    const primaryResult = results[resolvedIdxs[0]] ?? results[cluster.indices[0]] ?? results[0]
+    const primaryResult = filteredResults[resolvedIdxs[0]] ?? filteredResults[cluster.indices[0]] ?? filteredResults[0]
     const primaryImage = (primaryResult as any)?.image
     let imageUrl: string | undefined = primaryImage
     if (!imageUrl || !isImageFromSources(imageUrl, sources)) {
@@ -634,7 +649,7 @@ ${context}`
 
   onDiag?.({
     tavily: allResults.length,
-    filtered: results.length,
+    filtered: filteredResults.length,
     gemini: parsed.length,
     kept: items.length,
     dropped,
@@ -647,4 +662,6 @@ ${context}`
 export function isCacheStale(cachedAt: string): boolean {
   return Date.now() - new Date(cachedAt).getTime() > CACHE_TTL_MINUTES * 60 * 1000
 }
+
+
 
