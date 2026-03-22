@@ -528,6 +528,33 @@ ${context}`
   return items
 }
 
+// Busca imagens no Tavily pelo título do artigo — último recurso quando og:image falha
+export async function searchImagesForTitle(title: string): Promise<string | undefined> {
+  try {
+    const res = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: TAVILY_KEY,
+        query: title,
+        max_results: 3,
+        include_images: true,
+        include_raw_content: false,
+        include_answer: false,
+      }),
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!res.ok) return undefined
+    const data = await res.json()
+    const images: string[] = (data.images ?? []).filter(
+      (img: string) => img && !LAZY_IMAGE_PATTERNS.some(p => img.toLowerCase().includes(p))
+    )
+    return images[0]
+  } catch {
+    return undefined
+  }
+}
+
 export function isCacheStale(cachedAt: string): boolean {
   return Date.now() - new Date(cachedAt).getTime() > CACHE_TTL_MINUTES * 60 * 1000
 }

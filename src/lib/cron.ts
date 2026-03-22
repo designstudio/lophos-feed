@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import { getSupabaseAdmin } from './supabase'
-import { collectRawForTopic, fetchNewsForTopic, processRawBatch, fetchImageForSources } from './news'
+import { collectRawForTopic, fetchNewsForTopic, processRawBatch, fetchImageForSources, searchImagesForTitle } from './news'
 import { NewsItem } from './types'
 
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
@@ -155,7 +155,7 @@ export async function fixCachedImages() {
 
   const { data: rows, error } = await db
     .from('news_cache')
-    .select('id, image_url, sources, tavily_raw')
+    .select('id, title, image_url, sources, tavily_raw')
 
   if (error) { console.error('[fix-images] error loading news_cache:', error); return }
   if (!rows?.length) { console.log('[fix-images] nothing to fix'); return }
@@ -183,6 +183,12 @@ export async function fixCachedImages() {
           .filter((img: any) => img && !isStillLazy(img))
         if (rawImages.length > 0) imageUrl = rawImages[0]
       }
+      // Último recurso: busca pelo título do artigo no Tavily
+      if (!imageUrl && row.title) {
+        const titleImage = await searchImagesForTitle(row.title)
+        if (titleImage && !isStillLazy(titleImage)) imageUrl = titleImage
+      }
+
       if (imageUrl && !isStillLazy(imageUrl)) {
         await db.from('news_cache').update({ image_url: imageUrl }).eq('id', row.id)
         await db.from('articles').update({ image_url: imageUrl }).eq('id', row.id)
