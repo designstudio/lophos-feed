@@ -627,15 +627,27 @@ interface Props {
 
 export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: Props) {
   const path = usePathname()
-  const [collapsed, setCollapsed] = useState<boolean | null>(null)
+  const [collapsed, setCollapsed] = useState<boolean | null>(() => {
+    try {
+      if (typeof window === 'undefined') return null
+      return localStorage.getItem('sidebar_collapsed') === 'true'
+    } catch {
+      return null
+    }
+  })
   const [mounted, setMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem('sidebar_collapsed') === 'true'
-    setCollapsed(saved)
+    if (collapsed !== null) return
+    try {
+      const saved = localStorage.getItem('sidebar_collapsed') === 'true'
+      setCollapsed(saved)
+    } catch {
+      setCollapsed(false)
+    }
     setMounted(true)
-  }, [])
+  }, [collapsed])
 
   useEffect(() => { if (path === '/settings') setShowSettings(true) }, [path])
 
