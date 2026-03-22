@@ -1,13 +1,17 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { fetchNewsForTopic, fetchImageForSources } from '@/lib/news'
+import { fetchNewsForTopic, fetchNewsForTopicFromResults, fetchImageForSources } from '@/lib/news'
 import { NewsItem } from '@/lib/types'
+import { XMLParser } from 'fast-xml-parser'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const FETCH_INTERVAL_MINUTES = 120
+const RSS_FEEDS_PER_TOPIC = 4
+const RSS_ITEMS_PER_FEED = 3
+const RSS_TIMEOUT_MS = 7000
 
 function isSearchStale(lastFetched: string | null): boolean {
   if (!lastFetched) return true
@@ -67,8 +71,83 @@ export async function POST(req: NextRequest) {
     }))
   }
 
+  const fetchRssResults = async (topic: string) => {
+    const { data: feeds } = await db
+      .from('rss_feeds')
+      .select('url,name,topics,active')
+      .eq('active', true)
+      .contains('topics', [topic])
+      .limit(RSS_FEEDS_PER_TOPIC)
+
+    if (!feeds || feeds.length === 0) return []
+
+    const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '' })
+    const cutoff = Date.now() - 2 * 24 * 60 * 60 * 1000
+    const results: any[] = []
+
+    await Promise.allSettled(feeds.map(async (f: any) => {
+      try {
+        const res = await fetch(f.url, { signal: AbortSignal.timeout(RSS_TIMEOUT_MS) })
+        if (!res.ok) return
+        const xml = await res.text()
+        const data = parser.parse(xml)
+
+        const items =
+          data?.rss?.channel?.item ||
+          data?.feed?.entry ||
+          data?.rdf?.item ||
+          []
+
+        const arr = Array.isArray(items) ? items : [items]
+        for (const it of arr.slice(0, RSS_ITEMS_PER_FEED * 2)) {
+          const title = it.title?.['#text'] ?? it.title ?? ''
+          const link =
+            it.link?.href ||
+            it.link?.[0]?.href ||
+            it.link ||
+            it.guid ||
+            ''
+          const content =
+            it['content:encoded'] ||
+            it.content?.['#text'] ||
+            it.content ||
+            it.summary?.['#text'] ||
+            it.summary ||
+            it.description ||
+            ''
+          const pub =
+            it.pubDate ||
+            it.published ||
+            it.updated ||
+            it['dc:date'] ||
+            null
+          const ts = pub ? new Date(pub).getTime() : 0
+          if (ts && ts < cutoff) continue
+
+          let image =
+            it.enclosure?.url ||
+            it['media:content']?.url ||
+            it['media:thumbnail']?.url ||
+            null
+
+          if (!title || !link) continue
+          results.push({ url: link, title, content, image })
+          if (results.length >= RSS_FEEDS_PER_TOPIC * RSS_ITEMS_PER_FEED) break
+        }
+      } catch {}
+    }))
+
+    return results
+  }
+
   const fetchAndStore = async (topic: string, existingTitles: string[]) => {
-    const fresh = await fetchNewsForTopic(topic, existingTitles, (stats) => emitDebug({ topic, ...stats }))
+    let fresh: NewsItem[] = []
+    const rssResults = await fetchRssResults(topic)
+    if (rssResults.length > 0) {
+      fresh = await fetchNewsForTopicFromResults(topic, rssResults, existingTitles, (stats) => emitDebug({ topic, source: 'rss', ...stats }))
+    } else {
+      fresh = await fetchNewsForTopic(topic, existingTitles, (stats) => emitDebug({ topic, source: 'tavily', ...stats }))
+    }
     if (fresh.length === 0) return []
 
     const rows = fresh.map(itemToRow)
