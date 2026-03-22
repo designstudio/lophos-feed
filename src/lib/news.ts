@@ -44,6 +44,95 @@ function getSourceHint(topic: string): string {
   return 'Reuters, AP, BBC, The Guardian'
 }
 
+// Extract og:image from a URL — used as fallback when Tavily has no image
+// Fallback: use Tavily Extract to get og:image from sites that block direct fetch (Forbes, Bloomberg, etc.)
+async function fetchOgImageViaTavily(url: string): Promise<string | undefined> {
+  try {
+    const res = await fetch('https://api.tavily.com/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: TAVILY_KEY, urls: [url] }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) return undefined
+    const data = await res.json()
+    const raw = data?.results?.[0]?.raw_content ?? ''
+    const match =
+      raw.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+      raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      raw.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
+      raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
+    const imageUrl = match?.[1]
+    if (!imageUrl) return undefined
+    try { return new URL(imageUrl, url).href } catch { return imageUrl }
+  } catch {
+    return undefined
+  }
+}
+
+async function fetchOgImage(url: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) return undefined
+    // Read up to 100KB — SPAs sometimes have og:image injected further down
+    const reader = res.body?.getReader()
+    if (!reader) return undefined
+    let html = ''
+    while (html.length < 100000) {
+      const { done, value } = await reader.read()
+      if (done) break
+      html += new TextDecoder().decode(value)
+      // Stop early if we already found og:image (common case)
+      if (html.includes('og:image') && html.includes('</head>')) break
+    }
+    reader.cancel()
+    const match =
+      // Standard og:image variants
+      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      // Twitter card variants
+      html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i) ||
+      html.match(/<meta[^>]+name=["']twitter:image:src["'][^>]+content=["']([^"']+)["']/i) ||
+      // JSON-LD image (used by SPAs like VCT, Riot)
+      html.match(/"image"\s*:\s*[{"[]?\s*"url"\s*:\s*"([^"]+)"/i) ||
+      html.match(/"image"\s*:\s*"(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp))"/i) ||
+      // Next.js / Nuxt preloaded image hint
+      html.match(/<link[^>]+rel=["']preload["'][^>]+as=["']image["'][^>]+href=["']([^"']+)["']/i)
+    const imageUrl = match?.[1]
+    if (!imageUrl) return undefined
+    try { return new URL(imageUrl, url).href } catch { return imageUrl }
+  } catch {
+    return undefined
+  }
+}
+// Exported so PATCH /api/article can re-fetch just the image for a specific article
+export async function fetchImageForSources(sources: { url: string }[]): Promise<string | undefined> {
+  // Layer 1: direct fetch with real browser UA
+  for (const s of sources) {
+    if (s?.url) {
+      const img = await fetchOgImage(s.url)
+      if (img) return img
+    }
+  }
+  // Layer 2: Tavily Extract fallback
+  for (const s of sources) {
+    if (s?.url) {
+      const img = await fetchOgImageViaTavily(s.url)
+      if (img) return img
+    }
+  }
+  return undefined
+}
 
 function buildQuery(topic: string): string {
   const todayISO = new Date().toISOString().split('T')[0]
@@ -160,9 +249,9 @@ ${context}`
         }
       })
 
-    // Use Tavily's image field directly
+    // Use Tavily's image field directly — no external fetching needed
     const primaryResult = results[idxs[0]] ?? results[0]
-    const imageUrl = primaryResult?.image ?? undefined
+    const imageUrl: string | undefined = primaryResult?.image ?? (tavilyData.images?.[idxs[0]] ?? undefined)
 
     const safeId = `${topic}-${Date.now()}-${i}`
       .toLowerCase()
