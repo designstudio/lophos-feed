@@ -202,8 +202,8 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
     .join(' ')
 
   const score = textOverlapScore(genText, sourceText)
-  console.log(`[relevance-check] "${title.slice(0, 60)}..." score=${score.toFixed(3)} (threshold=0.18) -> ${score >= 0.18 ? 'PASS' : 'FAIL'}`)
-  return score >= 0.18
+  console.log(`[relevance-check] "${title.slice(0, 60)}..." score=${score.toFixed(3)} (threshold=0.15) -> ${score >= 0.15 ? 'PASS' : 'FAIL'}`)
+  return score >= 0.15
 }
 
 export async function fetchNewsForTopic(
@@ -284,18 +284,22 @@ Hoje é ${today}. Tópico: "${topic}".
 ${existingContext}
 REGRAS OBRIGATÓRIAS:
 1. Use APENAS as fontes fornecidas. NÃO invente fatos.
-2. O TÍTULO e o RESUMO devem usar termos presentes nas fontes. Se não for possível, retorne [].
-3. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
-3. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
-4. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo.
-5. Se não houver nenhum evento noticiável real nas fontes, retorne [].
-6. Tom editorial de referência: ${sourceHint}.
-7. Tom: neutro, jornalístico, sem clickbait.
-8. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
+2. O TÍTULO deve incluir palavras-chave LITERAIS das fontes (nomes de bandas, artistas, eventos, números, datas).
+3. O RESUMO deve incorporar frases e termos DIRETOS dos artigos das fontes. Reutilize a linguagem original.
+4. Agrupe fontes do MESMO evento em 1 notícia. Máx 2 notícias se eventos genuinamente distintos.
+5. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
+6. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo, lançamentos, turnês.
+7. Se não houver nenhum evento noticiável real nas fontes, retorne [].
+8. Tom editorial de referência: ${sourceHint}.
+9. Tom: neutro, jornalístico, sem clickbait.
+10. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
+
+EXEMPLO DE BOA ESTRUTURA:
+Se a fonte diz: "Taylor Swift announces 2026 world tour with 50 dates", seu título deve incluir "Taylor Swift" e "turnê" ou "tour", e o resumo deve reutilizar termos como "anúncio", "2026", "turnê mundial".
 
 ESTRUTURA de cada notícia:
-- title: título preciso em pt-BR
-- summary: parágrafo introdutório de 4-5 frases, factual e empolgante
+- title: título preciso em pt-BR (com nomes/termos das fontes)
+- summary: parágrafo introdutório de 4-5 frases, usando linguagem direta das fontes
 - sections: array de 2-4 seções com heading e body
 - conclusion: "O que esperar" ou null
 - sourceIndexes: índices das fontes usadas
