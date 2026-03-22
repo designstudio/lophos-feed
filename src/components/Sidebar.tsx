@@ -66,8 +66,8 @@ const ACCENT_COLORS = [
 ]
 
 const WIDGET_OPTIONS = [
-  { id: 'valorant', label: 'Partidas â€” Valorant' },
-  { id: 'lol',      label: 'Partidas â€” League of Legends' },
+  { id: 'valorant', label: 'Partidas - Valorant' },
+  { id: 'lol',      label: 'Partidas - League of Legends' },
   { id: 'series',   label: 'Próximos episódios' },
 ]
 
@@ -414,11 +414,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                         onClick={() => toggleWidget(id)}
                         role="switch"
                         aria-checked={activeWidgets.includes(id)}
-                        className={cn(
-                          'relative inline-flex flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none',
-                          activeWidgets.includes(id) ? '' : 'bg-gray-200'
-                        )}
-                        style={{ width: '42px', height: '24px', background: activeWidgets.includes(id) ? 'var(--color-ui-strong)' : undefined }}
+                        className="relative inline-flex flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none"
+                        style={{ width: '42px', height: '24px', background: activeWidgets.includes(id) ? 'var(--color-accent)' : 'var(--color-bg-tertiary)' }}
                       >
                         <span className={cn(
                           'pointer-events-none inline-block rounded-full bg-white shadow-md transform transition-transform duration-200',
