@@ -73,7 +73,7 @@ export default function ArticlePage() {
               className="flex items-center gap-2 text-[15px] font-semibold text-ink-primary transition-colors flex-shrink-0 md:w-48"
               onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
               onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
-              <LophosLogo size={26} />
+              <span className="md:hidden"><LophosLogo size={26} /></span>
               Meu Feed
             </Link>
             {/* Article title — appears when user scrolls past the h1 */}
