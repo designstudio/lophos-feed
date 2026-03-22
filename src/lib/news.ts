@@ -120,6 +120,13 @@ async function fetchOgImage(url: string): Promise<string | undefined> {
   }
 }
 
+const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
+
+function isLazyLoadImage(url: string | undefined): boolean {
+  if (!url) return false
+  return LAZY_IMAGE_PATTERNS.some(p => url.toLowerCase().includes(p))
+}
+
 function isImageFromSources(imageUrl: string | undefined, sources: NewsSource[]): boolean {
   if (!imageUrl) return false
   try {
@@ -469,6 +476,8 @@ ${context}`
 
     const primaryResult = results[idxs[0]] ?? results[0]
     let imageUrl: string | undefined = primaryResult?.image
+    // Descartar lazy-load placeholders que o Tavily às vezes retorna como imagem
+    if (isLazyLoadImage(imageUrl)) imageUrl = undefined
     if (!imageUrl || !isImageFromSources(imageUrl, sources)) {
       const ogImage = await fetchImageForSources(sources)
       if (ogImage) imageUrl = ogImage
