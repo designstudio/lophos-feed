@@ -259,22 +259,10 @@ function buildClusters(results: ResultItem[], onDiagCluster?: (info: { clusters:
   return clusters
 }
 
-type DiagStats = {
-  tavily: number
-  filtered: number
-  gemini: number
-  kept: number
-  dropped: number
-  clusters?: number
-  clusterSizes?: number[]
-  reason?: string
-  error?: string
-}
-
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = [],
-  onDiag?: (stats: DiagStats) => void
+  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number }) => void
 ): Promise<NewsItem[]> {
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
@@ -302,7 +290,7 @@ export async function fetchNewsForTopic(
   )
 
   if (results.length === 0) {
-    onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0, reason: 'no_results' })
+    onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0 })
     return []
   }
 
@@ -374,18 +362,9 @@ ${context}`
   const geminiData = await geminiRes.json()
   const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
   const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
-  if (!match) {
-    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, reason: 'no_json' })
-    return []
-  }
+  if (!match) return []
 
-  let parsed: any[] = []
-  try {
-    parsed = JSON.parse(match[0])
-  } catch {
-    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, reason: 'json_parse_error' })
-    return []
-  }
+  const parsed = JSON.parse(match[0])
   const now = new Date().toISOString()
 
   let dropped = 0
@@ -466,7 +445,7 @@ ${context}`
     dropped,
     clusters: clusterDiag?.clusters,
     clusterSizes: clusterDiag?.sizes,
-  })
+  } as any)
   return items
 }
 
