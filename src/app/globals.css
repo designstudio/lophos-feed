@@ -243,3 +243,29 @@ html, body {
 .stagger > *:nth-child(6) { animation-delay: 400ms; opacity: 0; }
 .stagger > *:nth-child(7) { animation-delay: 480ms; opacity: 0; }
 .stagger > *:nth-child(8) { animation-delay: 560ms; opacity: 0; }
+
+/* ═══════════════════════════════════════════════════════════
+   Mobile-only overrides  (< 768px)
+   Mantidas aqui separadas para não conflitar com utilities
+   desktop. Usar !important onde necessário para garantir
+   precedência sobre classes do Tailwind.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* ── Imagem do artigo interno ── */
+  .article-image {
+    height: 15.4rem !important;
+  }
+
+  /* ── Imagens dos cards no feed ── */
+  .news-card-image {
+    height: 12rem;
+  }
+
+  /* ── Título dos cards — sempre 1rem, independente do variant ── */
+  .news-card h2 {
+    font-size: 1rem !important;
+    line-height: 1.625 !important;
+    font-weight: 600;
+  }
+}

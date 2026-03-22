@@ -81,6 +81,33 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
   )
 }
 
+// Imagem do card — mesma altura em todos os variants no mobile (via CSS global)
+function CardImage({ proxiedImage, title, sources, onError }: {
+  proxiedImage: string | undefined
+  title: string
+  sources: NewsItem['sources']
+  onError: () => void
+}) {
+  const showImage = !!proxiedImage
+  return (
+    <div className="news-card-image w-full rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative">
+      {showImage ? (
+        <img src={proxiedImage} alt={title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          onError={onError}
+        />
+      ) : (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
+          <div className="absolute bottom-2 left-2 px-2 py-1 rounded-md text-[10px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
+            {getSourceLabel(sources)}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export function NewsCard({ item, variant = 'card', className }: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(null)
   const [reacting, setReacting] = useState(false)
@@ -104,24 +131,14 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
     setReacting(false)
   }
 
+  // ── Mobile: todos os variants usam o mesmo layout coluna única ──
+  // Padrão: imagem → categoria → título → fontes+reações → divider
+  // Desktop: layout específico por variant
+
   if (variant === 'card') {
     return (
-      <Link href={href} className={cn('group flex flex-col', className)}>
-        {showImage ? (
-          <div className="w-full h-36 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5">
-            <img src={proxiedImage} alt={item.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={() => setImgFailed(true)}
-            />
-          </div>
-        ) : (
-          <div className="w-full h-36 rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
-            <div className="absolute bottom-2 left-2 px-2 py-1 rounded-md text-[10px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
-              {getSourceLabel(item.sources)}
-            </div>
-          </div>
-        )}
+      <Link href={href} className={cn('news-card group flex flex-col pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0', className)}>
+        <CardImage proxiedImage={showImage ? proxiedImage : undefined} title={item.title} sources={item.sources} onError={() => setImgFailed(true)} />
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.topic}</span>
         <h2 className="text-card-title text-ink-primary group-hover:text-accent transition-colors">{item.title}</h2>
         <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
@@ -131,12 +148,12 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
 
   if (variant === 'full-left') {
     return (
-      <Link href={href} className={cn('group flex flex-col md:flex-row gap-4 md:gap-6 items-start', className)}>
-        {/* Image: topo no mobile (order-first), direita no desktop (order-last) */}
-        <div className="order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative">
+      <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-6 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0', className)}>
+        {/* Mobile: imagem no topo. Desktop: imagem à direita (order-last) */}
+        <div className="news-card-image order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
           {showImage ? (
             <img src={proxiedImage} alt={item.title}
-              className="w-full h-48 md:h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={() => setImgFailed(true)}
             />
           ) : (
@@ -162,12 +179,12 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
 
   // full-right
   return (
-    <Link href={href} className={cn('group flex flex-col md:flex-row gap-4 md:gap-6 items-start', className)}>
-      {/* Image: já vem primeiro no DOM → topo no mobile, esquerda no desktop */}
-      <div className="w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative">
+    <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-6 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0', className)}>
+      {/* Mobile: imagem no topo. Desktop: imagem à esquerda */}
+      <div className="news-card-image w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
         {showImage ? (
           <img src={proxiedImage} alt={item.title}
-            className="w-full h-48 md:h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={() => setImgFailed(true)}
           />
         ) : (
@@ -181,7 +198,7 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
       </div>
       <div className="flex-1 min-w-0">
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-        <h2 className="text-card-title md:text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
+        <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
         <div className="hidden md:block">
           <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
         </div>

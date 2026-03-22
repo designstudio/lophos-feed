@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { RightSidebar } from '@/components/RightSidebar'
 import { NewsCard } from '@/components/NewsCard'
+import { LophosLogo } from '@/components/LophosLogo'
 import { SkeletonBlock } from '@/components/SkeletonCard'
 import { Feed } from '@solar-icons/react-perf/Linear'
 import { NewsItem } from '@/lib/types'
@@ -16,7 +17,7 @@ function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: numbe
   if (posInCycle !== 1) {
     const variant = posInCycle === 2 ? 'full-right' : 'full-left'
     return (
-      <div className="py-6 border-b border-border">
+      <div className="md:py-6 md:border-b md:border-border">
         <NewsCard item={items[0]} variant={variant} />
       </div>
     )
@@ -26,15 +27,15 @@ function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: numbe
   if (items.length === 1) {
     // Not enough for grid, show as full-left
     return (
-      <div className="py-6 border-b border-border">
+      <div className="md:py-6 md:border-b md:border-border">
         <NewsCard item={items[0]} variant="full-left" />
       </div>
     )
   }
 
   return (
-    <div className="py-6 border-b border-border">
-      <div className={cn('grid gap-4 md:gap-6', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
+    <div className="md:py-6 md:border-b md:border-border">
+      <div className={cn('grid gap-0 md:gap-6', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
         {items.map(item => <NewsCard key={item.id} item={item} variant="card" />)}
       </div>
     </div>
@@ -350,14 +351,15 @@ export default function FeedPage() {
         <div className="sticky top-0 z-20 border-b border-border header-blur">
 
           {/* Mobile: title */}
-          <div className="flex items-center h-12 px-4 md:hidden">
+          <div className="flex items-center h-12 px-4 md:hidden gap-2">
+            <LophosLogo size={26} />
             <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
           </div>
 
           {/* Mobile: horizontal scrollable tabs */}
           <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pb-3"
             style={{ WebkitOverflowScrolling: 'touch' }}>
-            {(['Top', ...topicsInFeed] as (string | null)[]).map((t, i) => {
+            {(['Últimas notícias', ...topicsInFeed] as (string | null)[]).map((t, i) => {
               const val = i === 0 ? null : t as string
               const active = activeFilter === val
               return (
@@ -371,7 +373,7 @@ export default function FeedPage() {
                       : 'border-border text-ink-tertiary hover:text-ink-secondary'
                   )}
                 >
-                  {t ?? 'Top'}
+                  {t}
                 </button>
               )
             })}
@@ -390,7 +392,7 @@ export default function FeedPage() {
                     : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
                 )}
               >
-                Top
+                Últimas notícias
               </button>
               <TopicsDropdown
                 topics={topicsInFeed}
@@ -404,7 +406,7 @@ export default function FeedPage() {
 
         {/* ── Feed + Right sidebar ── */}
         <div className="feed-layout mx-auto px-4 md:px-8">
-          <div className="flex gap-10 py-6 pb-24 md:pb-6">
+          <div className="flex gap-10 pt-0 pb-24 md:py-6 md:pb-6">
             <div className="flex-1 min-w-0">
 
               {coldStartLoading && (

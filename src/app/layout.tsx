@@ -6,6 +6,12 @@ export const metadata: Metadata = {
   title: 'Lophos Feed',
   description: 'Seu feed de notícias personalizado por IA.',
   viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
+  manifest: '/site.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Lophos',
+  },
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
@@ -14,9 +20,6 @@ export const metadata: Metadata = {
     ],
     apple: [
       { url: '/apple-touch-icon.png' },
-    ],
-    other: [
-      { rel: 'manifest', url: '/site.webmanifest' },
     ],
   },
 }
@@ -40,6 +43,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '3.5rem' : '16.1rem');
               } catch(e) {}
             })();
+          ` }} />
+          <script dangerouslySetInnerHTML={{ __html: `
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js');
+              });
+            }
           ` }} />
         </head>
         <body>{children}</body>
