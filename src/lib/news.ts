@@ -202,13 +202,14 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
     .join(' ')
 
   const score = textOverlapScore(genText, sourceText)
+  console.log(`[relevance-check] "${title.slice(0, 60)}..." score=${score.toFixed(3)} (threshold=0.18) -> ${score >= 0.18 ? 'PASS' : 'FAIL'}`)
   return score >= 0.18
 }
 
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = [],
-  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; geminiRaw?: string }) => void
+  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; geminiRaw?: string; droppedItems?: { title: string; score: number }[] }) => void
 ): Promise<NewsItem[]> {
   const tavilyRes = await fetch('https://api.tavily.com/search', {
     method: 'POST',
@@ -342,6 +343,7 @@ ${context}`
 
   let dropped = 0
   const items: NewsItem[] = []
+  const droppedItems: { title: string; score: number }[] = []
   for (let i = 0; i < parsed.length; i++) {
     const item = parsed[i]
     const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
@@ -356,8 +358,21 @@ ${context}`
         }
       })
 
+    // Calculate relevance score for diagnostics
+    const title = item?.title || ''
+    const summary = item?.summary || ''
+    const genText = `${title} ${summary}`
+    const sourceText = sources
+      .map((s) => {
+        const r = results.find((rr: any) => rr?.url === s.url)
+        return r ? `${r.title || ''} ${r.content || ''}` : ''
+      })
+      .join(' ')
+    const relevanceScore = genText.trim() ? textOverlapScore(genText, sourceText) : 0
+
     if (!isGeneratedItemRelevant(item, sources, results)) {
       dropped++
+      droppedItems.push({ title: item.title || '(sem título)', score: relevanceScore })
       continue
     }
 
@@ -390,7 +405,7 @@ ${context}`
     })
   }
 
-  onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: parsed.length, kept: items.length, dropped, rejected, geminiRaw: rawPreview })
+  onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: parsed.length, kept: items.length, dropped, rejected, geminiRaw: rawPreview, droppedItems })
   return items
 }
 
