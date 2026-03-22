@@ -12,6 +12,7 @@ const FETCH_INTERVAL_MINUTES = 120
 const RSS_FEEDS_PER_TOPIC = 4
 const RSS_ITEMS_PER_FEED = 3
 const RSS_TIMEOUT_MS = 7000
+const CATEGORY_CACHE_DAYS = 30
 
 function isSearchStale(lastFetched: string | null): boolean {
   if (!lastFetched) return true
@@ -72,41 +73,114 @@ export async function POST(req: NextRequest) {
   }
 
   const fetchRssResults = async (topic: string) => {
-    const normalize = (s: string) =>
-      s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-    const t = normalize(topic)
-    const fallbackTopics = (() => {
-      if (/valorant|league|lol|tft|overwatch|esport/.test(t)) return ['E-sports','Games']
-      if (/game|gaming/.test(t)) return ['Games']
-      if (/cinema|filme|serie|série|tv|stream/.test(t)) return ['Cinema','Filmes','Séries','Entretenimento']
-      if (/musica|música|album|show|turne|turnê/.test(t)) return ['Música']
-      if (/politic|politica|brasil|mundo|election|eleic/.test(t)) return ['Política','Brasil','Mundo']
-      if (/tech|tecnologia|ia|inteligencia|inovacao|startup|software/.test(t)) return ['Tecnologia','Inovação']
-      if (/smartphone|android|iphone|ios|mobile/.test(t)) return ['Smartphones']
-      if (/negocio|economia|financa|finance|business|market/.test(t)) return ['Negócios','Economia','Finanças']
-      if (/ciencia|science|saude|health/.test(t)) return ['Ciência']
-      if (/educacao|carreira|trabalho/.test(t)) return ['Educação','Carreira']
-      if (/viagem|turismo|travel/.test(t)) return ['Turismo','Viagem']
-      if (/ambiente|clima|climate|environment/.test(t)) return ['Meio Ambiente']
-      if (/arte|cultura/.test(t)) return ['Arte','Cultura']
-      if (/esporte|sport|futebol|nba/.test(t)) return ['Esportes']
-      return []
-    })()
+    const getCategories = async () => {
+      const { data, error } = await db.from('rss_feeds').select('topics').eq('active', true)
+      if (error || !data) return []
+      const set = new Set<string>()
+      for (const row of data as any[]) {
+        for (const t of (row.topics || [])) set.add(String(t))
+      }
+      return Array.from(set)
+    }
 
-    const topicsToTry = [topic, ...fallbackTopics]
-    let feeds: any[] = []
-    for (const tp of topicsToTry) {
+    const loadCachedCategories = async (): Promise<string[] | null> => {
+      try {
+        const { data, error } = await db
+          .from('topic_category_map')
+          .select('categories, updated_at')
+          .eq('topic', topic)
+          .single()
+        if (error || !data) return null
+        const updated = new Date(data.updated_at).getTime()
+        if (Date.now() - updated > CATEGORY_CACHE_DAYS * 24 * 60 * 60 * 1000) return null
+        return (data.categories || []) as string[]
+      } catch {
+        return null
+      }
+    }
+
+    const classifyTopic = async (cats: string[]): Promise<string[]> => {
+      if (!process.env.GEMINI_API_KEY || cats.length === 0) return []
+      const prompt = `Classifique o tópico abaixo em até 3 categorias da lista.
+
+TÓPICO: "${topic}"
+LISTA: ${cats.join(', ')}
+
+Responda APENAS com JSON válido no formato:
+{"categories":["...","..."]}`
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.1 },
+            }),
+          }
+        )
+        if (!res.ok) return []
+        const data = await res.json()
+        const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+        const match = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
+        if (!match) return []
+        const parsed = JSON.parse(match[0])
+        const categories = Array.isArray(parsed.categories) ? parsed.categories.map(String) : []
+        return categories.slice(0, 3)
+      } catch {
+        return []
+      }
+    }
+
+    // 1) Try exact topic match
+    const { data: exactFeeds } = await db
+      .from('rss_feeds')
+      .select('url,name,topics,active')
+      .eq('active', true)
+      .contains('topics', [topic])
+      .limit(RSS_FEEDS_PER_TOPIC)
+    if (exactFeeds && exactFeeds.length > 0) {
+      return await fetchRssFromFeeds(exactFeeds)
+    }
+
+    // 2) Try cached or classified categories
+    let categories = await loadCachedCategories()
+    if (!categories) {
+      const allCats = await getCategories()
+      categories = await classifyTopic(allCats)
+      if (categories.length > 0) {
+        try {
+          await db.from('topic_category_map').upsert(
+            { topic, categories, updated_at: new Date().toISOString() },
+            { onConflict: 'topic' }
+          )
+        } catch {}
+      }
+    }
+
+    if (!categories || categories.length === 0) return []
+
+    const feeds: any[] = []
+    for (const cat of categories) {
       const { data } = await db
         .from('rss_feeds')
         .select('url,name,topics,active')
         .eq('active', true)
-        .contains('topics', [tp])
+        .contains('topics', [cat])
         .limit(RSS_FEEDS_PER_TOPIC)
-      if (data && data.length > 0) { feeds = data; break }
+      if (data && data.length > 0) {
+        for (const f of data) {
+          if (!feeds.find((x) => x.url === f.url)) feeds.push(f)
+        }
+      }
     }
 
     if (!feeds || feeds.length === 0) return []
+    return await fetchRssFromFeeds(feeds)
+  }
 
+  const fetchRssFromFeeds = async (feeds: any[]) => {
     const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '' })
     const cutoff = Date.now() - 2 * 24 * 60 * 60 * 1000
     const results: any[] = []
