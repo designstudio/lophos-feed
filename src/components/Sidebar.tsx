@@ -57,7 +57,7 @@ if (typeof window !== 'undefined') {
 }
 
 const ACCENT_COLORS = [
-  { label: 'PadrÃ£o',  value: '#ca774b', dot: '#ca774b' },
+  { label: 'Padrão',  value: '#ca774b', dot: '#ca774b' },
   { label: 'Azul',    value: '#2563eb', dot: '#3b82f6' },
   { label: 'Verde',   value: '#16a34a', dot: '#22c55e' },
   { label: 'Amarelo', value: '#ca8a04', dot: '#eab308' },
@@ -68,7 +68,7 @@ const ACCENT_COLORS = [
 const WIDGET_OPTIONS = [
   { id: 'valorant', label: 'Partidas â€” Valorant' },
   { id: 'lol',      label: 'Partidas â€” League of Legends' },
-  { id: 'series',   label: 'PrÃ³ximos episÃ³dios' },
+  { id: 'series',   label: 'Próximos episódios' },
 ]
 
 // â”€â”€â”€ Custom Accent Picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -258,7 +258,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
         {/* Full-width header */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 h-14 border-b z-10 rounded-t-[1.5rem]" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-primary)' }}>
-          <h2 className="font-semibold text-gray-900" style={{ fontSize: '20px' }}>ConfiguraÃ§Ãµes</h2>
+          <h2 className="font-semibold text-gray-900" style={{ fontSize: '20px' }}>Configurações</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
             <CloseCircle size={20} />
           </button>
@@ -290,8 +290,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             {tab === 'geral' && (
               <>
                 <section className="pb-5 border-b border-border">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">AparÃªncia</h3>
-                  <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para vocÃª.</p>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Aparência</h3>
+                  <p className="text-sm text-gray-500 mb-4">Escolha como o Lophos aparece para você.</p>
                   <div className="grid grid-cols-3 gap-3">
                     {([
                       { id: 'light',  label: 'Claro',   icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
@@ -312,32 +312,32 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
 
                 <section className="py-5 border-b border-border">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-900">Cor de Ãªnfase</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">Cor de ênfase</h3>
                     <AccentPicker value={accentColor} onChange={handleAccent} />
                   </div>
                 </section>
 
                 <section className="py-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">TÃ³picos de interesse</h3>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Tópicos de interesse</h3>
                   <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
                     {topics.map(t => (
                       <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-[13px]" style={{ background: "var(--color-ui-strong)" }}>
                         {t}
                         <button onClick={() => { setTopics(prev => prev.filter(x => x !== t)); setTopicsSaved(false) }}
-                          className="opacity-60 hover:opacity-100 leading-none">Ã—</button>
+                          className="opacity-60 hover:opacity-100 leading-none">×</button>
                       </span>
                     ))}
                   </div>
                   {suggestions.length === 0 && topics.length > 0 && (
                     <div className="flex items-center gap-2 mb-3 text-[12px] text-gray-400">
                       <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeDashoffset="12"/></svg>
-                      Gerando sugestÃµes personalizadasâ€¦
+                      Gerando sugestões personalizadas…
                     </div>
                   )}
                   {suggestions.filter(s => !topics.includes(s)).length > 0 && (
                     <div className="mb-1.5">
-                      <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-2">SugestÃµes para vocÃª</p>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-2">Sugestões para você</p>
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {suggestions.filter(s => !topics.includes(s)).slice(0, 10).map(s => (
                           <button key={s} onClick={() => { setTopics(p => [...p, s]); setSuggestions(p => p.filter(x => x !== s)); setTopicsSaved(false) }}
@@ -351,7 +351,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <div className="flex gap-2">
                     <input value={custom} onChange={e => setCustom(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
-                      placeholder="Adicionar tÃ³pico..."
+                      placeholder="Adicionar tópico..."
                       className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-gray-400 bg-white text-gray-900" />
                     <button onClick={() => { if (custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
                       className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-gray-400 transition-colors">
@@ -361,7 +361,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <button onClick={saveTopics} disabled={savingTopics}
                     className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
                     style={{ background: 'var(--color-ui-strong)' }}>
-                    {topicsSaved ? 'âœ“ Salvo!' : savingTopics ? 'Salvandoâ€¦' : 'Salvar tÃ³picos'}
+                    {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
                   </button>
                 </section>
               </>
@@ -457,7 +457,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <button onClick={saveName} disabled={savingName}
                     className="px-5 py-2.5 rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
                     style={{ background: 'var(--color-ui-strong)' }}>
-                    {nameSaved ? 'âœ“ Salvo!' : savingName ? 'Salvandoâ€¦' : 'Salvar'}
+                    {nameSaved ? '✓ Salvo!' : savingName ? 'Salvando…' : 'Salvar'}
                   </button>
                 </section>
 
@@ -531,7 +531,7 @@ function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors" style={{ color: 'var(--color-ink-secondary)' }}
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-              <Settings size={14} /> ConfiguraÃ§Ãµes
+              <Settings size={14} /> Configurações
             </button>
             <button onClick={() => signOut()}
               className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 transition-colors"
@@ -603,7 +603,7 @@ function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
             <button onClick={() => { setOpen(false); onOpenSettings() }} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors" style={{ color: 'var(--color-ink-secondary)' }}
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}>
-              <Settings size={14} /> ConfiguraÃ§Ãµes
+              <Settings size={14} /> Configurações
             </button>
             <button onClick={() => signOut()} className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 transition-colors"
               onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.10)')}
@@ -627,7 +627,7 @@ interface Props {
 
 export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: Props) {
   const path = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState<boolean | null>(null)
   const [mounted, setMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
 
@@ -647,13 +647,39 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     })
   }
 
+  const isCollapsed = collapsed ?? true
+  const isReady = collapsed !== null
+
   return (
     <>
+      {!isReady && (
+        <aside
+          className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
+          style={{
+            width: '3.5rem',
+            transition: 'none',
+          }}
+        >
+          <div className="h-14 flex items-center justify-center border-b border-border">
+            <div className="w-6 h-6 rounded-md bg-bg-secondary" />
+          </div>
+          <div className="flex-1 px-2 py-3 flex flex-col gap-2">
+            <div className="h-9 rounded-lg bg-bg-secondary" />
+            <div className="h-9 rounded-lg bg-bg-secondary" />
+            <div className="h-9 rounded-lg bg-bg-secondary" />
+          </div>
+          <div className="border-t border-border px-2 py-4">
+            <div className="h-10 rounded-lg bg-bg-secondary" />
+          </div>
+        </aside>
+      )}
       <aside
         className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
         style={{
-          width: collapsed ? '3.5rem' : '16.1rem',
+          width: isCollapsed ? '3.5rem' : '16.1rem',
           transition: mounted ? 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
+          opacity: isReady ? 1 : 0,
+          pointerEvents: isReady ? 'auto' : 'none',
           willChange: 'width',
         }}
       >
