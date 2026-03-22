@@ -314,6 +314,7 @@ REGRAS OBRIGATÓRIAS:
 6. Tom editorial de referência: ${sourceHint}.
 7. Tom: neutro, jornalístico, sem clickbait.
 8. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
+9. "conclusion" deve ser uma frase real (não repita "O que esperar"). Se não houver algo concreto, use null.
 
 ESTRUTURA de cada notícia:
 - title: título preciso em pt-BR
@@ -398,9 +399,13 @@ ${context}`
 
     const safeId = randomUUID()
 
-    const conclusion = typeof item.conclusion === 'string'
+    let conclusion = typeof item.conclusion === 'string'
       ? item.conclusion
       : item.conclusion?.body || undefined
+    if (conclusion) {
+      const clean = conclusion.trim()
+      if (clean.length < 12 || /^o que esperar$/i.test(clean)) conclusion = undefined
+    }
 
     const title = item?.title || ''
     const isDupExisting = existingTitles.some((t) => isSimilarTitle(title, t))
