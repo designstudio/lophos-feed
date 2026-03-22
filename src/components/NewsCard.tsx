@@ -132,13 +132,8 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
   if (variant === 'full-left') {
     return (
       <Link href={href} className={cn('group flex flex-col md:flex-row gap-4 md:gap-6 items-start', className)}>
-        <div className="flex-1 min-w-0">
-          <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-          <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
-          <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
-          <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
-        </div>
-        <div className="w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative">
+        {/* Image: topo no mobile (order-first), direita no desktop (order-last) */}
+        <div className="order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative">
           {showImage ? (
             <img src={proxiedImage} alt={item.title}
               className="w-full h-48 md:h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -153,12 +148,20 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
             </>
           )}
         </div>
+        <div className="flex-1 min-w-0">
+          <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
+          <h2 className="text-card-title md:text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
+          <p className="hidden md:block text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
+          <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
+        </div>
       </Link>
     )
   }
 
+  // full-right
   return (
     <Link href={href} className={cn('group flex flex-col md:flex-row gap-4 md:gap-6 items-start', className)}>
+      {/* Image: já vem primeiro no DOM → topo no mobile, esquerda no desktop */}
       <div className="w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative">
         {showImage ? (
           <img src={proxiedImage} alt={item.title}
@@ -176,8 +179,8 @@ export function NewsCard({ item, variant = 'card', className }: Props) {
       </div>
       <div className="flex-1 min-w-0">
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-        <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
-        <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
+        <h2 className="text-card-title md:text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
+        <p className="hidden md:block text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
         <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
       </div>
     </Link>
