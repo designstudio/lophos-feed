@@ -10,9 +10,13 @@ function createDedupHash(title: string): string {
 }
 
 // Extract text content from HTML
-function stripHtml(html: string | undefined): string {
+function stripHtml(html: any): string {
   if (!html) return ''
-  return html
+
+  // Convert to string if it's an object
+  let text = typeof html === 'string' ? html : String(html)
+
+  return text
     .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&quot;/g, '"')
@@ -67,11 +71,14 @@ async function fetchAndParseFeed(feed: RSSFeed): Promise<{ items: RSSItem[]; eta
       return { items: [], error: 'Empty response' }
     }
 
-    // Parse XML
+    // Parse XML with entity expansion disabled to prevent XXE and entity expansion attacks
     const parser = new XMLParser({
       ignoreAttributes: false,
       parseTagValue: true,
       trimValues: true,
+      isArray: (name: string) => name === 'item' || name === 'entry',
+      processEntities: false, // Disable entity processing
+      allowBooleanAttributes: true,
     })
     const parsed = parser.parse(xml) as any
 

@@ -11,7 +11,11 @@
       "WebFetch(domain:www.rssboard.org)",
       "WebFetch(domain:feeds.bbci.co.uk)",
       "WebFetch(domain:www.cnbc.com)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(supabase --version)",
+      "Bash(node scripts/insert-tech-feeds.js)",
+      "Bash(ls -la .env*)",
+      "Bash(grep -A 20 \"create table.*rss_feeds\" sql/*.sql)"
     ]
   }
 }
