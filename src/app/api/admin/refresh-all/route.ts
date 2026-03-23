@@ -37,6 +37,11 @@ async function handleRefresh(req: NextRequest) {
       .delete()
       .in('topic', topics)
 
+    await db
+      .from('raw_articles')
+      .delete()
+      .in('topic', topics)
+
     // 3. Clear topic_fetches to force refetch on next request
     await db
       .from('topic_fetches')
