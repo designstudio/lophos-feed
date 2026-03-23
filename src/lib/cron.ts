@@ -30,29 +30,38 @@ export function startFeedCron() {
   })
 }
 
-// Phase A: Tavily only — saves results to raw_articles (no Gemini)
+// Phase A: RSS Feed Collection — fetches RSS feeds and stores to raw_items
 async function collectAllFeeds() {
-  const db = getSupabaseAdmin()
-  const { data: topics, error } = await db.from('user_topics').select('topic')
-  if (error) { console.error('[cron] collect: topics error:', error); return }
-  if (!topics?.length) { console.log('[cron] collect: no topics'); return }
+  try {
+    const rssSecret = process.env.RSS_INGEST_SECRET
+    if (!rssSecret) {
+      console.error('[cron] collect: RSS_INGEST_SECRET not configured')
+      return
+    }
 
-  const uniqueTopics = Array.from(new Set(topics.map((t: any) => t.topic)))
-  console.log(`[cron] collect: ${uniqueTopics.length} topics`)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const res = await fetch(`${baseUrl}/api/rss/ingest`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${rssSecret}`,
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(300000), // 5 minute timeout for Vercel
+    })
 
-  const concurrency = 3
-  for (let i = 0; i < uniqueTopics.length; i += concurrency) {
-    const batch = uniqueTopics.slice(i, i + concurrency)
-    await Promise.allSettled(batch.map(async (topic) => {
-      try {
-        await collectRawForTopic(topic)
-        console.log(`[cron] collect ✓ ${topic}`)
-      } catch (err) {
-        console.error(`[cron] collect ✗ ${topic}:`, err)
-      }
-    }))
+    if (!res.ok) {
+      console.error(`[cron] collect: HTTP ${res.status}`)
+      return
+    }
+
+    const result = await res.json()
+    console.log(`[cron] collect: processed=${result.feedsProcessed}, added=${result.itemsAdded}, skipped=${result.itemsSkipped}`)
+    if (result.errors?.length > 0) {
+      console.warn(`[cron] collect: errors=${result.errors.join('; ')}`)
+    }
+  } catch (err: any) {
+    console.error('[cron] collect: error calling /api/rss/ingest:', err.message)
   }
-  console.log('[cron] collect: done')
 }
 
 // Phase B: Gemini only — reads raw_articles (status=raw) and saves to news_cache
