@@ -149,10 +149,8 @@ export default function FeedPage() {
   const coldStartRef = useRef(false)
 
   const coldStartMessages = [
-    'Estamos preparando o seu feed.',
-    'Primeira visita pode levar alguns segundos.',
-    'Ajustando tudo com base nos seus tópicos.',
-    'Personalizando o feed pra você.',
+    'O Lophos está preparando uma mágica com o seu feed.',
+    'Pode levar alguns minutos para você começar a ver os resultados.',
   ]
 
   useEffect(() => {
@@ -411,9 +409,8 @@ export default function FeedPage() {
 
               {coldStartLoading && (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <Feed size={48} className="text-ink-muted mb-4 animate-spin" />
+                  <Blog size={48} className="text-ink-muted mb-4 animate-spin" />
                   <p className="text-ink-secondary text-sm mb-2">{coldStartMessages[coldMsgIndex]}</p>
-                  <p className="text-ink-tertiary text-xs">Isso pode levar alguns segundos.</p>
                 </div>
               )}
 
