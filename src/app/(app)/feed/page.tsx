@@ -140,7 +140,6 @@ export default function FeedPage() {
   const [error, setError]         = useState<string | null>(null)
   const [pendingItems, setPendingItems] = useState<NewsItem[]>([])
   const [coldStartLoading, setColdStartLoading] = useState(false)
-  const [coldMsgIndex, setColdMsgIndex] = useState(0)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [visibleBlocks, setVisibleBlocks] = useState(4)
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -154,14 +153,6 @@ export default function FeedPage() {
     'O Lophos está preparando uma mágica com o seu feed.',
     'Pode levar alguns minutos para você começar a ver os resultados.',
   ]
-
-  useEffect(() => {
-    if (!coldStartLoading) return
-    const id = setInterval(() => {
-      setColdMsgIndex((i) => (i + 1) % coldStartMessages.length)
-    }, 2600)
-    return () => clearInterval(id)
-  }, [coldStartLoading])
 
   const setPending = (next: NewsItem[] | ((prev: NewsItem[]) => NewsItem[])) => {
     setPendingItems(prev => {
@@ -411,10 +402,16 @@ export default function FeedPage() {
 
               {coldStartLoading && (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-24 h-24 mb-4">
+                  <div className="w-24 h-24 mb-6">
                     <Lottie animationData={blogAnimation} loop autoplay />
                   </div>
-                  <p className="text-ink-secondary text-sm mb-2">{coldStartMessages[coldMsgIndex]}</p>
+                  <div className="max-w-md">
+                    {coldStartMessages.map((msg, i) => (
+                      <p key={i} className="text-ink-secondary text-sm mb-1">
+                        {msg}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
 
