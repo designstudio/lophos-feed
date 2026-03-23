@@ -277,59 +277,72 @@ export async function fetchNewsForTopic(
   existingTitles: string[] = [],
   onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; geminiRaw?: string; droppedItems?: { title: string; score: number }[] }) => void
 ): Promise<NewsItem[]> {
-  const tavilyRes = await fetch('https://api.tavily.com/search', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      api_key: TAVILY_KEY,
+  console.log(`[news] fetchNewsForTopic START for topic: ${topic}`)
+  try {
+    const tavilyRes = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: TAVILY_KEY,
+        query: buildQuery(topic),
+        search_depth: 'advanced',
+        max_results: 8,
+        time_range: 'week',
+        topic: 'news',
+        include_answer: false,
+        include_raw_content: true,
+        include_images: true,
+      }),
+    })
+
+    console.log(`[news] Tavily response for ${topic}: status=${tavilyRes.status}`)
+    if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
+    const tavilyData = await tavilyRes.json()
+
+    const allResults = (tavilyData.results || [])
+    console.log(`[news] Tavily returned ${allResults.length} results for ${topic}`)
+    const results: TavilyResult[] = []
+    const rejected: { url?: string; reason: string }[] = []
+    for (const r of allResults) {
+      if (!r?.url) { if (rejected.length < 12) rejected.push({ reason: 'missing_url' }); continue }
+      if (!r?.title) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_title' }); continue }
+      if (!r?.content) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_content' }); continue }
+      if (r.content.length <= 100) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'content_too_short' }); continue }
+      if (!isArticleUrl(r.url)) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'non_article_url' }); continue }
+      results.push({ url: r.url, title: r.title, content: r.content, image: r.image })
+    }
+
+    console.log(`[news] After filtering: ${results.length} valid articles for ${topic}`)
+    if (results.length === 0) {
+      onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0, rejected })
+      console.log(`[news] No valid results for ${topic}, returning empty`)
+      return []
+    }
+
+    const topLevelImages: string[] = (tavilyData.images ?? []).filter(
+      (img: string) => img && !isLazyLoadImage(img)
+    )
+
+    const db = getSupabaseAdmin()
+    const { error: rawError } = await db.from('raw_articles').insert({
+      topic,
+      tavily_results: { results, images: topLevelImages },
       query: buildQuery(topic),
-      search_depth: 'advanced',
-      max_results: 8,
-      time_range: 'week',
-      topic: 'news',
-      include_answer: false,
-      include_raw_content: true,
-      include_images: true,
-    }),
-  })
+      status: 'raw',
+    })
+    if (rawError) console.warn('[news] Failed to save raw_articles:', rawError.message)
+    else console.log(`[news] Successfully saved raw_articles for ${topic}`)
 
-  if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
-  const tavilyData = await tavilyRes.json()
-
-  const allResults = (tavilyData.results || [])
-  const results: TavilyResult[] = []
-  const rejected: { url?: string; reason: string }[] = []
-  for (const r of allResults) {
-    if (!r?.url) { if (rejected.length < 12) rejected.push({ reason: 'missing_url' }); continue }
-    if (!r?.title) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_title' }); continue }
-    if (!r?.content) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_content' }); continue }
-    if (r.content.length <= 100) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'content_too_short' }); continue }
-    if (!isArticleUrl(r.url)) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'non_article_url' }); continue }
-    results.push({ url: r.url, title: r.title, content: r.content, image: r.image })
+    console.log(`[news] Starting processRawBatch for ${topic}`)
+    const items = await processRawBatch(topic, results, existingTitles, (batchStats) => {
+      onDiag?.({ tavily: allResults.length, filtered: results.length, rejected, ...batchStats })
+    }, topLevelImages)
+    console.log(`[news] processRawBatch completed for ${topic}, returning ${items.length} items`)
+    return items
+  } catch (e) {
+    console.error(`[news] fetchNewsForTopic ERROR for ${topic}:`, e)
+    throw e
   }
-
-  if (results.length === 0) {
-    onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0, rejected })
-    return []
-  }
-
-  const topLevelImages: string[] = (tavilyData.images ?? []).filter(
-    (img: string) => img && !isLazyLoadImage(img)
-  )
-
-  const db = getSupabaseAdmin()
-  const { error: rawError } = await db.from('raw_articles').insert({
-    topic,
-    tavily_results: { results, images: topLevelImages },
-    query: buildQuery(topic),
-    status: 'raw',
-  })
-  if (rawError) console.warn('[news] Failed to save raw_articles:', rawError.message)
-
-  const items = await processRawBatch(topic, results, existingTitles, (batchStats) => {
-    onDiag?.({ tavily: allResults.length, filtered: results.length, rejected, ...batchStats })
-  }, topLevelImages)
-  return items
 }
 
 type DiagCallback = (stats: {
@@ -423,6 +436,7 @@ Responda APENAS com JSON válido:
 FONTES:
 ${context}`
 
+  console.log(`[news] Calling Gemini for topic: ${topic}, with ${results.length} sources`)
   const geminiRes = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
     {
@@ -435,8 +449,10 @@ ${context}`
     }
   )
 
+  console.log(`[news] Gemini response for ${topic}: status=${geminiRes.status}`)
   if (!geminiRes.ok) {
-    console.error(`Gemini error ${geminiRes.status}:`, await geminiRes.text())
+    const errorText = await geminiRes.text()
+    console.error(`[news] Gemini error ${geminiRes.status}:`, errorText)
     throw new Error(`Gemini error: ${geminiRes.status}`)
   }
 
