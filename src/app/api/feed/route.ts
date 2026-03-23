@@ -15,6 +15,7 @@ function isSearchStale(lastFetched: string | null): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  console.log('🔥 FEED ROUTE CALLED AT', new Date().toISOString())
   const { userId } = await auth()
   if (!userId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
