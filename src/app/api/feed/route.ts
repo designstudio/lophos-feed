@@ -83,6 +83,8 @@ export async function POST(req: NextRequest) {
       .order('cached_at', { ascending: false }).limit(rows.length)
     if (inserted?.length) {
       await db.from('articles').upsert(inserted, { onConflict: 'id' })
+      // Backfill images for new articles in background
+      backfillImages(inserted).catch(e => console.error('[feed] image backfill error for new items:', e))
       return inserted.map(rowToItem)
     }
 
