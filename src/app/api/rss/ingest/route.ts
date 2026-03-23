@@ -129,11 +129,21 @@ export async function POST(req: NextRequest) {
 
     const db = getSupabaseAdmin()
 
-    // 1. Fetch all active feeds
-    const { data: feeds, error: feedError } = await db
+    // Check if this is a retry for failed feeds
+    const url = new URL(req.url)
+    const retryFailed = url.searchParams.get('retry') === 'failed'
+
+    // 1. Fetch feeds (all active, or only failed if retry mode)
+    let query = db
       .from('rss_feeds')
-      .select('id, url, name, topics, language, last_etag, last_modified')
+      .select('id, url, name, topics, language, last_etag, last_modified, last_error')
       .eq('active', true)
+
+    if (retryFailed) {
+      query = query.not('last_error', 'is', null) // Only feeds with errors
+    }
+
+    const { data: feeds, error: feedError } = await query
 
     if (feedError) {
       console.error('[rss/ingest] feeds error:', feedError)
@@ -158,6 +168,16 @@ export async function POST(req: NextRequest) {
         if (error) {
           console.warn(`[rss/ingest] ${feed.name}: ${error}`)
           errors.push(`${feed.name}: ${error}`)
+
+          // Save error to database
+          await db
+            .from('rss_feeds')
+            .update({
+              last_error: error,
+              last_error_at: new Date().toISOString(),
+            })
+            .eq('id', feed.id)
+
           continue
         }
 
@@ -229,13 +249,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // 4. Update feed metadata
+        // 4. Update feed metadata and clear any previous errors
         await db
           .from('rss_feeds')
           .update({
             last_fetched: new Date().toISOString(),
             last_etag: etag,
             last_modified: modified,
+            last_error: null, // Clear error on success
+            last_error_at: null,
           })
           .eq('id', feed.id)
 
