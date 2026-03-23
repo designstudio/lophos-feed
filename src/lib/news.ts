@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto'
 import { NewsItem, NewsSource, ArticleSection } from './types'
 import { getSupabaseAdmin } from './supabase'
 
-const TAVILY_KEY = process.env.TAVILY_API_KEY!
 const GEMINI_KEY = process.env.GEMINI_API_KEY!
 
 export const CACHE_TTL_MINUTES = 120
@@ -48,33 +47,6 @@ function getSourceHint(topic: string): string {
   if (/esport|valorant|league|lol|overwatch|gaming|game|tft|teamfight/.test(t))
     return 'Dot Esports, The Esports Observer, Liquipedia, HLTV, VLR.gg, Lolesports'
   return 'Reuters, AP, BBC, The Guardian'
-}
-
-// Extract og:image from a URL — used as fallback when Tavily has no image
-// Fallback: use Tavily Extract to get og:image from sites that block direct fetch (Forbes, Bloomberg, etc.)
-async function fetchOgImageViaTavily(url: string): Promise<string | undefined> {
-  try {
-    const res = await fetch('https://api.tavily.com/extract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ api_key: TAVILY_KEY, urls: [url] }),
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) return undefined
-    const data = await res.json()
-    const raw = data?.results?.[0]?.raw_content ?? ''
-    const match =
-      raw.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
-      raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
-      raw.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
-      raw.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
-    const imageUrl = match?.[1]
-    if (!imageUrl) return undefined
-    if (LAZY_IMAGE_PATTERNS.some(p => imageUrl.toLowerCase().includes(p))) return undefined
-    try { return new URL(imageUrl, url).href } catch { return imageUrl }
-  } catch {
-    return undefined
-  }
 }
 
 async function fetchOgImage(url: string): Promise<string | undefined> {
@@ -157,19 +129,7 @@ export async function fetchImageForSources(sources: { url: string }[]): Promise<
       if (img) return img
     }
   }
-  // Layer 2: Tavily Extract fallback
-  for (const s of sources) {
-    if (s?.url) {
-      const cached = imageCache.get(s.url)
-      if (cached && Date.now() - cached.ts < IMAGE_CACHE_TTL_MS) {
-        if (cached.url) return cached.url
-        continue
-      }
-      const img = await fetchOgImageViaTavily(s.url)
-      imageCache.set(s.url, { url: img, ts: Date.now() })
-      if (img) return img
-    }
-  }
+  // [DEPRECATED] Tavily Extract fallback removed
   return undefined
 }
 
@@ -223,126 +183,20 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
 
 type TavilyResult = { url: string; title: string; content: string; image?: string }
 
-// Fetches Tavily, filters results, and saves to raw_articles. No Gemini call.
-// Used by the collect cron (Phase A).
+// [DEPRECATED] Tavily integration removed - replaced with RSS
 export async function collectRawForTopic(topic: string): Promise<TavilyResult[]> {
-  const tavilyRes = await fetch('https://api.tavily.com/search', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      api_key: TAVILY_KEY,
-      query: buildQuery(topic),
-      search_depth: 'advanced',
-      max_results: 8,
-      time_range: 'week',
-      topic: 'news',
-      include_answer: false,
-      include_raw_content: true,
-      include_images: true,
-    }),
-  })
-
-  if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
-  const tavilyData = await tavilyRes.json()
-
-  const allResults = (tavilyData.results || [])
-  const results: TavilyResult[] = []
-  for (const r of allResults) {
-    if (!r?.url || !r?.title || !r?.content || r.content.length <= 100) continue
-    if (!isArticleUrl(r.url)) continue
-    results.push({ url: r.url, title: r.title, content: r.content, image: r.image })
-  }
-
-  if (results.length === 0) return []
-
-  const topLevelImages: string[] = (tavilyData.images ?? []).filter(
-    (img: string) => img && !isLazyLoadImage(img)
-  )
-
-  const db = getSupabaseAdmin()
-  const { error } = await db.from('raw_articles').insert({
-    topic,
-    tavily_results: { results, images: topLevelImages },
-    query: buildQuery(topic),
-    status: 'raw',
-  })
-  if (error) console.warn('[news] collectRawForTopic: failed to save raw_articles:', error.message)
-
-  return results
+  console.warn(`[news] collectRawForTopic called but Tavily has been removed`)
+  return []
 }
 
-// Fetches Tavily + processes with Gemini in one shot. Used by POST /api/feed (on-demand).
+// [DEPRECATED] Tavily integration removed - replaced with RSS
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = [],
   onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; geminiRaw?: string; droppedItems?: { title: string; score: number }[] }) => void
 ): Promise<NewsItem[]> {
-  console.log(`[news] fetchNewsForTopic START for topic: ${topic}`)
-  try {
-    const tavilyRes = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: TAVILY_KEY,
-        query: buildQuery(topic),
-        search_depth: 'advanced',
-        max_results: 8,
-        time_range: 'week',
-        topic: 'news',
-        include_answer: false,
-        include_raw_content: true,
-        include_images: true,
-      }),
-    })
-
-    console.log(`[news] Tavily response for ${topic}: status=${tavilyRes.status}`)
-    if (!tavilyRes.ok) throw new Error(`Tavily error: ${tavilyRes.status}`)
-    const tavilyData = await tavilyRes.json()
-
-    const allResults = (tavilyData.results || [])
-    console.log(`[news] Tavily returned ${allResults.length} results for ${topic}`)
-    const results: TavilyResult[] = []
-    const rejected: { url?: string; reason: string }[] = []
-    for (const r of allResults) {
-      if (!r?.url) { if (rejected.length < 12) rejected.push({ reason: 'missing_url' }); continue }
-      if (!r?.title) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_title' }); continue }
-      if (!r?.content) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_content' }); continue }
-      if (r.content.length <= 100) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'content_too_short' }); continue }
-      if (!isArticleUrl(r.url)) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'non_article_url' }); continue }
-      results.push({ url: r.url, title: r.title, content: r.content, image: r.image })
-    }
-
-    console.log(`[news] After filtering: ${results.length} valid articles for ${topic}`)
-    if (results.length === 0) {
-      onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0, rejected })
-      console.log(`[news] No valid results for ${topic}, returning empty`)
-      return []
-    }
-
-    const topLevelImages: string[] = (tavilyData.images ?? []).filter(
-      (img: string) => img && !isLazyLoadImage(img)
-    )
-
-    const db = getSupabaseAdmin()
-    const { error: rawError } = await db.from('raw_articles').insert({
-      topic,
-      tavily_results: { results, images: topLevelImages },
-      query: buildQuery(topic),
-      status: 'raw',
-    })
-    if (rawError) console.warn('[news] Failed to save raw_articles:', rawError.message)
-    else console.log(`[news] Successfully saved raw_articles for ${topic}`)
-
-    console.log(`[news] Starting processRawBatch for ${topic}`)
-    const items = await processRawBatch(topic, results, existingTitles, (batchStats) => {
-      onDiag?.({ tavily: allResults.length, filtered: results.length, rejected, ...batchStats })
-    }, topLevelImages)
-    console.log(`[news] processRawBatch completed for ${topic}, returning ${items.length} items`)
-    return items
-  } catch (e) {
-    console.error(`[news] fetchNewsForTopic ERROR for ${topic}:`, e)
-    throw e
-  }
+  console.warn(`[news] fetchNewsForTopic called but Tavily has been removed`)
+  return []
 }
 
 type DiagCallback = (stats: {
@@ -551,32 +405,6 @@ ${context}`
   return items
 }
 
-// Busca imagens no Tavily pelo título do artigo — último recurso quando og:image falha
-export async function searchImagesForTitle(title: string): Promise<string | undefined> {
-  try {
-    const res = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        api_key: TAVILY_KEY,
-        query: title,
-        max_results: 3,
-        include_images: true,
-        include_raw_content: false,
-        include_answer: false,
-      }),
-      signal: AbortSignal.timeout(10000),
-    })
-    if (!res.ok) return undefined
-    const data = await res.json()
-    const images: string[] = (data.images ?? []).filter(
-      (img: string) => img && !LAZY_IMAGE_PATTERNS.some(p => img.toLowerCase().includes(p))
-    )
-    return images[0]
-  } catch {
-    return undefined
-  }
-}
 
 export function isCacheStale(cachedAt: string): boolean {
   return Date.now() - new Date(cachedAt).getTime() > CACHE_TTL_MINUTES * 60 * 1000

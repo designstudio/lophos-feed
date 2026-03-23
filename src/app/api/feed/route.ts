@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { fetchNewsForTopic, fetchImageForSources } from '@/lib/news'
+import { fetchImageForSources } from '@/lib/news'
 import { NewsItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -50,65 +50,6 @@ export async function POST(req: NextRequest) {
     debugBuffer.push(payload)
   }
 
-  const backfillImages = async (rows: any[]) => {
-    const candidates = rows
-      .filter(r => !r.image_url && Array.isArray(r.sources) && r.sources.length > 0)
-      .slice(0, 12)
-    if (candidates.length === 0) return
-
-    await Promise.allSettled(candidates.map(async (row) => {
-      try {
-        const imageUrl = await fetchImageForSources(row.sources)
-        if (!imageUrl) return
-        await db.from('news_cache').update({ image_url: imageUrl }).eq('id', row.id)
-        await db.from('articles').update({ image_url: imageUrl }).eq('id', row.id)
-      } catch (e) {
-        console.error('[feed] image backfill error:', e)
-      }
-    }))
-  }
-
-  const fetchAndStore = async (topic: string, existingTitles: string[]) => {
-    console.log(`[feed][bg] fetchAndStore START for topic: ${topic}`)
-    try {
-      const fresh = await fetchNewsForTopic(topic, existingTitles, (stats) => emitDebug({ topic, ...stats }))
-      console.log(`[feed][bg] fetchNewsForTopic completed for ${topic}, got ${fresh.length} articles`)
-      if (fresh.length === 0) {
-        console.log(`[feed][bg] no fresh articles for ${topic}`)
-        return []
-      }
-
-      const rows = fresh.map(itemToRow)
-      console.log(`[feed][bg] inserting ${rows.length} articles for ${topic}`)
-      const { error } = await db.from('news_cache').insert(rows)
-      if (error) {
-        console.error(`[feed][bg] insert error "${topic}":`, error.message)
-        return []
-      }
-      console.log(`[feed][bg] insert successful for ${topic}`)
-
-      const { data: inserted } = await db
-        .from('news_cache').select('*').eq('topic', topic)
-        .order('cached_at', { ascending: false }).limit(rows.length)
-      console.log(`[feed][bg] queried back ${inserted?.length ?? 0} articles for ${topic}`)
-
-      if (inserted?.length) {
-        console.log(`[feed][bg] upserting articles to articles table for ${topic}`)
-        await db.from('articles').upsert(inserted, { onConflict: 'id' })
-        // Backfill images for new articles in background
-        backfillImages(inserted).catch(e => console.error('[feed] image backfill error for new items:', e))
-        console.log(`[feed][bg] fetchAndStore COMPLETED for ${topic} with ${inserted.length} articles`)
-        return inserted.map(rowToItem)
-      }
-
-      console.log(`[feed][bg] fetchAndStore found no inserted articles for ${topic}`)
-      return []
-    } catch (e) {
-      console.error(`[feed][bg] fetchAndStore ERROR for ${topic}:`, e)
-      throw e
-    }
-  }
-
   console.log(`[feed] handler START for user ${userId}`)
   ;(async () => {
     console.log(`[feed] IIFE START at ${new Date().toISOString()}`)
@@ -147,8 +88,6 @@ export async function POST(req: NextRequest) {
         new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
       )
     if (allExisting.length > 0) await send(allExisting)
-    // Backfill missing images in background for cached items
-    backfillImages(allArticles ?? []).catch(e => console.error('[feed] image backfill error:', e))
 
     const isColdStart = allExisting.length === 0
     if (isColdStart) {
@@ -171,54 +110,19 @@ export async function POST(req: NextRequest) {
       topicsToFetch.map(topic => ({ topic, last_fetched: now, updated_at: now })),
       { onConflict: 'topic' }
     )
-    let newItemsCount = 0
-    const fetchAll = async (streamResults: boolean) => {
-      console.log(`[feed][bg] fetchAll started for ${topicsToFetch.length} topics, streamResults=${streamResults}`)
-      const concurrency = 3
-      for (let i = 0; i < topicsToFetch.length; i += concurrency) {
-        const batch = topicsToFetch.slice(i, i + concurrency)
-        console.log(`[feed][bg] processing batch ${Math.floor(i/concurrency) + 1}: ${batch.join(', ')}`)
-        await Promise.allSettled(batch.map(async (topic) => {
-          try {
-            const existingTitles = (byTopic.get(topic) ?? []).map((r: any) => r.title)
-            const inserted = await fetchAndStore(topic, existingTitles)
-            if (inserted.length > 0) newItemsCount += inserted.length
-            if (streamResults && inserted.length > 0) await send(inserted)
-          } catch (e) {
-            console.error(`[feed] error "${topic}":`, e)
-          }
-        }))
-      }
-      console.log(`[feed][bg] fetchAll COMPLETED with ${newItemsCount} new items`)
+    // [DEPRECATED] fetchAll disabled - Tavily removed, waiting for RSS implementation
+    const fetchAll = async () => {
+      console.log(`[feed] fetchAll called but Tavily integration has been removed`)
+      console.log(`[feed] Waiting for RSS implementation to populate articles`)
     }
 
-    // 5. Close writer IMMEDIATELY (don't wait for fetch on Vercel Free)
-    console.log(`[feed][bg] closing writer at ${new Date().toISOString()}`)
+    // 5. Close writer immediately
+    console.log(`[feed] closing writer at ${new Date().toISOString()}`)
     await writer.close()
-    console.log(`[feed][bg] writer closed, launching background fetch for ${topicsToFetch.length} topics`)
 
-    // 6. Launch background fetch (fire-and-forget)
-    // Articles will be inserted into DB and visible on next refresh
-    console.log(`[feed][bg] launching fetchAll at ${new Date().toISOString()}`)
-
-    // Store the promise so it runs even if handler returns
-    const backgroundTask = fetchAll(false)
-      .then(() => {
-        console.log(`[feed][bg] fetchAll completed at ${new Date().toISOString()}`)
-      })
-      .catch(err => {
-        console.error('[feed][bg] background fetch error:', {
-          topics: topicsToFetch,
-          error: err instanceof Error ? err.message : String(err),
-          timestamp: new Date().toISOString(),
-        })
-      })
-
-    // Give the event loop a brief moment to let the task start
-    // This helps ensure the Promise chain has begun before the response is sent
-    await new Promise(r => setTimeout(r, 25))
-
-    console.log(`[feed] IIFE returning at ${new Date().toISOString()}, background task has been initiated`)
+    // 6. [DEPRECATED] Background fetch disabled - Tavily removed
+    console.log(`[feed] background fetch would run here, but Tavily has been removed`)
+    console.log(`[feed] waiting for RSS implementation`)
   })()
 
   return new Response(stream.readable, {

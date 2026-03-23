@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import { getSupabaseAdmin } from './supabase'
-import { collectRawForTopic, fetchNewsForTopic, processRawBatch, fetchImageForSources, searchImagesForTitle } from './news'
+import { collectRawForTopic, processRawBatch, fetchImageForSources } from './news'
 import { NewsItem } from './types'
 
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
@@ -149,60 +149,4 @@ export async function refreshAllFeeds() {
   await collectAllFeeds()
 }
 
-// Fix: re-busca og:image real dos artigos que têm lazy-load placeholder ou sem imagem
-export async function fixCachedImages() {
-  const db = getSupabaseAdmin()
-
-  const { data: rows, error } = await db
-    .from('news_cache')
-    .select('id, title, image_url, sources, tavily_raw')
-
-  if (error) { console.error('[fix-images] error loading news_cache:', error); return }
-  if (!rows?.length) { console.log('[fix-images] nothing to fix'); return }
-
-  const toFix = rows.filter((r: any) => {
-    if (!r.image_url) return true
-    return LAZY_IMAGE_PATTERNS.some((p: string) => r.image_url.toLowerCase().includes(p))
-  })
-
-  console.log(`[fix-images] ${toFix.length} of ${rows.length} articles need image fix`)
-  if (toFix.length === 0) return
-
-  let fixed = 0
-  for (const row of toFix) {
-    try {
-      const sources = (row.sources ?? []).map((s: any) => ({ url: s.url }))
-      // Tenta og:image direto das fontes
-      let imageUrl = await fetchImageForSources(sources)
-      const isStillLazy = (url?: string) => !url || LAZY_IMAGE_PATTERNS.some(p => url.toLowerCase().includes(p))
-      if (isStillLazy(imageUrl)) imageUrl = undefined
-      // Fallback: imagens do tavily_raw (per-result) que não sejam lazy-load
-      if (!imageUrl) {
-        const rawImages: string[] = (row.tavily_raw ?? [])
-          .map((r: any) => r.image)
-          .filter((img: any) => img && !isStillLazy(img))
-        if (rawImages.length > 0) imageUrl = rawImages[0]
-      }
-      // Último recurso: busca pelo título do artigo no Tavily
-      if (!imageUrl && row.title) {
-        const titleImage = await searchImagesForTitle(row.title)
-        if (titleImage && !isStillLazy(titleImage)) imageUrl = titleImage
-      }
-
-      if (imageUrl && !isStillLazy(imageUrl)) {
-        await db.from('news_cache').update({ image_url: imageUrl }).eq('id', row.id)
-        await db.from('articles').update({ image_url: imageUrl }).eq('id', row.id)
-        fixed++
-        console.log(`[fix-images] ✓ ${row.id} → ${imageUrl.slice(0, 80)}`)
-      } else {
-        await db.from('news_cache').update({ image_url: null }).eq('id', row.id)
-        await db.from('articles').update({ image_url: null }).eq('id', row.id)
-        console.log(`[fix-images] — ${row.id}: no real image found, cleared`)
-      }
-    } catch (err) {
-      console.error(`[fix-images] ✗ ${row.id}:`, err)
-    }
-  }
-
-  console.log(`[fix-images] done — ${fixed}/${toFix.length} fixed`)
-}
+// [DEPRECATED] Image fixing with Tavily removed - use direct og:image fetching only

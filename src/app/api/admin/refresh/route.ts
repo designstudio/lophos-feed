@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { refreshAllFeeds, processRawFeeds, fixCachedImages } from '@/lib/cron'
+import { refreshAllFeeds, processRawFeeds } from '@/lib/cron'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -23,12 +23,6 @@ export async function POST(req: NextRequest) {
     console.log('[admin] Manual process triggered')
     await processRawFeeds()
     return new Response(JSON.stringify({ ok: true, phase: 'process' }))
-  }
-
-  if (phase === 'fix-images') {
-    console.log('[admin] Manual fix-images triggered')
-    await fixCachedImages()
-    return new Response(JSON.stringify({ ok: true, phase: 'fix-images' }))
   }
 
   // phase === 'all' (default)

@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { fetchNewsForTopic } from '@/lib/news'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
