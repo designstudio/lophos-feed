@@ -90,7 +90,7 @@ function CardImage({ proxiedImage, title, sources, onError }: {
 }) {
   const showImage = !!proxiedImage
   return (
-    <div className="news-card-image w-full rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative">
+    <div className="news-card-image h-36 w-full rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative">
       {showImage ? (
         <img src={proxiedImage} alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

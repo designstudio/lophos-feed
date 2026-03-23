@@ -259,7 +259,7 @@ html, body {
 
   /* ── Imagens dos cards no feed ── */
   .news-card-image {
-    height: 12rem;
+    height: 12rem !important;
   }
 
   /* ── Título dos cards — sempre 1rem, independente do variant ── */
