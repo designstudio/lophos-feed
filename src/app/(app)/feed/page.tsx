@@ -150,7 +150,7 @@ export default function FeedPage() {
   const coldStartRef = useRef(false)
 
   const coldStartMessages = [
-    'O Lophos está preparando uma mágica com o seu feed.',
+    'O Lophos está preparando o seu feed!',
     'Pode levar alguns minutos para você começar a ver os resultados.',
   ]
 
