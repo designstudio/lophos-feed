@@ -348,51 +348,55 @@ export default function FeedPage() {
           </div>
 
           {/* Mobile: horizontal scrollable tabs */}
-          <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pb-3"
-            style={{ WebkitOverflowScrolling: 'touch' }}>
-            {(['Últimas notícias', ...topicsInFeed] as (string | null)[]).map((t, i) => {
-              const val = i === 0 ? null : t as string
-              const active = activeFilter === val
-              return (
-                <button
-                  key={t ?? 'top'}
-                  onClick={() => { setActiveFilter(val); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                  className={cn(
-                    'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
-                    active
-                      ? 'bg-ink-primary text-bg-primary border-ink-primary'
-                      : 'border-border text-ink-tertiary hover:text-ink-secondary'
-                  )}
-                >
-                  {t}
-                </button>
-              )
-            })}
-          </div>
+          {hasData && topicsInFeed.length > 0 && (
+            <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pb-3"
+              style={{ WebkitOverflowScrolling: 'touch' }}>
+              {(['Últimas notícias', ...topicsInFeed] as (string | null)[]).map((t, i) => {
+                const val = i === 0 ? null : t as string
+                const active = activeFilter === val
+                return (
+                  <button
+                    key={t ?? 'top'}
+                    onClick={() => { setActiveFilter(val); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                    className={cn(
+                      'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
+                      active
+                        ? 'bg-ink-primary text-bg-primary border-ink-primary'
+                        : 'border-border text-ink-tertiary hover:text-ink-secondary'
+                    )}
+                  >
+                    {t}
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {/* Desktop: title + dropdown tabs */}
-          <div className="hidden md:flex items-center h-14 px-8">
-            <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
-            <div className="flex flex-1 justify-center">
-              <button
-                onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                className={cn(
-                  'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
-                  activeFilter === null
-                    ? 'border-ink-primary text-ink-primary'
-                    : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
-                )}
-              >
-                Últimas notícias
-              </button>
-              <TopicsDropdown
-                topics={topicsInFeed}
-                activeFilter={activeFilter}
-                onSelect={(t) => { setActiveFilter(t); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
-              />
+          {hasData && topicsInFeed.length > 0 && (
+            <div className="hidden md:flex items-center h-14 px-8">
+              <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
+              <div className="flex flex-1 justify-center">
+                <button
+                  onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  className={cn(
+                    'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
+                    activeFilter === null
+                      ? 'border-ink-primary text-ink-primary'
+                      : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
+                  )}
+                >
+                  Últimas notícias
+                </button>
+                <TopicsDropdown
+                  topics={topicsInFeed}
+                  activeFilter={activeFilter}
+                  onSelect={(t) => { setActiveFilter(t); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                />
+              </div>
+              <div style={{ width: '12rem' }} />
             </div>
-            <div style={{ width: '12rem' }} />
-          </div>
+          )}
         </div>
 
         {/* ── Feed + Right sidebar ── */}
