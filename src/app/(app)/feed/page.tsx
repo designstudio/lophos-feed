@@ -457,7 +457,7 @@ export default function FeedPage() {
 
               {hasData && (
                 <div ref={sentinelRef}>
-                  {(hasMore || streaming) && <SkeletonBlock />}
+                  {hasMore && <SkeletonBlock />}
                 </div>
               )}
             </div>
