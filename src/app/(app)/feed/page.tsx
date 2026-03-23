@@ -5,6 +5,8 @@ import { NewsCard } from '@/components/NewsCard'
 import { LophosLogo } from '@/components/LophosLogo'
 import { SkeletonBlock } from '@/components/SkeletonCard'
 import { Feed } from '@solar-icons/react-perf/Linear'
+import Lottie from 'lottie-react'
+import blogAnimation from '@/lib/animations/blog.json'
 import { NewsItem } from '@/lib/types'
 import { useFeedContext } from '@/components/FeedContext'
 import { cn } from '@/lib/utils'
@@ -409,7 +411,9 @@ export default function FeedPage() {
 
               {coldStartLoading && (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <Blog size={48} className="text-ink-muted mb-4 animate-spin" />
+                  <div className="w-24 h-24 mb-4">
+                    <Lottie animationData={blogAnimation} loop autoplay />
+                  </div>
                   <p className="text-ink-secondary text-sm mb-2">{coldStartMessages[coldMsgIndex]}</p>
                 </div>
               )}
