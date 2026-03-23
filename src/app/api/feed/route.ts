@@ -5,7 +5,7 @@ import { fetchNewsForTopic, fetchImageForSources } from '@/lib/news'
 import { NewsItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 const FETCH_INTERVAL_MINUTES = 120
 
