@@ -174,7 +174,14 @@ export async function fetchImageForSources(sources: { url: string }[]): Promise<
 }
 
 function buildQuery(topic: string): string {
-  // time_range: 'week' already filters by recency — keep query focused on the topic
+  const t = topic.toLowerCase()
+
+  // Specific queries for gaming/esports topics
+  if (/valorant/.test(t)) return 'Valorant esports VCT news 2026'
+  if (/league|lol|tft/.test(t)) return 'League of Legends esports LEC news 2026'
+  if (/overwatch/.test(t)) return 'Overwatch esports OWL news 2026'
+
+  // Default: topic + news
   return `${topic} news 2026`
 }
 
