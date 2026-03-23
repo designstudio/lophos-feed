@@ -174,8 +174,21 @@ export async function fetchImageForSources(sources: { url: string }[]): Promise<
 }
 
 function buildQuery(topic: string): string {
-  // time_range: 'day' already filters by recency — keep query focused on the topic
+  // Query focused on the topic, filtering by recency happens in code
   return `${topic} news 2026`
+}
+
+function filterByLastNDays(results: TavilyResult[], days: number = 3): TavilyResult[] {
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+  return results.filter(r => {
+    if (!r.publish_date) return true // Keep if no date (assume recent)
+    try {
+      const published = new Date(r.publish_date)
+      return published >= cutoff
+    } catch {
+      return true // Keep if date parsing fails
+    }
+  })
 }
 
 function normalizeText(s: string): string {
@@ -214,7 +227,7 @@ function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[
   return score >= 0.15
 }
 
-type TavilyResult = { url: string; title: string; content: string; image?: string }
+type TavilyResult = { url: string; title: string; content: string; image?: string; publish_date?: string }
 
 // Fetches Tavily, filters results, and saves to raw_articles. No Gemini call.
 // Used by the collect cron (Phase A).
@@ -243,10 +256,12 @@ export async function collectRawForTopic(topic: string): Promise<TavilyResult[]>
   for (const r of allResults) {
     if (!r?.url || !r?.title || !r?.content || r.content.length <= 100) continue
     if (!isArticleUrl(r.url)) continue
-    results.push({ url: r.url, title: r.title, content: r.content, image: r.image })
+    results.push({ url: r.url, title: r.title, content: r.content, image: r.image, publish_date: r.publish_date })
   }
 
-  if (results.length === 0) return []
+  // Filter to last 3 days
+  const filtered = filterByLastNDays(results, 3)
+  if (filtered.length === 0) return []
 
   const topLevelImages: string[] = (tavilyData.images ?? []).filter(
     (img: string) => img && !isLazyLoadImage(img)
@@ -255,13 +270,13 @@ export async function collectRawForTopic(topic: string): Promise<TavilyResult[]>
   const db = getSupabaseAdmin()
   const { error } = await db.from('raw_articles').insert({
     topic,
-    tavily_results: { results, images: topLevelImages },
+    tavily_results: { results: filtered, images: topLevelImages },
     query: buildQuery(topic),
     status: 'raw',
   })
   if (error) console.warn('[news] collectRawForTopic: failed to save raw_articles:', error.message)
 
-  return results
+  return filtered
 }
 
 // Fetches Tavily + processes with Gemini in one shot. Used by POST /api/feed (on-demand).
@@ -298,11 +313,13 @@ export async function fetchNewsForTopic(
     if (!r?.content) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'missing_content' }); continue }
     if (r.content.length <= 100) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'content_too_short' }); continue }
     if (!isArticleUrl(r.url)) { if (rejected.length < 12) rejected.push({ url: r.url, reason: 'non_article_url' }); continue }
-    results.push({ url: r.url, title: r.title, content: r.content, image: r.image })
+    results.push({ url: r.url, title: r.title, content: r.content, image: r.image, publish_date: r.publish_date })
   }
 
-  if (results.length === 0) {
-    onDiag?.({ tavily: allResults.length, filtered: 0, gemini: 0, kept: 0, dropped: 0, rejected })
+  // Filter to last 3 days
+  const filtered = filterByLastNDays(results, 3)
+  if (filtered.length === 0) {
+    onDiag?.({ tavily: allResults.length, filtered: results.length, gemini: 0, kept: 0, dropped: 0, rejected })
     return []
   }
 
@@ -313,14 +330,14 @@ export async function fetchNewsForTopic(
   const db = getSupabaseAdmin()
   const { error: rawError } = await db.from('raw_articles').insert({
     topic,
-    tavily_results: { results, images: topLevelImages },
+    tavily_results: { results: filtered, images: topLevelImages },
     query: buildQuery(topic),
     status: 'raw',
   })
   if (rawError) console.warn('[news] Failed to save raw_articles:', rawError.message)
 
-  const items = await processRawBatch(topic, results, existingTitles, (batchStats) => {
-    onDiag?.({ tavily: allResults.length, filtered: results.length, rejected, ...batchStats })
+  const items = await processRawBatch(topic, filtered, existingTitles, (batchStats) => {
+    onDiag?.({ tavily: allResults.length, filtered: filtered.length, rejected, ...batchStats })
   }, topLevelImages)
   return items
 }
