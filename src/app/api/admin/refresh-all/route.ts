@@ -37,34 +37,24 @@ async function handleRefresh(req: NextRequest) {
       .delete()
       .in('topic', topics)
 
-    // 3. Clear topic_fetches to force refetch
+    // 3. Clear topic_fetches to force refetch on next request
     await db
       .from('topic_fetches')
       .delete()
       .in('topic', topics)
 
-    // 4. Fetch fresh news for all topics
-    const allItems = []
-    for (const topic of topics) {
-      try {
-        const items = await fetchNewsForTopic(topic, [])
-        allItems.push(...items)
-      } catch (e) {
-        console.error(`[refresh-all] error fetching "${topic}":`, e)
-      }
-    }
-
+    // Done! Next feed request will force refetch with new queries
     return new Response(JSON.stringify({
       success: true,
-      message: `Refreshed ${topics.length} topics, found ${allItems.length} total articles`,
+      message: `Cleared ${topics.length} topics. Next feed request will refetch with updated queries.`,
       topics,
-      itemsCount: allItems.length,
+      nextStep: 'Open the feed page and click "Atualizar" to fetch fresh news',
     }, null, 2), {
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error) {
     console.error('[refresh-all] error:', error)
-    return new Response(JSON.stringify({ error: 'Failed to refresh' }), { status: 500 })
+    return new Response(JSON.stringify({ error: 'Failed to clear cache' }), { status: 500 })
   }
 }
 
