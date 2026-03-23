@@ -6,7 +6,7 @@ import { fetchNewsForTopic } from '@/lib/news'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-export async function POST(req: NextRequest) {
+async function handleRefresh(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
 
@@ -66,4 +66,12 @@ export async function POST(req: NextRequest) {
     console.error('[refresh-all] error:', error)
     return new Response(JSON.stringify({ error: 'Failed to refresh' }), { status: 500 })
   }
+}
+
+export async function GET(req: NextRequest) {
+  return handleRefresh(req)
+}
+
+export async function POST(req: NextRequest) {
+  return handleRefresh(req)
 }
