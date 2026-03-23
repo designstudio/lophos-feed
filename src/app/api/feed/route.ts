@@ -165,13 +165,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 5. Fetch inline so we can notify completion to the client
-    await fetchAll(true)
-    if (debug) {
-      await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'done', items: debugBuffer } }) + '\n'))
-    }
-    await writer.write(encoder.encode(JSON.stringify({ refreshComplete: true, newItemsCount }) + '\n'))
+    // 5. Close writer IMMEDIATELY (don't wait for fetch on Vercel Free)
     await writer.close()
+
+    // 6. Launch background fetch (fire-and-forget)
+    // Articles will be inserted into DB and visible on next refresh
+    void fetchAll(false).catch(err => {
+      console.error('[feed] background fetch error:', {
+        topics: topicsToFetch,
+        error: err instanceof Error ? err.message : String(err),
+        timestamp: new Date().toISOString(),
+      })
+    })
   })()
 
   return new Response(stream.readable, {
