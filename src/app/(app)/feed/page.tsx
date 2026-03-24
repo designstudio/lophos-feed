@@ -12,6 +12,8 @@ import { useFeedContext } from '@/components/FeedContext'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@clerk/nextjs'
 
+const toTitleCase = (s: string) => s.replace(/\b\w/g, c => c.toUpperCase())
+
 function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
   const posInCycle = blockIndex % 3
 
@@ -321,8 +323,8 @@ export default function FeedPage() {
     return () => obs.disconnect()
   }, [hasData])
 
-  const filteredItems = activeFilter ? items.filter(i => (i.displayTopic ?? i.topic) === activeFilter) : items
-  const topicsInFeed  = [...new Set(items.map(i => i.displayTopic ?? i.topic))]
+  const filteredItems = activeFilter ? items.filter(i => toTitleCase(i.displayTopic ?? i.topic) === activeFilter) : items
+  const topicsInFeed  = [...new Set(items.map(i => toTitleCase(i.displayTopic ?? i.topic)))]
   const allBlocks     = splitIntoBlocks(filteredItems)
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
   const hasMore       = visibleBlocks < allBlocks.length
