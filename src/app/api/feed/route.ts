@@ -58,9 +58,9 @@ export async function POST(req: NextRequest) {
       await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'start' } }) + '\n'))
     }
 
-    // 1. Load existing articles from RSS processing
+    // 1. Load existing cache from RSS processing
     const [{ data: allArticles }, fetchResult] = await Promise.all([
-      db.from('articles').select('*').in('topic', topics).order('published_at', { ascending: false }),
+      db.from('news_cache').select('*').in('topic', topics).order('cached_at', { ascending: false }),
       db.from('topic_fetches').select('*').in('topic', topics),
     ])
 
@@ -80,12 +80,12 @@ export async function POST(req: NextRequest) {
     const lastFetchByTopic = new Map<string, string>()
     for (const row of fetchTimes) lastFetchByTopic.set(row.topic, row.last_fetched)
 
-    // 2. Stream existing articles immediately
+    // 2. Stream existing cache immediately
     const allExisting = (allArticles ?? []).filter(isRecentRow)
       .map(rowToItem)
       .sort((a, b) =>
-        new Date(b.publishedAt ?? 0).getTime() -
-        new Date(a.publishedAt ?? 0).getTime()
+        new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
+        new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
       )
     if (allExisting.length > 0) await send(allExisting)
 
