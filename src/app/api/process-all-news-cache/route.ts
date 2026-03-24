@@ -68,16 +68,15 @@ export async function POST(req: NextRequest) {
       console.log(`[process-all-news-cache] Processing ${currentTopic}: ${items.length} items`)
 
       // Format items as sources for Gemini
-      const sources = items.map((item, idx) => ({
-        name: item.source_name,
+      const results = items.map((item) => ({
         url: item.source_url,
         title: item.title,
-        summary: item.summary,
-        body: item.content || item.summary,
+        content: item.content || item.summary,
+        image: item.image_url,
       }))
 
       // Process with Gemini for deduplication
-      const newsData = await processRawBatch(sources, currentTopic)
+      const newsData = await processRawBatch(currentTopic, results)
 
       if (newsData && newsData.length > 0) {
         console.log(`[process-all-news-cache] ${currentTopic}: Generated ${newsData.length} deduplicated news`)
