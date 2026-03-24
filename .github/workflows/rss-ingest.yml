@@ -1,0 +1,29 @@
+name: RSS Ingest
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6 hours
+  workflow_dispatch:          # allow manual runs from the GitHub UI
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Trigger RSS ingest
+        run: |
+          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.RSS_INGEST_SECRET }}" \
+            https://lophos.space/api/rss/ingest)
+
+          cat /tmp/response.json
+          echo ""
+
+          if [ "$response" -ne 200 ]; then
+            echo "❌ Ingest failed with HTTP $response"
+            exit 1
+          fi
+
+          echo "✅ Ingest completed successfully"
