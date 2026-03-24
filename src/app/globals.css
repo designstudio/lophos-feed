@@ -119,6 +119,16 @@ html, body {
   font-weight: 600;
 }
 
+/* ─── Spring press effect ───────────────────────────────── */
+.spring-press {
+  transition-property: color, background-color, border-color, opacity, transform !important;
+  transition-timing-function: ease, ease, ease, ease, cubic-bezier(.16, 1, .3, 1) !important;
+  transition-duration: 150ms, 150ms, 150ms, 150ms, 500ms !important;
+}
+.spring-press:active {
+  transform: scale(0.95);
+}
+
 /* ─── Layout classes ─────────────────────────────────────── */
 .feed-layout {
   max-width: var(--feed-max-width);

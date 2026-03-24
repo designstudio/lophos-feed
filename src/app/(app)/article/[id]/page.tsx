@@ -149,7 +149,7 @@ export default function ArticlePage() {
 
             {/* Back button — Perplexity style */}
             <Link href="/feed"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
+              className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
             >
               <ArrowLeft size={15} className="flex-shrink-0" />
               <span className="hidden sm:inline">Voltar para Meu feed</span>
@@ -184,7 +184,7 @@ export default function ArticlePage() {
               {/* Share */}
               <button
                 onClick={shareArticle}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] text-[13px] font-medium text-white hover:opacity-80 transition-opacity"
+                className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] text-[13px] font-medium text-white hover:opacity-80"
                 style={{ background: 'var(--color-ui-strong)' }}
               >
                 <Share size={14} />
@@ -308,7 +308,7 @@ export default function ArticlePage() {
                         <button
                           key={rel.id}
                           onClick={() => navigateTo(rel.id)}
-                          className="flex flex-col gap-0 text-left group rounded-[1rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all"
+                          className="spring-press flex flex-col gap-0 text-left group rounded-[1rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all"
                         >
                           {rel.imageUrl && (
                             <div className="bg-bg-secondary aspect-video w-full overflow-hidden">
