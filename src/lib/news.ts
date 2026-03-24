@@ -16,7 +16,7 @@ const LOW_QUALITY_DOMAINS = [
   'mobafire.com', 'op.gg', 'u.gg', 'lolalytics.com',
 ]
 
-const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
+const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 const GENERIC_PATTERNS = [
   /\/(tag|tags|category|categories|topic|topics|section|search|archive|label)\//i,
