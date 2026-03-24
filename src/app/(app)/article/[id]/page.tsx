@@ -2,9 +2,10 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
-import { SquareTopDown, ClockCircle, CloseCircle, Documents } from '@solar-icons/react-perf/Linear'
-import { LophosLogo } from '@/components/LophosLogo'
+import { SquareTopDown, ClockCircle, CloseCircle, Documents, AltArrowLeft, Bookmark, Share } from '@solar-icons/react-perf/Linear'
+import { Bookmark as BookmarkFilled } from '@solar-icons/react-perf/Bold'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -29,8 +30,6 @@ function SourceCard({ src }: { src: NewsSource }) {
   )
 }
 
-
-
 interface RelatedItem {
   id: string
   topic: string
@@ -42,10 +41,14 @@ interface RelatedItem {
 
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>()
+  const { isSignedIn } = useAuth()
   const [item, setItem] = useState<NewsItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAllSources, setShowAllSources] = useState(false)
   const [related, setRelated] = useState<RelatedItem[]>([])
+  const [favorited, setFavorited] = useState(false)
+  const [favLoading, setFavLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     fetch(`/api/article?id=${id}`)
@@ -59,12 +62,50 @@ export default function ArticlePage() {
       .catch(() => {})
   }, [id])
 
+  // Load favorite state (only for signed-in users)
+  useEffect(() => {
+    if (!isSignedIn) return
+    fetch('/api/favorites')
+      .then((r) => r.json())
+      .then((data) => setFavorited((data.ids || []).includes(id)))
+      .catch(() => {})
+  }, [id, isSignedIn])
+
+  const toggleFavorite = async () => {
+    if (!isSignedIn || favLoading) return
+    setFavLoading(true)
+    const newState = !favorited
+    setFavorited(newState)
+    try {
+      await fetch('/api/favorites', {
+        method: newState ? 'POST' : 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleId: id }),
+      })
+    } catch {
+      setFavorited(!newState) // revert on error
+    }
+    setFavLoading(false)
+  }
+
+  const shareArticle = () => {
+    const url = `${window.location.origin}/article/${id}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }).catch(() => {
+      // Fallback: Web Share API
+      if (navigator.share) {
+        navigator.share({ title: item?.title, url })
+      }
+    })
+  }
+
   const shownSources = item?.sources?.slice(0, 3) || []
   const extraCount = (item?.sources?.length || 0) - 3
-  const scrollRef      = useRef<HTMLDivElement>(null)
-  const titleRef       = useRef<HTMLHeadingElement>(null)
-  const [showTitle, setShowTitle]     = useState(false)
-
+  const scrollRef  = useRef<HTMLDivElement>(null)
+  const titleRef   = useRef<HTMLHeadingElement>(null)
+  const [showTitle, setShowTitle] = useState(false)
 
   useEffect(() => {
     const el = scrollRef.current
@@ -72,7 +113,7 @@ export default function ArticlePage() {
     const onScroll = () => {
       if (!titleRef.current) return
       const titleBottom = titleRef.current.getBoundingClientRect().bottom
-      setShowTitle(titleBottom < 56) // 56 = header height
+      setShowTitle(titleBottom < 56)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
@@ -81,18 +122,20 @@ export default function ArticlePage() {
   return (
     <div className="flex flex-1 min-w-0 overflow-hidden">
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
-        {/* ── Sticky header — matches feed header style ── */}
+        {/* ── Sticky header ── */}
         <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
-          <div className="flex items-center h-12 md:h-14">
+          <div className="flex items-center h-12 md:h-14 gap-3">
+
+            {/* Back button */}
             <Link href="/feed"
-              className="flex items-center gap-2 text-[15px] font-semibold text-ink-primary transition-colors flex-shrink-0 md:w-48"
-              onMouseEnter={e => (e.currentTarget.style.opacity = '0.65')}
-              onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
-              <span className="md:hidden"><LophosLogo size={26} /></span>
-              Meu Feed
+              className="flex items-center gap-1.5 text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-colors flex-shrink-0"
+            >
+              <AltArrowLeft size={16} className="flex-shrink-0" />
+              <span className="hidden sm:inline">Voltar para Meu feed</span>
             </Link>
-            {/* Article title — appears when user scrolls past the h1 */}
-            <div className="flex-1 flex justify-center overflow-hidden px-4">
+
+            {/* Article title — appears when scrolled past h1 */}
+            <div className="flex-1 flex justify-center overflow-hidden px-2">
               <span
                 className="text-[0.875rem] font-medium text-ink-primary truncate max-w-lg transition-all duration-200"
                 style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? 'translateY(0)' : 'translateY(4px)' }}
@@ -100,8 +143,38 @@ export default function ArticlePage() {
                 {item?.title}
               </span>
             </div>
-            {/* Spacer — desktop only */}
-            <div className="hidden md:block md:w-48 flex-shrink-0" />
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Bookmark */}
+              {isSignedIn && (
+                <button
+                  onClick={toggleFavorite}
+                  title={favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors hover:bg-bg-secondary"
+                  style={{ color: favorited ? 'var(--color-accent)' : undefined }}
+                >
+                  {favorited
+                    ? <BookmarkFilled size={16} style={{ color: 'var(--color-accent)' }} />
+                    : <Bookmark size={16} className="text-ink-secondary" />
+                  }
+                  <span className="hidden md:inline text-ink-secondary" style={favorited ? { color: 'var(--color-accent)' } : {}}>
+                    {favorited ? 'Salvo' : 'Salvar'}
+                  </span>
+                </button>
+              )}
+
+              {/* Share */}
+              <button
+                onClick={shareArticle}
+                title="Compartilhar"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-ink-primary text-bg-primary hover:opacity-80 transition-opacity"
+              >
+                <Share size={14} />
+                <span>{copied ? 'Link copiado!' : 'Compartilhar'}</span>
+              </button>
+            </div>
+
           </div>
         </div>
 
