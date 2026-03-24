@@ -235,6 +235,17 @@ export async function POST(req: NextRequest) {
             image_url = item['media:thumbnail'][0]['@_url']
           } else if (item.enclosure?.['@_url'] && item.enclosure['@_type']?.startsWith('image')) {
             image_url = item.enclosure['@_url']
+          } else {
+            // Fallback: busca primeira <img> no conteúdo HTML do artigo
+            const htmlContent = item['content:encoded'] || item.description || ''
+            const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i)
+            if (imgMatch?.[1]) {
+              const src = imgMatch[1]
+              // Ignora favicons, ícones e imagens muito pequenas
+              if (!src.includes('favicon') && !src.includes('icon') && !src.includes('logo')) {
+                image_url = src
+              }
+            }
           }
 
           // Parse pub_date
