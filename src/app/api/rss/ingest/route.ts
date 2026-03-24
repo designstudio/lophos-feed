@@ -42,6 +42,7 @@ interface RSSItem {
   'content:encoded'?: string
   pubDate?: string
   'media:content'?: any
+  'media:thumbnail'?: any
   enclosure?: any
   image?: any
 }
@@ -223,6 +224,10 @@ export async function POST(req: NextRequest) {
           let image_url: string | undefined
           if (item['media:content']?.['@_url']) {
             image_url = item['media:content']['@_url']
+          } else if (item['media:thumbnail']?.['@_url']) {
+            image_url = item['media:thumbnail']['@_url']
+          } else if (Array.isArray(item['media:thumbnail']) && item['media:thumbnail'][0]?.['@_url']) {
+            image_url = item['media:thumbnail'][0]['@_url']
           } else if (item.enclosure?.['@_url'] && item.enclosure['@_type']?.startsWith('image')) {
             image_url = item.enclosure['@_url']
           }
