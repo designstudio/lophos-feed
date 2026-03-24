@@ -149,7 +149,7 @@ export default function ArticlePage() {
 
             {/* Back button — Perplexity style */}
             <Link href="/feed"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border bg-white hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
             >
               <ArrowLeft size={15} className="flex-shrink-0" />
               <span className="hidden sm:inline">Voltar para Meu feed</span>
@@ -262,13 +262,6 @@ export default function ArticlePage() {
                   </div>
                 )}
 
-                {/* Conclusion */}
-                {item.conclusion && (
-                  <div className="rounded-[1rem] border border-border bg-bg-secondary p-4 mb-8">
-                    <h2 className="text-[13px] font-semibold text-ink-primary mb-1.5">O que esperar</h2>
-                    <p className="text-[14px] text-ink-secondary leading-relaxed">{item.conclusion}</p>
-                  </div>
-                )}
 
                 {/* Sources */}
                 {item.sources && item.sources.length > 0 && (
@@ -303,7 +296,7 @@ export default function ArticlePage() {
                 {/* Related articles — Perplexity "Descubra mais" style */}
                 {related.length > 0 && (
                   <div className="mb-8">
-                    <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-2 mb-6">
                       <Documents size={24} className="text-ink-primary flex-shrink-0" />
                       <h2 className="font-semibold text-ink-primary" style={{ fontSize: '1.125rem' }}>
                         Notícias relacionadas
@@ -327,7 +320,7 @@ export default function ArticlePage() {
                             </div>
                           )}
                           <div className="p-3 flex flex-col gap-1">
-                            <p className="text-[13px] font-semibold text-ink-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+                            <p className="text-[0.875rem] font-semibold text-ink-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors">
                               {rel.title}
                             </p>
                             <p className="text-[12px] text-ink-tertiary leading-relaxed line-clamp-2">
