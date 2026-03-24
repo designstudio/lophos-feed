@@ -20,9 +20,17 @@ function createDedupHash(title) {
   return crypto.createHash('md5').update(title.toLowerCase().trim()).digest('hex')
 }
 
+function extractText(val) {
+  if (!val) return ''
+  // Some parsers return { '#text': '...', '@_type': 'html' } instead of a plain string
+  if (typeof val === 'object') return val['#text'] || ''
+  return String(val)
+}
+
 function stripHtml(html) {
-  if (!html) return ''
-  return String(html)
+  const text = extractText(html)
+  if (!text) return ''
+  return text
     .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&quot;/g, '"')
@@ -54,7 +62,9 @@ async function fetchAndParseFeed(feed) {
       allowBooleanAttributes: true,
     })
     const parsed = parser.parse(xml)
-    const channel = parsed.rss?.channel || parsed.feed
+
+    // RSS 2.0, Atom, or RSS 1.0 (RDF)
+    const channel = parsed.rss?.channel || parsed.feed || parsed['rdf:RDF']
     if (!channel) return { items: [], error: 'No RSS/Atom channel found' }
 
     let items = channel.item || []
@@ -111,7 +121,7 @@ async function main() {
       for (const item of items) {
         const title = stripHtml(item.title)
         const url = item.link?.trim()
-        const description = stripHtml(item['content:encoded'] || item.description || '')
+        const description = stripHtml(extractText(item['content:encoded']) || extractText(item.description) || '')
 
         if (!title || !url) { totalSkipped++; continue }
 
@@ -131,7 +141,7 @@ async function main() {
         } else if (item.enclosure?.['@_url'] && item.enclosure['@_type']?.startsWith('image')) {
           image_url = item.enclosure['@_url']
         } else {
-          const htmlContent = item['content:encoded'] || item.description || ''
+          const htmlContent = extractText(item['content:encoded']) || extractText(item.description) || ''
           const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i)
           if (imgMatch?.[1]) {
             const src = imgMatch[1]

@@ -7,9 +7,15 @@ function createDedupHash(title: string): string {
   return crypto.createHash('md5').update(normalized).digest('hex')
 }
 
+function extractText(val: any): string {
+  if (!val) return ''
+  if (typeof val === 'object') return val['#text'] || ''
+  return String(val)
+}
+
 function stripHtml(html: any): string {
-  if (!html) return ''
-  let text = typeof html === 'string' ? html : String(html)
+  const text = extractText(html)
+  if (!text) return ''
   return text
     .replace(/<[^>]*>/g, '')
     .replace(/&nbsp;/g, ' ')
@@ -67,7 +73,7 @@ async function fetchAndParseFeed(feed: RSSFeed): Promise<{ items: RSSItem[]; eta
       allowBooleanAttributes: true,
     })
     const parsed = parser.parse(xml) as any
-    const channel = parsed.rss?.channel || parsed.feed
+    const channel = parsed.rss?.channel || parsed.feed || parsed['rdf:RDF']
     if (!channel) return { items: [], error: 'No RSS/Atom channel found' }
 
     let items = channel.item || []
@@ -135,7 +141,7 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
       for (const item of items) {
         const title = stripHtml(item.title as string)
         const url = (item.link as string)?.trim()
-        const description = stripHtml((item['content:encoded'] || item.description || '') as string)
+        const description = stripHtml(extractText(item['content:encoded']) || extractText(item.description) || '')
 
         if (!title || !url) { totalSkipped++; continue }
 
@@ -155,7 +161,7 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
         } else if (item.enclosure?.['@_url'] && item.enclosure['@_type']?.startsWith('image')) {
           image_url = item.enclosure['@_url']
         } else {
-          const htmlContent = item['content:encoded'] || item.description || ''
+          const htmlContent = extractText(item['content:encoded']) || extractText(item.description) || ''
           const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i)
           if (imgMatch?.[1]) {
             const src = imgMatch[1]
