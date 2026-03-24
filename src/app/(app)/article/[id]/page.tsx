@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
-import { SquareTopDown, ClockCircle, CloseCircle, Documents, AltArrowLeft, Bookmark, Share } from '@solar-icons/react-perf/Linear'
+import { SquareTopDown, ClockCircle, CloseCircle, Documents, ArrowLeft, Bookmark, Share } from '@solar-icons/react-perf/Linear'
 import { Bookmark as BookmarkFilled } from '@solar-icons/react-perf/Bold'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -14,14 +14,13 @@ function SourceCard({ src }: { src: NewsSource }) {
     <a href={src.url} target="_blank" rel="noopener noreferrer"
       className="flex flex-col gap-2 p-3 rounded-[1rem] border border-border bg-white hover:border-border-strong hover:bg-bg-secondary transition-all group"
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         {src.favicon ? (
           <img src={src.favicon} alt="" width={20} height={20} className="rounded-md flex-shrink-0"
             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
         ) : (
           <span className="w-5 h-5 rounded-md bg-bg-tertiary flex-shrink-0" />
         )}
-        <SquareTopDown size={12} className="text-ink-muted" />
       </div>
       <p className="text-[12px] font-medium text-ink-primary group-hover:text-accent transition-colors truncate leading-tight">
         {src.name}
@@ -152,7 +151,7 @@ export default function ArticlePage() {
             <Link href="/feed"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border bg-white hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
             >
-              <AltArrowLeft size={15} className="flex-shrink-0" />
+              <ArrowLeft size={15} className="flex-shrink-0" />
               <span className="hidden sm:inline">Voltar para Meu feed</span>
             </Link>
 
@@ -315,10 +314,10 @@ export default function ArticlePage() {
                         <button
                           key={rel.id}
                           onClick={() => navigateTo(rel.id)}
-                          className="flex flex-col gap-2 text-left group"
+                          className="flex flex-col gap-0 text-left group rounded-[1rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all"
                         >
                           {rel.imageUrl && (
-                            <div className="rounded-[1rem] overflow-hidden bg-bg-secondary aspect-video w-full">
+                            <div className="bg-bg-secondary aspect-video w-full overflow-hidden">
                               <img
                                 src={rel.imageUrl}
                                 alt=""
@@ -327,12 +326,14 @@ export default function ArticlePage() {
                               />
                             </div>
                           )}
-                          <p className="text-[13px] font-semibold text-ink-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors">
-                            {rel.title}
-                          </p>
-                          <p className="text-[12px] text-ink-tertiary leading-relaxed line-clamp-2">
-                            {rel.summary}
-                          </p>
+                          <div className="p-3 flex flex-col gap-1">
+                            <p className="text-[13px] font-semibold text-ink-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+                              {rel.title}
+                            </p>
+                            <p className="text-[12px] text-ink-tertiary leading-relaxed line-clamp-2">
+                              {rel.summary}
+                            </p>
+                          </div>
                         </button>
                       ))}
                     </div>
