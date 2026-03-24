@@ -233,7 +233,7 @@ export default function ArticlePage() {
                 {/* Hero image — shadow on the wrapper div */}
                 {item.imageUrl && (
                   <div className="rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md">
-                    <img src={item.imageUrl} alt={item.title} className="article-image"
+                    <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image"
                       onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
                     {item.sources?.[0] && (
                       <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
@@ -313,7 +313,7 @@ export default function ArticlePage() {
                           {rel.imageUrl && (
                             <div className="bg-bg-secondary aspect-video w-full overflow-hidden">
                               <img
-                                src={rel.imageUrl}
+                                src={`/api/image-proxy?url=${encodeURIComponent(rel.imageUrl)}`}
                                 alt=""
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                 onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
