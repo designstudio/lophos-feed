@@ -134,6 +134,18 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
   const [savingTopics, setSavingTopics] = useState(false)
   const [topicsSaved, setTopicsSaved] = useState(false)
 
+  // Excluded Topics
+  const [excludedTopics, setExcludedTopics] = useState<string[]>([])
+  const [excludedCustom, setExcludedCustom] = useState('')
+  const [savingExcluded, setSavingExcluded] = useState(false)
+  const [excludedSaved, setExcludedSaved] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/topics/excluded')
+      .then(r => r.json())
+      .then(data => setExcludedTopics(data.excludedTopics ?? []))
+  }, [])
+
   useEffect(() => {
     fetch('/api/topics')
       .then(r => r.json())
@@ -218,6 +230,14 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     setSavingTopics(false)
     setTopicsSaved(true)
     setTimeout(() => setTopicsSaved(false), 2000)
+  }
+
+  const saveExcludedTopics = async () => {
+    setSavingExcluded(true)
+    await fetch('/api/topics/excluded', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ excludedTopics }) })
+    setSavingExcluded(false)
+    setExcludedSaved(true)
+    setTimeout(() => setExcludedSaved(false), 2000)
   }
 
   const TABS = [
@@ -350,6 +370,38 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
                     style={{ background: 'var(--color-ui-strong)' }}>
                     {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
+                  </button>
+                </section>
+
+                <section className="py-5 border-t border-border">
+                  <h3 className="text-sm font-semibold text-ink-primary mb-1">Tópicos excluídos</h3>
+                  <p className="text-sm text-ink-tertiary mb-3">Artigos com esses termos não aparecerão no seu feed.</p>
+                  <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
+                    {excludedTopics.map(t => (
+                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px]" style={{ background: 'var(--color-error, #fee2e2)', color: 'var(--color-error-text, #991b1b)' }}>
+                        {t}
+                        <button onClick={() => { setExcludedTopics(prev => prev.filter(x => x !== t)); setExcludedSaved(false) }}
+                          className="opacity-60 hover:opacity-100 leading-none">×</button>
+                      </span>
+                    ))}
+                    {excludedTopics.length === 0 && (
+                      <p className="text-sm text-ink-tertiary italic">Nenhum tópico excluído</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input value={excludedCustom} onChange={e => setExcludedCustom(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter' && excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) { setExcludedTopics(p => [...p, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false) } }}
+                      placeholder="Ex: anime, k-pop..."
+                      className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-gray-400 bg-white text-gray-900" />
+                    <button onClick={() => { if (excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) { setExcludedTopics(p => [...p, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false) } }}
+                      className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-gray-400 transition-colors">
+                      Adicionar
+                    </button>
+                  </div>
+                  <button onClick={saveExcludedTopics} disabled={savingExcluded}
+                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-ui-strong)' }}>
+                    {excludedSaved ? '✓ Salvo!' : savingExcluded ? 'Salvando…' : 'Salvar exclusões'}
                   </button>
                 </section>
               </>
