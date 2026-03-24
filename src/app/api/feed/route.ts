@@ -7,12 +7,6 @@ import { NewsItem } from '@/lib/types'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-const FETCH_INTERVAL_MINUTES = 120
-
-function isSearchStale(lastFetched: string | null): boolean {
-  if (!lastFetched) return true
-  return Date.now() - new Date(lastFetched).getTime() > FETCH_INTERVAL_MINUTES * 60 * 1000
-}
 
 export async function POST(req: NextRequest) {
   console.log('🔥 FEED ROUTE CALLED AT', new Date().toISOString())
@@ -65,13 +59,10 @@ export async function POST(req: NextRequest) {
 
     // 1. Load existing cache from RSS processing
     // Use matched_topics to find articles that match user's topics
-    const [{ data: allArticles }, fetchResult] = await Promise.all([
-      db.from('news_cache')
-        .select('*')
-        .or(topics.map((t: string) => `matched_topics.cs.{${t}}`).join(','))
-        .order('cached_at', { ascending: false }),
-      db.from('topic_fetches').select('*').in('topic', topics),
-    ])
+    const { data: allArticles } = await db.from('news_cache')
+      .select('*')
+      .or(topics.map((t: string) => `matched_topics.cs.{${t}}`).join(','))
+      .order('cached_at', { ascending: false })
 
     const cutoffIso = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
     const isRecentRow = (row: any) => {
@@ -79,15 +70,6 @@ export async function POST(req: NextRequest) {
       if (!d) return false
       return new Date(d).getTime() >= new Date(cutoffIso).getTime()
     }
-
-    const fetchTimes = fetchResult.data ?? []
-    const byTopic = new Map<string, any[]>()
-    for (const row of (allArticles ?? []).filter(isRecentRow)) {
-      if (!byTopic.has(row.topic)) byTopic.set(row.topic, [])
-      byTopic.get(row.topic)!.push(row)
-    }
-    const lastFetchByTopic = new Map<string, string>()
-    for (const row of fetchTimes) lastFetchByTopic.set(row.topic, row.last_fetched)
 
     // 2. Stream existing cache immediately (filtering excluded topics)
     const allExisting = (allArticles ?? []).filter(isRecentRow)
@@ -108,23 +90,7 @@ export async function POST(req: NextRequest) {
       await writer.write(encoder.encode(JSON.stringify({ coldStart: true }) + '\n'))
     }
 
-    // 3. Which topics need refresh?
-    const topicsToFetch = topics.filter(t =>
-      forceRefresh || isColdStart || isSearchStale(lastFetchByTopic.get(t) ?? null)
-    )
-    if (topicsToFetch.length === 0) {
-      console.log(`[feed] no topics to fetch, closing writer`)
-      await writer.close()
-      return
-    }
-
-    // 4. Mark as fetching immediately to prevent duplicate requests
-    const now = new Date().toISOString()
-    await db.from('topic_fetches').upsert(
-      topicsToFetch.map(topic => ({ topic, last_fetched: now, updated_at: now })),
-      { onConflict: 'topic' }
-    )
-    // 5. Close writer immediately
+    // 3. Close writer
     console.log(`[feed] closing writer at ${new Date().toISOString()}`)
     await writer.close()
   })()
@@ -152,13 +118,4 @@ function rowToItem(row: any, userTopics?: string[]): NewsItem {
   }
 }
 
-function itemToRow(item: NewsItem) {
-  return {
-    id: item.id, topic: item.topic, title: item.title, summary: item.summary,
-    sections: item.sections || [], conclusion: item.conclusion || null,
-    sources: item.sources, image_url: item.imageUrl || null,
-    published_at: item.publishedAt, cached_at: item.cachedAt,
-    tavily_raw: item.tavilyRaw || null,
-  }
-}
 
