@@ -1,7 +1,10 @@
 name: Process News
 
 on:
-  workflow_dispatch:   # manual runs only
+  workflow_run:
+    workflows: ["RSS Ingest"]
+    types: [completed]
+  workflow_dispatch:   # allow manual runs too
 
 jobs:
   process:
