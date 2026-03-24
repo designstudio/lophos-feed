@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { processRawBatch } from '@/lib/synthesize'
+import { processRawBatch } from '@/lib/news'
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
