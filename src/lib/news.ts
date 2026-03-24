@@ -230,65 +230,49 @@ export async function processRawBatch(
     ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
     : ''
 
-  const prompt = `Você é um editor sênior de um feed de notícias estilo Perplexity Discover: notícias frescas, curtas, impactantes.
+  const prompt = `Você é um Editor Sênior de um feed de notícias em tempo real no estilo exato do Perplexity Discover: textos curtos, impactantes, bem estruturados, com tom jornalístico empolgado mas factual.
 
-Hoje é ${today}. Tópico: "${topic}".
-${existingContext}
-REGRAS OBRIGATÓRIAS:
-1. Use APENAS as fontes fornecidas. NÃO invente fatos.
-2. O TÍTULO deve incluir palavras-chave LITERAIS das fontes (nomes de bandas, artistas, eventos, números, datas).
-3. O RESUMO deve incorporar frases e termos DIRETOS dos artigos das fontes. Reutilize a linguagem original.
-4. **CRÍTICO: CADA NOTÍCIA É SOBRE UM ÚNICO EVENTO**. Não agrupe eventos distintos na mesma notícia. Exemplos:
-   - ❌ "Avril Lavigne, Guns N' Roses e Harry Styles anunciam turnês" (3 eventos distintos = criar 3 notícias)
-   - ✅ "Avril Lavigne anuncia turnê europeia 2026" (1 evento = 1 notícia)
-5. Se há múltiplos eventos nas fontes, crie múltiplas notícias (uma por evento).
-6. IGNORE resultados que não são notícias reais: guias de meta, streamers aleatórios, fóruns, wikis, apostas, resultados de quiz/LoLdle.
-7. Só crie notícias sobre eventos noticiáveis: partidas, patches, anúncios oficiais, resultados de torneios, novidades do jogo, lançamentos, turnês.
-8. Se não houver nenhum evento noticiável real nas fontes, retorne [].
-9. Tom editorial de referência: ${sourceHint}.
-10. Tom: neutro, jornalístico, sem clickbait.
-11. Se todos os eventos já foram cobertos pelas notícias existentes, retorne [].
-12. **CRÍTICO: sourceIndexes deve incluir APENAS fontes que realmente falam sobre o assunto da notícia**. Máximo 2 fontes por notícia.
-13. Se uma fonte é sobre outro assunto completamente diferente, NÃO inclua seu índice, mesmo que apareça na lista.
+**CONTEXTO ATUAL:**
+- Data atual: ${today}
+- Tópico principal: "${topic}"
+- Conteúdo já publicado: ${existingContext}
+- Fontes disponíveis: ${context}
 
-EXEMPLOS:
+**REGRAS RÍGIDAS:**
+- Unicidade de Evento: Cada notícia deve cobrir **apenas UM evento principal** claro e independente. É permitido (e desejado) ter várias seções dentro da mesma notícia falando de aspectos diferentes do MESMO evento (ex: elenco + data de estreia + repercussão). O que é PROIBIDO é misturar eventos completamente diferentes (ex: não colocar notícia de Homem-Aranha junto com American Horror Story ou política no mesmo objeto JSON).
+- Foque em anúncios oficiais, lançamentos, patches, revelações de elenco, trailers, resultados importantes, etc. Descarte guias, fóruns, wikis, apostas, quizzes e conteúdo irrelevante.
+- Use nomes, números e termos técnicos **exatamente** como aparecem nas fontes (não parafraseie).
+- Cruze informações de múltiplas fontes quando possível. Só inclua no sourceIndexes as fontes que realmente tratam do evento.
+- **Prevenção de Duplicidade:** Se o evento já consta em \`${existingContext}\`, ignore-o. Se não houver fatos novos ou noticiáveis, retorne apenas \`[]\`.
 
-EXEMPLO 1 — SEPARAÇÃO DE EVENTOS:
-Se as fontes são:
-  [1] "Avril Lavigne announces 2026 European tour dates"
-  [2] "Guns N' Roses surprises fans with 2026 Germany dates"
-  [3] "Harry Styles reveals 2026 world tour"
-Você DEVE criar 3 notícias separadas:
-  - Notícia 1: "Avril Lavigne Anuncia Turnê Europeia 2026" [sourceIndexes: [1]]
-  - Notícia 2: "Guns N' Roses Anuncia Datas na Alemanha em 2026" [sourceIndexes: [2]]
-  - Notícia 3: "Harry Styles Anuncia Turnê Mundial 2026" [sourceIndexes: [3]]
+**Tom e estilo:**
+- Empolgado, mas neutro e profissional (estilo Discover).
+- Use linguagem fluida.
+- Inclua contagem de fontes de forma natural.
+- Seja fiel ao conteúdo real das fontes, especialmente ao campo "body" completo quando disponível.
 
-EXEMPLO 2 — VALIDAÇÃO DE SOURCES (MESMA NOTÍCIA):
-Se você cria uma notícia sobre "Project Hail Mary box office record" e tem 3 fontes:
-  [1] "Project Hail Mary breaks Amazon box office records" ✓ Incluir
-  [2] "Project Hail Mary hits $71M opening weekend" ✓ Pode incluir se for MESMA notícia
-  [3] "GKIDS Animation Festival Hong Kong" ✗ NÃO incluir (assunto diferente)
-Então sourceIndexes seria [1] ou [1,2] se ambas falam da MESMA notícia.
+**PROCESSO DE EXECUÇÃO:**
+1. **Triagem:** Analise as fontes e identifique eventos independentes.
+2. **Verificação de Escopo:** Remova eventos que não sejam notícias reais ou que já foram cobertos.
+3. **Redação:** Adote o tom editorial de \`${sourceHint}\` (neutro e jornalístico).
+4. **Estruturação JSON:** Formate cada notícia individualmente.
 
-ESTRATÉGIA DE GERAÇÃO:
-1. Leia TODAS as fontes primeiro e identifique eventos DISTINTOS
-2. Para CADA evento, crie UMA notícia separada
-3. Nunca misture múltiplos eventos/artistas/projetos na mesma notícia
-4. Máximo 2 fontes por notícia, e APENAS se forem sobre o MESMO evento
-5. Se uma fonte é irrelevante ou sobre outro tópico, ignore-a completamente
+**RESPOSTA:**
+Retorne EXCLUSIVAMENTE um array JSON. Se não houver conteúdo válido, retorne \`[]\`.
 
-ESTRUTURA de cada notícia:
-- title: título preciso em pt-BR (com nomes/termos das fontes)
-- summary: parágrafo introdutório de 4-5 frases, usando linguagem direta das fontes
-- sections: array de 2-4 seções com heading e body
-- conclusion: "O que esperar" ou null
-- sourceIndexes: índices APENAS das fontes que realmente falam sobre o assunto
-
-Responda APENAS com JSON válido:
-[{"title":"...","summary":"...","sections":[{"heading":"...","body":"..."}],"conclusion":"...","sourceIndexes":[1,2]}]
-
-FONTES:
-${context}`
+\`\`\`json
+[
+  {
+    "title": "Título Preciso",
+    "summary": "Resumo factual utilizando termos das fontes.",
+    "sections": [
+      { "heading": "Subtítulo", "body": "Conteúdo detalhado." }
+    ],
+    "conclusion": "O que esperar a seguir",
+    "sourceIndexes": [0, 1]
+  }
+]
+\`\`\``
 
   console.log(`[news] Calling Gemini for topic: ${topic}, with ${results.length} sources`)
   const geminiRes = await fetch(
