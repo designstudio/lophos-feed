@@ -350,17 +350,21 @@ ${context}`
       continue
     }
 
-    const primaryResult = results[idxs[0]] ?? results[0]
-    let imageUrl: string | undefined = primaryResult?.image
-    // Descartar lazy-load placeholders que o Tavily às vezes retorna como imagem
-    if (isLazyLoadImage(imageUrl)) imageUrl = undefined
-    if (!imageUrl || !isImageFromSources(imageUrl, sources)) {
-      const ogImage = await fetchImageForSources(sources)
-      if (ogImage) imageUrl = ogImage
+    // Percorre todas as fontes do artigo e usa a primeira imagem válida
+    let imageUrl: string | undefined
+    for (const idx of idxs) {
+      const candidate = results[idx]?.image
+      if (candidate && !isLazyLoadImage(candidate)) {
+        imageUrl = candidate
+        break
+      }
     }
-    // Último recurso: usar imagens do array top-level do Tavily (geralmente CDN real)
-    if (!imageUrl && tavilyImages.length > 0) {
-      imageUrl = tavilyImages.find(img => !isLazyLoadImage(img))
+
+    // Se não encontrou imagem em nenhuma das fontes, ignora o artigo
+    if (!imageUrl) {
+      dropped++
+      droppedItems.push({ title: item.title || '(sem título)', score: 0 })
+      continue
     }
 
     const conclusion = typeof item.conclusion === 'string'
