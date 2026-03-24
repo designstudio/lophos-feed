@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     .or(orFilter)
     .neq('id', id)
     .order('published_at', { ascending: false })
-    .limit(6)
+    .limit(4)
 
   const items = (rows || []).map((row: any) => ({
     id: row.id,

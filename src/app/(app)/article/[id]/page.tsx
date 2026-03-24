@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
 import { SquareTopDown, ClockCircle, CloseCircle, Documents, AltArrowLeft, Bookmark, Share } from '@solar-icons/react-perf/Linear'
@@ -12,7 +12,7 @@ import { ptBR } from 'date-fns/locale'
 function SourceCard({ src }: { src: NewsSource }) {
   return (
     <a href={src.url} target="_blank" rel="noopener noreferrer"
-      className="flex flex-col gap-2 p-3 rounded-xl border border-border bg-white hover:border-border-strong hover:bg-bg-secondary transition-all group"
+      className="flex flex-col gap-2 p-3 rounded-[1rem] border border-border bg-white hover:border-border-strong hover:bg-bg-secondary transition-all group"
     >
       <div className="flex items-center justify-between">
         {src.favicon ? (
@@ -41,20 +41,44 @@ interface RelatedItem {
 
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>()
+  const router = useRouter()
   const { isSignedIn } = useAuth()
   const [item, setItem] = useState<NewsItem | null>(null)
   const [loading, setLoading] = useState(true)
+  const [transitioning, setTransitioning] = useState(false)
   const [showAllSources, setShowAllSources] = useState(false)
   const [related, setRelated] = useState<RelatedItem[]>([])
   const [favorited, setFavorited] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const titleRef  = useRef<HTMLHeadingElement>(null)
+  const [showTitle, setShowTitle] = useState(false)
+  const prevId = useRef<string | null>(null)
 
   useEffect(() => {
+    const isNavigation = prevId.current !== null && prevId.current !== id
+    prevId.current = id
+
+    if (isNavigation) {
+      // Smooth content swap — fade out, fetch, fade in
+      setTransitioning(true)
+      scrollRef.current?.scrollTo({ top: 0 })
+    } else {
+      setLoading(true)
+    }
+
+    setShowAllSources(false)
+    setShowTitle(false)
+
     fetch(`/api/article?id=${id}`)
       .then((r) => r.json())
-      .then((data) => { setItem(data.item || null); setLoading(false) })
-      .catch(() => setLoading(false))
+      .then((data) => {
+        setItem(data.item || null)
+        setLoading(false)
+        setTransitioning(false)
+      })
+      .catch(() => { setLoading(false); setTransitioning(false) })
 
     fetch(`/api/article/related?id=${id}`)
       .then((r) => r.json())
@@ -62,7 +86,7 @@ export default function ArticlePage() {
       .catch(() => {})
   }, [id])
 
-  // Load favorite state (only for signed-in users)
+  // Load favorite state
   useEffect(() => {
     if (!isSignedIn) return
     fetch('/api/favorites')
@@ -83,7 +107,7 @@ export default function ArticlePage() {
         body: JSON.stringify({ articleId: id }),
       })
     } catch {
-      setFavorited(!newState) // revert on error
+      setFavorited(!newState)
     }
     setFavLoading(false)
   }
@@ -94,26 +118,23 @@ export default function ArticlePage() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }).catch(() => {
-      // Fallback: Web Share API
-      if (navigator.share) {
-        navigator.share({ title: item?.title, url })
-      }
+      if (navigator.share) navigator.share({ title: item?.title, url })
     })
+  }
+
+  const navigateTo = (targetId: string) => {
+    router.push(`/article/${targetId}`)
   }
 
   const shownSources = item?.sources?.slice(0, 3) || []
   const extraCount = (item?.sources?.length || 0) - 3
-  const scrollRef  = useRef<HTMLDivElement>(null)
-  const titleRef   = useRef<HTMLHeadingElement>(null)
-  const [showTitle, setShowTitle] = useState(false)
 
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const onScroll = () => {
       if (!titleRef.current) return
-      const titleBottom = titleRef.current.getBoundingClientRect().bottom
-      setShowTitle(titleBottom < 56)
+      setShowTitle(titleRef.current.getBoundingClientRect().bottom < 56)
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
@@ -122,15 +143,16 @@ export default function ArticlePage() {
   return (
     <div className="flex flex-1 min-w-0 overflow-hidden">
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
+
         {/* ── Sticky header ── */}
         <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
           <div className="flex items-center h-12 md:h-14 gap-3">
 
-            {/* Back button */}
+            {/* Back button — Perplexity style */}
             <Link href="/feed"
-              className="flex items-center gap-1.5 text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-colors flex-shrink-0"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border bg-white hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
             >
-              <AltArrowLeft size={16} className="flex-shrink-0" />
+              <AltArrowLeft size={15} className="flex-shrink-0" />
               <span className="hidden sm:inline">Voltar para Meu feed</span>
             </Link>
 
@@ -146,29 +168,24 @@ export default function ArticlePage() {
 
             {/* Action buttons */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              {/* Bookmark */}
+              {/* Bookmark — icon only */}
               {isSignedIn && (
                 <button
                   onClick={toggleFavorite}
                   title={favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors hover:bg-bg-secondary"
-                  style={{ color: favorited ? 'var(--color-accent)' : undefined }}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-bg-secondary"
                 >
                   {favorited
-                    ? <BookmarkFilled size={16} style={{ color: 'var(--color-accent)' }} />
-                    : <Bookmark size={16} className="text-ink-secondary" />
+                    ? <BookmarkFilled size={18} style={{ color: 'var(--color-accent)' }} />
+                    : <Bookmark size={18} className="text-ink-secondary" />
                   }
-                  <span className="hidden md:inline text-ink-secondary" style={favorited ? { color: 'var(--color-accent)' } : {}}>
-                    {favorited ? 'Salvo' : 'Salvar'}
-                  </span>
                 </button>
               )}
 
               {/* Share */}
               <button
                 onClick={shareArticle}
-                title="Compartilhar"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium bg-ink-primary text-bg-primary hover:opacity-80 transition-opacity"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] text-[13px] font-medium bg-ink-primary text-bg-primary hover:opacity-80 transition-opacity"
               >
                 <Share size={14} />
                 <span>{copied ? 'Link copiado!' : 'Compartilhar'}</span>
@@ -178,155 +195,161 @@ export default function ArticlePage() {
           </div>
         </div>
 
-      <main className="page-scroll">
-        <div className="article-layout mx-auto py-6 px-4 md:px-8 pb-24 md:pb-8">
+        <main className="page-scroll">
+          <div
+            className="article-layout mx-auto py-6 px-4 md:px-8 pb-24 md:pb-8 transition-opacity duration-200"
+            style={{ opacity: transitioning ? 0 : 1 }}
+          >
 
-          {loading && (
-            <div className="space-y-4 animate-pulse">
-              <div className="h-3 bg-bg-secondary rounded w-20" />
-              <div className="h-9 bg-bg-secondary rounded w-4/5" />
-              <div className="h-9 bg-bg-secondary rounded w-3/5" />
-              <div className="h-3 bg-bg-secondary rounded w-32" />
-              <div className="h-56 bg-bg-secondary rounded-xl" />
-              <div className="space-y-2">
-                {[1,2,3,4].map(i => <div key={i} className="h-4 bg-bg-secondary rounded" style={{ width: `${100 - i*5}%` }} />)}
+            {loading && (
+              <div className="space-y-4 animate-pulse">
+                <div className="h-3 bg-bg-secondary rounded w-20" />
+                <div className="h-9 bg-bg-secondary rounded w-4/5" />
+                <div className="h-9 bg-bg-secondary rounded w-3/5" />
+                <div className="h-3 bg-bg-secondary rounded w-32" />
+                <div className="h-56 bg-bg-secondary rounded-[1rem]" />
+                <div className="space-y-2">
+                  {[1,2,3,4].map(i => <div key={i} className="h-4 bg-bg-secondary rounded" style={{ width: `${100 - i*5}%` }} />)}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {!loading && !item && (
-            <div className="text-center py-20 text-ink-tertiary">Artigo não encontrado.</div>
-          )}
+            {!loading && !item && (
+              <div className="text-center py-20 text-ink-tertiary">Artigo não encontrado.</div>
+            )}
 
-          {!loading && item && (
-            <article className="animate-fade-in">
-              {/* Topic + title */}
-              <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-              <h1 ref={titleRef} className="text-ink-primary leading-tight mt-2 mb-3" style={{ fontSize: '2.3rem', lineHeight: '1.25' }}>{item.title}</h1>
+            {!loading && item && (
+              <article className="animate-fade-in">
+                {/* Topic + title */}
+                <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
+                <h1 ref={titleRef} className="text-ink-primary leading-tight mt-2 mb-3" style={{ fontSize: '2.3rem', lineHeight: '1.25' }}>{item.title}</h1>
 
-              {/* Recency line */}
-              <div className="flex items-center gap-2 text-xs text-ink-muted mb-6">
-                <ClockCircle size={16} />
-                <span>Publicado {formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true, locale: ptBR })}</span>
-              </div>
-
-              {/* Hero image with source attribution overlay */}
-              {item.imageUrl && (
-                <div className="rounded-xl overflow-hidden mb-6 bg-bg-secondary relative">
-                  <img src={item.imageUrl} alt={item.title} className="article-image shadow-md"
-                    onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
-                  {item.sources?.[0] && (
-                    <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
-                      style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
-                      {item.sources[0].favicon && (
-                        <img src={item.sources[0].favicon} alt="" width={12} height={12} className="rounded-sm opacity-90"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                      )}
-                      <span className="text-[11px] text-white/80 font-medium">{item.sources[0].name}</span>
-                    </div>
-                  )}
+                {/* Recency */}
+                <div className="flex items-center gap-2 text-xs text-ink-muted mb-6">
+                  <ClockCircle size={16} />
+                  <span>Publicado {formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true, locale: ptBR })}</span>
                 </div>
-              )}
 
-              {/* Intro paragraph */}
-              <p className="text-body text-ink-secondary leading-relaxed mb-8">{item.summary}</p>
-
-              {/* Thematic sections */}
-              {item.sections && item.sections.length > 0 && (
-                <div className="space-y-6 mb-8">
-                  {item.sections.map((section, i) => (
-                    <div key={i}>
-                      <h2 className="text-[15px] font-semibold text-ink-primary mb-2">{section.heading}</h2>
-                      <p className="text-body text-ink-secondary leading-relaxed">{section.body}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Conclusion / O que esperar */}
-              {item.conclusion && (
-                <div className="rounded-xl border border-border bg-bg-secondary p-4 mb-8">
-                  <h2 className="text-[13px] font-semibold text-ink-primary mb-1.5">O que esperar</h2>
-                  <p className="text-[14px] text-ink-secondary leading-relaxed">{item.conclusion}</p>
-                </div>
-              )}
-
-              {/* Sources */}
-              {item.sources && item.sources.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-3">
-                    {item.sources.length} fonte{item.sources.length !== 1 ? 's' : ''}
-                  </h2>
-                  <div className="flex gap-2 items-stretch">
-                    {shownSources.map((src, i) => (
-                      <div key={i} className="flex-1 min-w-0"><SourceCard src={src} /></div>
-                    ))}
-                    {extraCount > 0 && (
-                      <button onClick={() => setShowAllSources(true)}
-                        className="flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-xl border border-border bg-white hover:border-border-strong hover:bg-bg-secondary transition-all min-w-[80px]"
-                      >
-                        <div className="flex items-center">
-                          {item.sources.slice(3, 6).map((src, i) => (
-                            <div key={i} className="w-4 h-4 rounded-full border-2 border-white overflow-hidden bg-bg-secondary"
-                              style={{ marginLeft: i === 0 ? 0 : '-5px', zIndex: 3 - i }}>
-                              {src.favicon && <img src={src.favicon} alt="" width={16} height={16} className="w-full h-full object-cover"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />}
-                            </div>
-                          ))}
-                        </div>
-                        <span className="text-[12px] font-medium text-ink-secondary whitespace-nowrap">+{extraCount} fontes</span>
-                      </button>
+                {/* Hero image — shadow on the wrapper div */}
+                {item.imageUrl && (
+                  <div className="rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md">
+                    <img src={item.imageUrl} alt={item.title} className="article-image"
+                      onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
+                    {item.sources?.[0] && (
+                      <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
+                        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
+                        {item.sources[0].favicon && (
+                          <img src={item.sources[0].favicon} alt="" width={12} height={12} className="rounded-sm opacity-90"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        )}
+                        <span className="text-[11px] text-white/80 font-medium">{item.sources[0].name}</span>
+                      </div>
                     )}
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Related articles */}
-              {related.length > 0 && (
-                <div className="mb-8">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Documents size={14} className="text-ink-tertiary flex-shrink-0" />
-                    <h2 className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">
-                      Notícias relacionadas
-                    </h2>
-                  </div>
-                  <div className="flex flex-col divide-y divide-border">
-                    {related.map((rel) => (
-                      <Link key={rel.id} href={`/article/${rel.id}`}
-                        className="flex items-start gap-3 py-3 group hover:opacity-75 transition-opacity"
-                      >
-                        {rel.imageUrl && (
-                          <img
-                            src={rel.imageUrl}
-                            alt=""
-                            className="w-14 h-14 rounded-lg object-cover flex-shrink-0 shadow-sm"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                          />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{rel.topic}</span>
-                          <p className="text-[13px] font-medium text-ink-primary leading-snug mt-0.5 line-clamp-2 group-hover:text-accent transition-colors">
-                            {rel.title}
-                          </p>
-                        </div>
-                      </Link>
+                {/* Summary */}
+                <p className="text-body text-ink-secondary leading-relaxed mb-8">{item.summary}</p>
+
+                {/* Sections */}
+                {item.sections && item.sections.length > 0 && (
+                  <div className="space-y-6 mb-8">
+                    {item.sections.map((section, i) => (
+                      <div key={i}>
+                        <h2 className="text-[15px] font-semibold text-ink-primary mb-2">{section.heading}</h2>
+                        <p className="text-body text-ink-secondary leading-relaxed">{section.body}</p>
+                      </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </article>
-          )}
-        </div>
-      </main>
+                )}
+
+                {/* Conclusion */}
+                {item.conclusion && (
+                  <div className="rounded-[1rem] border border-border bg-bg-secondary p-4 mb-8">
+                    <h2 className="text-[13px] font-semibold text-ink-primary mb-1.5">O que esperar</h2>
+                    <p className="text-[14px] text-ink-secondary leading-relaxed">{item.conclusion}</p>
+                  </div>
+                )}
+
+                {/* Sources */}
+                {item.sources && item.sources.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider mb-3">
+                      {item.sources.length} fonte{item.sources.length !== 1 ? 's' : ''}
+                    </h2>
+                    <div className="flex gap-2 items-stretch">
+                      {shownSources.map((src, i) => (
+                        <div key={i} className="flex-1 min-w-0"><SourceCard src={src} /></div>
+                      ))}
+                      {extraCount > 0 && (
+                        <button onClick={() => setShowAllSources(true)}
+                          className="flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-[1rem] border border-border bg-white hover:border-border-strong hover:bg-bg-secondary transition-all min-w-[80px]"
+                        >
+                          <div className="flex items-center">
+                            {item.sources.slice(3, 6).map((src, i) => (
+                              <div key={i} className="w-4 h-4 rounded-full border-2 border-white overflow-hidden bg-bg-secondary"
+                                style={{ marginLeft: i === 0 ? 0 : '-5px', zIndex: 3 - i }}>
+                                {src.favicon && <img src={src.favicon} alt="" width={16} height={16} className="w-full h-full object-cover"
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />}
+                              </div>
+                            ))}
+                          </div>
+                          <span className="text-[12px] font-medium text-ink-secondary whitespace-nowrap">+{extraCount} fontes</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Related articles — Perplexity "Descubra mais" style */}
+                {related.length > 0 && (
+                  <div className="mb-8">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Documents size={24} className="text-ink-primary flex-shrink-0" />
+                      <h2 className="font-semibold text-ink-primary" style={{ fontSize: '1.125rem' }}>
+                        Notícias relacionadas
+                      </h2>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {related.slice(0, 4).map((rel) => (
+                        <button
+                          key={rel.id}
+                          onClick={() => navigateTo(rel.id)}
+                          className="flex flex-col gap-2 text-left group"
+                        >
+                          {rel.imageUrl && (
+                            <div className="rounded-[1rem] overflow-hidden bg-bg-secondary aspect-video w-full">
+                              <img
+                                src={rel.imageUrl}
+                                alt=""
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
+                              />
+                            </div>
+                          )}
+                          <p className="text-[13px] font-semibold text-ink-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+                            {rel.title}
+                          </p>
+                          <p className="text-[12px] text-ink-tertiary leading-relaxed line-clamp-2">
+                            {rel.summary}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </article>
+            )}
+          </div>
+        </main>
       </div>
 
-      {/* ── Sources panel — pushes content, slides in from right ── */}
+      {/* ── Sources panel ── */}
       <div
         className="flex-shrink-0 border-l border-border overflow-hidden transition-all duration-300 ease-in-out"
         style={{ width: showAllSources ? '20rem' : '0', opacity: showAllSources ? 1 : 0 }}
       >
         <div className="w-80 h-full flex flex-col">
-          {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0" style={{ height: '57px' }}>
             <div className="flex items-center gap-2">
               <div className="flex items-center">
@@ -345,7 +368,6 @@ export default function ArticlePage() {
               <CloseCircle size={20} />
             </button>
           </div>
-          {/* List */}
           <div className="overflow-y-auto flex-1 px-4 py-3">
             {(item?.sources || []).map((src, i) => (
               <a key={i} href={src.url} target="_blank" rel="noopener noreferrer"
