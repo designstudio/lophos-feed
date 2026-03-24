@@ -30,8 +30,8 @@ export async function POST(req: NextRequest) {
   // Delete existing topics for this user
   await getSupabaseAdmin().from('user_topics').delete().eq('user_id', userId)
 
-  // Insert new topics
-  const rows = topics.map((topic: string) => ({ user_id: userId, topic }))
+  // Insert new topics (normalized to lowercase)
+  const rows = topics.map((topic: string) => ({ user_id: userId, topic: topic.toLowerCase().trim() }))
   const { error } = await getSupabaseAdmin().from('user_topics').insert(rows)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

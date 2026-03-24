@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
           }
 
           const dedup_hash = createDedupHash(title)
-          const topic = (feed.topics as string[])?.[0] || 'tecnologia'
+          const topic = ((feed.topics as string[])?.[0] || 'tecnologia').toLowerCase().trim()
 
           // Check for duplicate by URL (unique constraint)
           const { data: existing } = await db

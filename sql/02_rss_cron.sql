@@ -9,7 +9,7 @@ select cron.schedule(
   'rss-ingest',
   '*/30 * * * *',
   $$
-  select net.http_post(
+  select http_post(
     url := current_setting('app.rss_ingest_url'),
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
