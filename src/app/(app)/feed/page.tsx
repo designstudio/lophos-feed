@@ -314,7 +314,7 @@ export default function FeedPage() {
 
   // Poll for new articles every 5 minutes
   useEffect(() => {
-    const POLL_INTERVAL = 5 * 60 * 1000
+    const POLL_INTERVAL = 30 * 60 * 1000
     const interval = setInterval(async () => {
       if (items.length === 0 || topics.length === 0) return
       const newest = items.reduce((max, i) =>
