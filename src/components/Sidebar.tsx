@@ -332,10 +332,10 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
                     {topics.map(t => (
-                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px]" style={{ background: "var(--color-ui-strong)", color: 'var(--color-bg-primary)' }}>
+                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] bg-bg-tertiary text-ink-primary">
                         {t}
                         <button onClick={() => { setTopics(prev => prev.filter(x => x !== t)); setTopicsSaved(false) }}
-                          className="opacity-60 hover:opacity-100 leading-none">×</button>
+                          className="opacity-50 hover:opacity-100 leading-none">×</button>
                       </span>
                     ))}
                   </div>
@@ -369,8 +369,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     </button>
                   </div>
                   <button onClick={saveTopics} disabled={savingTopics}
-                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)', color: 'var(--color-bg-primary)' }}>
+                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-accent)' }}>
                     {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
                   </button>
                 </section>
@@ -401,8 +401,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     </button>
                   </div>
                   <button onClick={saveExcludedTopics} disabled={savingExcluded}
-                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)', color: 'var(--color-bg-primary)' }}>
+                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-accent)' }}>
                     {excludedSaved ? '✓ Salvo!' : savingExcluded ? 'Salvando…' : 'Salvar exclusões'}
                   </button>
                 </section>
@@ -494,8 +494,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     </div>
                   </div>
                   <button onClick={saveName} disabled={savingName}
-                    className="px-5 py-2.5 rounded-full text-sm font-medium transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)', color: 'var(--color-bg-primary)' }}>
+                    className="px-5 py-2.5 rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-accent)' }}>
                     {nameSaved ? '✓ Salvo!' : savingName ? 'Salvando…' : 'Salvar'}
                   </button>
                 </section>
