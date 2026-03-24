@@ -19,11 +19,12 @@ export async function POST(req: NextRequest) {
     const db = getSupabaseAdmin()
 
     // Fetch all unprocessed raw items
+    const limit = parseInt(req.nextUrl.searchParams.get('limit') || '100')
     const { data: rawItems, error: fetchError } = await db
       .from('raw_items')
       .select('url, title, content, image_url, topic')
       .eq('processed', false)
-      .limit(100)
+      .limit(limit)
       .order('pub_date', { ascending: false })
 
     if (fetchError) {
