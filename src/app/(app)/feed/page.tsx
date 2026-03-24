@@ -11,6 +11,7 @@ import { NewsItem } from '@/lib/types'
 import { useFeedContext } from '@/components/FeedContext'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@clerk/nextjs'
+import FloatSidebar from 'float-sidebar'
 
 const toTitleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
@@ -144,9 +145,11 @@ export default function FeedPage() {
   const [coldStartLoading, setColdStartLoading] = useState(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [visibleBlocks, setVisibleBlocks] = useState(4)
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  const abortRef    = useRef<AbortController | null>(null)
-  const scrollRef   = useRef<HTMLDivElement>(null)
+  const sentinelRef  = useRef<HTMLDivElement>(null)
+  const abortRef     = useRef<AbortController | null>(null)
+  const scrollRef    = useRef<HTMLDivElement>(null)
+  const feedRowRef   = useRef<HTMLDivElement>(null)
+  const sidebarRef   = useRef<HTMLDivElement>(null)
   const initialCacheAppliedRef = useRef(false)
   const pendingRef = useRef<NewsItem[]>([])
   const coldStartRef = useRef(false)
@@ -312,6 +315,18 @@ export default function FeedPage() {
 
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
 
+  // FloatSidebar — sticky right sidebar with smart scroll
+  useEffect(() => {
+    if (!sidebarRef.current || !feedRowRef.current) return
+    const instance = FloatSidebar({
+      sidebar: sidebarRef.current,
+      relative: feedRowRef.current,
+      topSpacing: 24,
+      bottomSpacing: 24,
+    })
+    return () => instance.destroy()
+  }, [])
+
   // Poll for new articles every 5 minutes
   useEffect(() => {
     const POLL_INTERVAL = 6 * 60 * 60 * 1000
@@ -444,7 +459,7 @@ export default function FeedPage() {
 
         {/* ── Feed + Right sidebar ── */}
         <div className="feed-layout mx-auto px-4 md:px-8">
-          <div className="flex gap-10 pt-0 pb-24 md:py-6 md:pb-6">
+          <div ref={feedRowRef} className="flex gap-10 pt-0 pb-24 md:py-6 md:pb-6">
             <div className="flex-1 min-w-0">
 
               {coldStartLoading && (
@@ -507,7 +522,7 @@ export default function FeedPage() {
               )}
             </div>
 
-            <div className="sidebar-right hidden lg:block">
+            <div ref={sidebarRef} className="sidebar-right hidden lg:block">
               <RightSidebar topics={topics} />
             </div>
           </div>
