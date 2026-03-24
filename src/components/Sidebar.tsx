@@ -95,6 +95,7 @@ type Tab = 'geral' | 'widgets' | 'conta'
 function SettingsModal({ onClose }: { onClose: () => void }) {
   const { user } = useUser()
   const clerk = useClerk()
+  const { triggerRefresh } = useFeedContext()
   const [tab, setTab] = useState<Tab>('geral')
 
   // Geral
@@ -230,6 +231,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
     setSavingTopics(false)
     setTopicsSaved(true)
     setTimeout(() => setTopicsSaved(false), 2000)
+    triggerRefresh()
+    onClose()
   }
 
   const saveExcludedTopics = async () => {
