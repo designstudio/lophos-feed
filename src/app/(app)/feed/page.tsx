@@ -321,8 +321,8 @@ export default function FeedPage() {
     return () => obs.disconnect()
   }, [hasData])
 
-  const filteredItems = activeFilter ? items.filter(i => i.topic === activeFilter) : items
-  const topicsInFeed  = [...new Set(items.map(i => i.topic))]
+  const filteredItems = activeFilter ? items.filter(i => (i.displayTopic ?? i.topic) === activeFilter) : items
+  const topicsInFeed  = [...new Set(items.map(i => i.displayTopic ?? i.topic))]
   const allBlocks     = splitIntoBlocks(filteredItems)
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
   const hasMore       = visibleBlocks < allBlocks.length
