@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
         for (const item of items) {
           const title = stripHtml(item.title as string)
           const url = (item.link as string)?.trim()
-          const description = stripHtml((item.description || item['content:encoded'] || '') as string)
+          const description = stripHtml((item['content:encoded'] || item.description || '') as string)
 
           if (!title || !url) {
             totalSkipped++
