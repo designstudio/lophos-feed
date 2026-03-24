@@ -184,7 +184,8 @@ export default function ArticlePage() {
               {/* Share */}
               <button
                 onClick={shareArticle}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] text-[13px] font-medium bg-ink-primary text-bg-primary hover:opacity-80 transition-opacity"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] text-[13px] font-medium text-white hover:opacity-80 transition-opacity"
+                style={{ background: 'var(--color-ui-strong)' }}
               >
                 <Share size={14} />
                 <span>{copied ? 'Link copiado!' : 'Compartilhar'}</span>
