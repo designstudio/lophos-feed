@@ -257,22 +257,26 @@ export async function processRawBatch(
 3. **Redação:** Adote o tom editorial de \`${sourceHint}\` (neutro e jornalístico).
 4. **Estruturação JSON:** Formate cada notícia individualmente.
 
+**ESTRUTURA OBRIGATÓRIA (JSON):**
+- \`title\`: Título direto em pt-BR com termos literais da fonte.
+- \`summary\`: Parágrafo de 4-5 frases incorporando frases diretas das fontes.
+- \`sections\`: 2 a 4 objetos com \`heading\` e \`body\`. **IMPORTANTE: Cada seção deve ter conteúdo substancial (3-5 linhas mínimo), não apenas um parágrafo curto.**
+- \`conclusion\`: Seção "O que esperar" ou \`null\`.
+- \`sourceIndexes\`: Array de inteiros referenciando apenas fontes pertinentes ao evento.
+
+**INSTRUÇÕES DE PROFUNDIDADE:**
+- Extraia informações COMPLETAS de cada fonte.
+- Não resuma em uma frase; desenvolva a seção com detalhes, contexto e impacto.
+- Use citações diretas das fontes quando apropriado.
+- Cada seção deve antecipar perguntas que um leitor faria.
+
 **RESPOSTA:**
 Retorne EXCLUSIVAMENTE um array JSON. Se não houver conteúdo válido, retorne \`[]\`.
 
-\`\`\`json
-[
-  {
-    "title": "Título Preciso",
-    "summary": "Resumo factual utilizando termos das fontes.",
-    "sections": [
-      { "heading": "Subtítulo", "body": "Conteúdo detalhado." }
-    ],
-    "conclusion": "O que esperar a seguir",
-    "sourceIndexes": [0, 1]
-  }
-]
-\`\`\``
+[{"title":"...","summary":"...","sections":[{"heading":"...","body":"Conteúdo substancial com múltiplas linhas de detalhes..."}],"conclusion":"...","sourceIndexes":[0,1]}]
+
+FONTES:
+${context}`
 
   console.log(`[news] Calling Gemini for topic: ${topic}, with ${results.length} sources`)
   const geminiRes = await fetch(
