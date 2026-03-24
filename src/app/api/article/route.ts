@@ -12,19 +12,9 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  const { data: cached } = await db.from('news_cache').select('*').eq('id', id).single()
-  const row = cached ?? await (async () => {
-    const { data } = await db.from('articles').select('*').eq('id', id).single()
-    return data
-  })()
+  const { data: row } = await db.from('news_cache').select('*').eq('id', id).single()
 
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  await db.from('articles').upsert({
-    id: row.id, topic: row.topic, title: row.title, summary: row.summary,
-    sources: row.sources, image_url: row.image_url,
-    published_at: row.published_at, cached_at: row.cached_at,
-  }, { onConflict: 'id' })
 
   return NextResponse.json({
     item: {
