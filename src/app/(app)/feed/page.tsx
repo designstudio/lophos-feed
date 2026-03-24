@@ -12,7 +12,7 @@ import { useFeedContext } from '@/components/FeedContext'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@clerk/nextjs'
 
-const toTitleCase = (s: string) => s.replace(/\b\w/g, c => c.toUpperCase())
+const toTitleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
 function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
   const posInCycle = blockIndex % 3
