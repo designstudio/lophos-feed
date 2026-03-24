@@ -11,7 +11,8 @@ export interface ArticleSection {
 
 export interface NewsItem {
   id: string
-  topic: string
+  topic: string          // tópico original do artigo (ex: "anime")
+  displayTopic?: string  // tópico do usuário que fez o match (ex: "música")
   title: string
   summary: string         // intro paragraph — used in feed cards
   sections?: ArticleSection[]  // structured sections — used in article page

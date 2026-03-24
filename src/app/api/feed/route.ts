@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Stream existing cache immediately
     const allExisting = (allArticles ?? []).filter(isRecentRow)
-      .map(rowToItem)
+      .map(row => rowToItem(row, topics))
       .sort((a, b) =>
         new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
         new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
@@ -128,9 +128,13 @@ export async function POST(req: NextRequest) {
   })
 }
 
-function rowToItem(row: any): NewsItem {
+function rowToItem(row: any, userTopics?: string[]): NewsItem {
+  // Find which user topic matched this article
+  const matchedTopics: string[] = row.matched_topics ?? []
+  const displayTopic = userTopics?.find(t => matchedTopics.includes(t)) ?? row.topic
+
   return {
-    id: row.id, topic: row.topic, title: row.title, summary: row.summary,
+    id: row.id, topic: row.topic, displayTopic, title: row.title, summary: row.summary,
     sections: row.sections || [], conclusion: row.conclusion || undefined,
     sources: row.sources, imageUrl: row.image_url,
     publishedAt: row.published_at, cachedAt: row.cached_at,
