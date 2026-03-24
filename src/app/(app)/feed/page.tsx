@@ -341,13 +341,13 @@ export default function FeedPage() {
         {/* ── Sticky header ── */}
         <div className="sticky top-0 z-20 border-b border-border header-blur">
 
-          {/* Mobile: title */}
+          {/* Mobile: title (always visible) */}
           <div className="flex items-center h-12 px-4 md:hidden gap-2">
             <LophosLogo size={26} />
             <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
           </div>
 
-          {/* Mobile: horizontal scrollable tabs */}
+          {/* Mobile: horizontal scrollable tabs (only if has data) */}
           {hasData && topicsInFeed.length > 0 && (
             <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pb-3"
               style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -372,7 +372,7 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* Desktop: title + dropdown tabs */}
+          {/* Desktop: title + dropdown tabs (only if has data) */}
           {hasData && topicsInFeed.length > 0 && (
             <div className="hidden md:flex items-center h-14 px-8">
               <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
@@ -395,6 +395,13 @@ export default function FeedPage() {
                 />
               </div>
               <div style={{ width: '12rem' }} />
+            </div>
+          )}
+
+          {/* Desktop: title only (when no data) */}
+          {(!hasData || topicsInFeed.length === 0) && (
+            <div className="hidden md:flex items-center h-14 px-8">
+              <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
             </div>
           )}
         </div>
