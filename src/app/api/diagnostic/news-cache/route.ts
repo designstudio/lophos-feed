@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
 
     // Get count by topic
     const { data: allItems, error: allError } = await db
-      .from('news_cache')
+      .from('articles')
       .select('topic', { count: 'exact' })
 
     if (allError) {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
     // Get sample item
     const { data: sample } = await db
-      .from('news_cache')
+      .from('articles')
       .select('*')
       .limit(1)
 
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     })
   } catch (err: any) {
     return NextResponse.json(
-      { error: err.message || 'Error querying news_cache' },
+      { error: err.message || 'Error querying articles' },
       { status: 500 }
     )
   }

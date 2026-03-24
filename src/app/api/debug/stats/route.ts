@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     const cutoffIso = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
 
     const { data: articles } = await db
-      .from('news_cache')
+      .from('articles')
       .select('topic, published_at, cached_at, image_url')
       .in('topic', topics)
       .gte('cached_at', cutoffIso)

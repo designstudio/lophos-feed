@@ -64,7 +64,7 @@ async function collectAllFeeds() {
   }
 }
 
-// Phase B: Gemini only — reads raw_articles (status=raw) and saves to news_cache
+// Phase B: Gemini only — reads raw_articles (status=raw) and saves to articles
 export async function processRawFeeds() {
   const db = getSupabaseAdmin()
 
@@ -82,10 +82,10 @@ export async function processRawFeeds() {
 
   console.log(`[cron] process: ${rawRows.length} raw batches to process`)
 
-  // 2. Build set of URLs already in news_cache (last 24h) for dedup
+  // 2. Build set of URLs already in articles (last 24h) for dedup
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: recentCache } = await db
-    .from('news_cache')
+    .from('articles')
     .select('tavily_raw')
     .gte('cached_at', oneDayAgo)
 
@@ -115,9 +115,9 @@ export async function processRawFeeds() {
           return
         }
 
-        // Get existing titles from news_cache for this topic
+        // Get existing titles from articles for this topic
         const { data: existing } = await db
-          .from('news_cache')
+          .from('articles')
           .select('title')
           .eq('topic', topic)
           .order('cached_at', { ascending: false })
@@ -130,7 +130,7 @@ export async function processRawFeeds() {
 
         if (items.length > 0) {
           const rows = items.map(itemToRow)
-          const { error: insertError } = await db.from('news_cache').insert(rows)
+          const { error: insertError } = await db.from('articles').insert(rows)
           if (insertError) {
             console.error(`[cron] process ✗ ${topic} insert:`, insertError.message)
           } else {

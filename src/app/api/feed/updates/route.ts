@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   // Check if there are articles newer than `since` matching user's topics
   const { data, error } = await db
-    .from('news_cache')
+    .from('articles')
     .select('id, title, topic, summary, sections, conclusion, sources, image_url, published_at, cached_at, matched_topics, tavily_raw')
     .or(topics.map((t: string) => `matched_topics.cs.{${t}}`).join(','))
     .gt('cached_at', since)

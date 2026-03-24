@@ -21,10 +21,10 @@ export async function POST(req: NextRequest) {
     const limit = parseInt(url.searchParams.get('limit') || '100')
     const offset = parseInt(url.searchParams.get('offset') || '0')
 
-    console.log(`[process-all-news-cache] Processing news_cache${topic ? ` for topic: ${topic}` : ''}, limit=${limit}, offset=${offset}`)
+    console.log(`[process-all-news-cache] Processing articles${topic ? ` for topic: ${topic}` : ''}, limit=${limit}, offset=${offset}`)
 
-    // Get items from news_cache
-    let query = db.from('news_cache').select('*')
+    // Get items from articles
+    let query = db.from('articles').select('*')
 
     if (topic) {
       query = query.eq('topic', topic)

@@ -244,7 +244,7 @@ async function main() {
 
       // Get existing titles to avoid duplicates
       const { data: existing } = await db
-        .from('news_cache')
+        .from('articles')
         .select('title')
         .eq('topic', topic)
         .order('published_at', { ascending: false })
@@ -257,7 +257,7 @@ async function main() {
       console.log(`[${topic}] Generated ${newsItems.length} articles`)
 
       if (newsItems.length > 0) {
-        const { error: saveError } = await db.from('news_cache').upsert(
+        const { error: saveError } = await db.from('articles').upsert(
           newsItems,
           { onConflict: 'id' }
         )

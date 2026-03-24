@@ -69,11 +69,11 @@ export async function POST(req: NextRequest) {
 
     console.log(`[process-topic] Generated ${newsItems.length} news items for ${topic}`)
 
-    // Save to news_cache
+    // Save to articles
     let newsSaved = 0
     if (newsItems.length > 0) {
       const { error: saveError } = await db
-        .from('news_cache')
+        .from('articles')
         .upsert(
           newsItems.map(item => ({
             id: item.id,

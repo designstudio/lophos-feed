@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  const { data: row } = await db.from('news_cache').select('*').eq('id', id).single()
+  const { data: row } = await db.from('articles').select('*').eq('id', id).single()
 
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 

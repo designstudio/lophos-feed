@@ -1,6 +1,6 @@
 /**
  * One-time script to backfill matched_topics with rich keywords for
- * existing news_cache articles that only have the basic topic tag.
+ * existing articles articles that only have the basic topic tag.
  *
  * Required env vars:
  *   NEXT_PUBLIC_SUPABASE_URL
@@ -69,7 +69,7 @@ ${context}`
 async function main() {
   // Fetch articles with simple matched_topics (only 1 item = just the topic)
   const { data: articles, error } = await db
-    .from('news_cache')
+    .from('articles')
     .select('id, topic, title, summary, matched_topics')
     .order('published_at', { ascending: false })
 
@@ -105,7 +105,7 @@ async function main() {
         const matched_topics = [...new Set([article.topic, ...keywords.map(k => String(k).toLowerCase().trim())])]
 
         const { error: updateError } = await db
-          .from('news_cache')
+          .from('articles')
           .update({ matched_topics })
           .eq('id', article.id)
 

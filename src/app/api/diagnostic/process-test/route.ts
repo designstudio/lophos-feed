@@ -9,10 +9,10 @@ export async function GET(req: NextRequest) {
     const limit = 100
     const offset = 0
 
-    console.log(`[diagnostic] Querying news_cache for topic: ${topic}`)
+    console.log(`[diagnostic] Querying articles for topic: ${topic}`)
 
     // Exact same query as process-all-news-cache
-    let query = db.from('news_cache').select('*')
+    let query = db.from('articles').select('*')
 
     if (topic) {
       query = query.eq('topic', topic)

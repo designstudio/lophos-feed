@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Load existing cache from RSS processing
     // Use matched_topics to find articles that match user's topics
-    const { data: allArticles } = await db.from('news_cache')
+    const { data: allArticles } = await db.from('articles')
       .select('*')
       .or(topics.map((t: string) => `matched_topics.cs.{${t}}`).join(','))
       .order('cached_at', { ascending: false })

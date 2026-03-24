@@ -27,7 +27,7 @@ async function handleRefresh(req: NextRequest) {
 
     // 2. Clear old articles for these topics
     await db
-      .from('news_cache')
+      .from('articles')
       .delete()
       .in('topic', topics)
 
