@@ -784,12 +784,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meu Feed</span>}
           </Link>
 
-          <Link href="/feed/favorites"
+          <Link href="/favorites"
             title={collapsed ? 'Meus Favoritos' : undefined}
             className={cn(
               'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
               collapsed ? 'justify-center' : '',
-              path === '/feed/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+              path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
             )}>
             <Bookmark size={18} className="flex-shrink-0" />
             {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meus Favoritos</span>}

@@ -25,7 +25,9 @@
       "Bash(curl -s \"https://feeds.feedburner.com/www/HbIE5QHYI6H\")",
       "Bash(node -e \":*)",
       "Bash(node scripts/gen-sql.mjs)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -n \"related\\\\|Related\\\\|spring\" src/app/\\\\\\(app\\\\\\)/article/[id]/page.tsx)"
     ]
   }
 }

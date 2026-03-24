@@ -24,7 +24,7 @@ export async function GET() {
 
   const { data: rows, error } = await db
     .from('articles')
-    .select('id, topic, title, summary, image_url, published_at, sources, matched_topics')
+    .select('id, topic, title, summary, sections, image_url, published_at, cached_at, sources, matched_topics')
     .in('id', ids)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -39,9 +39,12 @@ export async function GET() {
     topic: row.topic,
     title: row.title,
     summary: row.summary,
+    sections: row.sections || [],
     imageUrl: row.image_url,
     publishedAt: row.published_at,
+    cachedAt: row.cached_at,
     sources: row.sources,
+    matchedTopics: row.matched_topics,
   }))
 
   return NextResponse.json({ items })
