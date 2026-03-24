@@ -35,6 +35,11 @@ export async function POST(req: NextRequest) {
   if (topics.length === 0)
     return new Response(JSON.stringify({ error: 'No topics' }), { status: 400 })
 
+  // Load excluded topics for this user
+  const { data: excludedData } = await db
+    .from('user_excluded_topics').select('topic').eq('user_id', userId)
+  const excludedTopics: string[] = (excludedData ?? []).map((r: any) => r.topic)
+
   const encoder = new TextEncoder()
   const stream = new TransformStream()
   const writer = stream.writable.getWriter()
@@ -84,8 +89,13 @@ export async function POST(req: NextRequest) {
     const lastFetchByTopic = new Map<string, string>()
     for (const row of fetchTimes) lastFetchByTopic.set(row.topic, row.last_fetched)
 
-    // 2. Stream existing cache immediately
+    // 2. Stream existing cache immediately (filtering excluded topics)
     const allExisting = (allArticles ?? []).filter(isRecentRow)
+      .filter(row => {
+        if (excludedTopics.length === 0) return true
+        const matched: string[] = row.matched_topics ?? []
+        return !excludedTopics.some(excluded => matched.includes(excluded))
+      })
       .map(row => rowToItem(row, topics))
       .sort((a, b) =>
         new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
