@@ -321,7 +321,13 @@ ${context}`
   const droppedItems: { title: string; score: number }[] = []
   for (let i = 0; i < parsed.length; i++) {
     const item = parsed[i]
-    const idxs: number[] = (item.sourceIndexes || [i + 1]).map((n: number) => n - 1)
+    // Se o Gemini não retornou sourceIndexes, descarta o artigo para evitar fontes erradas
+    if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) {
+      dropped++
+      droppedItems.push({ title: item.title || '(sem título)', score: 0 })
+      continue
+    }
+    const idxs: number[] = item.sourceIndexes.map((n: number) => n - 1)
     const sources: NewsSource[] = idxs
       .filter((idx) => idx >= 0 && idx < results.length)
       .map((idx) => {
