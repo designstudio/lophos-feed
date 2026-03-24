@@ -141,6 +141,11 @@ html, body {
 .sidebar-right {
   width: var(--sidebar-right-width);
   flex-shrink: 0;
+  position: sticky;
+  top: 24px;
+  align-self: flex-start;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
 }
 
 .article-image {
