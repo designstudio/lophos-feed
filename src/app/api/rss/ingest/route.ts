@@ -132,8 +132,9 @@ export async function POST(req: NextRequest) {
     // Check if this is a retry for failed feeds
     const url = new URL(req.url)
     const retryFailed = url.searchParams.get('retry') === 'failed'
+    const topic = url.searchParams.get('topic')
 
-    // 1. Fetch feeds (all active, or only failed if retry mode)
+    // 1. Fetch feeds (all active, or only failed if retry mode, or by topic if specified)
     let query = db
       .from('rss_feeds')
       .select('id, url, name, topics, language, last_etag, last_modified, last_error')
@@ -141,6 +142,10 @@ export async function POST(req: NextRequest) {
 
     if (retryFailed) {
       query = query.not('last_error', 'is', null) // Only feeds with errors
+    }
+
+    if (topic) {
+      query = query.filter('topics', 'cs', `{"${topic}"`) // Filter by topic
     }
 
     const { data: feeds, error: feedError } = await query
