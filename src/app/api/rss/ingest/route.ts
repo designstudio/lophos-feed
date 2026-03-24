@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (topic) {
-      query = query.filter('topics', 'cs', `{"${topic}"`) // Filter by topic
+      query = query.contains('topics', [topic]) // Filter by topic array
     }
 
     const { data: feeds, error: feedError } = await query
