@@ -8,22 +8,23 @@ on:
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
-      - name: Trigger RSS ingest
-        run: |
-          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
-            -X POST \
-            -H "Authorization: Bearer ${{ secrets.RSS_INGEST_SECRET }}" \
-            https://lophos.space/api/rss/ingest)
+      - name: Checkout
+        uses: actions/checkout@v4
 
-          cat /tmp/response.json
-          echo ""
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-          if [ "$response" -ne 200 ]; then
-            echo "❌ Ingest failed with HTTP $response"
-            exit 1
-          fi
+      - name: Install dependencies
+        run: npm ci
 
-          echo "✅ Ingest completed successfully"
+      - name: Run RSS ingest
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/rss-ingest.mjs
