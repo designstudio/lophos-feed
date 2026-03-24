@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { NewsItem, NewsSource } from '@/lib/types'
-import { SquareTopDown, ClockCircle, CloseCircle } from '@solar-icons/react-perf/Linear'
+import { SquareTopDown, ClockCircle, CloseCircle, Documents } from '@solar-icons/react-perf/Linear'
 import { LophosLogo } from '@/components/LophosLogo'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -31,17 +31,32 @@ function SourceCard({ src }: { src: NewsSource }) {
 
 
 
+interface RelatedItem {
+  id: string
+  topic: string
+  title: string
+  summary: string
+  imageUrl: string
+  publishedAt: string
+}
+
 export default function ArticlePage() {
   const { id } = useParams<{ id: string }>()
   const [item, setItem] = useState<NewsItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAllSources, setShowAllSources] = useState(false)
+  const [related, setRelated] = useState<RelatedItem[]>([])
 
   useEffect(() => {
     fetch(`/api/article?id=${id}`)
       .then((r) => r.json())
       .then((data) => { setItem(data.item || null); setLoading(false) })
       .catch(() => setLoading(false))
+
+    fetch(`/api/article/related?id=${id}`)
+      .then((r) => r.json())
+      .then((data) => setRelated(data.items || []))
+      .catch(() => {})
   }, [id])
 
   const shownSources = item?.sources?.slice(0, 3) || []
@@ -125,7 +140,7 @@ export default function ArticlePage() {
               {/* Hero image with source attribution overlay */}
               {item.imageUrl && (
                 <div className="rounded-xl overflow-hidden mb-6 bg-bg-secondary relative">
-                  <img src={item.imageUrl} alt={item.title} className="article-image"
+                  <img src={item.imageUrl} alt={item.title} className="article-image shadow-md"
                     onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
                   {item.sources?.[0] && (
                     <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
@@ -189,6 +204,40 @@ export default function ArticlePage() {
                         <span className="text-[12px] font-medium text-ink-secondary whitespace-nowrap">+{extraCount} fontes</span>
                       </button>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Related articles */}
+              {related.length > 0 && (
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Documents size={14} className="text-ink-tertiary flex-shrink-0" />
+                    <h2 className="text-[11px] font-semibold text-ink-tertiary uppercase tracking-wider">
+                      Notícias relacionadas
+                    </h2>
+                  </div>
+                  <div className="flex flex-col divide-y divide-border">
+                    {related.map((rel) => (
+                      <Link key={rel.id} href={`/article/${rel.id}`}
+                        className="flex items-start gap-3 py-3 group hover:opacity-75 transition-opacity"
+                      >
+                        {rel.imageUrl && (
+                          <img
+                            src={rel.imageUrl}
+                            alt=""
+                            className="w-14 h-14 rounded-lg object-cover flex-shrink-0 shadow-sm"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{rel.topic}</span>
+                          <p className="text-[13px] font-medium text-ink-primary leading-snug mt-0.5 line-clamp-2 group-hover:text-accent transition-colors">
+                            {rel.title}
+                          </p>
+                        </div>
+                      </Link>
+                    ))}
                   </div>
                 </div>
               )}
