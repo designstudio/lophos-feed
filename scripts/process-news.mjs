@@ -104,6 +104,7 @@ async function callGemini(topic, results, existingTitles) {
 - \`sections\`: 2 a 4 objetos com \`heading\` e \`body\`. **IMPORTANTE: Cada seção deve ter conteúdo substancial (3-5 linhas mínimo), não apenas um parágrafo curto.**
 - \`conclusion\`: Seção "O que esperar" ou \`null\`.
 - \`sourceIndexes\`: Array de inteiros referenciando apenas fontes pertinentes ao evento.
+- \`keywords\`: Array de 5 a 15 termos em **letras minúsculas** para descoberta e matching. Inclua obrigatoriamente: o tópico geral (ex: "games"), entidades específicas do artigo (nomes de jogos, filmes, pessoas, eventos, times), termos relacionados que um usuário poderia cadastrar (ex: "valorant", "vct 2026", "masters bangkok", "riot games", "esports"), e variações em pt-BR e inglês quando relevante.
 
 **INSTRUÇÕES DE PROFUNDIDADE:**
 - Extraia informações COMPLETAS de cada fonte.
@@ -114,7 +115,7 @@ async function callGemini(topic, results, existingTitles) {
 **RESPOSTA:**
 Retorne EXCLUSIVAMENTE um array JSON. Se não houver conteúdo válido, retorne \`[]\`.
 
-[{"title":"...","summary":"...","sections":[{"heading":"...","body":"Conteúdo substancial com múltiplas linhas de detalhes..."}],"conclusion":"...","sourceIndexes":[1,2]}]
+[{"title":"...","summary":"...","sections":[{"heading":"...","body":"Conteúdo substancial com múltiplas linhas de detalhes..."}],"conclusion":"...","sourceIndexes":[1,2],"keywords":["games","valorant","vct 2026","masters bangkok","esports","riot games"]}]
 
 FONTES:
 ${context}`
@@ -189,6 +190,11 @@ async function processTopic(topic, rawItems, existingTitles) {
       ? item.conclusion
       : item.conclusion?.body || undefined
 
+    // Build matched_topics from Gemini keywords, falling back to topic
+    const keywords = Array.isArray(item.keywords)
+      ? [...new Set([topic, ...item.keywords.map(k => String(k).toLowerCase().trim())])]
+      : [topic]
+
     newsItems.push({
       id: randomUUID(),
       topic,
@@ -200,6 +206,7 @@ async function processTopic(topic, rawItems, existingTitles) {
       image_url: imageUrl,
       published_at: now,
       cached_at: now,
+      matched_topics: keywords,
     })
   }
 

@@ -263,6 +263,7 @@ export async function processRawBatch(
 - \`sections\`: 2 a 4 objetos com \`heading\` e \`body\`. **IMPORTANTE: Cada seção deve ter conteúdo substancial (3-5 linhas mínimo), não apenas um parágrafo curto.**
 - \`conclusion\`: Seção "O que esperar" ou \`null\`.
 - \`sourceIndexes\`: Array de inteiros referenciando apenas fontes pertinentes ao evento.
+- \`keywords\`: Array de 5 a 15 termos em **letras minúsculas** para descoberta e matching. Inclua obrigatoriamente: o tópico geral (ex: "games"), entidades específicas do artigo (nomes de jogos, filmes, pessoas, eventos, times), termos relacionados que um usuário poderia cadastrar, e variações em pt-BR e inglês quando relevante.
 
 **INSTRUÇÕES DE PROFUNDIDADE:**
 - Extraia informações COMPLETAS de cada fonte.
@@ -273,7 +274,7 @@ export async function processRawBatch(
 **RESPOSTA:**
 Retorne EXCLUSIVAMENTE um array JSON. Se não houver conteúdo válido, retorne \`[]\`.
 
-[{"title":"...","summary":"...","sections":[{"heading":"...","body":"Conteúdo substancial com múltiplas linhas de detalhes..."}],"conclusion":"...","sourceIndexes":[0,1]}]
+[{"title":"...","summary":"...","sections":[{"heading":"...","body":"Conteúdo substancial com múltiplas linhas de detalhes..."}],"conclusion":"...","sourceIndexes":[1,2],"keywords":["games","valorant","vct 2026","masters bangkok","esports","riot games"]}]
 
 FONTES:
 ${context}`
@@ -384,6 +385,10 @@ ${context}`
         return { url: r.url, title: r.title, content: r.content, image: r.image }
       })
 
+    const keywords: string[] = Array.isArray(item.keywords)
+      ? [...new Set([topic, ...item.keywords.map((k: any) => String(k).toLowerCase().trim())])]
+      : [topic]
+
     items.push({
       id: randomUUID(),
       topic,
@@ -396,6 +401,7 @@ ${context}`
       publishedAt: now,
       cachedAt: now,
       tavilyRaw,
+      matchedTopics: keywords,
     })
   }
 

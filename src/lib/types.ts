@@ -21,6 +21,7 @@ export interface NewsItem {
   imageUrl?: string
   publishedAt: string
   cachedAt: string
+  matchedTopics?: string[]  // keywords geradas pelo Gemini para matching com tópicos do usuário
   tavilyRaw?: { url: string; title: string; content: string; image?: string }[]  // original Tavily results
 }
 

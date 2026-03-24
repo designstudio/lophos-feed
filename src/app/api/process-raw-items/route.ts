@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
             image_url: item.imageUrl,
             published_at: item.publishedAt,
             cached_at: item.cachedAt,
+            matched_topics: item.matchedTopics ?? [item.topic],
           })),
           { onConflict: 'id' }
         )
