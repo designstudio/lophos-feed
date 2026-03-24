@@ -268,7 +268,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
             <button key={t.id} onClick={() => setTab(t.id)}
               className={cn(
                 'flex-shrink-0 flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all',
-                tab === t.id ? 'border-ink-primary text-ink-primary' : 'border-transparent text-ink-tertiary'
+                tab === t.id ? 'border-accent text-ink-primary' : 'border-transparent text-ink-tertiary'
               )}>
               {t.icon}{t.label}
             </button>
@@ -283,11 +283,10 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={cn('w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2.5 rounded-lg mx-1',
-                tab === t.id ? 'font-medium text-ink-primary' : 'text-ink-tertiary hover:text-ink-primary'
-              )}
-              style={{ backgroundColor: tab === t.id ? 'var(--color-hover-subtle)' : undefined }}
-              onMouseEnter={e => { if (tab !== t.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--color-hover-subtle)' }}
-              onMouseLeave={e => { if (tab !== t.id) (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent' }}>
+                tab === t.id
+                  ? 'bg-bg-tertiary font-medium text-ink-primary'
+                  : 'text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary'
+              )}>
               {t.icon}{t.label}
             </button>
           ))}
@@ -333,7 +332,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
                     {topics.map(t => (
-                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-white text-[13px]" style={{ background: "var(--color-ui-strong)" }}>
+                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px]" style={{ background: "var(--color-ui-strong)", color: 'var(--color-bg-primary)' }}>
                         {t}
                         <button onClick={() => { setTopics(prev => prev.filter(x => x !== t)); setTopicsSaved(false) }}
                           className="opacity-60 hover:opacity-100 leading-none">×</button>
@@ -370,8 +369,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     </button>
                   </div>
                   <button onClick={saveTopics} disabled={savingTopics}
-                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)' }}>
+                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-ui-strong)', color: 'var(--color-bg-primary)' }}>
                     {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
                   </button>
                 </section>
@@ -381,7 +380,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-ink-tertiary mb-3">Artigos com esses termos não aparecerão no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
                     {excludedTopics.map(t => (
-                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px]" style={{ background: 'var(--color-error, #fee2e2)', color: 'var(--color-error-text, #991b1b)' }}>
+                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px]" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
                         {t}
                         <button onClick={() => { setExcludedTopics(prev => prev.filter(x => x !== t)); setExcludedSaved(false) }}
                           className="opacity-60 hover:opacity-100 leading-none">×</button>
@@ -402,8 +401,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     </button>
                   </div>
                   <button onClick={saveExcludedTopics} disabled={savingExcluded}
-                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)' }}>
+                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-ui-strong)', color: 'var(--color-bg-primary)' }}>
                     {excludedSaved ? '✓ Salvo!' : savingExcluded ? 'Salvando…' : 'Salvar exclusões'}
                   </button>
                 </section>
@@ -495,8 +494,8 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     </div>
                   </div>
                   <button onClick={saveName} disabled={savingName}
-                    className="px-5 py-2.5 rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)' }}>
+                    className="px-5 py-2.5 rounded-full text-sm font-medium transition-colors disabled:opacity-50"
+                    style={{ background: 'var(--color-ui-strong)', color: 'var(--color-bg-primary)' }}>
                     {nameSaved ? '✓ Salvo!' : savingName ? 'Salvando…' : 'Salvar'}
                   </button>
                 </section>

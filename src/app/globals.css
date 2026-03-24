@@ -62,8 +62,8 @@ html, body {
 
 .dark {
   --color-bg-primary:    #0f0f0f;
-  --color-ui-strong:     #111111;
-  --color-hover-subtle:  #0505050a;
+  --color-ui-strong:     #f0efed;
+  --color-hover-subtle:  rgba(255,255,255,0.06);
   --color-bg-secondary:  #1a1a1a;
   --color-bg-tertiary:   #252525;
   --color-ink-primary:   #f0efed;
