@@ -312,6 +312,40 @@ export default function FeedPage() {
 
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
 
+  // Poll for new articles every 5 minutes
+  useEffect(() => {
+    const POLL_INTERVAL = 5 * 60 * 1000
+    const interval = setInterval(async () => {
+      if (items.length === 0 || topics.length === 0) return
+      const newest = items.reduce((max, i) =>
+        new Date(i.cachedAt ?? i.publishedAt ?? 0) > new Date(max.cachedAt ?? max.publishedAt ?? 0) ? i : max
+      )
+      const since = newest.cachedAt ?? newest.publishedAt
+      if (!since) return
+      try {
+        const res = await fetch('/api/feed/updates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ since, topics }),
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.hasUpdates && data.items?.length > 0) {
+          const newItems: NewsItem[] = data.items.map((row: any) => ({
+            id: row.id, topic: row.topic, title: row.title, summary: row.summary,
+            sections: row.sections || [], conclusion: row.conclusion || undefined,
+            sources: row.sources, imageUrl: row.image_url,
+            publishedAt: row.published_at, cachedAt: row.cached_at,
+            displayTopic: topics.find((t: string) => (row.matched_topics ?? []).includes(t)) ?? row.topic,
+          }))
+          setPending(newItems)
+          setUpdatesReady(true)
+        }
+      } catch {}
+    }, POLL_INTERVAL)
+    return () => clearInterval(interval)
+  }, [items, topics, setUpdatesReady])
+
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
