@@ -134,6 +134,7 @@ export async function POST(req: NextRequest) {
     const url = new URL(req.url)
     const retryFailed = url.searchParams.get('retry') === 'failed'
     const topic = url.searchParams.get('topic')
+    const source = url.searchParams.get('source') // Filter by feed name (partial match)
 
     // 1. Fetch feeds (all active, or only failed if retry mode, or by topic if specified)
     let query = db
@@ -147,6 +148,10 @@ export async function POST(req: NextRequest) {
 
     if (topic) {
       query = query.contains('topics', [topic]) // Filter by topic array
+    }
+
+    if (source) {
+      query = query.ilike('name', `%${source}%`) // Filter by feed name (case-insensitive)
     }
 
     const { data: feeds, error: feedError } = await query
