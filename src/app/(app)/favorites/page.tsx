@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { BookmarkMinimalistic } from '@solar-icons/react-perf/Linear'
+import { Bookmark } from '@solar-icons/react-perf/Linear'
 import { NewsCard } from '@/components/NewsCard'
 import { SkeletonBlock } from '@/components/SkeletonCard'
 import { NewsItem } from '@/lib/types'
@@ -84,11 +84,11 @@ export default function FavoritesPage() {
       {/* ── Sticky header ── */}
       <div className="sticky top-0 z-20 border-b border-border header-blur">
         <div className="flex items-center h-12 px-4 md:hidden gap-2">
-          <BookmarkMinimalistic size={18} className="text-ink-primary flex-shrink-0" />
+          <Bookmark size={18} className="text-ink-primary flex-shrink-0" />
           <h1 className="text-[15px] font-semibold text-ink-primary">Meus Favoritos</h1>
         </div>
         <div className="hidden md:flex items-center h-14 px-8">
-          <BookmarkMinimalistic size={18} className="text-ink-primary flex-shrink-0 mr-2" />
+          <Bookmark size={18} className="text-ink-primary flex-shrink-0 mr-2" />
           <h1 className="text-[15px] font-semibold text-ink-primary">Meus Favoritos</h1>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function FavoritesPage() {
 
           {!loading && items.length === 0 && (
             <div className="flex flex-col items-center justify-center py-32 gap-4 text-center">
-              <BookmarkMinimalistic size={40} className="text-ink-tertiary opacity-40" />
+              <Bookmark size={40} className="text-ink-tertiary opacity-40" />
               <div>
                 <p className="text-[15px] font-medium text-ink-secondary">Nenhum favorito ainda</p>
                 <p className="text-[13px] text-ink-tertiary mt-1">Salve artigos clicando em favoritar enquanto lê.</p>
