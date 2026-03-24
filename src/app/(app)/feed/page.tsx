@@ -317,10 +317,11 @@ export default function FeedPage() {
 
   // FloatSidebar — sticky right sidebar with smart scroll
   useEffect(() => {
-    if (!sidebarRef.current || !feedRowRef.current) return
+    if (!sidebarRef.current || !feedRowRef.current || !scrollRef.current) return
     const instance = FloatSidebar({
-      sidebar: sidebarRef.current,
-      relative: feedRowRef.current,
+      sidebar:   sidebarRef.current,
+      relative:  feedRowRef.current,
+      viewport:  scrollRef.current,
       topSpacing: 24,
       bottomSpacing: 24,
     })

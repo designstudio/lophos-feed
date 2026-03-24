@@ -2,7 +2,7 @@ declare module 'float-sidebar' {
   interface FloatSidebarOptions {
     sidebar: HTMLElement
     relative: HTMLElement
-    viewport?: HTMLElement | Window
+    viewport?: HTMLElement | Window & typeof globalThis
     sidebarInner?: HTMLElement
     topSpacing?: number
     bottomSpacing?: number
