@@ -5,7 +5,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'Lophos Feed',
   description: 'Seu feed de notícias personalizado por IA.',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no, viewport-fit=cover',
+  viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
   manifest: '/site.webmanifest',
   appleWebApp: {
     capable: true,
