@@ -157,6 +157,11 @@ html, body {
   background: var(--color-bg-primary);
 }
 
+/* iOS safe area for sticky headers */
+.sticky-header {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+
 /* Settings modal — full screen on mobile, centered card on desktop */
 .settings-modal {
   width: 100%;
@@ -179,8 +184,6 @@ html, body {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-  /* iOS safe area — adds top padding for notch/Dynamic Island */
-  padding-top: max(env(safe-area-inset-top), 0px);
 }
 
 /* ─── Sidebar slide animation ────────────────────────────── */
