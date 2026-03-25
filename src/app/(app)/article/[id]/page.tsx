@@ -189,6 +189,18 @@ export default function ArticlePage() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Lock scroll when modal is open
+  useEffect(() => {
+    if (showImageModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [showImageModal])
+
   return (
     <div className="flex flex-1 min-w-0 overflow-hidden">
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
@@ -286,9 +298,9 @@ export default function ArticlePage() {
                 ) : item.imageUrl ? (
                   <button
                     onClick={() => setShowImageModal(true)}
-                    className="w-full rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                    className="w-full rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md hover:shadow-lg transition-all duration-300 cursor-zoom-in group"
                   >
-                    <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image w-full group-hover:scale-102 transition-transform duration-300"
+                    <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image w-full group-hover:scale-[1.02] transition-transform duration-300"
                       onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
                     {item.sources?.[0] && (
                       <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
