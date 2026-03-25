@@ -9,6 +9,55 @@ import { Bookmark as BookmarkFilled } from '@solar-icons/react-perf/Bold'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+  ]
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match?.[1]) return match[1]
+  }
+  return null
+}
+
+function extractVimeoId(url: string): string | null {
+  const patterns = [
+    /vimeo\.com\/(\d+)/,
+    /player\.vimeo\.com\/video\/(\d+)/,
+  ]
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (match?.[1]) return match[1]
+  }
+  return null
+}
+
+function VideoPlayer({ url, title }: { url: string; title: string }) {
+  const youtubeId = extractYouTubeId(url)
+  const vimeoId = extractVimeoId(url)
+
+  if (!youtubeId && !vimeoId) return null
+
+  const iframeUrl = vimeoId
+    ? `https://player.vimeo.com/video/${vimeoId}`
+    : `https://www.youtube.com/embed/${youtubeId}`
+
+  return (
+    <div className="rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md aspect-video">
+      <iframe
+        className="w-full h-full"
+        src={iframeUrl}
+        title={title}
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  )
+}
+
 function SourceCard({ src }: { src: NewsSource }) {
   return (
     <a href={src.url} target="_blank" rel="noopener noreferrer"
@@ -230,8 +279,10 @@ export default function ArticlePage() {
                   <span>Publicado {formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true, locale: ptBR })}</span>
                 </div>
 
-                {/* Hero image — shadow on the wrapper div */}
-                {item.imageUrl && (
+                {/* Hero media — video or image */}
+                {item.videoUrl ? (
+                  <VideoPlayer url={item.videoUrl} title={item.title} />
+                ) : item.imageUrl ? (
                   <div className="rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md">
                     <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image"
                       onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
@@ -246,7 +297,7 @@ export default function ArticlePage() {
                       </div>
                     )}
                   </div>
-                )}
+                ) : null}
 
                 {/* Summary */}
                 <p className="text-body text-ink-secondary leading-relaxed mb-8">{item.summary}</p>
