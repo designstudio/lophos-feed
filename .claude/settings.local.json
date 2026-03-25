@@ -27,7 +27,11 @@
       "Bash(node scripts/gen-sql.mjs)",
       "Bash(xargs sed:*)",
       "Bash(xargs grep:*)",
-      "Bash(grep -n \"related\\\\|Related\\\\|spring\" src/app/\\\\\\(app\\\\\\)/article/[id]/page.tsx)"
+      "Bash(grep -n \"related\\\\|Related\\\\|spring\" src/app/\\\\\\(app\\\\\\)/article/[id]/page.tsx)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(npm install:*)",
+      "Bash(git revert:*)"
     ]
   }
 }

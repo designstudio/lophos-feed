@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   const { data: rows } = await db
     .from('articles')
-    .select('id, topic, title, summary, image_url, published_at, matched_topics')
+    .select('id, topic, title, summary, image_url, video_url, published_at, matched_topics')
     .or(orFilter)
     .neq('id', id)
     .order('published_at', { ascending: false })
