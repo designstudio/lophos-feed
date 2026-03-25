@@ -112,7 +112,7 @@ function rowToItem(row: any, userTopics?: string[]): NewsItem {
   return {
     id: row.id, topic: row.topic, displayTopic, title: row.title, summary: row.summary,
     sections: row.sections || [], conclusion: row.conclusion || undefined,
-    sources: row.sources, imageUrl: row.image_url,
+    sources: row.sources, imageUrl: row.image_url, videoUrl: row.video_url,
     publishedAt: row.published_at, cachedAt: row.cached_at,
     tavilyRaw: row.tavily_raw,
   }

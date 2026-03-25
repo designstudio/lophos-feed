@@ -41,6 +41,7 @@ export async function GET() {
     summary: row.summary,
     sections: row.sections || [],
     imageUrl: row.image_url,
+    videoUrl: row.video_url,
     publishedAt: row.published_at,
     cachedAt: row.cached_at,
     sources: row.sources,
