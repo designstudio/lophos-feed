@@ -32,6 +32,33 @@ function isYouTubeOrVimeo(url: string | undefined): boolean {
          lower.includes('vimeo.com')
 }
 
+function extractVideoFromContent(content: string | undefined): string | undefined {
+  if (!content) return undefined
+
+  // Procura por URLs de YouTube ou Vimeo no conteúdo
+  const patterns = [
+    // YouTube watch URLs
+    /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[\w-]+/i,
+    // YouTube short URLs
+    /https?:\/\/youtu\.be\/[\w-]+/i,
+    // YouTube embed URLs
+    /https?:\/\/(?:www\.)?youtube\.com\/embed\/[\w-]+/i,
+    // YouTube nocookie embed
+    /https?:\/\/(?:www\.)?youtube-nocookie\.com\/embed\/[\w-]+/i,
+    // Vimeo URLs
+    /https?:\/\/(?:www\.)?vimeo\.com\/[\d]+/i,
+    // Vimeo player
+    /https?:\/\/player\.vimeo\.com\/video\/[\d]+/i,
+  ]
+
+  for (const pattern of patterns) {
+    const match = content.match(pattern)
+    if (match?.[0]) return match[0]
+  }
+
+  return undefined
+}
+
 function extractVideoUrl(item: RSSItem): string | undefined {
   // 1. Procura em media:content[@url] com type=video
   if (item['media:content']?.['@_type']?.includes('video')) {
@@ -50,6 +77,11 @@ function extractVideoUrl(item: RSSItem): string | undefined {
     const url = item['media:player']['@_url']
     if (isYouTubeOrVimeo(url)) return url
   }
+
+  // 4. Procura no conteúdo (content:encoded ou description)
+  const htmlContent = extractText(item['content:encoded']) || extractText(item.description) || ''
+  const videoUrl = extractVideoFromContent(htmlContent)
+  if (videoUrl) return videoUrl
 
   return undefined
 }
