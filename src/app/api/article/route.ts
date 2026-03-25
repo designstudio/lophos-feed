@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     item: {
       id: row.id, topic: row.topic, title: row.title, summary: row.summary,
       sections: row.sections || [], conclusion: row.conclusion || undefined,
-      sources: row.sources, imageUrl: row.image_url,
+      sources: row.sources, imageUrl: row.image_url, videoUrl: row.video_url,
       publishedAt: row.published_at, cachedAt: row.cached_at,
     },
   })
