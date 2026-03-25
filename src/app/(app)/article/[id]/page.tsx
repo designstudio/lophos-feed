@@ -356,9 +356,9 @@ export default function ArticlePage() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {related.slice(0, 4).map((rel) => (
-                        <button
+                        <Link
                           key={rel.id}
-                          onClick={() => navigateTo(rel.id)}
+                          href={`/article/${rel.id}`}
                           className="spring-press flex flex-col gap-0 text-left group rounded-[1rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all"
                         >
                           {rel.imageUrl && (
@@ -379,7 +379,7 @@ export default function ArticlePage() {
                               {rel.summary}
                             </p>
                           </div>
-                        </button>
+                        </Link>
                       ))}
                     </div>
                   </div>
