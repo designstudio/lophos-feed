@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
@@ -300,12 +301,12 @@ export default function ArticlePage() {
                     onClick={() => setShowImageModal(true)}
                     className="w-full rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md hover:shadow-lg transition-all duration-300 cursor-zoom-in"
                   >
-                    <div className="overflow-hidden h-full">
-                      <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image w-full hover:scale-[1.02] transition-transform duration-300"
+                    <div className="relative overflow-visible">
+                      <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image w-full hover:scale-[1.05] transition-transform duration-300 origin-center"
                         onError={(e) => { (e.target as HTMLImageElement).parentElement!.parentElement!.style.display = 'none' }} />
                     </div>
                     {item.sources?.[0] && (
-                      <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
+                      <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5 pointer-events-none"
                         style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
                         {item.sources[0].favicon && (
                           <img src={item.sources[0].favicon} alt="" width={12} height={12} className="rounded-sm opacity-90"
@@ -318,28 +319,6 @@ export default function ArticlePage() {
                 ) : null}
 
                 {/* Image Modal */}
-                {showImageModal && item?.imageUrl && (
-                  <div
-                    onClick={() => setShowImageModal(false)}
-                    className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowImageModal(false)
-                      }}
-                      className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
-                    >
-                      <CloseCircle size={24} />
-                    </button>
-                    <img
-                      src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
-                      alt={item.title}
-                      className="max-w-full max-h-[90vh] rounded-[1rem] shadow-2xl"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
 
                 {/* Summary */}
                 <p className="text-body text-ink-secondary leading-relaxed mb-8">{item.summary}</p>
@@ -476,5 +455,30 @@ export default function ArticlePage() {
       </div>
 
     </div>
+
+    {/* Image Modal — renderizado fora da main com Portal */}
+    {showImageModal && item?.imageUrl && createPortal(
+      <div
+        onClick={() => setShowImageModal(false)}
+        className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4"
+      >
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowImageModal(false)
+          }}
+          className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+        >
+          <CloseCircle size={24} />
+        </button>
+        <img
+          src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
+          alt={item.title}
+          className="max-w-full max-h-[90vh] rounded-[1rem] shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>,
+      document.body
+    )}
   )
 }
