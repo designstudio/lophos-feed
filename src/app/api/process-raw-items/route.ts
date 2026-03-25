@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const limit = parseInt(req.nextUrl.searchParams.get('limit') || '100')
     const { data: rawItems, error: fetchError } = await db
       .from('raw_items')
-      .select('url, title, content, image_url, topic')
+      .select('url, title, content, image_url, video_url, topic')
       .eq('processed', false)
       .limit(limit)
       .order('pub_date', { ascending: false })
@@ -50,7 +50,8 @@ export async function POST(req: NextRequest) {
       url: item.url,
       title: item.title,
       content: item.content || '',
-      image: item.image_url
+      image: item.image_url,
+      video: item.video_url
     }))
 
     // Determine primary topic for context (most common or first)
@@ -89,6 +90,7 @@ export async function POST(req: NextRequest) {
             conclusion: item.conclusion,
             sources: item.sources,
             image_url: item.imageUrl,
+            video_url: item.videoUrl,
             published_at: item.publishedAt,
             cached_at: item.cachedAt,
             matched_topics: item.matchedTopics ?? [item.topic],

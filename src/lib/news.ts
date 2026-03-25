@@ -208,7 +208,7 @@ type DiagCallback = (stats: {
 // Called by fetchNewsForTopic (on-demand) and processRawFeeds (cron batch).
 export async function processRawBatch(
   topic: string,
-  results: { url: string; title: string; content: string; image?: string }[],
+  results: { url: string; title: string; content: string; image?: string; video?: string }[],
   existingTitles: string[] = [],
   onDiag?: DiagCallback,
   tavilyImages: string[] = []
@@ -380,6 +380,16 @@ ${context}`
         return { url: r.url, title: r.title, content: r.content, image: r.image }
       })
 
+    // Extrair URL de vídeo da primeira fonte que tiver
+    let videoUrl: string | undefined
+    for (const idx of idxs) {
+      const candidate = results[idx]?.video
+      if (candidate) {
+        videoUrl = candidate
+        break
+      }
+    }
+
     const keywords: string[] = Array.isArray(item.keywords)
       ? [...new Set([topic, ...item.keywords.map((k: any) => String(k).toLowerCase().trim())])]
       : [topic]
@@ -392,6 +402,7 @@ ${context}`
       sections: (item.sections || []) as ArticleSection[],
       sources,
       imageUrl,
+      videoUrl,
       publishedAt: now,
       cachedAt: now,
       tavilyRaw,
