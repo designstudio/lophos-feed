@@ -16,7 +16,7 @@ export function MobileNav() {
     <nav
       className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border header-blur"
     >
-      <div className="flex items-center justify-around h-14">
+      <div className="flex items-center justify-around h-14 pb-6">
         {links.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || (href === '/feed' && pathname === '/')
           return (
