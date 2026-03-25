@@ -141,16 +141,6 @@ html, body {
 .sidebar-right {
   width: var(--sidebar-right-width);
   flex-shrink: 0;
-  position: sticky;
-  top: 24px;
-  align-self: flex-start;
-  max-height: calc(100dvh - 48px);
-  overflow-y: auto;
-  scrollbar-width: none;          /* Firefox */
-  -ms-overflow-style: none;       /* IE/Edge */
-}
-.sidebar-right::-webkit-scrollbar {
-  display: none;                  /* Chrome/Safari */
 }
 
 .article-image {
