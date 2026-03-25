@@ -203,6 +203,7 @@ export default function ArticlePage() {
   }, [showImageModal])
 
   return (
+    <>
     <div className="flex flex-1 min-w-0 overflow-hidden">
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
 
@@ -456,7 +457,6 @@ export default function ArticlePage() {
 
     </div>
 
-    {/* Image Modal — renderizado fora da main com Portal */}
     {showImageModal && item?.imageUrl && createPortal(
       <div
         onClick={() => setShowImageModal(false)}
@@ -480,5 +480,6 @@ export default function ArticlePage() {
       </div>,
       document.body
     )}
+    </>
   )
 }
