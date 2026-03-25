@@ -175,15 +175,12 @@ html, body {
 .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
 
-/* Mobile safe area */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-}
-
 .page-scroll {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+  /* iOS safe area — adds top padding for notch/Dynamic Island */
+  padding-top: max(env(safe-area-inset-top), 0px);
 }
 
 /* ─── Sidebar slide animation ────────────────────────────── */

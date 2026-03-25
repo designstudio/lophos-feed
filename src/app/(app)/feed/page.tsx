@@ -372,7 +372,7 @@ export default function FeedPage() {
 
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 page-scroll">
 
         {/* ── Sticky header ── */}
         <div className="sticky top-0 z-20 border-b border-border header-blur">
