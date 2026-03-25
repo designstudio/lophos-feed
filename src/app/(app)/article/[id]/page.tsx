@@ -99,6 +99,7 @@ export default function ArticlePage() {
   const [favorited, setFavorited] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const titleRef  = useRef<HTMLHeadingElement>(null)
   const [showTitle, setShowTitle] = useState(false)
@@ -283,8 +284,11 @@ export default function ArticlePage() {
                 {item.videoUrl ? (
                   <VideoPlayer url={item.videoUrl} title={item.title} />
                 ) : item.imageUrl ? (
-                  <div className="rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md">
-                    <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image"
+                  <button
+                    onClick={() => setShowImageModal(true)}
+                    className="w-full rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                  >
+                    <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image w-full group-hover:scale-102 transition-transform duration-300"
                       onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
                     {item.sources?.[0] && (
                       <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5"
@@ -296,8 +300,32 @@ export default function ArticlePage() {
                         <span className="text-[11px] text-white/80 font-medium">{item.sources[0].name}</span>
                       </div>
                     )}
-                  </div>
+                  </button>
                 ) : null}
+
+                {/* Image Modal */}
+                {showImageModal && item?.imageUrl && (
+                  <div
+                    onClick={() => setShowImageModal(false)}
+                    className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowImageModal(false)
+                      }}
+                      className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+                    >
+                      <CloseCircle size={24} />
+                    </button>
+                    <img
+                      src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
+                      alt={item.title}
+                      className="max-w-full max-h-[90vh] rounded-[1rem] shadow-2xl"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
 
                 {/* Summary */}
                 <p className="text-body text-ink-secondary leading-relaxed mb-8">{item.summary}</p>
