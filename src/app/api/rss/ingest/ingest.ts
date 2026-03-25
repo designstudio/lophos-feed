@@ -25,6 +25,35 @@ function stripHtml(html: any): string {
     .trim()
 }
 
+function isYouTubeOrVimeo(url: string | undefined): boolean {
+  if (!url) return false
+  const lower = url.toLowerCase()
+  return lower.includes('youtube.com') || lower.includes('youtu.be') ||
+         lower.includes('vimeo.com')
+}
+
+function extractVideoUrl(item: RSSItem): string | undefined {
+  // 1. Procura em media:content[@url] com type=video
+  if (item['media:content']?.['@_type']?.includes('video')) {
+    const url = item['media:content']['@_url'] || item['media:content']['#text']
+    if (isYouTubeOrVimeo(url)) return url
+  }
+
+  // 2. Procura em enclosure[@url] com type=video
+  if (item.enclosure?.['@_type']?.includes('video')) {
+    const url = item.enclosure['@_url']
+    if (isYouTubeOrVimeo(url)) return url
+  }
+
+  // 3. Procura em media:player
+  if (item['media:player']?.['@_url']) {
+    const url = item['media:player']['@_url']
+    if (isYouTubeOrVimeo(url)) return url
+  }
+
+  return undefined
+}
+
 interface RSSFeed {
   id: string
   url: string
@@ -171,12 +200,15 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
           }
         }
 
+        // Extrair URL de vídeo (apenas YouTube/Vimeo)
+        const video_url = extractVideoUrl(item)
+
         const pub_date = item.pubDate ? new Date(item.pubDate as string).toISOString() : new Date().toISOString()
 
         const { error: insertError } = await db.from('raw_items').insert({
           topic: itemTopic, title, url, content: description,
           summary: description.slice(0, 300), source_name: feed.name,
-          source_url: feed.url, image_url, pub_date,
+          source_url: feed.url, image_url, video_url, pub_date,
           fetched_at: new Date().toISOString(), dedup_hash, processed: false,
         })
 
