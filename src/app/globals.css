@@ -157,9 +157,11 @@ html, body {
   background: var(--color-bg-primary);
 }
 
-/* iOS safe area for sticky headers — use 'top' to let content scroll behind notch */
-.sticky-header {
-  top: max(env(safe-area-inset-top), 0px) !important;
+/* iOS safe area for sticky headers */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .sticky-header {
+    padding-top: env(safe-area-inset-top);
+  }
 }
 
 /* Settings modal — full screen on mobile, centered card on desktop */
