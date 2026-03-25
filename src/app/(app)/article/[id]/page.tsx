@@ -300,10 +300,12 @@ export default function ArticlePage() {
                 ) : item.imageUrl ? (
                   <button
                     onClick={() => setShowImageModal(true)}
-                    className="w-full rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md hover:shadow-lg transition-all duration-300 cursor-zoom-in"
+                    className="w-full mb-6 relative transform-gpu group cursor-zoom-in"
                   >
-                    <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image w-full hover:scale-[1.02] transition-transform duration-300"
-                      onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
+                    <div className="relative h-full overflow-hidden rounded-[1rem] shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform duration-150">
+                      <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image w-full h-auto"
+                        onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
+                    </div>
                     {item.sources?.[0] && (
                       <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5 pointer-events-none"
                         style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
