@@ -19,6 +19,7 @@ export interface NewsItem {
   conclusion?: string     // "O que esperar" / "Próximos passos"
   sources: NewsSource[]
   imageUrl?: string
+  videoUrl?: string      // YouTube/Vimeo URL extraída do RSS
   publishedAt: string
   cachedAt: string
   matchedTopics?: string[]  // keywords geradas pelo Gemini para matching com tópicos do usuário
