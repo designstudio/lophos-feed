@@ -72,6 +72,7 @@ interface RSSItem {
   pubDate?: string
   'media:content'?: any
   'media:thumbnail'?: any
+  'media:player'?: any
   enclosure?: any
   image?: any
 }
