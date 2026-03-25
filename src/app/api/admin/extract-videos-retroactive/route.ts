@@ -16,72 +16,57 @@ export async function POST(req: NextRequest) {
 
     const db = getSupabaseAdmin()
 
-    // Get all articles that don't have video_url but have corresponding raw_items with video_url
-    const { data: articlesWithoutVideo, error: fetchError } = await db
-      .from('articles')
-      .select('id, sources')
-      .is('video_url', null)
-      .order('cached_at', { ascending: false })
+    // Simple approach: get all raw_items with video_url
+    const { data: rawItemsWithVideo } = await db
+      .from('raw_items')
+      .select('url, video_url')
+      .not('video_url', 'is', null)
 
-    if (fetchError) {
-      console.error(`[extract-videos-retroactive] Fetch error:`, fetchError)
-      return NextResponse.json({ error: fetchError.message }, { status: 500 })
-    }
-
-    if (!articlesWithoutVideo || articlesWithoutVideo.length === 0) {
-      console.log(`[extract-videos-retroactive] No articles without video found`)
+    if (!rawItemsWithVideo || rawItemsWithVideo.length === 0) {
       return NextResponse.json({
         status: 'complete',
-        articlesProcessed: 0,
+        rawItemsProcessed: 0,
         articlesUpdated: 0,
-        message: 'No articles without video found'
+        message: 'No raw items with video found'
       })
     }
 
-    console.log(`[extract-videos-retroactive] Found ${articlesWithoutVideo.length} articles without video`)
+    console.log(`[extract-videos-retroactive] Found ${rawItemsWithVideo.length} raw items with video`)
 
-    // For each article, try to find the source URL in raw_items and get the video_url
     let articlesUpdated = 0
-    const failedUpdates: string[] = []
 
-    for (const article of articlesWithoutVideo) {
+    // For each raw_item with video, get all articles that have this URL in sources
+    for (const rawItem of rawItemsWithVideo) {
       try {
-        const sources = Array.isArray(article.sources) ? article.sources : []
-        if (sources.length === 0) continue
+        if (!rawItem.video_url || !rawItem.url) continue
 
-        // Try to find video_url from any of the source URLs
-        let foundVideoUrl: string | null = null
+        // Get articles with this source URL and no video_url
+        const { data: articles } = await db
+          .from('articles')
+          .select('id, sources')
+          .is('video_url', null)
 
-        for (const source of sources) {
-          const { data: rawItem } = await db
-            .from('raw_items')
-            .select('video_url')
-            .eq('url', source.url)
-            .single()
+        if (!articles) continue
 
-          if (rawItem?.video_url) {
-            foundVideoUrl = rawItem.video_url
-            break
-          }
-        }
+        // Filter articles that have matching source URL
+        const matchingArticles = articles.filter(article => {
+          const sources = Array.isArray(article.sources) ? article.sources : []
+          return sources.some((s: any) => s?.url === rawItem.url)
+        })
 
-        // If found, update the article
-        if (foundVideoUrl) {
+        // Update each matching article
+        for (const article of matchingArticles) {
           const { error: updateError } = await db
             .from('articles')
-            .update({ video_url: foundVideoUrl })
+            .update({ video_url: rawItem.video_url })
             .eq('id', article.id)
 
-          if (updateError) {
-            console.error(`[extract-videos-retroactive] Update error for ${article.id}:`, updateError)
-            failedUpdates.push(article.id)
-          } else {
+          if (!updateError) {
             articlesUpdated++
           }
         }
       } catch (err: any) {
-        console.error(`[extract-videos-retroactive] Error processing ${article.id}:`, err.message)
-        failedUpdates.push(article.id)
+        console.error(`[extract-videos-retroactive] Error:`, err.message)
       }
     }
 
@@ -89,9 +74,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       status: 'complete',
-      articlesProcessed: articlesWithoutVideo.length,
+      rawItemsProcessed: rawItemsWithVideo.length,
       articlesUpdated,
-      failedUpdates: failedUpdates.length > 0 ? failedUpdates.slice(0, 10) : undefined,
       message: `Successfully updated ${articlesUpdated} articles with video URLs`
     })
   } catch (err: any) {
