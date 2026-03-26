@@ -261,7 +261,7 @@ export default function ArticlePage() {
 
         <main className="page-scroll">
           <div
-            className="article-layout mx-auto py-6 px-4 md:px-8 pb-24 md:pb-8 transition-opacity duration-200"
+            className="article-layout mx-auto py-6 px-6 pb-24 md:pb-8 transition-opacity duration-200"
             style={{ opacity: transitioning ? 0 : 1 }}
           >
 
