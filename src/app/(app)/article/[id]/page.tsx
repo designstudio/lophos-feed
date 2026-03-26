@@ -307,8 +307,8 @@ export default function ArticlePage() {
                         onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }} />
                     </div>
                     {item.sources?.[0] && (
-                      <div className="absolute bottom-0 left-0 right-0 px-3 py-2 flex items-center gap-1.5 pointer-events-none"
-                        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
+                      <div className="absolute bottom-2 left-2 w-auto px-2 py-1.5 flex items-center gap-1.5 pointer-events-none rounded-md"
+                        style={{ background: 'rgba(0,0,0,0.6)' }}>
                         {item.sources[0].favicon && (
                           <img src={item.sources[0].favicon} alt="" width={12} height={12} className="rounded-sm opacity-90"
                             onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
