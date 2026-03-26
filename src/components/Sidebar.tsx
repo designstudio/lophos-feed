@@ -6,11 +6,12 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   Feed, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, UserRounded, Bookmark
+  Settings, Logout, CloseCircle, UserRounded, Bookmark, MagnifyingGlass
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 import { LophosLogo } from '@/components/LophosLogo'
+import { SearchModal } from '@/components/SearchModal'
 
 // â”€â”€â”€ Theme / Accent utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function applyTheme(t: string) {
@@ -670,6 +671,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [collapsed, setCollapsed] = useState<boolean | null>(null)
   const [mounted, setMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
 
   useEffect(() => {
     try {
@@ -795,6 +797,18 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meus Favoritos</span>}
           </Link>
 
+          <button
+            onClick={() => setShowSearch(true)}
+            title={collapsed ? 'Buscar' : undefined}
+            className={cn(
+              'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+              collapsed ? 'justify-center' : '',
+              'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+            )}>
+            <MagnifyingGlass size={18} className="flex-shrink-0" />
+            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Buscar</span>}
+          </button>
+
           {onRefresh && (
             <button onClick={onRefresh} disabled={refreshing}
               title={collapsed ? (refreshTitle ?? refreshLabel ?? 'Atualizar feed') : undefined}
@@ -826,6 +840,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           setShowSettings(false)
           if (path === '/settings') router.push('/feed')
         }} />,
+        document.body
+      )}
+
+      {showSearch && mounted && createPortal(
+        <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />,
         document.body
       )}
     </>

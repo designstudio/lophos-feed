@@ -31,7 +31,11 @@
       "WebFetch(domain:www.npmjs.com)",
       "WebFetch(domain:github.com)",
       "Bash(npm install:*)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(python3:*)",
+      "Bash(pip install:*)",
+      "Bash(find C:/Users/henri/Downloads/lophos_feed/src -name *modal* -o -name *dialog* -o -name *settings*)"
     ]
   }
 }
