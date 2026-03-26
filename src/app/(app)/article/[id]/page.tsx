@@ -460,7 +460,8 @@ export default function ArticlePage() {
     {showImageModal && item?.imageUrl && createPortal(
       <div
         onClick={() => setShowImageModal(false)}
-        className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4"
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+        style={{ backgroundColor: "#05050533", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }}
       >
         <button
           onClick={(e) => {
