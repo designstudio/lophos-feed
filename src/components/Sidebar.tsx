@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   Feed, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, UserRounded, Bookmark, MagnifyingGlass
+  Settings, Logout, CloseCircle, UserRounded, Bookmark, Magnifer
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
@@ -805,7 +805,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               collapsed ? 'justify-center' : '',
               'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
             )}>
-            <MagnifyingGlass size={18} className="flex-shrink-0" />
+            <Magnifer size={18} className="flex-shrink-0" />
             {!collapsed && <span className="whitespace-nowrap overflow-hidden">Buscar</span>}
           </button>
 
