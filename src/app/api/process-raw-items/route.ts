@@ -113,6 +113,12 @@ export async function POST(req: NextRequest) {
     // Save to articles with duplicate detection
     if (newsItems.length > 0) {
       for (const newsItem of newsItems) {
+        // Skip if title is missing
+        if (!newsItem.title) {
+          console.warn(`[process-raw-items] Skipping item with missing title`)
+          continue
+        }
+
         // Find corresponding raw item for source info
         const rawItem = rawItems.find(r => r.title.toLowerCase() === newsItem.title.toLowerCase())
         if (!rawItem) continue
