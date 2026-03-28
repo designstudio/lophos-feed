@@ -84,11 +84,9 @@ export default function FavoritesPage() {
       {/* ── Sticky header ── */}
       <div className="sticky top-0 z-20 border-b border-border header-blur">
         <div className="flex items-center h-12 px-4 md:hidden gap-2">
-          <Bookmark size={18} className="text-ink-primary flex-shrink-0" />
           <h1 className="text-[15px] font-semibold text-ink-primary">Meus Favoritos</h1>
         </div>
         <div className="hidden md:flex items-center h-14 px-8">
-          <Bookmark size={18} className="text-ink-primary flex-shrink-0 mr-2" />
           <h1 className="text-[15px] font-semibold text-ink-primary">Meus Favoritos</h1>
         </div>
       </div>
