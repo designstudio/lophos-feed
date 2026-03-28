@@ -1,26 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
+import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 export async function GET(req: NextRequest) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ items: [] })
+
   const id = req.nextUrl.searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 })
 
   const db = getSupabaseAdmin()
 
-  // Fetch the current article to get its matched_topics
-  const { data: current } = await db
-    .from('articles')
-    .select('matched_topics')
-    .eq('id', id)
-    .single()
+  // Fetch user's topics and current article in parallel
+  const [{ data: current }, { data: userTopicsRows }] = await Promise.all([
+    db.from('articles').select('matched_topics').eq('id', id).single(),
+    db.from('user_topics').select('topic').eq('user_id', userId),
+  ])
 
-  if (!current?.matched_topics?.length) {
+  const userTopics: string[] = (userTopicsRows ?? []).map((r: any) => r.topic)
+
+  if (!current?.matched_topics?.length || userTopics.length === 0) {
     return NextResponse.json({ items: [] })
   }
 
-  // Build OR filter: any article that contains at least one of the same keywords
-  const orFilter = current.matched_topics
+  // Intersect article's matched_topics with user's feed topics so related
+  // articles come only from the user's areas of interest
+  const intersection = current.matched_topics.filter((t: string) =>
+    userTopics.includes(t)
+  )
+
+  // Fall back to user's topics if the article has no overlap (e.g. shared link)
+  const filterTopics = intersection.length > 0 ? intersection : userTopics
+
+  const orFilter = filterTopics
     .map((t: string) => `matched_topics.cs.{${t}}`)
     .join(',')
 
