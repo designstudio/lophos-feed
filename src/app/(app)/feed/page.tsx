@@ -156,7 +156,7 @@ function TimeFilterDropdown({ days, onChange }: { days: number; onChange: (d: nu
       <button
         onClick={() => setOpen(v => !v)}
         className={cn(
-          'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all',
+          'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all spring-press',
           !isDefault
             ? 'border-ink-primary text-ink-primary bg-ink-primary/5'
             : 'border-border text-ink-tertiary hover:text-ink-secondary hover:border-border-strong'
