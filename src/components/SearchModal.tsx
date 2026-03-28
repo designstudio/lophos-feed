@@ -109,7 +109,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex-shrink-0 p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="flex-shrink-0 px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: 'var(--color-border)' }}>
           <input
             ref={inputRef}
             type="text"
@@ -121,9 +121,21 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               }
             }}
             placeholder="Buscar notícias..."
-            className="w-full px-4 py-2.5 bg-bg-secondary rounded-lg outline-none focus:ring-2 focus:ring-accent text-ink-primary placeholder-ink-tertiary"
+            className="flex-1 outline-none text-ink-primary placeholder-ink-tertiary bg-transparent"
             autoFocus
           />
+          {query && (
+            <button
+              onClick={() => {
+                setQuery('')
+                setResults([])
+                inputRef.current?.focus()
+              }}
+              className="flex-shrink-0 text-ink-tertiary hover:text-ink-primary transition-colors p-1"
+            >
+              <CloseCircle size={18} />
+            </button>
+          )}
         </div>
 
         {/* Body */}
@@ -205,13 +217,6 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
           )}
         </div>
 
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-ink-tertiary hover:text-ink-primary transition-colors"
-        >
-          <CloseCircle size={20} />
-        </button>
       </div>
     </div>,
     document.body
