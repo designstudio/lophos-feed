@@ -14,10 +14,11 @@ import { useAuth } from '@clerk/nextjs'
 
 const toTitleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
-function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
+function FeedBlock({ items, blockIndex, reactions, fadingOut, onReactionChange }: {
   items: NewsItem[]
   blockIndex: number
   reactions: Record<string, 'like' | 'dislike'>
+  fadingOut: Set<string>
   onReactionChange: (id: string, r: 'like' | 'dislike' | null) => void
 }) {
   const posInCycle = blockIndex % 3
@@ -26,7 +27,7 @@ function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
     const variant = posInCycle === 2 ? 'full-right' : 'full-left'
     return (
       <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant={variant} initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
+        <NewsCard item={items[0]} variant={variant} initialReaction={reactions[items[0].id] ?? null} fadingOut={fadingOut.has(items[0].id)} onReactionChange={onReactionChange} />
       </div>
     )
   }
@@ -34,7 +35,7 @@ function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
   if (items.length === 1) {
     return (
       <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant="full-left" initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
+        <NewsCard item={items[0]} variant="full-left" initialReaction={reactions[items[0].id] ?? null} fadingOut={fadingOut.has(items[0].id)} onReactionChange={onReactionChange} />
       </div>
     )
   }
@@ -42,7 +43,7 @@ function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
   return (
     <div className="md:py-6 md:border-b md:border-border">
       <div className={cn('grid gap-0 md:gap-6', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
-        {items.map(item => <NewsCard key={item.id} item={item} variant="card" initialReaction={reactions[item.id] ?? null} onReactionChange={onReactionChange} />)}
+        {items.map(item => <NewsCard key={item.id} item={item} variant="card" initialReaction={reactions[item.id] ?? null} fadingOut={fadingOut.has(item.id)} onReactionChange={onReactionChange} />)}
       </div>
     </div>
   )
@@ -444,13 +445,23 @@ export default function FeedPage() {
     return () => obs.disconnect()
   }, [hasData])
 
+  const [fadingOut, setFadingOut] = useState<Set<string>>(new Set())
+
   const handleReactionChange = (id: string, r: 'like' | 'dislike' | null) => {
-    setReactions(prev => {
-      const next = { ...prev }
-      if (r === null) delete next[id]
-      else next[id] = r
-      return next
-    })
+    if (r === 'dislike') {
+      setFadingOut(prev => new Set(prev).add(id))
+      setTimeout(() => {
+        setReactions(prev => ({ ...prev, [id]: 'dislike' }))
+        setFadingOut(prev => { const s = new Set(prev); s.delete(id); return s })
+      }, 400)
+    } else {
+      setReactions(prev => {
+        const next = { ...prev }
+        if (r === null) delete next[id]
+        else next[id] = r
+        return next
+      })
+    }
   }
 
   const visibleItems = items.filter(i => reactions[i.id] !== 'dislike')
@@ -607,7 +618,7 @@ export default function FeedPage() {
               )}
 
               {shownBlocks.map((block, i) => (
-                <FeedBlock key={i} items={block.items} blockIndex={i} reactions={reactions} onReactionChange={handleReactionChange} />
+                <FeedBlock key={i} items={block.items} blockIndex={i} reactions={reactions} fadingOut={fadingOut} onReactionChange={handleReactionChange} />
               ))}
 
               {hasData && (

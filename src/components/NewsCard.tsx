@@ -26,6 +26,7 @@ interface Props {
   variant?: 'full-left' | 'full-right' | 'card'
   className?: string
   initialReaction?: 'like' | 'dislike' | null
+  fadingOut?: boolean
   onReactionChange?: (articleId: string, reaction: 'like' | 'dislike' | null) => void
 }
 
@@ -110,7 +111,7 @@ function CardImage({ proxiedImage, title, sources, onError }: {
   )
 }
 
-export function NewsCard({ item, variant = 'card', className, initialReaction = null, onReactionChange }: Props) {
+export function NewsCard({ item, variant = 'card', className, initialReaction = null, fadingOut = false, onReactionChange }: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
   const [reacting, setReacting] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
@@ -143,7 +144,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
 
   if (variant === 'card') {
     return (
-      <Link href={href} className={cn('news-card group flex flex-col pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0', className)}>
+      <Link href={href} className={cn('news-card group flex flex-col pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
         <CardImage proxiedImage={showImage ? proxiedImage : undefined} title={item.title} sources={item.sources} onError={() => setImgFailed(true)} />
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.displayTopic ?? item.topic}</span>
         <h2 className="text-card-title text-ink-primary group-hover:text-accent transition-colors">{item.title}</h2>
@@ -154,7 +155,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
 
   if (variant === 'full-left') {
     return (
-      <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-6 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0', className)}>
+      <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-6 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
         {/* Mobile: imagem no topo. Desktop: imagem à direita (order-last) */}
         <div className="news-card-image order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
           {showImage ? (
@@ -185,7 +186,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
 
   // full-right
   return (
-    <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-6 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0', className)}>
+    <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-6 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
       {/* Mobile: imagem no topo. Desktop: imagem à esquerda */}
       <div className="news-card-image w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
         {showImage ? (
