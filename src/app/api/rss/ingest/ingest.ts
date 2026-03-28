@@ -214,7 +214,8 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
         if (existing) { totalSkipped++; continue }
 
         let image_url: string | undefined
-        if (item['media:content']?.['@_url']) {
+        const isVideoUrl = (u?: string) => !u ? false : isYouTubeOrVimeo(u) || item['media:content']?.['@_type']?.includes('video')
+        if (item['media:content']?.['@_url'] && !isVideoUrl(item['media:content']['@_url'])) {
           image_url = item['media:content']['@_url']
         } else if (item['media:thumbnail']?.['@_url']) {
           image_url = item['media:thumbnail']['@_url']
@@ -227,7 +228,7 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
           const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i)
           if (imgMatch?.[1]) {
             const src = imgMatch[1]
-            if (!src.includes('favicon') && !src.includes('icon') && !src.includes('logo')) {
+            if (!src.includes('favicon') && !src.includes('icon') && !src.includes('logo') && !isYouTubeOrVimeo(src)) {
               image_url = src
             }
           }
