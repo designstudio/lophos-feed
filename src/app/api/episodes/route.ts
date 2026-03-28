@@ -101,9 +101,7 @@ export async function GET(req: NextRequest) {
       if (!details) return null
 
       const nextEp = details.next_episode_to_air
-      const lastEp = details.last_episode_to_air
-      const ep = nextEp ?? lastEp
-      if (!ep) return null
+      if (!nextEp) return null
 
       return {
         showId: show.id,
@@ -111,10 +109,8 @@ export async function GET(req: NextRequest) {
         posterPath: show.poster_path
           ? `https://image.tmdb.org/t/p/w92${show.poster_path}`
           : null,
-        episode: `T${ep.season_number}E${ep.episode_number} — ${ep.name || 'Próximo episódio'}`,
-        airDate: ep.air_date ?? null,
-        isNext: !!nextEp,
-        status: details.status ?? null,
+        episode: `T${nextEp.season_number}E${nextEp.episode_number} — ${nextEp.name || 'Próximo episódio'}`,
+        airDate: nextEp.air_date ?? null,
       }
     })
   )
@@ -124,9 +120,9 @@ export async function GET(req: NextRequest) {
     .map(r => (r as PromiseFulfilledResult<any>).value)
     .filter((ep, idx, arr) => arr.findIndex(e => e.showId === ep.showId) === idx)
     .sort((a, b) => {
-      if (a.isNext && !b.isNext) return -1
-      if (!a.isNext && b.isNext) return 1
-      return 0
+      if (!a.airDate) return 1
+      if (!b.airDate) return -1
+      return new Date(a.airDate).getTime() - new Date(b.airDate).getTime()
     })
 
   return NextResponse.json({ episodes })
