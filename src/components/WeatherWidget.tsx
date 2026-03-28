@@ -10,7 +10,7 @@ interface WeatherData {
   high: number
   low: number
   currentCode: number
-  forecast: { day: string; temp: number; weathercode: number }[]
+  forecast: { day: string; temp: number; tempMin: number; weathercode: number }[]
 }
 
 const WEATHER_CACHE_KEY = 'weather_cache_v2'
@@ -169,8 +169,10 @@ export function WeatherWidget() {
       high: Math.round(data.daily?.temperature_2m_max?.[0] ?? 0),
       low: Math.round(data.daily?.temperature_2m_min?.[0] ?? 0),
       forecast: (data.daily?.time || []).slice(1, 6).map((t: string, i: number) => ({
-        day: days[new Date(t).getDay()],
+        // Use T12:00:00 to avoid UTC-vs-local offset shifting the day-of-week
+        day: days[new Date(t + 'T12:00:00').getDay()],
         temp: Math.round(data.daily.temperature_2m_max[i + 1] ?? 0),
+        tempMin: Math.round(data.daily.temperature_2m_min[i + 1] ?? 0),
         weathercode: codeByDay.get(t) ?? data.daily.weather_code?.[i + 1] ?? 0,
       })),
     }
@@ -241,6 +243,7 @@ export function WeatherWidget() {
             <div key={i} className="flex flex-col items-center gap-1">
               <WeatherIcon code={f.weathercode} size={18} />
               <span className="text-[11px] text-ink-secondary font-medium">{toUnit(f.temp)}°</span>
+              <span className="text-[10px] text-ink-muted">{toUnit(f.tempMin)}°</span>
               <span className="text-[10px] text-ink-tertiary">{f.day}</span>
             </div>
           ))}
