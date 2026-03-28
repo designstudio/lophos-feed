@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     .or(topics.map((t: string) => `matched_topics.cs.{${t}}`).join(','))
     .gt('cached_at', since)
     .order('cached_at', { ascending: false })
+    .limit(50)
 
   if (error) return NextResponse.json({ hasUpdates: false })
 
