@@ -125,15 +125,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
             autoFocus
           />
           <button
-            onClick={() => {
-              if (query) {
-                setQuery('')
-                setResults([])
-                inputRef.current?.focus()
-              } else {
-                onClose()
-              }
-            }}
+            onClick={onClose}
             className="flex-shrink-0 text-ink-tertiary hover:text-ink-primary transition-colors p-1"
           >
             <CloseCircle size={18} />
