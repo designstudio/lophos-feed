@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   const debug = req.nextUrl.searchParams.get('debug') === '1'
   const body = await req.json()
   const forceRefresh: boolean = body.forceRefresh ?? false
+  const days: number = body.days ?? 2
   const db = getSupabaseAdmin()
 
   let topics: string[] = body.topics ?? []
@@ -64,8 +65,9 @@ export async function POST(req: NextRequest) {
       .or(topics.map((t: string) => `matched_topics.cs.{${t}}`).join(','))
       .order('cached_at', { ascending: false })
 
-    const cutoffIso = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
     const isRecentRow = (row: any) => {
+      if (days === 0) return true
+      const cutoffIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
       const d = row.published_at ?? row.cached_at
       if (!d) return false
       return new Date(d).getTime() >= new Date(cutoffIso).getTime()

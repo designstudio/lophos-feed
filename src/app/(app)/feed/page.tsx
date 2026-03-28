@@ -4,7 +4,7 @@ import { RightSidebar } from '@/components/RightSidebar'
 import { NewsCard } from '@/components/NewsCard'
 import { LophosLogo } from '@/components/LophosLogo'
 import { SkeletonBlock } from '@/components/SkeletonCard'
-import { Feed } from '@solar-icons/react-perf/Linear'
+import { Feed, Tuning2 } from '@solar-icons/react-perf/Linear'
 import Lottie from 'lottie-react'
 import blogAnimation from '@/lib/animations/blog.json'
 import { NewsItem } from '@/lib/types'
@@ -131,6 +131,69 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
   )
 }
 
+const TIME_OPTIONS: { label: string; days: number }[] = [
+  { label: 'Últimas 24h', days: 1 },
+  { label: 'Últimas 48h', days: 2 },
+  { label: 'Última semana', days: 7 },
+  { label: 'Último mês', days: 30 },
+  { label: 'Sem limite', days: 0 },
+]
+
+function TimeFilterDropdown({ days, onChange }: { days: number; onChange: (d: number) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const current = TIME_OPTIONS.find(o => o.days === days) ?? TIME_OPTIONS[1]
+  const isDefault = days === 2
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className={cn(
+          'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all',
+          !isDefault
+            ? 'border-ink-primary text-ink-primary bg-ink-primary/5'
+            : 'border-border text-ink-tertiary hover:text-ink-secondary hover:border-border-strong'
+        )}
+      >
+        <Tuning2 size={15} />
+        <span className="hidden sm:inline">{current.label}</span>
+      </button>
+
+      {open && (
+        <div className="absolute top-full right-0 mt-1.5 w-44 bg-white rounded-xl border border-gray-100 shadow-lg z-50 py-1.5"
+          style={{ animation: 'slideUp 0.12s ease' }}>
+          {TIME_OPTIONS.map(o => (
+            <button
+              key={o.days}
+              onClick={() => { onChange(o.days); setOpen(false) }}
+              className={cn(
+                'flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors text-left',
+                days === o.days
+                  ? 'text-ink-primary font-medium bg-gray-50'
+                  : 'text-ink-secondary hover:bg-gray-50'
+              )}
+            >
+              {o.label}
+              {days === o.days && (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2.5 7L5.5 10L11.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function FeedPage() {
   const { isLoaded, isSignedIn } = useAuth()
   const { setRefreshing, onRefreshCallback, updatesReady, setUpdatesReady, onApplyUpdatesCallback } = useFeedContext()
@@ -143,6 +206,11 @@ export default function FeedPage() {
   const [pendingItems, setPendingItems] = useState<NewsItem[]>([])
   const [coldStartLoading, setColdStartLoading] = useState(false)
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+  const [timeDays, setTimeDays] = useState(2)
+  const handleTimeDaysChange = (d: number) => {
+    setTimeDays(d)
+    timeDaysRef.current = d
+  }
   const [visibleBlocks, setVisibleBlocks] = useState(4)
   const sentinelRef  = useRef<HTMLDivElement>(null)
   const abortRef     = useRef<AbortController | null>(null)
@@ -150,6 +218,7 @@ export default function FeedPage() {
   const initialCacheAppliedRef = useRef(false)
   const pendingRef = useRef<NewsItem[]>([])
   const coldStartRef = useRef(false)
+  const timeDaysRef = useRef(2)
 
   const coldStartMessages = [
     'O Lophos está preparando o seu feed!',
@@ -210,7 +279,7 @@ export default function FeedPage() {
       const res = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topics: [], forceRefresh: force }),
+        body: JSON.stringify({ topics: [], forceRefresh: force, days: timeDaysRef.current }),
         signal: ctrl.signal,
       })
       if (!res.ok) {
@@ -311,6 +380,7 @@ export default function FeedPage() {
   }, [fetchFeed])
 
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
+  useEffect(() => { if (isLoaded && isSignedIn) fetchFeed(true) }, [timeDays])
 
   // Poll for new articles every 5 minutes
   useEffect(() => {
@@ -430,7 +500,9 @@ export default function FeedPage() {
                   onSelect={(t) => { setActiveFilter(t); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                 />
               </div>
-              <div style={{ width: '12rem' }} />
+              <div style={{ width: '12rem' }} className="flex justify-end">
+                <TimeFilterDropdown days={timeDays} onChange={handleTimeDaysChange} />
+              </div>
             </div>
           )}
 
