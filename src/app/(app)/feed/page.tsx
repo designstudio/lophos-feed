@@ -14,25 +14,27 @@ import { useAuth } from '@clerk/nextjs'
 
 const toTitleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
-function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
+function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
+  items: NewsItem[]
+  blockIndex: number
+  reactions: Record<string, 'like' | 'dislike'>
+  onReactionChange: (id: string, r: 'like' | 'dislike' | null) => void
+}) {
   const posInCycle = blockIndex % 3
 
-  // Full block (positions 0 and 2 in cycle)
   if (posInCycle !== 1) {
     const variant = posInCycle === 2 ? 'full-right' : 'full-left'
     return (
       <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant={variant} />
+        <NewsCard item={items[0]} variant={variant} initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
       </div>
     )
   }
 
-  // Trio slot — 1, 2 or 3 cards
   if (items.length === 1) {
-    // Not enough for grid, show as full-left
     return (
       <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant="full-left" />
+        <NewsCard item={items[0]} variant="full-left" initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
       </div>
     )
   }
@@ -40,7 +42,7 @@ function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: numbe
   return (
     <div className="md:py-6 md:border-b md:border-border">
       <div className={cn('grid gap-0 md:gap-6', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
-        {items.map(item => <NewsCard key={item.id} item={item} variant="card" />)}
+        {items.map(item => <NewsCard key={item.id} item={item} variant="card" initialReaction={reactions[item.id] ?? null} onReactionChange={onReactionChange} />)}
       </div>
     </div>
   )
@@ -206,6 +208,7 @@ export default function FeedPage() {
   const [error, setError]         = useState<string | null>(null)
   const [pendingItems, setPendingItems] = useState<NewsItem[]>([])
   const [coldStartLoading, setColdStartLoading] = useState(false)
+  const [reactions, setReactions] = useState<Record<string, 'like' | 'dislike'>>({})
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [timeDays, setTimeDays] = useState(2)
   const handleTimeDaysChange = (d: number) => {
@@ -383,6 +386,14 @@ export default function FeedPage() {
   }, [fetchFeed])
 
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return
+    fetch('/api/reactions')
+      .then(r => r.json())
+      .then(data => setReactions(data.reactions ?? {}))
+      .catch(() => {})
+  }, [isLoaded, isSignedIn])
   useEffect(() => {
     if (!timeDaysMountedRef.current) { timeDaysMountedRef.current = true; return }
     if (isLoaded && isSignedIn) fetchFeed(true)
@@ -433,7 +444,17 @@ export default function FeedPage() {
     return () => obs.disconnect()
   }, [hasData])
 
-  const filteredItems = activeFilter ? items.filter(i => toTitleCase(i.displayTopic ?? i.topic) === activeFilter) : items
+  const handleReactionChange = (id: string, r: 'like' | 'dislike' | null) => {
+    setReactions(prev => {
+      const next = { ...prev }
+      if (r === null) delete next[id]
+      else next[id] = r
+      return next
+    })
+  }
+
+  const visibleItems = items.filter(i => reactions[i.id] !== 'dislike')
+  const filteredItems = activeFilter ? visibleItems.filter(i => toTitleCase(i.displayTopic ?? i.topic) === activeFilter) : visibleItems
   const topicsInFeed  = [...new Set(items.map(i => toTitleCase(i.displayTopic ?? i.topic)))]
   const allBlocks     = splitIntoBlocks(filteredItems)
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
@@ -586,7 +607,7 @@ export default function FeedPage() {
               )}
 
               {shownBlocks.map((block, i) => (
-                <FeedBlock key={i} items={block.items} blockIndex={i} />
+                <FeedBlock key={i} items={block.items} blockIndex={i} reactions={reactions} onReactionChange={handleReactionChange} />
               ))}
 
               {hasData && (

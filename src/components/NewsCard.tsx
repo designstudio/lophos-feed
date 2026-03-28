@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
 import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
@@ -25,6 +25,8 @@ interface Props {
   item: NewsItem
   variant?: 'full-left' | 'full-right' | 'card'
   className?: string
+  initialReaction?: 'like' | 'dislike' | null
+  onReactionChange?: (articleId: string, reaction: 'like' | 'dislike' | null) => void
 }
 
 function SourcesAndReactions({ sources, reaction, onReact }: {
@@ -108,19 +110,23 @@ function CardImage({ proxiedImage, title, sources, onError }: {
   )
 }
 
-export function NewsCard({ item, variant = 'card', className }: Props) {
-  const [reaction, setReaction] = useState<'like' | 'dislike' | null>(null)
+export function NewsCard({ item, variant = 'card', className, initialReaction = null, onReactionChange }: Props) {
+  const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
   const [reacting, setReacting] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
   const href = `/article/${item.id}`
   const proxiedImage = proxyImage(item.imageUrl)
   const showImage = !!proxiedImage && !imgFailed
 
+  // Sync when parent loads reactions from API
+  useEffect(() => { setReaction(initialReaction) }, [initialReaction])
+
   const react = async (type: 'like' | 'dislike') => {
     if (reacting) return
     setReacting(true)
     const newReaction = reaction === type ? null : type
     setReaction(newReaction)
+    onReactionChange?.(item.id, newReaction)
     try {
       await fetch('/api/reactions', {
         method: 'POST',

@@ -24,27 +24,32 @@ function splitIntoBlocks(items: NewsItem[]): { items: NewsItem[] }[] {
   return blocks
 }
 
-function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: number }) {
+function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
+  items: NewsItem[]
+  blockIndex: number
+  reactions: Record<string, 'like' | 'dislike'>
+  onReactionChange: (id: string, r: 'like' | 'dislike' | null) => void
+}) {
   const posInCycle = blockIndex % 3
   if (posInCycle !== 1) {
     const variant = posInCycle === 2 ? 'full-right' : 'full-left'
     return (
       <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant={variant} />
+        <NewsCard item={items[0]} variant={variant} initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
       </div>
     )
   }
   if (items.length === 1) {
     return (
       <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant="full-left" />
+        <NewsCard item={items[0]} variant="full-left" initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
       </div>
     )
   }
   return (
     <div className="md:py-6 md:border-b md:border-border">
       <div className={cn('grid gap-0 md:gap-6', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
-        {items.map(item => <NewsCard key={item.id} item={item} variant="card" />)}
+        {items.map(item => <NewsCard key={item.id} item={item} variant="card" initialReaction={reactions[item.id] ?? null} onReactionChange={onReactionChange} />)}
       </div>
     </div>
   )
@@ -53,6 +58,7 @@ function FeedBlock({ items, blockIndex }: { items: NewsItem[]; blockIndex: numbe
 export default function FavoritesPage() {
   const [items, setItems] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [reactions, setReactions] = useState<Record<string, 'like' | 'dislike'>>({})
   const [visibleBlocks, setVisibleBlocks] = useState(4)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -61,7 +67,20 @@ export default function FavoritesPage() {
       .then(r => r.json())
       .then(data => { setItems(data.items || []); setLoading(false) })
       .catch(() => setLoading(false))
+    fetch('/api/reactions')
+      .then(r => r.json())
+      .then(data => setReactions(data.reactions ?? {}))
+      .catch(() => {})
   }, [])
+
+  const handleReactionChange = (id: string, r: 'like' | 'dislike' | null) => {
+    setReactions(prev => {
+      const next = { ...prev }
+      if (r === null) delete next[id]
+      else next[id] = r
+      return next
+    })
+  }
 
   const allBlocks = splitIntoBlocks(items)
   const shownBlocks = allBlocks.slice(0, visibleBlocks)
@@ -117,7 +136,7 @@ export default function FavoritesPage() {
           {!loading && items.length > 0 && (
             <>
               {shownBlocks.map((block, i) => (
-                <FeedBlock key={i} items={block.items} blockIndex={i} />
+                <FeedBlock key={i} items={block.items} blockIndex={i} reactions={reactions} onReactionChange={handleReactionChange} />
               ))}
               <div ref={sentinelRef}>
                 {hasMore && <SkeletonBlock />}
