@@ -220,6 +220,7 @@ export default function FeedPage() {
   const pendingRef = useRef<NewsItem[]>([])
   const coldStartRef = useRef(false)
   const timeDaysRef = useRef(2)
+  const timeDaysMountedRef = useRef(false)
 
   const coldStartMessages = [
     'O Lophos está preparando o seu feed!',
@@ -382,7 +383,10 @@ export default function FeedPage() {
   }, [fetchFeed])
 
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
-  useEffect(() => { if (isLoaded && isSignedIn) fetchFeed(true) }, [timeDays])
+  useEffect(() => {
+    if (!timeDaysMountedRef.current) { timeDaysMountedRef.current = true; return }
+    if (isLoaded && isSignedIn) fetchFeed(true)
+  }, [timeDays])
 
   // Poll for new articles every 5 minutes
   useEffect(() => {
