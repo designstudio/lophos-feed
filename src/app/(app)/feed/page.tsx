@@ -199,7 +199,7 @@ export default function FeedPage() {
   const { setRefreshing, onRefreshCallback, updatesReady, setUpdatesReady, onApplyUpdatesCallback } = useFeedContext()
   const [items, setItems]         = useState<NewsItem[]>([])
   const [topics, setTopics]       = useState<string[]>([])
-  const [streaming, setStreamingLocal] = useState(false)
+  const [streaming, setStreamingLocal] = useState(true)
   const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
   const [hasData, setHasData]     = useState(false)
   const [error, setError]         = useState<string | null>(null)
