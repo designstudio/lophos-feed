@@ -512,10 +512,21 @@ export default function FeedPage() {
             </div>
           )}
 
-          {/* Desktop: title only (when no data) */}
+          {/* Desktop: skeleton while loading, title only when no data */}
           {(!hasData || topicsInFeed.length === 0) && (
             <div className="hidden md:flex items-center h-14 px-8">
-              <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
+              <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
+              {streaming && (
+                <>
+                  <div className="flex flex-1 justify-center gap-2">
+                    <div className="skeleton h-4 w-28 rounded-full" />
+                    <div className="skeleton h-4 w-20 rounded-full" />
+                  </div>
+                  <div style={{ width: '12rem' }} className="flex justify-end">
+                    <div className="skeleton h-7 w-24 rounded-lg" />
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
