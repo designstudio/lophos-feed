@@ -121,21 +121,19 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
               }
             }}
             placeholder="Buscar notícias..."
-            className="flex-1 outline-none text-ink-primary placeholder-ink-tertiary bg-transparent"
+            className="flex-1 outline-none text-ink-primary placeholder-ink-tertiary bg-transparent p-2"
             autoFocus
           />
-          {query && (
-            <button
-              onClick={() => {
-                setQuery('')
-                setResults([])
-                inputRef.current?.focus()
-              }}
-              className="flex-shrink-0 text-ink-tertiary hover:text-ink-primary transition-colors p-1"
-            >
-              <CloseCircle size={18} />
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setQuery('')
+              setResults([])
+              inputRef.current?.focus()
+            }}
+            className="flex-shrink-0 text-ink-tertiary hover:text-ink-primary transition-colors p-1"
+          >
+            <CloseCircle size={18} />
+          </button>
         </div>
 
         {/* Body */}
