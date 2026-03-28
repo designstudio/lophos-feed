@@ -200,6 +200,7 @@ export default function FeedPage() {
   const [items, setItems]         = useState<NewsItem[]>([])
   const [topics, setTopics]       = useState<string[]>([])
   const [streaming, setStreamingLocal] = useState(true)
+  const [initialized, setInitialized] = useState(false)
   const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
   const [hasData, setHasData]     = useState(false)
   const [error, setError]         = useState<string | null>(null)
@@ -370,6 +371,7 @@ export default function FeedPage() {
       if (e?.name !== 'AbortError') console.error(e)
     } finally {
       setStreaming(false)
+      setInitialized(true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -433,7 +435,7 @@ export default function FeedPage() {
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
   const hasMore       = visibleBlocks < allBlocks.length
   const showSkeleton  = !hasData && streaming
-  const showEmpty     = !hasData && !streaming && !coldStartLoading
+  const showEmpty     = initialized && !hasData && !streaming && !coldStartLoading
   const emptyMessage  = error
     ? (error.toLowerCase().includes('no topics')
         ? 'Nenhum tópico salvo. Selecione seus tópicos no onboarding ou em Configurações.'
