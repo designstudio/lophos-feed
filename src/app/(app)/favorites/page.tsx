@@ -92,7 +92,7 @@ export default function FavoritesPage() {
       </div>
 
       {/* ── Content ── */}
-      <div className="feed-layout mx-auto px-4 md:px-8">
+      <div className="article-layout mx-auto px-4 md:px-8">
         <div className="pt-0 pb-24 md:py-6 md:pb-6">
 
           {loading && (
