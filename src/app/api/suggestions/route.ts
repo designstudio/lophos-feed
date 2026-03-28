@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
+import Groq from 'groq-sdk'
 
-const GEMINI_KEY = process.env.GEMINI_API_KEY!
+function getGroqClient() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY })
+}
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
@@ -26,31 +29,20 @@ Responda SOMENTE com JSON array de strings, sem markdown, sem explicação:
 ["sugestão1","sugestão2","sugestão3","sugestão4","sugestão5","sugestão6","sugestão7","sugestão8","sugestão9","sugestão10","sugestão11","sugestão12"]`
 
   try {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.8 },
-        }),
-      }
-    )
+    const groq = getGroqClient()
+    const res = await groq.chat.completions.create({
+      model: 'mixtral-8x7b-32768',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.8,
+    })
 
-    if (!res.ok) {
-      console.error('Gemini suggestions error:', res.status, await res.text())
-      return NextResponse.json({ suggestions: DEFAULT_SUGGESTIONS })
-    }
-
-    const data = await res.json()
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-    console.log('[suggestions] Gemini raw response:', raw.slice(0, 500))
+    const raw = res.choices?.[0]?.message?.content ?? ''
+    console.log('[suggestions] Groq raw response:', raw.slice(0, 500))
     const clean = raw.replace(/```json|```/g, '').trim()
     const match = clean.match(/\[[\s\S]*\]/)
 
     if (!match) {
-      console.error('No JSON match in Gemini response:', raw)
+      console.error('No JSON match in Groq response:', raw)
       return NextResponse.json({ suggestions: DEFAULT_SUGGESTIONS })
     }
 

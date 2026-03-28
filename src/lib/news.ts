@@ -1,8 +1,11 @@
 import { randomUUID } from 'crypto'
 import { NewsItem, NewsSource, ArticleSection } from './types'
 import { getSupabaseAdmin } from './supabase'
+import Groq from 'groq-sdk'
 
-const GEMINI_KEY = process.env.GEMINI_API_KEY!
+function getGroqClient() {
+  return new Groq({ apiKey: process.env.GROQ_API_KEY })
+}
 
 export const CACHE_TTL_MINUTES = 120
 const IMAGE_CACHE_TTL_MS = 6 * 60 * 60 * 1000
@@ -278,40 +281,30 @@ Retorne EXCLUSIVAMENTE um array JSON. Se não houver conteúdo válido, retorne 
 FONTES:
 ${context}`
 
-  console.log(`[news] Calling Gemini for topic: ${topic}, with ${results.length} sources`)
-  const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1 },
-      }),
-    }
-  )
+  console.log(`[news] Calling Groq for topic: ${topic}, with ${results.length} sources`)
+  const groq = getGroqClient()
+  const groqRes = await groq.chat.completions.create({
+    model: 'mixtral-8x7b-32768',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.1,
+  })
 
-  console.log(`[news] Gemini response for ${topic}: status=${geminiRes.status}`)
-  if (!geminiRes.ok) {
-    const errorText = await geminiRes.text()
-    console.error(`[news] Gemini error ${geminiRes.status}:`, errorText)
-    throw new Error(`Gemini error: ${geminiRes.status}`)
-  }
-
-  const geminiData = await geminiRes.json()
-  const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  console.log(`[news] Groq response for ${topic}: success`)
+  const raw = groqRes.choices?.[0]?.message?.content ?? ''
   const rawPreview = raw ? raw.slice(0, 800) : ''
   const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
   if (!match) {
     onDiag?.({ gemini: 0, kept: 0, dropped: 0, geminiRaw: rawPreview })
+    console.error(`[news] No JSON match in Groq response for ${topic}`)
     return []
   }
 
   let parsed: any[] = []
   try {
     parsed = JSON.parse(match[0])
-  } catch {
+  } catch (e) {
     onDiag?.({ gemini: 0, kept: 0, dropped: 0, geminiRaw: rawPreview })
+    console.error(`[news] Failed to parse Groq JSON for ${topic}:`, e)
     return []
   }
   const now = new Date().toISOString()

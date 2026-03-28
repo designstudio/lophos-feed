@@ -35,7 +35,9 @@
       "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
       "Bash(python3:*)",
       "Bash(pip install:*)",
-      "Bash(find C:/Users/henri/Downloads/lophos_feed/src -name *modal* -o -name *dialog* -o -name *settings*)"
+      "Bash(find C:/Users/henri/Downloads/lophos_feed/src -name *modal* -o -name *dialog* -o -name *settings*)",
+      "Bash(npm list:*)",
+      "Bash(find /c/Users/henri/Downloads/lophos_feed/node_modules/@solar-icons/react-perf -name *.d.ts)"
     ]
   }
 }
