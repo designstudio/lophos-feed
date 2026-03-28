@@ -126,9 +126,13 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
           />
           <button
             onClick={() => {
-              setQuery('')
-              setResults([])
-              inputRef.current?.focus()
+              if (query) {
+                setQuery('')
+                setResults([])
+                inputRef.current?.focus()
+              } else {
+                onClose()
+              }
             }}
             className="flex-shrink-0 text-ink-tertiary hover:text-ink-primary transition-colors p-1"
           >
