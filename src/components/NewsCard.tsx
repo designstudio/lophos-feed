@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
 import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
-import { Heart as HeartFilled } from '@solar-icons/react-perf/Bold'
+import { Heart as HeartFilled, Dislike as DislikeFilled } from '@solar-icons/react-perf/Bold'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -88,13 +88,27 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
           </AnimatePresence>
         </motion.button>
 
-        <button
+        {/* Dislike com animação de pop — tom neutro zinc quando ativo */}
+        <motion.button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
-          className={cn('flex items-center px-2 py-1 rounded-full transition-all',
-            reaction === 'dislike' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
+          whileTap={{ scale: 0.8 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+          className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
+            reaction === 'dislike' ? 'bg-zinc-100 text-zinc-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
           )}>
-          <Dislike size={16} />
-        </button>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={reaction === 'dislike' ? 'filled' : 'outline'}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+              style={{ display: 'flex' }}
+            >
+              {reaction === 'dislike' ? <DislikeFilled size={16} /> : <Dislike size={16} />}
+            </motion.span>
+          </AnimatePresence>
+        </motion.button>
       </div>
     </div>
   )
