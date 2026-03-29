@@ -1,11 +1,11 @@
 /**
- * Standalone Gemini processing script — runs directly with Node.js (no Next.js needed).
+ * Standalone Groq processing script — runs directly with Node.js (no Next.js needed).
  * Used by GitHub Actions every 6 hours, after rss-ingest.mjs.
  *
  * Required env vars:
  *   NEXT_PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *   GEMINI_API_KEY
+ *   GROQ_API_KEY
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -16,8 +16,9 @@ const db = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY,
 )
 
-const GEMINI_KEY = process.env.GEMINI_API_KEY
-const BATCH_SIZE = 40 // max sources per Gemini call
+const GROQ_KEY = process.env.GROQ_API_KEY
+const GROQ_MODEL = 'llama-3.3-70b-versatile'
+const BATCH_SIZE = 40 // max sources per Groq call
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 function isLazyLoadImage(url) {
@@ -59,7 +60,7 @@ function getSourceHint(topic) {
   return 'Reuters, AP, BBC, The Guardian'
 }
 
-async function callGemini(topic, results, existingTitles) {
+async function callGroq(topic, results, existingTitles) {
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const context = results.map((r, i) =>
     `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
@@ -112,32 +113,33 @@ async function callGemini(topic, results, existingTitles) {
 - Cada seção deve antecipar perguntas que um leitor faria.
 
 **RESPOSTA:**
-Retorne EXCLUSIVAMENTE um array JSON. Se não houver conteúdo válido, retorne \`[]\`.
+Retorne EXCLUSIVAMENTE um array JSON válido. Não inclua markdown, comentários ou texto fora do JSON. Se não houver conteúdo válido, retorne \`[]\`.
 
 [{"title":"...","summary":"...","sections":[{"heading":"...","body":"Conteúdo substancial com múltiplas linhas de detalhes..."}],"sourceIndexes":[1,2],"keywords":["games","valorant","vct 2026","masters bangkok","esports","riot games"]}]
 
 FONTES:
 ${context}`
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1 },
-      }),
-    }
-  )
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${GROQ_KEY}`,
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+    }),
+  })
 
   if (!res.ok) {
     const err = await res.text()
-    throw new Error(`Gemini error ${res.status}: ${err.slice(0, 200)}`)
+    throw new Error(`Groq error ${res.status}: ${err.slice(0, 200)}`)
   }
 
   const data = await res.json()
-  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  const raw = data.choices?.[0]?.message?.content ?? ''
   const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
   if (!match) return []
 
@@ -156,7 +158,7 @@ async function processTopic(topic, rawItems, existingTitles) {
     image: item.image_url,
   }))
 
-  const parsed = await callGemini(topic, results, existingTitles)
+  const parsed = await callGroq(topic, results, existingTitles)
   const now = new Date().toISOString()
   const newsItems = []
 
@@ -246,7 +248,7 @@ async function main() {
 
       const existingTitles = (existing || []).map(r => r.title)
 
-      console.log(`\n[${topic}] ${rawItems.length} items → Gemini...`)
+      console.log(`\n[${topic}] ${rawItems.length} items → Groq (${GROQ_MODEL})...`)
       const newsItems = await processTopic(topic, rawItems, existingTitles)
       console.log(`[${topic}] Generated ${newsItems.length} articles`)
 
