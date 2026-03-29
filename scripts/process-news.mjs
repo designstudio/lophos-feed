@@ -67,6 +67,31 @@ function getSourceHint(topic) {
 }
 
 
+// FASE 1: Triagem Leve (Metadados) — Com Retry Logic para 429
+async function triageMetadataPhaseWithRetry(topic, results, attempt = 1) {
+  try {
+    return await triageMetadataPhase(topic, results)
+  } catch (err) {
+    // Se for erro 429 (Rate Limit) e ainda temos tentativas
+    if (err.status === 429 && attempt < MAX_RETRIES) {
+      const waitTime = RATE_LIMIT_RETRY_DELAY_MS / 1000
+      console.warn(`⚠️  [${topic}] Erro 429 na Fase 1 (tentativa ${attempt}/${MAX_RETRIES}). Aguardando ${waitTime}s...`)
+      await new Promise(r => setTimeout(r, RATE_LIMIT_RETRY_DELAY_MS))
+      console.log(`🔄 [${topic}] Tentando Fase 1 novamente...`)
+      return triageMetadataPhaseWithRetry(topic, results, attempt + 1)
+    }
+
+    // Se esgotou as tentativas ou é outro erro
+    if (err.status === 429) {
+      console.error(`❌ [${topic}] Erro 429 na Fase 1 após ${MAX_RETRIES} tentativas. Criando eventos individuais como fallback.`)
+    } else {
+      console.error(`❌ [${topic}] Erro na Fase 1:`, err.message)
+    }
+    // Fallback: criar evento individual para cada fonte
+    return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
+  }
+}
+
 // FASE 1: Triagem Leve (Metadados) — Agrupa TODOS os títulos em UMA requisição
 async function triageMetadataPhase(topic, results) {
   if (!results.length) return []
@@ -122,9 +147,9 @@ Regras RÍGIDAS:
     if (!res.ok) {
       const status = res.status
       const err = await res.text()
-      console.error(`[${topic}] Fase 1 error ${status}`)
-      // Fallback: criar evento individual para cada fonte
-      return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
+      const error = new Error(`Groq error ${status}`)
+      error.status = status
+      throw error
     }
 
     const data = await res.json()
@@ -145,8 +170,8 @@ Regras RÍGIDAS:
     console.log(`[${topic}] Fase 1: ${events.length} evento(s) identificado(s)`)
     return events
   } catch (err) {
-    console.error(`[${topic}] Fase 1 exception:`, err.message)
-    return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
+    // Re-lança o erro para que triageMetadataPhaseWithRetry possa fazer retry
+    throw err
   }
 }
 
@@ -309,7 +334,7 @@ async function processTopic(topic, rawItems, existingTitles) {
   // ═══════════════════════════════════════════════════════════════
   // FASE 1: TRIAGEM DE METADADOS (Leve) — Agrupa TODOS os títulos
   // ═══════════════════════════════════════════════════════════════
-  const events = await triageMetadataPhase(topic, results)
+  const events = await triageMetadataPhaseWithRetry(topic, results)
 
   if (!events.length) {
     console.log(`[${topic}] Nenhum evento identificado na Fase 1`)
