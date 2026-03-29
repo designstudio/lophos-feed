@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
 import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
+import { Heart as HeartFilled } from '@solar-icons/react-perf/Bold'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
@@ -65,13 +67,27 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
       </div>
       {/* Reactions — right */}
       <div className="flex items-center gap-0.5">
-        <button
+        {/* Like com animação de pop */}
+        <motion.button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('like') }}
-          className={cn('flex items-center px-2 py-1 rounded-full transition-all',
+          whileTap={{ scale: 0.85 }}
+          className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
             reaction === 'like' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
           )}>
-          <HeartAngle size={16} />
-        </button>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={reaction === 'like' ? 'filled' : 'outline'}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              style={{ display: 'flex' }}
+            >
+              {reaction === 'like' ? <HeartFilled size={16} /> : <HeartAngle size={16} />}
+            </motion.span>
+          </AnimatePresence>
+        </motion.button>
+
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
           className={cn('flex items-center px-2 py-1 rounded-full transition-all',

@@ -7,6 +7,7 @@ import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
 import { SquareTopDown, ClockCircle, CloseCircle, Documents, ArrowLeft, HeartAngle, Share } from '@solar-icons/react-perf/Linear'
 import { Heart as HeartFilled } from '@solar-icons/react-perf/Bold'
+import { motion, AnimatePresence } from 'framer-motion'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -233,16 +234,25 @@ export default function ArticlePage() {
             <div className="flex items-center gap-1 flex-shrink-0">
               {/* Like — sincronizado com o coração do feed */}
               {isSignedIn && (
-                <button
+                <motion.button
                   onClick={toggleLike}
                   title={liked ? 'Descurtir' : 'Curtir'}
-                  className={`spring-press flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${liked ? 'text-red-500 hover:bg-red-50' : 'text-ink-secondary hover:bg-bg-secondary'}`}
+                  whileTap={{ scale: 0.85 }}
+                  className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${liked ? 'text-red-500 hover:bg-red-50' : 'text-ink-secondary hover:bg-bg-secondary'}`}
                 >
-                  {liked
-                    ? <HeartFilled size={18} />
-                    : <HeartAngle size={18} />
-                  }
-                </button>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={liked ? 'filled' : 'outline'}
+                      initial={{ scale: 0.5, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.5, opacity: 0 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
+                      style={{ display: 'flex' }}
+                    >
+                      {liked ? <HeartFilled size={18} /> : <HeartAngle size={18} />}
+                    </motion.span>
+                  </AnimatePresence>
+                </motion.button>
               )}
 
               {/* Share */}
