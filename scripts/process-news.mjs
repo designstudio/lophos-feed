@@ -1,14 +1,16 @@
 /**
- * Standalone Groq processing script — runs directly with Node.js (no Next.js needed).
- * Used by GitHub Actions every 6 hours, after rss-ingest.mjs.
+ * Lophos News Processing — Gemini 1.5 Flash Edition
  *
- * Required env vars:
- *   NEXT_PUBLIC_SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY
- *   GROQ_API_KEY
+ * Nova Arquitetura:
+ * ✅ Contexto Brutal: 4000 chars por fonte (máximo de detalhes)
+ * ✅ Processamento em Lote Único: Todas as 15 fontes de uma vez
+ * ✅ Deduplicação Perfeita: Gemini com 1M tokens agrupa tudo
+ * ✅ Código Limpo: Sem chunks complexos, fluxo direto
+ * ✅ Rate Limit Friendly: 8s entre tópicos (15 req/min)
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { randomUUID } from 'crypto'
 
 const db = createClient(
@@ -16,15 +18,12 @@ const db = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY,
 )
 
-const GROQ_KEY = process.env.GROQ_API_KEY
-const GROQ_MODEL_PRIMARY = 'llama-3.3-70b-versatile'
-const GROQ_MODEL_FALLBACK = 'llama-3.1-8b-instant'
-const BATCH_SIZE = 15       // max sources per Groq call
-const CONTENT_CHARS = 2000  // chars per source — sweet spot: enough context without API bloat
-const TPM_COOLDOWN_MS = 65_000 // 65s between calls — respects 12k TPM free tier
-const PHASE2_DELAY_MS = 18_000 // 18s delay between Phase 2 events (Groq free tier: devagar e sempre)
-const RATE_LIMIT_RETRY_DELAY_MS = 30_000 // 30s wait before retry on 429
-const MAX_RETRIES = 3 // Max retry attempts on 429 error
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
+const BATCH_SIZE = 15          // max sources per Gemini call
+const CONTENT_CHARS = 4000     // chars per source — BRUTAL CONTEXT
+const DELAY_BETWEEN_TOPICS_MS = 8_000 // 8s between topics (15 req/min free tier)
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 function isLazyLoadImage(url) {
@@ -56,270 +55,104 @@ function isGeneratedItemRelevant(item, results) {
   return textOverlapScore(genText, sourceText) >= 0.15
 }
 
-function getSourceHint(topic) {
-  const t = topic.toLowerCase()
-  if (/cinema|filme|série|entretenimento|music|album|award|oscar|emmy/.test(t)) return 'Variety, Deadline, Hollywood Reporter, Rolling Stone, Billboard'
-  if (/política|governo|eleição|congress|senate|president/.test(t)) return 'Reuters, AP, CNN, BBC, The Guardian, NYT'
-  if (/economia|mercado|finanças|stock|crypto|bitcoin/.test(t)) return 'Bloomberg, Financial Times, Reuters, WSJ'
-  if (/tech|ia|inteligência artificial|startup|software/.test(t)) return 'TechCrunch, The Verge, Wired, Ars Technica'
-  if (/esport|valorant|league|lol|overwatch|gaming|game|tft|teamfight/.test(t)) return 'Dot Esports, The Esports Observer, Liquipedia, HLTV'
-  return 'Reuters, AP, BBC, The Guardian'
-}
-
-
-// FASE 1: Triagem Leve (Metadados) — Com Retry Logic para 429
-async function triageMetadataPhaseWithRetry(topic, results, attempt = 1) {
-  try {
-    return await triageMetadataPhase(topic, results)
-  } catch (err) {
-    // Se for erro 429 (Rate Limit) e ainda temos tentativas
-    if (err.status === 429 && attempt < MAX_RETRIES) {
-      const waitTime = RATE_LIMIT_RETRY_DELAY_MS / 1000
-      console.warn(`⚠️  [${topic}] Erro 429 na Fase 1 (tentativa ${attempt}/${MAX_RETRIES}). Aguardando ${waitTime}s...`)
-      await new Promise(r => setTimeout(r, RATE_LIMIT_RETRY_DELAY_MS))
-      console.log(`🔄 [${topic}] Tentando Fase 1 novamente...`)
-      return triageMetadataPhaseWithRetry(topic, results, attempt + 1)
-    }
-
-    // Se esgotou as tentativas ou é outro erro
-    if (err.status === 429) {
-      console.error(`❌ [${topic}] Erro 429 na Fase 1 após ${MAX_RETRIES} tentativas. Criando eventos individuais como fallback.`)
-    } else {
-      console.error(`❌ [${topic}] Erro na Fase 1:`, err.message)
-    }
-    // Fallback: criar evento individual para cada fonte
-    return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
-  }
-}
-
-// FASE 1: Triagem Leve (Metadados) — Agrupa TODOS os títulos em UMA requisição
-async function triageMetadataPhase(topic, results) {
+// ═══════════════════════════════════════════════════════════════
+// GEMINI: Processamento em Lote Único (Contexto Brutal)
+// ═══════════════════════════════════════════════════════════════
+async function processTopicWithGemini(topic, results, existingTitles) {
   if (!results.length) return []
 
-  console.log(`[${topic}] Fase 1: Triagem de metadados (${results.length} fontes)...`)
-
-  const titlesContext = results.map((r, i) =>
-    `[${i + 1}] "${r.title}" (${new URL(r.url).hostname.replace('www.', '')})`
-  ).join('\n')
-
-  const phase1Prompt = `Você é um analisador de eventos para deduplicação. Analise estes títulos e agrupe as URLs que cobrem o MESMO evento real.
-
-TÍTULOS E FONTES:
-${titlesContext}
-
-RESPOSTA: Retorne EXCLUSIVAMENTE um JSON (sem markdown, sem comentários):
-{
-  "events": [
-    {
-      "name": "Descrição breve e clara do evento",
-      "sourceIndexes": [1, 3, 5]
-    },
-    {
-      "name": "Outro evento independente",
-      "sourceIndexes": [2, 4]
-    }
-  ]
-}
-
-Regras RÍGIDAS:
-- Cada evento = UM assunto independente (não misture)
-- sourceIndexes usa os números [1-${results.length}] dos títulos acima
-- Se um título é sobre "Novo patch do Valorant", agrupe com outros sobre o mesmo patch
-- Se é sobre "Novo skin do Valorant", é EVENTO DIFERENTE
-- Retorne APENAS o JSON válido, nada mais
-- Se não conseguir agrupar, retorne: {"events": []}`
-
-  try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_KEY}`,
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL_PRIMARY,
-        messages: [{ role: 'user', content: phase1Prompt }],
-        temperature: 0.1,
-        max_tokens: 1000,
-      }),
-    })
-
-    if (!res.ok) {
-      const status = res.status
-      const err = await res.text()
-      const error = new Error(`Groq error ${status}`)
-      error.status = status
-      throw error
-    }
-
-    const data = await res.json()
-    const raw = data.choices?.[0]?.message?.content ?? ''
-    const match = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
-    if (!match) {
-      console.warn(`[${topic}] Fase 1: Nenhuma resposta válida, criando eventos individuais`)
-      return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
-    }
-
-    const parsed = JSON.parse(match[0])
-    const events = parsed.events || []
-
-    if (!events.length) {
-      return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
-    }
-
-    console.log(`[${topic}] Fase 1: ${events.length} evento(s) identificado(s)`)
-    return events
-  } catch (err) {
-    // Re-lança o erro para que triageMetadataPhaseWithRetry possa fazer retry
-    throw err
-  }
-}
-
-// FASE 2: Processamento Denso (Conteúdo) — Processa cada evento com conteúdo completo + Retry Logic
-async function processDensePhaseWithRetry(topic, event, results, existingTitles, attempt = 1) {
-  try {
-    return await processDensePhase(topic, event, results, existingTitles)
-  } catch (err) {
-    // Se for erro 429 (Rate Limit) e ainda temos tentativas
-    if (err.status === 429 && attempt < MAX_RETRIES) {
-      const waitTime = RATE_LIMIT_RETRY_DELAY_MS / 1000
-      console.warn(`⚠️  [${topic}] Erro 429 detectado em "${event.name}" (tentativa ${attempt}/${MAX_RETRIES}). Aguardando ${waitTime}s...`)
-      await new Promise(r => setTimeout(r, RATE_LIMIT_RETRY_DELAY_MS))
-      console.log(`🔄 [${topic}] Tentando novamente "${event.name}"...`)
-      return processDensePhaseWithRetry(topic, event, results, existingTitles, attempt + 1)
-    }
-
-    // Se esgotou as tentativas ou é outro erro
-    if (err.status === 429) {
-      console.error(`❌ [${topic}] Erro 429 após ${MAX_RETRIES} tentativas em "${event.name}". Pulando evento.`)
-    } else {
-      console.error(`❌ [${topic}] Erro ao processar "${event.name}":`, err.message)
-    }
-    return []
-  }
-}
-
-async function processDensePhase(topic, event, results, existingTitles) {
-  const eventSourceIndexes = event.sourceIndexes || []
-  const eventResults = eventSourceIndexes
-    .map(idx => results[idx - 1])
-    .filter(r => r)
-
-  if (!eventResults.length) return []
-
-  console.log(`[${topic}] Fase 2: Processando "${event.name}" (${eventResults.length} fonte(s))...`)
-
-  // Monta contexto denso com conteúdo completo de cada fonte
-  const context = eventResults.map((r, i) =>
-    `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 2000)}`
-  ).join('\n\n')
-
-  const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
-    : ''
+  console.log(`[${topic}] Gemini: Processando ${results.length} fontes em lote único...`)
 
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const prompt = `Você é o Curador-Chefe do Lophos, um hub de inteligência focado em eficiência e clareza. Sua missão é destilar o conteúdo bruto em um resumo que respeite o tempo do leitor e a alma da fonte original.
+  // Contexto brutal: 4000 chars por fonte
+  const context = results.map((r, i) =>
+    `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`
+  ).join('\n\n')
+
+  const existingContext = existingTitles.length > 0
+    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
+    : ''
+
+  const prompt = `Você é o Curador-Chefe do Lophos. Sua missão: destilar ${results.length} fontes em artigos precisos e substanciais.
+
+**INSTRUÇÕES CRÍTICAS:**
+
+1. **Agrupamento de Eventos**: Identifique qual URL fala do MESMO evento real. Se 3 URLs cobrem o lançamento do PS5, agrupe como UM evento.
+
+2. **Fidelidade Brutal**:
+   - Se menciona "dano aumentou 15%", comente com "15%"
+   - Se menciona "CEO João Silva", cite "João Silva"
+   - Se menciona "preço caiu de R$100 para R$80", reproduza os valores
+   - SEM GENÉRICOS: Nada de "fãs estão felizes" sem detalhes
+
+3. **Extração de Dados**:
+   - Números: datas, porcentagens, valores, placares, estatísticas
+   - Mudanças Técnicas: patch notes, features, atualizações
+   - Citações: reproduza ou parafraseie fielmente (não resuma)
+   - Nomes: use nomes reais de pessoas, empresas, produtos
+
+4. **Tom Direto**: Comece pelo fato mais impactante. Sem "Em um mundo onde..." ou "O futuro promete".
+
+5. **Estrutura JSON Obrigatória**:
+   - Cada artigo = UM evento
+   - title: Direto em pt-BR, termos da fonte
+   - summary: 2-4 frases densas COM DADOS (números, mudanças, citações)
+   - sections: 1-3 seções (não invente para preencher)
+   - sourceIndexes: [1,2,5] apenas as fontes que cobrem ESTE evento
+   - keywords: 5-15 termos em minúsculas
 
 **CONTEXTO:**
-- Data atual: ${today}
+- Data: ${today}
 - Tópico: "${topic}"
-- Evento: ${event.name}
-- Conteúdo já publicado: ${existingContext}
-- Fontes disponíveis (conteúdo completo): ${context}
-
-**DIRETRIZES DE CONTEÚDO:**
-
-**Fidelidade à Substância (O "Sumo"):**
-- Comece sempre pelo fato, história ou conceito mais impactante.
-- Exemplo: Se o texto fala de uma escola militar sobrenatural em 1910, isso vem antes da data de estreia. Se fala de inflação, o preço no bolso vem antes do nome do ministro.
-- O que o leitor precisa saber primeiro? Coloque lá.
-
-**Preservação do Colorido Original:**
-- Se o autor usou uma analogia única (ex: "é como um cereal genérico") ou um tom específico, mantenha isso.
-- Não neutralize nem "limpe" a personalidade da fonte.
-- Se o texto é sarcástico, mantenha o sarcasmo. Se é técnico e denso, mantenha a densidade.
-
-**Banimento de Clichês IA:**
-É TERMINANTEMENTE PROIBIDO usar frases como:
-- "Em uma nova era", "O futuro promete", "Um lembrete de"
-- "A equipe trabalha arduamente", "Os fãs estão ansiosos"
-- "Abrindo novos caminhos", "Mudando o jogo", "Quebrando barreiras"
-- "Inovador", "revolucionário", "nunca antes visto"
-Se não for um fato ou opinião explícita da fonte, delete.
-
-**Tom "Colega Especialista":**
-- Escreva como um profissional resumindo um artigo para outro colega pelo Slack.
-- Direto, sem enrolação e sem "introduções de redação escolar".
-- Informal é aceitável. Robótico é proibido.
-
-**ESTRUTURA JSON:**
-- \`title\`: Direto, usando termos literais da fonte em pt-BR.
-- \`summary\`: Um parágrafo denso (2-4 frases). Proibido introduções genéricas. Vá direto ao ponto principal.
-  **⚠️ OBRIGATÓRIO:** Se a fonte menciona números (datas, valores, placares, estatísticas), mudanças técnicas (patch notes, features, algoritmos), ou citações (de fãs, experts, desenvolvedores), esses dados DEVEM estar no resumo. Um resumo sem dados específicos é considerado uma falha.
-  **⚠️ NÃO FAÇA:** Resumos de uma única frase. Isso é insuficiente.
-  Exemplo RUIM: "Os fãs estão felizes com a mudança."
-  Exemplo BOM: "Os desenvolvedores aumentaram o dano do personagem em 15% (de 20 para 23 por hit), uma mudança que os fãs pediam há meses."
-- \`sections\`: 1 a 3 seções (apenas o necessário). Não invente texto para preencher espaço. Qualidade sobre quantidade.
-- \`sourceIndexes\`: Array com números 1 a ${eventResults.length}, referenciando as fontes deste evento.
-- \`keywords\`: 5-15 termos específicos em minúsculas.
-
-**FILTRAGEM OBRIGATÓRIA:**
-- Descarte vendas, cupons, ofertas (se deixaria de existir sem o desconto).
-- Mantenha lançamentos, análises técnicas, atualizações.
-- Se o evento já foi publicado (mesmo em tópico diferente), retorne \`[]\`.
+- Artigos já publicados: ${existingContext}
+- ${results.length} fontes disponíveis com até 4000 chars cada
 
 **RESPOSTA:**
-Retorne EXCLUSIVAMENTE um array JSON válido. Sem markdown, sem comentários. Se não houver conteúdo válido, retorne \`[]\`.
+Retorne EXCLUSIVAMENTE um array JSON válido. Sem markdown, comentários ou texto extra.
 
-**⚠️ VERIFICAÇÃO FINAL ANTES DE RETORNAR:**
-1. O resumo contém dados específicos (números, mudanças técnicas, citações)?
-2. O resumo NÃO é uma única frase genérica?
-3. Se as fontes mencionam números ou mudanças técnicas, elas estão no resumo?
+Se não houver conteúdo válido, retorne: []
 
-Um resumo sem dados específicos é considerado uma falha.
-
-Você tem conteúdo denso das ${eventResults.length} fonte(s) sobre este evento. Use-o. Não use clichês para preencher o vazio.
+[
+  {
+    "title": "PS5 Pro Lançado com Upgrade de GPU",
+    "summary": "Sony anuncia PS5 Pro com GPU 45% mais rápida (vs PS5 base). Preço: $799 (lançamento em novembro). Especialistas apontam melhora em ray-tracing e resolução.",
+    "sections": [
+      {
+        "heading": "Especificações Técnicas",
+        "body": "A GPU aumenta de 10.28 TFLOPS (PS5 original) para 16.7 TFLOPS. CPU mantém os mesmos 3.5GHz. 16GB de GDDR6 total (10 padrão + 6 para I/O)."
+      },
+      {
+        "heading": "Preço e Disponibilidade",
+        "body": "Custa $799 USD, $200 a mais que a versão original. Disponível a partir de novembro de 2024. Não inclui disco Blu-ray — acoplador opcional custa $80."
+      }
+    ],
+    "sourceIndexes": [1, 3, 5],
+    "keywords": ["ps5", "playstation", "gpu", "sony", "console", "gaming", "hardware", "upgrade", "2024"]
+  }
+]
 
 FONTES:
 ${context}`
 
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_KEY}`,
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL_PRIMARY,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.1,
-        max_tokens: 2000,
-      }),
-    })
+    const result = await model.generateContent(prompt)
+    const response = result.response
+    const text = response.text()
 
-    if (!res.ok) {
-      const status = res.status
-      const err = await res.text()
-      const error = new Error(`Groq error ${status}`)
-      error.status = status
-      throw error
+    // Extrai JSON da resposta
+    const match = text.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
+    if (!match) {
+      console.warn(`[${topic}] Gemini: Nenhuma resposta JSON válida`)
+      return []
     }
-
-    const data = await res.json()
-    const raw = data.choices?.[0]?.message?.content ?? ''
-    const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
-    if (!match) return []
 
     return JSON.parse(match[0])
   } catch (err) {
-    // Re-lança o erro para que processDensePhaseWithRetry possa fazer retry em 429
-    throw err
+    console.error(`[${topic}] Gemini error:`, err.message)
+    return []
   }
 }
-
 
 async function processTopic(topic, rawItems, existingTitles) {
   const results = rawItems.map(item => ({
@@ -331,102 +164,26 @@ async function processTopic(topic, rawItems, existingTitles) {
 
   if (!results.length) return []
 
-  // ═══════════════════════════════════════════════════════════════
-  // FASE 1: TRIAGEM DE METADADOS (Leve) — Agrupa TODOS os títulos
-  // ═══════════════════════════════════════════════════════════════
-  const events = await triageMetadataPhaseWithRetry(topic, results)
-
-  if (!events.length) {
-    console.log(`[${topic}] Nenhum evento identificado na Fase 1`)
-    return []
-  }
-
+  // Processa tudo em lote único com Gemini
+  const parsed = await processTopicWithGemini(topic, results, existingTitles)
   const now = new Date().toISOString()
   const newsItems = []
 
-  // ═══════════════════════════════════════════════════════════════
-  // FASE 2: PROCESSAMENTO DENSO (Conteúdo) — Processa cada evento
-  // ═══════════════════════════════════════════════════════════════
-
-  // Opcional: Agrupa eventos com 1 fonte para economizar requisições (batching 2x2)
-  const eventGroups = []
-  for (let ei = 0; ei < events.length; ei++) {
-    const event = events[ei]
-    const isSmall = (event.sourceIndexes || []).length === 1
-    const nextEvent = events[ei + 1]
-    const nextIsSmall = nextEvent && (nextEvent.sourceIndexes || []).length === 1
-
-    // Se ambos são pequenos, agrupa
-    if (isSmall && nextIsSmall) {
-      eventGroups.push({ type: 'batch', events: [event, nextEvent] })
-      ei++ // pula o próximo já que foi agrupado
-    } else {
-      eventGroups.push({ type: 'single', events: [event] })
-    }
-  }
-
-  // Processa cada grupo
-  for (let gi = 0; gi < eventGroups.length; gi++) {
-    const group = eventGroups[gi]
-
-    if (group.type === 'batch') {
-      console.log(`[${topic}] Fase 2: Processando BATCH de 2 eventos pequenos...`)
-      // Processa ambos os eventos (em sequência com retry)
-      for (const event of group.events) {
-        const parsed = await processDensePhaseWithRetry(topic, event, results, existingTitles)
-        // Adiciona resultados
-        newsItems.push(...extractNewsItems(parsed, event.sourceIndexes, results, topic, now, existingTitles))
-
-        // Delay entre eventos dentro do batch
-        if (group.events.indexOf(event) < group.events.length - 1) {
-          await new Promise(r => setTimeout(r, PHASE2_DELAY_MS))
-        }
-      }
-    } else {
-      // Evento único
-      const event = group.events[0]
-      const parsed = await processDensePhaseWithRetry(topic, event, results, existingTitles)
-      newsItems.push(...extractNewsItems(parsed, event.sourceIndexes, results, topic, now, existingTitles))
-    }
-
-    // Delay entre grupos
-    if (gi < eventGroups.length - 1) {
-      console.log(`[${topic}] Aguardando ${PHASE2_DELAY_MS / 1000}s antes do próximo evento (Groq free tier)...`)
-      await new Promise(r => setTimeout(r, PHASE2_DELAY_MS))
-    }
-  }
-
-  return newsItems
-}
-
-// Helper: Extrai news items de um resultado parseado
-function extractNewsItems(parsed, eventSourceIndexes, results, topic, now, existingTitles) {
-  const newsItems = []
-  const eventIdxs = eventSourceIndexes || []
-
   for (const item of parsed) {
     if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) continue
-
-    // Mapeia sourceIndexes para índices reais do evento
-    const itemIdxs = item.sourceIndexes
-      .map(n => {
-        const eventIdx = eventIdxs[n - 1]
-        return eventIdx ? eventIdx - 1 : undefined
-      })
-      .filter(i => i !== undefined)
-
-    if (!itemIdxs.length) continue
     if (!isGeneratedItemRelevant(item, results)) continue
 
-    // Busca primeira imagem válida
+    const idxs = item.sourceIndexes.map(n => n - 1)
+
+    // Find first valid image
     let imageUrl
-    for (const idx of itemIdxs) {
+    for (const idx of idxs) {
       const candidate = results[idx]?.image
       if (candidate && !isLazyLoadImage(candidate)) { imageUrl = candidate; break }
     }
     if (!imageUrl) continue
 
-    const sources = itemIdxs
+    const sources = idxs
       .filter(idx => idx >= 0 && idx < results.length)
       .map(idx => {
         const r = results[idx]
@@ -469,9 +226,10 @@ async function main() {
   if (!topicRows?.length) { console.log('No unprocessed items found.'); return }
 
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
-  console.log(`Topics to process: ${topics.join(', ')}`)
+  console.log(`\n🦖 Lophos x Gemini 1.5 Flash`)
+  console.log(`Topics to process: ${topics.join(', ')}\n`)
 
-  // 1. Busca global de títulos + ids + sources + keywords + matched_topics das últimas 24h
+  // Fetch existing articles (últimas 24h)
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
@@ -480,7 +238,6 @@ async function main() {
     .order('published_at', { ascending: false })
     .limit(100)
 
-  // allProcessedArticles: cache local atualizado em tempo real a cada tópico processado
   const allProcessedArticles = (globalExisting || []).map(r => ({
     id: r.id,
     title: r.title,
@@ -488,10 +245,9 @@ async function main() {
     keywords: r.keywords || [],
     matched_topics: r.matched_topics || [],
   }))
-  console.log(`Artigos existentes (últimas 24h): ${allProcessedArticles.length}`)
+  console.log(`Artigos existentes (últimas 24h): ${allProcessedArticles.length}\n`)
 
   const SIMILARITY_THRESHOLD = 0.85
-
   let totalGenerated = 0
   let totalMerged = 0
   let totalSaved = 0
@@ -510,26 +266,19 @@ async function main() {
 
       if (!rawItems?.length) continue
 
-      console.log(`\n[${topic}] ${rawItems.length} items → Groq (${GROQ_MODEL_PRIMARY})...`)
+      console.log(`[${topic}] ${rawItems.length} items → Gemini`)
       const newsItems = await processTopic(topic, rawItems, allProcessedArticles.map(a => a.title))
-
-      // Small delay between API calls to prevent strain
-      await new Promise(r => setTimeout(r, MINIBATCH_DELAY_MS))
 
       const dedupedItems = []
 
       for (const item of newsItems) {
-        // Verifica similaridade com todos os artigos já conhecidos
         const match = allProcessedArticles.find(
           existing => textOverlapScore(item.title, existing.title) >= SIMILARITY_THRESHOLD
         )
 
         if (match) {
-          // Merge de fontes: adiciona apenas URLs ainda não presentes
           const existingUrls = new Set((match.sources || []).map(s => s.url))
           const newSources = item.sources.filter(s => !existingUrls.has(s.url))
-
-          // Merge de keywords e matched_topics via Set (sem repetição)
           const mergedKeywords = [...new Set([...match.keywords, ...(item.keywords || [])])]
           const mergedMatchedTopics = [...new Set([...match.matched_topics, ...(item.matched_topics || [])])]
 
@@ -548,24 +297,19 @@ async function main() {
               .eq('id', match.id)
 
             if (mergeError) {
-              console.error(`[${topic}] Merge error em "${match.title}":`, mergeError.message)
+              console.error(`[${topic}] Merge error:`, mergeError.message)
             } else {
-              // Atualiza cache local
               match.sources = mergedSources
               match.keywords = mergedKeywords
               match.matched_topics = mergedMatchedTopics
               totalMerged++
-              console.log(`[${topic}] Merge em "${match.title}": +${newSources.length} fonte(s), +${mergedKeywords.length - (match.keywords.length - (mergedKeywords.length - match.keywords.length))} keyword(s)`)
+              console.log(`  ✓ Merge em "${match.title}"`)
             }
-          } else {
-            console.log(`[${topic}] Ignorado (sem dados novos): "${item.title}"`)
           }
         } else {
           dedupedItems.push(item)
         }
       }
-
-      console.log(`[${topic}] Novos: ${dedupedItems.length} | Merges: ${newsItems.length - dedupedItems.length}`)
 
       if (dedupedItems.length > 0) {
         const { error: saveError } = await db.from('articles').upsert(
@@ -576,7 +320,6 @@ async function main() {
           console.error(`[${topic}] Save error:`, saveError.message)
         } else {
           totalSaved += dedupedItems.length
-          // Alimenta o cache com os novos artigos desta iteração
           for (const item of dedupedItems) {
             allProcessedArticles.push({
               id: item.id,
@@ -586,27 +329,28 @@ async function main() {
               matched_topics: item.matched_topics || [],
             })
           }
+          console.log(`  ✓ ${dedupedItems.length} artigos salvos`)
         }
       }
 
-      // Mark all fetched items as processed
+      totalGenerated += dedupedItems.length
+
+      // Mark items as processed
       await db.from('raw_items').update({ processed: true })
         .eq('topic', topic)
         .eq('processed', false)
 
-      totalGenerated += dedupedItems.length
-
-      // Delay apenas se houver um próximo tópico (economiza minutos do Actions no último)
+      // Delay para respeitar rate limit (15 req/min)
       if (ti < topics.length - 1) {
-        console.log(`\nAguardando ${TPM_COOLDOWN_MS / 1000}s para respeitar o rate limit do Groq...`)
-        await new Promise(r => setTimeout(r, TPM_COOLDOWN_MS))
+        console.log(`Aguardando ${DELAY_BETWEEN_TOPICS_MS / 1000}s antes do próximo tópico...\n`)
+        await new Promise(r => setTimeout(r, DELAY_BETWEEN_TOPICS_MS))
       }
     } catch (err) {
       console.error(`[${topic}] Error:`, err.message)
     }
   }
 
-  console.log(`\nDone! topics=${topics.length} generated=${totalGenerated} saved=${totalSaved} merges=${totalMerged}`)
+  console.log(`\n✨ Done! topics=${topics.length} generated=${totalGenerated} saved=${totalSaved} merges=${totalMerged}`)
 }
 
 main().catch(err => { console.error(err); process.exit(1) })
