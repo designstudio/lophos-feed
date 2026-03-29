@@ -225,20 +225,27 @@ async function main() {
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
   console.log(`Topics to process: ${topics.join(', ')}`)
 
-  // 1. Busca global de títulos das últimas 24h (todos os tópicos)
+  // 1. Busca global de títulos + ids + sources das últimas 24h (todos os tópicos)
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
-    .select('title')
+    .select('id, title, sources')
     .gte('published_at', since24h)
     .order('published_at', { ascending: false })
     .limit(100)
 
-  // 2. allProcessedTitles: atualizado em tempo real a cada tópico processado
-  const allProcessedTitles = (globalExisting || []).map(r => r.title)
-  console.log(`Títulos existentes (últimas 24h): ${allProcessedTitles.length}`)
+  // allProcessedArticles: {id, title, sources} — atualizado em tempo real a cada tópico
+  const allProcessedArticles = (globalExisting || []).map(r => ({
+    id: r.id,
+    title: r.title,
+    sources: r.sources || [],
+  }))
+  console.log(`Artigos existentes (últimas 24h): ${allProcessedArticles.length}`)
+
+  const SIMILARITY_THRESHOLD = 0.85
 
   let totalGenerated = 0
+  let totalMerged = 0
   let totalSaved = 0
 
   for (let ti = 0; ti < topics.length; ti++) {
@@ -260,20 +267,44 @@ async function main() {
       if (!rawItems?.length) continue
 
       console.log(`\n[${topic}] ${rawItems.length} items → Groq (${GROQ_MODEL})...`)
-      // Passa allProcessedTitles para o Groq — inclui títulos de tópicos já processados nesta rodada
-      const newsItems = await processTopic(topic, rawItems, allProcessedTitles)
+      const newsItems = await processTopic(topic, rawItems, allProcessedArticles.map(a => a.title))
 
-      // 3. Verificação de similaridade local (≥ 85% = descarta)
-      const SIMILARITY_THRESHOLD = 0.85
-      const dedupedItems = newsItems.filter(item => {
-        const isDup = allProcessedTitles.some(
-          existing => textOverlapScore(item.title, existing) >= SIMILARITY_THRESHOLD
+      const dedupedItems = []
+
+      for (const item of newsItems) {
+        // Verifica similaridade com todos os artigos já conhecidos
+        const match = allProcessedArticles.find(
+          existing => textOverlapScore(item.title, existing.title) >= SIMILARITY_THRESHOLD
         )
-        if (isDup) console.log(`[${topic}] Descartado por similaridade: "${item.title}"`)
-        return !isDup
-      })
 
-      console.log(`[${topic}] Generated ${dedupedItems.length} articles (${newsItems.length - dedupedItems.length} descartados por duplicidade)`)
+        if (match) {
+          // Merge de fontes: adiciona apenas URLs ainda não presentes
+          const existingUrls = new Set((match.sources || []).map(s => s.url))
+          const newSources = item.sources.filter(s => !existingUrls.has(s.url))
+
+          if (newSources.length > 0) {
+            const mergedSources = [...match.sources, ...newSources]
+            const { error: mergeError } = await db
+              .from('articles')
+              .update({ sources: mergedSources })
+              .eq('id', match.id)
+
+            if (mergeError) {
+              console.error(`[${topic}] Merge error em "${match.title}":`, mergeError.message)
+            } else {
+              match.sources = mergedSources // atualiza cache local
+              totalMerged++
+              console.log(`[${topic}] Merge: +${newSources.length} fonte(s) em "${match.title}"`)
+            }
+          } else {
+            console.log(`[${topic}] Ignorado (sem fontes novas): "${item.title}"`)
+          }
+        } else {
+          dedupedItems.push(item)
+        }
+      }
+
+      console.log(`[${topic}] Novos: ${dedupedItems.length} | Merges: ${newsItems.length - dedupedItems.length}`)
 
       if (dedupedItems.length > 0) {
         const { error: saveError } = await db.from('articles').upsert(
@@ -284,8 +315,10 @@ async function main() {
           console.error(`[${topic}] Save error:`, saveError.message)
         } else {
           totalSaved += dedupedItems.length
-          // 4. Alimenta allProcessedTitles com os novos títulos gerados nesta iteração
-          for (const item of dedupedItems) allProcessedTitles.push(item.title)
+          // Alimenta allProcessedArticles com os novos artigos desta iteração
+          for (const item of dedupedItems) {
+            allProcessedArticles.push({ id: item.id, title: item.title, sources: item.sources })
+          }
         }
       }
 
@@ -300,7 +333,7 @@ async function main() {
     }
   }
 
-  console.log(`\nDone! topics=${topics.length} generated=${totalGenerated} saved=${totalSaved}`)
+  console.log(`\nDone! topics=${topics.length} generated=${totalGenerated} saved=${totalSaved} merges=${totalMerged}`)
 }
 
 main().catch(err => { console.error(err); process.exit(1) })
