@@ -66,7 +66,7 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
               style={{
                 background: 'var(--color-bg-secondary)',
                 color: '#0f1419',
-                border: '1px solid #cfd9de',
+                border: '1px solid #E9E9E9',
                 borderRadius: '0.375rem',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
               }}
