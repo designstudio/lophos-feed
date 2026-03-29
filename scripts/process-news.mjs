@@ -87,7 +87,7 @@ async function callGroq(topic, results, existingTitles) {
 - Foque em anúncios oficiais, lançamentos, patches, revelações de elenco, trailers, resultados importantes, etc. Descarte guias, fóruns, wikis, apostas, quizzes e conteúdo irrelevante.
 - Use nomes, números e termos técnicos **exatamente** como aparecem nas fontes (não parafraseie).
 - Cruze informações de múltiplas fontes quando possível. Só inclua no sourceIndexes as fontes que realmente tratam do evento.
-- **Prevenção de Duplicidade:** Se o evento já consta em \`${existingContext}\`, ignore-o. Se não houver fatos novos ou noticiáveis, retorne apenas \`[]\`.
+- **Prevenção de Duplicidade ABSOLUTA:** Se o evento já consta em \`${existingContext}\`, ignore-o **mesmo que ele tenha sido publicado em uma categoria diferente** (ex: uma notícia de Harry Potter publicada em "movies" não deve ser republicada em "cultura" ou qualquer outro tópico). Se não houver fatos novos ou noticiáveis, retorne apenas \`[]\`.
 
 **Tom e estilo:**
 - Empolgado, mas neutro e profissional (estilo Discover).
@@ -225,6 +225,19 @@ async function main() {
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
   console.log(`Topics to process: ${topics.join(', ')}`)
 
+  // 1. Busca global de títulos das últimas 24h (todos os tópicos)
+  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  const { data: globalExisting } = await db
+    .from('articles')
+    .select('title')
+    .gte('published_at', since24h)
+    .order('published_at', { ascending: false })
+    .limit(100)
+
+  // 2. allProcessedTitles: atualizado em tempo real a cada tópico processado
+  const allProcessedTitles = (globalExisting || []).map(r => r.title)
+  console.log(`Títulos existentes (últimas 24h): ${allProcessedTitles.length}`)
+
   let totalGenerated = 0
   let totalSaved = 0
 
@@ -246,29 +259,33 @@ async function main() {
 
       if (!rawItems?.length) continue
 
-      // Get existing titles to avoid duplicates
-      const { data: existing } = await db
-        .from('articles')
-        .select('title')
-        .eq('topic', topic)
-        .order('published_at', { ascending: false })
-        .limit(20)
-
-      const existingTitles = (existing || []).map(r => r.title)
-
       console.log(`\n[${topic}] ${rawItems.length} items → Groq (${GROQ_MODEL})...`)
-      const newsItems = await processTopic(topic, rawItems, existingTitles)
-      console.log(`[${topic}] Generated ${newsItems.length} articles`)
+      // Passa allProcessedTitles para o Groq — inclui títulos de tópicos já processados nesta rodada
+      const newsItems = await processTopic(topic, rawItems, allProcessedTitles)
 
-      if (newsItems.length > 0) {
+      // 3. Verificação de similaridade local (≥ 85% = descarta)
+      const SIMILARITY_THRESHOLD = 0.85
+      const dedupedItems = newsItems.filter(item => {
+        const isDup = allProcessedTitles.some(
+          existing => textOverlapScore(item.title, existing) >= SIMILARITY_THRESHOLD
+        )
+        if (isDup) console.log(`[${topic}] Descartado por similaridade: "${item.title}"`)
+        return !isDup
+      })
+
+      console.log(`[${topic}] Generated ${dedupedItems.length} articles (${newsItems.length - dedupedItems.length} descartados por duplicidade)`)
+
+      if (dedupedItems.length > 0) {
         const { error: saveError } = await db.from('articles').upsert(
-          newsItems,
+          dedupedItems,
           { onConflict: 'id' }
         )
         if (saveError) {
           console.error(`[${topic}] Save error:`, saveError.message)
         } else {
-          totalSaved += newsItems.length
+          totalSaved += dedupedItems.length
+          // 4. Alimenta allProcessedTitles com os novos títulos gerados nesta iteração
+          for (const item of dedupedItems) allProcessedTitles.push(item.title)
         }
       }
 
@@ -277,7 +294,7 @@ async function main() {
         .eq('topic', topic)
         .eq('processed', false)
 
-      totalGenerated += newsItems.length
+      totalGenerated += dedupedItems.length
     } catch (err) {
       console.error(`[${topic}] Error:`, err.message)
     }
