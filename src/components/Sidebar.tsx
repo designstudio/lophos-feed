@@ -672,6 +672,14 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [mounted, setMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [userTopics, setUserTopics] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch('/api/topics')
+      .then(r => r.json())
+      .then(data => setUserTopics((data.topics || []).map((x: { topic: string }) => x.topic)))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     try {
