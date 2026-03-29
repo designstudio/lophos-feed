@@ -142,7 +142,7 @@ export default function FavoritesPage() {
           {!loading && likedItems.length > 0 && (
             <>
               {shownBlocks.map((block, i) => (
-                <FeedBlock key={i} items={block.items} blockIndex={i} reactions={reactions} onReactionChange={handleReactionChange} />
+                <FeedBlock key={block.items[0].id} items={block.items} blockIndex={i} reactions={reactions} onReactionChange={handleReactionChange} />
               ))}
               <div ref={sentinelRef}>
                 {hasMore && <SkeletonBlock />}

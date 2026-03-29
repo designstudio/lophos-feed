@@ -618,7 +618,7 @@ export default function FeedPage() {
               )}
 
               {shownBlocks.map((block, i) => (
-                <FeedBlock key={i} items={block.items} blockIndex={i} reactions={reactions} fadingOut={fadingOut} onReactionChange={handleReactionChange} />
+                <FeedBlock key={block.items[0].id} items={block.items} blockIndex={i} reactions={reactions} fadingOut={fadingOut} onReactionChange={handleReactionChange} />
               ))}
 
               {hasData && (
