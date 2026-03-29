@@ -18,7 +18,7 @@ const db = createClient(
 
 const GROQ_KEY = process.env.GROQ_API_KEY
 const GROQ_MODEL_PRIMARY = 'llama-3.3-70b-versatile'
-const GROQ_MODEL_FALLBACK = 'llama-3-8b-8192'
+const GROQ_MODEL_FALLBACK = 'llama-3.1-8b-instant'
 const BATCH_SIZE = 15       // max sources per Groq call
 const CONTENT_CHARS = 500   // chars per source — primeiro parágrafo completo
 const TPM_COOLDOWN_MS = 65_000 // 65s between calls — respects 12k TPM free tier
@@ -161,13 +161,13 @@ async function callGroqWithFallback(topic, results, existingTitles) {
     // Tenta primeiro com o modelo 70B
     return await callGroqApi(GROQ_MODEL_PRIMARY, topic, results, existingTitles)
   } catch (err) {
-    // Se receber erro 429 (Rate Limit), tenta com o modelo 8B
+    // Se receber erro 429 (Rate Limit), tenta com o modelo fallback
     if (err.status === 429) {
-      console.log(`[${topic}] Limite atingido no 70B, tentando fallback com 8B...`)
+      console.log(`[${topic}] Limite atingido no 70B, tentando fallback com llama-3.1-8b-instant...`)
       try {
         return await callGroqApi(GROQ_MODEL_FALLBACK, topic, results, existingTitles)
       } catch (fallbackErr) {
-        console.error(`[${topic}] Fallback com 8B também falhou:`, fallbackErr.message || fallbackErr)
+        console.error(`[${topic}] Fallback com ${GROQ_MODEL_FALLBACK} também falhou:`, fallbackErr.message || fallbackErr)
         return []
       }
     }
