@@ -17,7 +17,8 @@ const db = createClient(
 )
 
 const GROQ_KEY = process.env.GROQ_API_KEY
-const GROQ_MODEL = 'llama-3.3-70b-versatile'
+const GROQ_MODEL_PRIMARY = 'llama-3.3-70b-versatile'
+const GROQ_MODEL_FALLBACK = 'llama-3-8b-8192'
 const BATCH_SIZE = 15       // max sources per Groq call
 const CONTENT_CHARS = 500   // chars per source — primeiro parágrafo completo
 const TPM_COOLDOWN_MS = 65_000 // 65s between calls — respects 12k TPM free tier
@@ -62,7 +63,7 @@ function getSourceHint(topic) {
   return 'Reuters, AP, BBC, The Guardian'
 }
 
-async function callGroq(topic, results, existingTitles) {
+async function callGroqApi(model, topic, results, existingTitles) {
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const context = results.map((r, i) =>
     `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`
@@ -130,7 +131,7 @@ ${context}`
       'Authorization': `Bearer ${GROQ_KEY}`,
     },
     body: JSON.stringify({
-      model: GROQ_MODEL,
+      model,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.1,
       max_tokens: 2000,
@@ -138,8 +139,9 @@ ${context}`
   })
 
   if (!res.ok) {
+    const status = res.status
     const err = await res.text()
-    throw new Error(`Groq error ${res.status}: ${err.slice(0, 200)}`)
+    throw { status, message: `Groq error ${status}: ${err.slice(0, 200)}` }
   }
 
   const data = await res.json()
@@ -154,6 +156,27 @@ ${context}`
   }
 }
 
+async function callGroqWithFallback(topic, results, existingTitles) {
+  try {
+    // Tenta primeiro com o modelo 70B
+    return await callGroqApi(GROQ_MODEL_PRIMARY, topic, results, existingTitles)
+  } catch (err) {
+    // Se receber erro 429 (Rate Limit), tenta com o modelo 8B
+    if (err.status === 429) {
+      console.log(`[${topic}] Limite atingido no 70B, tentando fallback com 8B...`)
+      try {
+        return await callGroqApi(GROQ_MODEL_FALLBACK, topic, results, existingTitles)
+      } catch (fallbackErr) {
+        console.error(`[${topic}] Fallback com 8B também falhou:`, fallbackErr.message || fallbackErr)
+        return []
+      }
+    }
+    // Outros erros: apenas loga e retorna array vazio
+    console.error(`[${topic}] Erro ao processar:`, err.message || err)
+    return []
+  }
+}
+
 async function processTopic(topic, rawItems, existingTitles) {
   const results = rawItems.map(item => ({
     url: item.url,
@@ -162,7 +185,7 @@ async function processTopic(topic, rawItems, existingTitles) {
     image: item.image_url,
   }))
 
-  const parsed = await callGroq(topic, results, existingTitles)
+  const parsed = await callGroqWithFallback(topic, results, existingTitles)
   const now = new Date().toISOString()
   const newsItems = []
 
@@ -265,7 +288,7 @@ async function main() {
 
       if (!rawItems?.length) continue
 
-      console.log(`\n[${topic}] ${rawItems.length} items → Groq (${GROQ_MODEL})...`)
+      console.log(`\n[${topic}] ${rawItems.length} items → Groq (${GROQ_MODEL_PRIMARY})...`)
       const newsItems = await processTopic(topic, rawItems, allProcessedArticles.map(a => a.title))
 
       const dedupedItems = []
