@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -7,17 +7,33 @@ interface TooltipProps {
   content: string
   side?: 'top' | 'right' | 'bottom' | 'left'
   children: React.ReactNode
-  /** Sobrescreve a classe do wrapper. Padrão: inline-flex relative. */
+  /** Sobrescreve a classe do wrapper. Padrão: relative inline-flex. */
   className?: string
   /** Desativa o tooltip (renderiza apenas os children sem wrapper). */
   disabled?: boolean
 }
 
-const SIDE_CONFIG = {
-  top:    { pos: 'bottom-full left-1/2 -translate-x-1/2 mb-2',  initial: { opacity: 0, y:  4, x: '-50%' }, animate: { opacity: 1, y:  0, x: '-50%' } },
-  right:  { pos: 'left-full top-1/2 -translate-y-1/2 ml-2',     initial: { opacity: 0, x: -6, y: '-50%' }, animate: { opacity: 1, x:  0, y: '-50%' } },
-  bottom: { pos: 'top-full left-1/2 -translate-x-1/2 mt-2',     initial: { opacity: 0, y: -4, x: '-50%' }, animate: { opacity: 1, y:  0, x: '-50%' } },
-  left:   { pos: 'right-full top-1/2 -translate-y-1/2 mr-2',    initial: { opacity: 0, x:  6, y: '-50%' }, animate: { opacity: 1, x:  0, y: '-50%' } },
+// Posicionamento via style inline para não conflitar com os transforms do Framer Motion
+const SIDE_STYLE: Record<string, React.CSSProperties> = {
+  top:    { position: 'absolute', bottom: '100%', left: '50%', marginBottom: '8px' },
+  right:  { position: 'absolute', left: '100%',  top: '50%',  marginLeft:   '8px' },
+  bottom: { position: 'absolute', top: '100%',   left: '50%', marginTop:    '8px' },
+  left:   { position: 'absolute', right: '100%', top: '50%',  marginRight:  '8px' },
+}
+
+// Slide de 2px na direção correta — Framer Motion só cuida de opacity + translate
+const SIDE_INITIAL: Record<string, object> = {
+  top:    { opacity: 0, x: '-50%', y: 4  },
+  right:  { opacity: 0, x: -6,    y: '-50%' },
+  bottom: { opacity: 0, x: '-50%', y: -4 },
+  left:   { opacity: 0, x: 6,     y: '-50%' },
+}
+
+const SIDE_ANIMATE: Record<string, object> = {
+  top:    { opacity: 1, x: '-50%', y: 0 },
+  right:  { opacity: 1, x: 0,     y: '-50%' },
+  bottom: { opacity: 1, x: '-50%', y: 0 },
+  left:   { opacity: 1, x: 0,     y: '-50%' },
 }
 
 export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
@@ -25,8 +41,6 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
 
   // Sem tooltip: renderiza children diretamente (sem wrapper no DOM)
   if (disabled || !content) return <>{children}</>
-
-  const cfg = SIDE_CONFIG[side]
 
   return (
     <div
@@ -39,13 +53,14 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
       <AnimatePresence>
         {visible && (
           <motion.div
-            initial={cfg.initial}
-            animate={cfg.animate}
-            exit={cfg.initial}
+            style={SIDE_STYLE[side]}
+            initial={SIDE_INITIAL[side]}
+            animate={SIDE_ANIMATE[side]}
+            exit={SIDE_INITIAL[side]}
             transition={{ duration: 0.12, ease: 'easeOut' }}
-            className={cn('absolute z-[9999] pointer-events-none', cfg.pos)}
+            className="z-[9999] pointer-events-none"
           >
-            {/* Estilo Grok — fundo claro mesmo no dark mode */}
+            {/* Estilo Grok — fundo claro fixo mesmo no dark mode */}
             <span
               className="block px-2.5 py-1.5 rounded-lg text-[12px] font-semibold leading-none whitespace-nowrap"
               style={{
