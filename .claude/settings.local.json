@@ -37,7 +37,19 @@
       "Bash(pip install:*)",
       "Bash(find C:/Users/henri/Downloads/lophos_feed/src -name *modal* -o -name *dialog* -o -name *settings*)",
       "Bash(npm list:*)",
-      "Bash(find /c/Users/henri/Downloads/lophos_feed/node_modules/@solar-icons/react-perf -name *.d.ts)"
+      "Bash(find /c/Users/henri/Downloads/lophos_feed/node_modules/@solar-icons/react-perf -name *.d.ts)",
+      "Bash(gh workflow:*)",
+      "Bash(gh run:*)",
+      "Bash(find C:UsershenriDownloadslophos_feed -type f \\\\\\(-name *.sql -o -name *schema* -o -name *migration* \\\\\\))",
+      "Bash(node -e \"const p = require.resolve\\(''''@solar-icons/react-perf/Bold''''\\); console.log\\(p\\)\")",
+      "Bash(find C:UsershenriDownloadslophos_feednode_modules@solar-iconsreact-perfdistcjsicons -name *islike* -o -name *Dislike*)",
+      "Bash(node -c \"C:\\\\Users\\\\henri\\\\Downloads\\\\lophos_feed\\\\src\\\\components\\\\Sidebar.tsx\")",
+      "Bash(grep -l \"<>\" \"C:\\\\Users\\\\henri\\\\Downloads\\\\lophos_feed\\\\src\\\\components\"/*.tsx)",
+      "Bash(while read:*)",
+      "Bash(do if:*)",
+      "Bash(then echo:*)",
+      "Bash(fi)",
+      "Bash(done)"
     ]
   }
 }

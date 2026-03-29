@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, TargetAndTransition } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 interface TooltipProps {
@@ -22,14 +22,14 @@ const SIDE_STYLE: Record<string, React.CSSProperties> = {
 }
 
 // Slide de 2px na direção correta — Framer Motion só cuida de opacity + translate
-const SIDE_INITIAL: Record<string, object> = {
+const SIDE_INITIAL: Record<string, TargetAndTransition> = {
   top:    { opacity: 0, x: '-50%', y: 4  },
   right:  { opacity: 0, x: -6,    y: '-50%' },
   bottom: { opacity: 0, x: '-50%', y: -4 },
   left:   { opacity: 0, x: 6,     y: '-50%' },
 }
 
-const SIDE_ANIMATE: Record<string, object> = {
+const SIDE_ANIMATE: Record<string, TargetAndTransition> = {
   top:    { opacity: 1, x: '-50%', y: 0 },
   right:  { opacity: 1, x: 0,     y: '-50%' },
   bottom: { opacity: 1, x: '-50%', y: 0 },
