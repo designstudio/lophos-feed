@@ -18,7 +18,9 @@ const db = createClient(
 
 const GROQ_KEY = process.env.GROQ_API_KEY
 const GROQ_MODEL = 'llama-3.3-70b-versatile'
-const BATCH_SIZE = 40 // max sources per Groq call
+const BATCH_SIZE = 15       // max sources per Groq call
+const CONTENT_CHARS = 500   // chars per source — primeiro parágrafo completo
+const TPM_COOLDOWN_MS = 65_000 // 65s between calls — respects 12k TPM free tier
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 function isLazyLoadImage(url) {
@@ -63,7 +65,7 @@ function getSourceHint(topic) {
 async function callGroq(topic, results, existingTitles) {
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const context = results.map((r, i) =>
-    `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
+    `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`
   ).join('\n\n')
 
   const existingContext = existingTitles.length > 0
@@ -130,6 +132,7 @@ ${context}`
       model: GROQ_MODEL,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.1,
+      max_tokens: 2000,
     }),
   })
 
@@ -225,7 +228,12 @@ async function main() {
   let totalGenerated = 0
   let totalSaved = 0
 
-  for (const topic of topics) {
+  for (let ti = 0; ti < topics.length; ti++) {
+    const topic = topics[ti]
+    if (ti > 0) {
+      console.log(`\nAguardando ${TPM_COOLDOWN_MS / 1000}s para respeitar o rate limit do Groq...`)
+      await new Promise(r => setTimeout(r, TPM_COOLDOWN_MS))
+    }
     try {
       // Fetch unprocessed items for this topic
       const { data: rawItems } = await db
