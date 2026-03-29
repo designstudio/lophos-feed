@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
 import { Settings, CloseCircle, UserRounded } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
@@ -56,6 +56,54 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [excludedCustom, setExcludedCustom] = useState('')
   const [savingExcluded, setSavingExcluded] = useState(false)
   const [excludedSaved, setExcludedSaved] = useState(false)
+
+  // Carrega tópicos excluídos
+  useEffect(() => {
+    fetch('/api/topics/excluded')
+      .then(r => r.json())
+      .then(data => setExcludedTopics(data.excludedTopics ?? []))
+      .catch(() => {})
+  }, [])
+
+  // Carrega tópicos de interesse e sugestões
+  useEffect(() => {
+    fetch('/api/topics')
+      .then(r => r.json())
+      .then(data => {
+        const t = (data.topics || []).map((x: any) => x.topic)
+        setTopics(t)
+        return t
+      })
+      .then(t => {
+        // Verifica cache localStorage — válido por 7 dias
+        try {
+          const cached = localStorage.getItem('lophos_suggestions')
+          if (cached) {
+            const { suggestions: s, fetchedAt } = JSON.parse(cached)
+            const sevenDays = 7 * 24 * 60 * 60 * 1000
+            if (Date.now() - fetchedAt < sevenDays && s?.length > 0) {
+              setSuggestions(s)
+              return
+            }
+          }
+        } catch {}
+        // Busca sugestões frescas
+        fetch('/api/suggestions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topics: t }),
+        })
+          .then(r => r.json())
+          .then(d => {
+            const s = d.suggestions || []
+            setSuggestions(s)
+            try {
+              localStorage.setItem('lophos_suggestions', JSON.stringify({ suggestions: s, fetchedAt: Date.now() }))
+            } catch {}
+          })
+      })
+      .catch(() => {})
+  }, [])
 
   const handleTheme = (t: string) => { setTheme(t); applyTheme(t) }
   const handleAccent = (c: string) => { setAccentColor(c); applyAccent(c) }
@@ -177,16 +225,17 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-ink-tertiary mb-4">Escolha como o Lophos aparece para você.</p>
                   <div className="grid grid-cols-3 gap-3">
                     {([
-                      { id: 'light',  label: 'Claro' },
-                      { id: 'dark',   label: 'Escuro' },
-                      { id: 'system', label: 'Sistema' },
-                    ] as { id: string; label: string }[]).map(t => (
+                      { id: 'light',  label: 'Claro', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                      { id: 'dark',   label: 'Escuro', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><circle cx="19" cy="3" r="1" fill="currentColor"/><circle cx="22" cy="6" r="0.8" fill="currentColor"/><circle cx="17" cy="5.5" r="0.8" fill="currentColor"/></svg> },
+                      { id: 'system', label: 'Sistema', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 21h8M12 17v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                    ] as { id: string; label: string; icon: React.ReactNode }[]).map(t => (
                       <button key={t.id} onClick={() => handleTheme(t.id)}
                         className={cn(
                           'flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all',
                           theme === t.id ? 'text-ink-primary' : 'border-border text-ink-tertiary hover:text-ink-secondary'
                         )}
                         style={theme === t.id ? { borderColor: 'var(--color-ui-strong)', backgroundColor: 'var(--color-bg-tertiary)' } : {}}>
+                        {t.icon}
                         {t.label}
                       </button>
                     ))}
