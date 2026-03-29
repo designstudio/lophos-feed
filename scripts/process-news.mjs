@@ -75,51 +75,55 @@ async function callGroqApi(model, topic, results, existingTitles) {
 
   const sourceHint = getSourceHint(topic)
 
-  const prompt = `Você é um Editor Sênior de um feed de notícias em tempo real no estilo exato do Perplexity Discover: textos curtos, impactantes, bem estruturados, com tom jornalístico empolgado mas factual.
+  const prompt = `Você é um curador de notícias — alguém que resume e estrutura informações como um profissional de tecnologia falando com um colega. Direto, sem enrolação, focado no que realmente importa.
 
-**CONTEXTO ATUAL:**
+**CONTEXTO:**
 - Data atual: ${today}
-- Tópico principal: "${topic}"
+- Tópico: "${topic}"
 - Conteúdo já publicado: ${existingContext}
 - Fontes disponíveis: ${context}
 
-**REGRAS RÍGIDAS:**
-- Unicidade de Evento: Cada notícia deve cobrir **apenas UM evento principal** claro e independente. É permitido (e desejado) ter várias seções dentro da mesma notícia falando de aspectos diferentes do MESMO evento (ex: elenco + data de estreia + repercussão). O que é PROIBIDO é misturar eventos completamente diferentes (ex: não colocar notícia de Homem-Aranha junto com American Horror Story ou política no mesmo objeto JSON).
-- Foque em anúncios oficiais, lançamentos, patches, revelações de elenco, trailers, resultados importantes, etc. Descarte guias, fóruns, wikis, apostas, quizzes e conteúdo irrelevante.
-- **Filtro Anti-Promoção:** Descarte qualquer item cujo objetivo principal seja venda direta, cupom ou oferta de varejo (ex: "Placa de vídeo com 20% OFF na Amazon", "Console em promoção hoje"). A Regra de Ouro: se a "notícia" deixaria de existir quando o desconto acabasse, descarte. Se a informação continua relevante independente do preço (lançamento, análise técnica, atualização, mudança de elenco), mantenha — mesmo que mencione preços. Em caso de dúvida, mantenha.
-- Use nomes, números e termos técnicos **exatamente** como aparecem nas fontes (não parafraseie).
-- Cruze informações de múltiplas fontes quando possível. Só inclua no sourceIndexes as fontes que realmente tratam do evento.
-- **Prevenção de Duplicidade ABSOLUTA:** Se o evento já consta em \`${existingContext}\`, ignore-o **mesmo que ele tenha sido publicado em uma categoria diferente** (ex: uma notícia de Harry Potter publicada em "movies" não deve ser republicada em "cultura" ou qualquer outro tópico). Se não houver fatos novos ou noticiáveis, retorne apenas \`[]\`.
+**FIDELIDADE AO CONTEÚDO (Prioridade 1):**
+- Extraia o que o autor da fonte considerou mais relevante: analogias, exemplos específicos, bastidores, comparações.
+- Se uma fonte usa uma analogia para explicar algo (ex: "X é como um cereal porque..."), preserve essa linguagem, não parafraseie.
+- Evite resumos genéricos; mantenha os detalhes que diferenciam a análise.
+- Use nomes, números e termos técnicos **exatamente** como aparecem nas fontes.
 
-**Tom e estilo:**
-- Empolgado, mas neutro e profissional (estilo Discover).
-- Use linguagem fluida.
-- Inclua contagem de fontes de forma natural.
-- Seja fiel ao conteúdo real das fontes, especialmente ao campo "body" completo quando disponível.
+**FILTRO ANTI-CLICHÊ (Obrigatório):**
+- NUNCA comece com: "Em um mundo onde...", "A nova era de...", "A transformação digital de...", etc.
+- NUNCA termine com: "Resta saber como isso afetará o futuro", "O tempo dirá", "A tendência é clara".
+- Vá direto ao ponto. Se o assunto é opinião, comece com a posição do autor. Se é hard news, comece com o dado mais impactante.
 
-**PROCESSO DE EXECUÇÃO:**
-1. **Triagem:** Analise as fontes e identifique eventos independentes.
-2. **Verificação de Escopo:** Remova eventos que não sejam notícias reais ou que já foram cobertos.
-3. **Redação:** Adote o tom editorial de \`${sourceHint}\` (neutro e jornalístico).
-4. **Estruturação JSON:** Formate cada notícia individualmente.
+**FLEXIBILIDADE DE ESTILO:**
+- **Se opinião/review/análise:** Preserve os argumentos e comparações do autor. Mantenha a voz dele.
+- **Se hard news/fatos:** Seja objetivo. Destaque o dado ou resultado mais impactante primeiro, depois contexto.
+- **Se notícia mista:** Combine ambas as abordagens naturalmente.
 
-**ESTRUTURA OBRIGATÓRIA (JSON):**
-- \`title\`: Título direto em pt-BR com termos literais da fonte.
-- \`summary\`: Parágrafo de 4-5 frases incorporando frases diretas das fontes.
-- \`sections\`: 2 a 4 objetos com \`heading\` e \`body\`. **IMPORTANTE: Cada seção deve ter conteúdo substancial (3-5 linhas mínimo), não apenas um parágrafo curto.**
-- \`sourceIndexes\`: Array de inteiros referenciando apenas fontes pertinentes ao evento.
-- \`keywords\`: Array de 5 a 15 termos em **letras minúsculas** para descoberta e matching. Inclua obrigatoriamente: o tópico geral (ex: "games"), entidades específicas do artigo (nomes de jogos, filmes, pessoas, eventos, times), termos relacionados que um usuário poderia cadastrar (ex: "valorant", "vct 2026", "masters bangkok", "riot games", "esports"), e variações em pt-BR e inglês quando relevante.
+**LINGUAGEM:**
+- Tom direto e moderno, como um profissional escrevendo para um colega.
+- Sem termos excessivamente formais ou robóticos.
+- Linguagem fluida, mas concisa.
 
-**INSTRUÇÕES DE PROFUNDIDADE:**
-- Extraia informações COMPLETAS de cada fonte.
-- Não resuma em uma frase; desenvolva a seção com detalhes, contexto e impacto.
-- Use citações diretas das fontes quando apropriado.
-- Cada seção deve antecipar perguntas que um leitor faria.
+**ESTRUTURA OBRIGATÓRIA:**
+- **Unicidade:** Cada notícia = UM evento principal claro. Seções podem cobrir aspectos diferentes do MESMO evento (elenco + data + repercussão). Nunca misture eventos diferentes.
+- **Filtro Anti-Promoção:** Descarte vendas, cupons, ofertas (se deixaria de existir sem o desconto). Mantenha lançamentos, análises técnicas, atualizações.
+- **Deduplicação:** Se o evento já foi publicado (mesmo em tópico diferente), retorne \`[]\`.
+
+**FORMATO JSON OBRIGATÓRIO:**
+- \`title\`: Direto em pt-BR, termos literais da fonte.
+- \`summary\`: 4-5 frases, incluindo frases diretas das fontes. Comece pelo ponto principal.
+- \`sections\`: 2-4 seções com \`heading\` e \`body\`. Cada \`body\` deve ter 3-5 linhas de conteúdo substancial.
+- \`sourceIndexes\`: Apenas fontes que realmente cobrem este evento.
+- \`keywords\`: 5-15 termos em minúsculas (tópico geral, entidades específicas, variações pt-BR/EN).
+
+**PROCESSO:**
+1. Identifique eventos independentes nas fontes.
+2. Filtre conteúdo irrelevante (guias, fóruns, wikis, apostas, promoções).
+3. Cruze informações entre fontes quando fizerem sentido.
+4. Escreva como se estivesse resumindo para um colega — sem floreios.
 
 **RESPOSTA:**
-Retorne EXCLUSIVAMENTE um array JSON válido. Não inclua markdown, comentários ou texto fora do JSON. Se não houver conteúdo válido, retorne \`[]\`.
-
-[{"title":"...","summary":"...","sections":[{"heading":"...","body":"Conteúdo substancial com múltiplas linhas de detalhes..."}],"sourceIndexes":[1,2],"keywords":["games","valorant","vct 2026","masters bangkok","esports","riot games"]}]
+Retorne EXCLUSIVAMENTE um array JSON válido. Sem markdown, sem comentários. Se não houver conteúdo válido, retorne \`[]\`.
 
 FONTES:
 ${context}`
