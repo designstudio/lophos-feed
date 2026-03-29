@@ -62,11 +62,12 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
           >
             {/* Estilo Grok — fundo claro fixo mesmo no dark mode */}
             <span
-              className="block px-2.5 py-1.5 rounded-lg text-[12px] font-semibold leading-none whitespace-nowrap"
+              className="block px-2.5 py-1.5 text-[12px] font-semibold leading-none whitespace-nowrap"
               style={{
-                background: '#f0f7ff',
+                background: 'var(--color-bg-secondary)',
                 color: '#0f1419',
                 border: '1px solid #cfd9de',
+                borderRadius: '0.375rem',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
               }}
             >
