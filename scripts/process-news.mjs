@@ -105,6 +105,13 @@ async function processTopicWithGemini(topic, results, existingTitles) {
    - sourceIndexes: [1,2,5] apenas as fontes que cobrem ESTE evento
    - keywords: 5-15 termos em minúsculas
 
+6. **Diferenciação de Conteúdo**:
+   - Hard news (fatos, dados, eventos reais): artigo factual isolado
+   - Opinião/Análise/Retrospectiva: seção separada OU artigo distinto
+   - NUNCA misture análise histórica de uma marca com bilheteria de outro filme
+   - SOMENTE mescle conteúdos diferentes se forem do MESMO evento factual
+   - Se houver dúvida, errar para o lado de gerar artigos separados
+
 **CONTEXTO:**
 - Data: ${today}
 - Tópico: "${topic}"
