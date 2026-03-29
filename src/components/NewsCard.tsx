@@ -74,7 +74,7 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('like') }}
             whileTap={{ scale: 0.85 }}
             className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
-              reaction === 'like' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
+              reaction === 'like' ? 'bg-red-50 dark:bg-red-950 text-red-500 dark:text-red-400' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
             )}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
@@ -98,7 +98,7 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
             whileTap={{ scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
-              reaction === 'dislike' ? 'bg-zinc-100 text-zinc-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
+              reaction === 'dislike' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
             )}>
             <AnimatePresence mode="wait" initial={false}>
               <motion.span

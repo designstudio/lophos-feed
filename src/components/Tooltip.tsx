@@ -38,6 +38,18 @@ const SIDE_ANIMATE: Record<string, TargetAndTransition> = {
 
 export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
   const [visible, setVisible] = useState(false)
+  const [isDark, setIsDark] = useState(false)
+
+  // Detecta dark mode ao montar
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDark(document.documentElement.classList.contains('dark'))
+    }
+    checkDarkMode()
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, { attributes: true })
+    return () => observer.disconnect()
+  }, [])
 
   // Sem tooltip: renderiza children diretamente (sem wrapper no DOM)
   if (disabled || !content) return <>{children}</>
@@ -60,10 +72,15 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
             transition={{ duration: 0.12, ease: 'easeOut' }}
             className="z-[9999] pointer-events-none"
           >
-            {/* Estilo Grok — fundo claro fixo mesmo no dark mode */}
             <span
               className="block px-2.5 py-1.5 text-[12px] font-semibold leading-none whitespace-nowrap"
-              style={{
+              style={isDark ? {
+                background: '#2a2a2a',
+                color: '#f2f2f2',
+                border: '1px solid #404040',
+                borderRadius: '0.375rem',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.30)',
+              } : {
                 background: 'var(--color-bg-secondary)',
                 color: '#0f1419',
                 border: '1px solid #E9E9E9',
@@ -78,4 +95,8 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
       </AnimatePresence>
     </div>
   )
+}
+
+function useEffect(effect: () => void | (() => void), deps?: React.DependencyList): void {
+  React.useEffect(effect, deps)
 }
