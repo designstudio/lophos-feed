@@ -225,20 +225,22 @@ async function main() {
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
   console.log(`Topics to process: ${topics.join(', ')}`)
 
-  // 1. Busca global de títulos + ids + sources das últimas 24h (todos os tópicos)
+  // 1. Busca global de títulos + ids + sources + keywords + matched_topics das últimas 24h
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
-    .select('id, title, sources')
+    .select('id, title, sources, keywords, matched_topics')
     .gte('published_at', since24h)
     .order('published_at', { ascending: false })
     .limit(100)
 
-  // allProcessedArticles: {id, title, sources} — atualizado em tempo real a cada tópico
+  // allProcessedArticles: cache local atualizado em tempo real a cada tópico processado
   const allProcessedArticles = (globalExisting || []).map(r => ({
     id: r.id,
     title: r.title,
     sources: r.sources || [],
+    keywords: r.keywords || [],
+    matched_topics: r.matched_topics || [],
   }))
   console.log(`Artigos existentes (últimas 24h): ${allProcessedArticles.length}`)
 
@@ -250,10 +252,6 @@ async function main() {
 
   for (let ti = 0; ti < topics.length; ti++) {
     const topic = topics[ti]
-    if (ti > 0) {
-      console.log(`\nAguardando ${TPM_COOLDOWN_MS / 1000}s para respeitar o rate limit do Groq...`)
-      await new Promise(r => setTimeout(r, TPM_COOLDOWN_MS))
-    }
     try {
       // Fetch unprocessed items for this topic
       const { data: rawItems } = await db
@@ -282,22 +280,36 @@ async function main() {
           const existingUrls = new Set((match.sources || []).map(s => s.url))
           const newSources = item.sources.filter(s => !existingUrls.has(s.url))
 
-          if (newSources.length > 0) {
+          // Merge de keywords e matched_topics via Set (sem repetição)
+          const mergedKeywords = [...new Set([...match.keywords, ...(item.keywords || [])])]
+          const mergedMatchedTopics = [...new Set([...match.matched_topics, ...(item.matched_topics || [])])]
+
+          const keywordsChanged = mergedKeywords.length > match.keywords.length
+          const topicsChanged = mergedMatchedTopics.length > match.matched_topics.length
+
+          if (newSources.length > 0 || keywordsChanged || topicsChanged) {
             const mergedSources = [...match.sources, ...newSources]
             const { error: mergeError } = await db
               .from('articles')
-              .update({ sources: mergedSources })
+              .update({
+                sources: mergedSources,
+                keywords: mergedKeywords,
+                matched_topics: mergedMatchedTopics,
+              })
               .eq('id', match.id)
 
             if (mergeError) {
               console.error(`[${topic}] Merge error em "${match.title}":`, mergeError.message)
             } else {
-              match.sources = mergedSources // atualiza cache local
+              // Atualiza cache local
+              match.sources = mergedSources
+              match.keywords = mergedKeywords
+              match.matched_topics = mergedMatchedTopics
               totalMerged++
-              console.log(`[${topic}] Merge: +${newSources.length} fonte(s) em "${match.title}"`)
+              console.log(`[${topic}] Merge em "${match.title}": +${newSources.length} fonte(s), +${mergedKeywords.length - (match.keywords.length - (mergedKeywords.length - match.keywords.length))} keyword(s)`)
             }
           } else {
-            console.log(`[${topic}] Ignorado (sem fontes novas): "${item.title}"`)
+            console.log(`[${topic}] Ignorado (sem dados novos): "${item.title}"`)
           }
         } else {
           dedupedItems.push(item)
@@ -315,9 +327,15 @@ async function main() {
           console.error(`[${topic}] Save error:`, saveError.message)
         } else {
           totalSaved += dedupedItems.length
-          // Alimenta allProcessedArticles com os novos artigos desta iteração
+          // Alimenta o cache com os novos artigos desta iteração
           for (const item of dedupedItems) {
-            allProcessedArticles.push({ id: item.id, title: item.title, sources: item.sources })
+            allProcessedArticles.push({
+              id: item.id,
+              title: item.title,
+              sources: item.sources,
+              keywords: item.keywords || [],
+              matched_topics: item.matched_topics || [],
+            })
           }
         }
       }
@@ -328,6 +346,12 @@ async function main() {
         .eq('processed', false)
 
       totalGenerated += dedupedItems.length
+
+      // Delay apenas se houver um próximo tópico (economiza minutos do Actions no último)
+      if (ti < topics.length - 1) {
+        console.log(`\nAguardando ${TPM_COOLDOWN_MS / 1000}s para respeitar o rate limit do Groq...`)
+        await new Promise(r => setTimeout(r, TPM_COOLDOWN_MS))
+      }
     } catch (err) {
       console.error(`[${topic}] Error:`, err.message)
     }
