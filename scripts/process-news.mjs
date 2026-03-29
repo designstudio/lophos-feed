@@ -20,8 +20,9 @@ const GROQ_KEY = process.env.GROQ_API_KEY
 const GROQ_MODEL_PRIMARY = 'llama-3.3-70b-versatile'
 const GROQ_MODEL_FALLBACK = 'llama-3.1-8b-instant'
 const BATCH_SIZE = 15       // max sources per Groq call
-const CONTENT_CHARS = 3000  // chars per source — full article context for real curation
+const CONTENT_CHARS = 2000  // chars per source — sweet spot: enough context without API bloat
 const TPM_COOLDOWN_MS = 65_000 // 65s between calls — respects 12k TPM free tier
+const MINIBATCH_DELAY_MS = 5_000 // 5s delay between mini-batches to prevent API strain
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 function isLazyLoadImage(url) {
@@ -111,6 +112,10 @@ Se não for um fato ou opinião explícita da fonte, delete.
 **ESTRUTURA JSON:**
 - \`title\`: Direto, usando termos literais da fonte em pt-BR.
 - \`summary\`: Um parágrafo denso (2-4 frases). Proibido introduções genéricas. Vá direto ao ponto principal.
+  **⚠️ OBRIGATÓRIO:** Se a fonte menciona números (datas, valores, placares, estatísticas), mudanças técnicas (patch notes, features, algoritmos), ou citações (de fãs, experts, desenvolvedores), esses dados DEVEM estar no resumo. Um resumo sem dados específicos é considerado uma falha.
+  **⚠️ NÃO FAÇA:** Resumos de uma única frase. Isso é insuficiente.
+  Exemplo RUIM: "Os fãs estão felizes com a mudança."
+  Exemplo BOM: "Os desenvolvedores aumentaram o dano do personagem em 15% (de 20 para 23 por hit), uma mudança que os fãs pediam há meses."
 - \`sections\`: 1 a 3 seções (apenas o necessário). Não invente texto para preencher espaço. Qualidade sobre quantidade.
 - \`sourceIndexes\`: Apenas fontes que realmente cobrem este evento.
 - \`keywords\`: 5-15 termos específicos em minúsculas.
@@ -124,7 +129,15 @@ Se não for um fato ou opinião explícita da fonte, delete.
 **RESPOSTA:**
 Retorne EXCLUSIVAMENTE um array JSON válido. Sem markdown, sem comentários. Se não houver conteúdo válido, retorne \`[]\`.
 
-Agora você tem 3000 caracteres de contexto. Não use clichês para preencher o vazio. Use o conteúdo real para contar a história.
+**⚠️ VERIFICAÇÃO FINAL ANTES DE RETORNAR:**
+1. Cada resumo contém dados específicos (números, mudanças técnicas, citações)?
+2. Nenhum resumo é uma única frase genérica?
+3. Se a fonte menciona: "Patch 2.5 aumenta dano em 15%", isso está no seu resumo (não "a comunidade gostou")?
+4. Se a fonte menciona citação de usuário/expert, reproduza ou parafraseie fielmente (não summarize como "as pessoas concordam")?
+
+Se a resposta for NÃO para alguma pergunta, revise. Um resumo sem dados específicos é uma falha.
+
+Você tem 2000 caracteres de contexto real. Use cada um deles. Não use clichês para preencher o vazio.
 
 FONTES:
 ${context}`
@@ -295,6 +308,9 @@ async function main() {
 
       console.log(`\n[${topic}] ${rawItems.length} items → Groq (${GROQ_MODEL_PRIMARY})...`)
       const newsItems = await processTopic(topic, rawItems, allProcessedArticles.map(a => a.title))
+
+      // Small delay between API calls to prevent strain
+      await new Promise(r => setTimeout(r, MINIBATCH_DELAY_MS))
 
       const dedupedItems = []
 
