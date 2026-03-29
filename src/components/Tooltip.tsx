@@ -40,8 +40,13 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
   const [visible, setVisible] = useState(false)
   const [isDark, setIsDark] = useState(false)
 
+  // Reseta tooltip quando disabled muda
+  React.useEffect(() => {
+    setVisible(false)
+  }, [disabled])
+
   // Detecta dark mode ao montar
-  useEffect(() => {
+  React.useEffect(() => {
     const checkDarkMode = () => {
       setIsDark(document.documentElement.classList.contains('dark'))
     }
@@ -95,8 +100,4 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
       </AnimatePresence>
     </div>
   )
-}
-
-function useEffect(effect: () => void | (() => void), deps?: React.DependencyList): void {
-  React.useEffect(effect, deps)
 }
