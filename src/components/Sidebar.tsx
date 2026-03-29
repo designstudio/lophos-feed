@@ -134,7 +134,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           </span>
 
           {!collapsed && (
-            <Tooltip content="Recolher menu" side="top">
+            <Tooltip content="Recolher menu" side="right">
               <button
                 onClick={toggle}
                 className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0 ml-auto"
