@@ -163,7 +163,10 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
       <Link href={href} className={cn('news-card group flex flex-col pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
         <CardImage proxiedImage={showImage ? proxiedImage : undefined} title={item.title} sources={item.sources} onError={() => setImgFailed(true)} />
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.displayTopic ?? item.topic}</span>
-        <h2 className="text-card-title text-ink-primary group-hover:text-accent transition-colors">{item.title}</h2>
+        <h2
+          className="text-card-title text-ink-primary group-hover:text-accent transition-colors line-clamp-3"
+          style={{ height: 'calc(3 * 1.625rem)' }}
+        >{item.title}</h2>
         <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
       </Link>
     )
