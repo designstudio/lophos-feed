@@ -19,7 +19,10 @@ const db = createClient(
 )
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+const model = genAI.getGenerativeModel({
+  model: 'gemini-3-flash-preview',
+  apiVersion: 'v1'
+})
 
 const BATCH_SIZE = 15          // max sources per Gemini call
 const CONTENT_CHARS = 4000     // chars per source — BRUTAL CONTEXT
