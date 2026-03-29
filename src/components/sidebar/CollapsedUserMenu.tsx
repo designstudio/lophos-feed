@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
 import { Settings, Logout } from '@solar-icons/react-perf/Linear'
+import { Tooltip } from '@/components/Tooltip'
 import { FixedDropdown } from './FixedDropdown'
 
 export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
@@ -22,22 +23,23 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
 
   return (
     <div ref={ref} className="relative mt-auto">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-secondary transition-colors"
-        title={user?.firstName ?? 'Conta'}
-      >
-        {user?.imageUrl ? (
-          <img src={user.imageUrl} alt="" width={26} height={26} className="rounded-full" />
-        ) : (
-          <div
-            className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-white text-xs font-semibold"
-            style={{ background: 'var(--color-accent)' }}
-          >
-            {user?.firstName?.[0] ?? '?'}
-          </div>
-        )}
-      </button>
+      <Tooltip content={user?.firstName ?? 'Conta'} side="right">
+        <button
+          onClick={() => setOpen(v => !v)}
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-secondary transition-colors"
+        >
+          {user?.imageUrl ? (
+            <img src={user.imageUrl} alt="" width={26} height={26} className="rounded-full" />
+          ) : (
+            <div
+              className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-white text-xs font-semibold"
+              style={{ background: 'var(--color-accent)' }}
+            >
+              {user?.firstName?.[0] ?? '?'}
+            </div>
+          )}
+        </button>
+      </Tooltip>
       {open && (
         <FixedDropdown anchorRef={ref} onClose={() => setOpen(false)}>
           <div className="px-3 py-2.5 border-b border-border">
