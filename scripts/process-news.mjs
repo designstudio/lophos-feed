@@ -22,7 +22,9 @@ const GROQ_MODEL_FALLBACK = 'llama-3.1-8b-instant'
 const BATCH_SIZE = 15       // max sources per Groq call
 const CONTENT_CHARS = 2000  // chars per source — sweet spot: enough context without API bloat
 const TPM_COOLDOWN_MS = 65_000 // 65s between calls — respects 12k TPM free tier
-const MINIBATCH_DELAY_MS = 5_000 // 5s delay between mini-batches to prevent API strain
+const PHASE2_DELAY_MS = 18_000 // 18s delay between Phase 2 events (Groq free tier: devagar e sempre)
+const RATE_LIMIT_RETRY_DELAY_MS = 30_000 // 30s wait before retry on 429
+const MAX_RETRIES = 3 // Max retry attempts on 429 error
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 function isLazyLoadImage(url) {
@@ -148,7 +150,29 @@ Regras RÍGIDAS:
   }
 }
 
-// FASE 2: Processamento Denso (Conteúdo) — Processa cada evento com conteúdo completo
+// FASE 2: Processamento Denso (Conteúdo) — Processa cada evento com conteúdo completo + Retry Logic
+async function processDensePhaseWithRetry(topic, event, results, existingTitles, attempt = 1) {
+  try {
+    return await processDensePhase(topic, event, results, existingTitles)
+  } catch (err) {
+    // Se for erro 429 (Rate Limit) e ainda temos tentativas
+    if (err.status === 429 && attempt < MAX_RETRIES) {
+      const waitTime = RATE_LIMIT_RETRY_DELAY_MS / 1000
+      console.warn(`[${topic}] Erro 429 na tentativa ${attempt}/${MAX_RETRIES}. Aguardando ${waitTime}s antes de tentar novamente...`)
+      await new Promise(r => setTimeout(r, RATE_LIMIT_RETRY_DELAY_MS))
+      return processDensePhaseWithRetry(topic, event, results, existingTitles, attempt + 1)
+    }
+
+    // Se esgotou as tentativas ou é outro erro
+    if (err.status === 429) {
+      console.error(`[${topic}] Erro 429 após ${MAX_RETRIES} tentativas. Pulando evento.`)
+    } else {
+      console.error(`[${topic}] Erro ao processar evento:`, err.message)
+    }
+    return []
+  }
+}
+
 async function processDensePhase(topic, event, results, existingTitles) {
   const eventSourceIndexes = event.sourceIndexes || []
   const eventResults = eventSourceIndexes
@@ -253,7 +277,9 @@ ${context}`
     if (!res.ok) {
       const status = res.status
       const err = await res.text()
-      throw { status, message: `Groq error ${status}` }
+      const error = new Error(`Groq error ${status}`)
+      error.status = status
+      throw error
     }
 
     const data = await res.json()
@@ -295,67 +321,112 @@ async function processTopic(topic, rawItems, existingTitles) {
   // ═══════════════════════════════════════════════════════════════
   // FASE 2: PROCESSAMENTO DENSO (Conteúdo) — Processa cada evento
   // ═══════════════════════════════════════════════════════════════
+
+  // Opcional: Agrupa eventos com 1 fonte para economizar requisições (batching 2x2)
+  const eventGroups = []
   for (let ei = 0; ei < events.length; ei++) {
     const event = events[ei]
+    const isSmall = (event.sourceIndexes || []).length === 1
+    const nextEvent = events[ei + 1]
+    const nextIsSmall = nextEvent && (nextEvent.sourceIndexes || []).length === 1
 
-    const parsed = await processDensePhase(topic, event, results, existingTitles)
-
-    // Delay entre eventos para evitar sobrecarga
-    if (ei < events.length - 1) {
-      await new Promise(r => setTimeout(r, MINIBATCH_DELAY_MS))
+    // Se ambos são pequenos, agrupa
+    if (isSmall && nextIsSmall) {
+      eventGroups.push({ type: 'batch', events: [event, nextEvent] })
+      ei++ // pula o próximo já que foi agrupado
+    } else {
+      eventGroups.push({ type: 'single', events: [event] })
     }
+  }
 
-    for (const item of parsed) {
-      if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) continue
+  // Processa cada grupo
+  for (let gi = 0; gi < eventGroups.length; gi++) {
+    const group = eventGroups[gi]
 
-      // Mapeia sourceIndexes para índices reais do evento
-      const eventIdxs = event.sourceIndexes || []
-      const itemIdxs = item.sourceIndexes
-        .map(n => {
-          const eventIdx = eventIdxs[n - 1]
-          return eventIdx ? eventIdx - 1 : undefined
-        })
-        .filter(i => i !== undefined)
+    if (group.type === 'batch') {
+      console.log(`[${topic}] Fase 2: Processando BATCH de 2 eventos pequenos...`)
+      // Processa ambos os eventos (em sequência com retry)
+      for (const event of group.events) {
+        const parsed = await processDensePhaseWithRetry(topic, event, results, existingTitles)
+        // Adiciona resultados
+        newsItems.push(...extractNewsItems(parsed, event.sourceIndexes, results, topic, now, existingTitles))
 
-      if (!itemIdxs.length) continue
-      if (!isGeneratedItemRelevant(item, results)) continue
-
-      // Busca primeira imagem válida
-      let imageUrl
-      for (const idx of itemIdxs) {
-        const candidate = results[idx]?.image
-        if (candidate && !isLazyLoadImage(candidate)) { imageUrl = candidate; break }
+        // Delay entre eventos dentro do batch
+        if (group.events.indexOf(event) < group.events.length - 1) {
+          await new Promise(r => setTimeout(r, PHASE2_DELAY_MS))
+        }
       }
-      if (!imageUrl) continue
-
-      const sources = itemIdxs
-        .filter(idx => idx >= 0 && idx < results.length)
-        .map(idx => {
-          const r = results[idx]
-          return {
-            name: new URL(r.url).hostname.replace('www.', ''),
-            url: r.url,
-            favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
-          }
-        })
-
-      const keywords = Array.isArray(item.keywords)
-        ? [...new Set([topic, ...item.keywords.map(k => String(k).toLowerCase().trim())])]
-        : [topic]
-
-      newsItems.push({
-        id: randomUUID(),
-        topic,
-        title: item.title,
-        summary: item.summary,
-        sections: item.sections || [],
-        sources,
-        image_url: imageUrl,
-        published_at: now,
-        cached_at: now,
-        matched_topics: keywords,
-      })
+    } else {
+      // Evento único
+      const event = group.events[0]
+      const parsed = await processDensePhaseWithRetry(topic, event, results, existingTitles)
+      newsItems.push(...extractNewsItems(parsed, event.sourceIndexes, results, topic, now, existingTitles))
     }
+
+    // Delay entre grupos
+    if (gi < eventGroups.length - 1) {
+      console.log(`[${topic}] Aguardando ${PHASE2_DELAY_MS / 1000}s antes do próximo evento (Groq free tier)...`)
+      await new Promise(r => setTimeout(r, PHASE2_DELAY_MS))
+    }
+  }
+
+  return newsItems
+}
+
+// Helper: Extrai news items de um resultado parseado
+function extractNewsItems(parsed, eventSourceIndexes, results, topic, now, existingTitles) {
+  const newsItems = []
+  const eventIdxs = eventSourceIndexes || []
+
+  for (const item of parsed) {
+    if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) continue
+
+    // Mapeia sourceIndexes para índices reais do evento
+    const itemIdxs = item.sourceIndexes
+      .map(n => {
+        const eventIdx = eventIdxs[n - 1]
+        return eventIdx ? eventIdx - 1 : undefined
+      })
+      .filter(i => i !== undefined)
+
+    if (!itemIdxs.length) continue
+    if (!isGeneratedItemRelevant(item, results)) continue
+
+    // Busca primeira imagem válida
+    let imageUrl
+    for (const idx of itemIdxs) {
+      const candidate = results[idx]?.image
+      if (candidate && !isLazyLoadImage(candidate)) { imageUrl = candidate; break }
+    }
+    if (!imageUrl) continue
+
+    const sources = itemIdxs
+      .filter(idx => idx >= 0 && idx < results.length)
+      .map(idx => {
+        const r = results[idx]
+        return {
+          name: new URL(r.url).hostname.replace('www.', ''),
+          url: r.url,
+          favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
+        }
+      })
+
+    const keywords = Array.isArray(item.keywords)
+      ? [...new Set([topic, ...item.keywords.map(k => String(k).toLowerCase().trim())])]
+      : [topic]
+
+    newsItems.push({
+      id: randomUUID(),
+      topic,
+      title: item.title,
+      summary: item.summary,
+      sections: item.sections || [],
+      sources,
+      image_url: imageUrl,
+      published_at: now,
+      cached_at: now,
+      matched_topics: keywords,
+    })
   }
 
   return newsItems
