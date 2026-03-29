@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { fetchImageForSources } from '@/lib/news'
 import { NewsItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +14,6 @@ export async function POST(req: NextRequest) {
 
   const debug = req.nextUrl.searchParams.get('debug') === '1'
   const body = await req.json()
-  const forceRefresh: boolean = body.forceRefresh ?? false
   const days: number = body.days ?? 2
   const db = getSupabaseAdmin()
 
@@ -44,12 +42,6 @@ export async function POST(req: NextRequest) {
     await writer.write(encoder.encode(JSON.stringify({ items }) + '\n'))
   }
 
-  const debugBuffer: any[] = []
-  const emitDebug = (payload: any) => {
-    if (!debug) return
-    debugBuffer.push(payload)
-  }
-
   console.log(`[feed] handler START for user ${userId}`)
   ;(async () => {
     console.log(`[feed] IIFE START at ${new Date().toISOString()}`)
@@ -58,33 +50,21 @@ export async function POST(req: NextRequest) {
       await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'start' } }) + '\n'))
     }
 
-    // 1. Load existing cache from RSS processing
-    // Use matched_topics to find articles that match user's topics
-    const { data: allArticles } = await db.from('articles')
-      .select('*')
-      .or(topics.map((t: string) => `matched_topics.cs.{${t}}`).join(','))
-      .order('cached_at', { ascending: false })
+    // Feed personalizado via RPC — ordenado por afinidade de keywords com likes recentes,
+    // depois por data. Dislikes e tópicos excluídos são filtrados no banco.
+    const { data: allArticles, error } = await db.rpc('get_personalized_feed', {
+      p_user_id: userId,
+      p_topics: topics,
+      p_days: days,
+      p_excluded_topics: excludedTopics,
+    })
 
-    const isRecentRow = (row: any) => {
-      if (days === 0) return true
-      const cutoffIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
-      const d = row.published_at ?? row.cached_at
-      if (!d) return false
-      return new Date(d).getTime() >= new Date(cutoffIso).getTime()
+    if (error) {
+      console.error('[feed] RPC error:', error)
     }
 
-    // 2. Stream existing cache immediately (filtering excluded topics)
-    const allExisting = (allArticles ?? []).filter(isRecentRow)
-      .filter(row => {
-        if (excludedTopics.length === 0) return true
-        const matched: string[] = row.matched_topics ?? []
-        return !excludedTopics.some(excluded => matched.includes(excluded))
-      })
-      .map(row => rowToItem(row, topics))
-      .sort((a, b) =>
-        new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
-        new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
-      )
+    const allExisting = (allArticles ?? []).map((row: any) => rowToItem(row, topics))
+
     if (allExisting.length > 0) await send(allExisting)
 
     const isColdStart = allExisting.length === 0
@@ -92,7 +72,6 @@ export async function POST(req: NextRequest) {
       await writer.write(encoder.encode(JSON.stringify({ coldStart: true }) + '\n'))
     }
 
-    // 3. Close writer
     console.log(`[feed] closing writer at ${new Date().toISOString()}`)
     await writer.close()
   })()

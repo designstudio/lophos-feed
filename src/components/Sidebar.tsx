@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 import { LophosLogo } from '@/components/LophosLogo'
 import { SearchModal } from '@/components/SearchModal'
+import { Tooltip } from '@/components/Tooltip'
 
 // â”€â”€â”€ Theme / Accent utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function applyTheme(t: string) {
@@ -741,21 +742,23 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         {/* Header */}
         <div className="flex items-center px-3 pt-5 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
           {/* Logo â€” when collapsed, hover hides logo and shows expand button */}
-          <div
-            className={cn('flex-shrink-0 relative', collapsed ? 'group cursor-pointer' : '')}
-            onClick={collapsed ? toggle : undefined}
-          >
-            {/* Logo â€” hidden on hover when collapsed */}
-            <div className={collapsed ? 'group-hover:opacity-0 transition-opacity' : ''}>
-              <LophosLogo size={34} />
-            </div>
-            {/* Expand arrow â€” shown on hover when collapsed */}
-            {collapsed && (
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <AltArrowRight size={16} className="text-ink-secondary" />
+          <Tooltip content=”Expandir menu” side=”right” disabled={!collapsed}>
+            <div
+              className={cn('flex-shrink-0 relative', collapsed ? 'group cursor-pointer' : '')}
+              onClick={collapsed ? toggle : undefined}
+            >
+              {/* Logo â€” hidden on hover when collapsed */}
+              <div className={collapsed ? 'group-hover:opacity-0 transition-opacity' : ''}>
+                <LophosLogo size={34} />
               </div>
-            )}
-          </div>
+              {/* Expand arrow â€” shown on hover when collapsed */}
+              {collapsed && (
+                <div className=”absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity”>
+                  <AltArrowRight size={16} className=”text-ink-secondary” />
+                </div>
+              )}
+            </div>
+          </Tooltip>
 
           {/* Name â€” fades out when collapsed */}
           <span
@@ -772,65 +775,71 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
 
           {/* Collapse button â€” only visible when expanded */}
           {!collapsed && (
-            <button
-              onClick={toggle}
-              className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0 ml-auto"
-            >
-              <AltArrowLeft size={14} />
-            </button>
+            <Tooltip content=”Recolher menu” side=”top”>
+              <button
+                onClick={toggle}
+                className=”w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0 ml-auto”
+              >
+                <AltArrowLeft size={14} />
+              </button>
+            </Tooltip>
           )}
         </div>
 
         {/* Nav */}
         <nav className="flex flex-col gap-0.5 flex-1 px-2">
-          <Link href="/feed"
-            title={collapsed ? 'Meu Feed' : undefined}
-            className={cn(
-              'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-              collapsed ? 'justify-center' : '',
-              path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
-            )}>
-            <Feed size={18} className="flex-shrink-0" />
-            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meu Feed</span>}
-          </Link>
+          <Tooltip content="Início" side="right" disabled={!collapsed} className="w-full">
+            <Link href="/feed"
+              className={cn(
+                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                collapsed ? 'justify-center' : '',
+                path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+              )}>
+              <Feed size={18} className="flex-shrink-0" />
+              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meu Feed</span>}
+            </Link>
+          </Tooltip>
 
-          <Link href="/favorites"
-            title={collapsed ? 'Minhas curtidas' : undefined}
-            className={cn(
-              'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-              collapsed ? 'justify-center' : '',
-              path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
-            )}>
-            <HeartAngle size={18} className="flex-shrink-0" />
-            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Minhas curtidas</span>}
-          </Link>
+          <Tooltip content="Minhas curtidas" side="right" disabled={!collapsed} className="w-full">
+            <Link href="/favorites"
+              className={cn(
+                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                collapsed ? 'justify-center' : '',
+                path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+              )}>
+              <HeartAngle size={18} className="flex-shrink-0" />
+              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Minhas curtidas</span>}
+            </Link>
+          </Tooltip>
 
-          <button
-            onClick={() => setShowSearch(true)}
-            title={collapsed ? 'Buscar' : undefined}
-            className={cn(
-              'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-              collapsed ? 'justify-center' : '',
-              'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
-            )}>
-            <Magnifer size={18} className="flex-shrink-0" />
-            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Buscar</span>}
-          </button>
+          <Tooltip content="Buscar" side="right" disabled={!collapsed} className="w-full">
+            <button
+              onClick={() => setShowSearch(true)}
+              className={cn(
+                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                collapsed ? 'justify-center' : '',
+                'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+              )}>
+              <Magnifer size={18} className="flex-shrink-0" />
+              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Buscar</span>}
+            </button>
+          </Tooltip>
 
           {onRefresh && (
-            <button onClick={onRefresh} disabled={refreshing}
-              title={collapsed ? (refreshTitle ?? refreshLabel ?? 'Atualizar feed') : undefined}
-              className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left',
-                collapsed ? 'justify-center' : ''
-              )}>
-              <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
-              {!collapsed && (
-                <span className="whitespace-nowrap overflow-hidden">
-                  {refreshing ? 'Atualizandoâ€¦' : (refreshLabel ?? 'Atualizar feed')}
-                </span>
-              )}
-            </button>
+            <Tooltip content={refreshTitle ?? refreshLabel ?? 'Atualizar feed'} side="right" disabled={!collapsed} className="w-full">
+              <button onClick={onRefresh} disabled={refreshing}
+                className={cn(
+                  'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left',
+                  collapsed ? 'justify-center' : ''
+                )}>
+                <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
+                {!collapsed && (
+                  <span className="whitespace-nowrap overflow-hidden">
+                    {refreshing ? 'Atualizandoâ€¦' : (refreshLabel ?? 'Atualizar feed')}
+                  </span>
+                )}
+              </button>
+            </Tooltip>
           )}
         </nav>
 

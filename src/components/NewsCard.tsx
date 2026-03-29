@@ -6,6 +6,7 @@ import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
 import { Heart as HeartFilled, Dislike as DislikeFilled } from '@solar-icons/react-perf/Bold'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
+import { Tooltip } from '@/components/Tooltip'
 
 const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
 
@@ -68,47 +69,51 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
       {/* Reactions — right */}
       <div className="flex items-center gap-0.5">
         {/* Like com animação de pop */}
-        <motion.button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('like') }}
-          whileTap={{ scale: 0.85 }}
-          className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
-            reaction === 'like' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
-          )}>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.span
-              key={reaction === 'like' ? 'filled' : 'outline'}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-              transition={{ duration: 0.15, ease: 'easeOut' }}
-              style={{ display: 'flex' }}
-            >
-              {reaction === 'like' ? <HeartFilled size={16} /> : <HeartAngle size={16} />}
-            </motion.span>
-          </AnimatePresence>
-        </motion.button>
+        <Tooltip content="Curtir" side="top">
+          <motion.button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('like') }}
+            whileTap={{ scale: 0.85 }}
+            className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
+              reaction === 'like' ? 'bg-red-50 text-red-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
+            )}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={reaction === 'like' ? 'filled' : 'outline'}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.5, opacity: 0 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                style={{ display: 'flex' }}
+              >
+                {reaction === 'like' ? <HeartFilled size={16} /> : <HeartAngle size={16} />}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
+        </Tooltip>
 
         {/* Dislike com animação de pop — tom neutro zinc quando ativo */}
-        <motion.button
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
-          whileTap={{ scale: 0.8 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-          className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
-            reaction === 'dislike' ? 'bg-zinc-100 text-zinc-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
-          )}>
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.span
-              key={reaction === 'dislike' ? 'filled' : 'outline'}
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-              style={{ display: 'flex' }}
-            >
-              {reaction === 'dislike' ? <DislikeFilled size={16} /> : <Dislike size={16} />}
-            </motion.span>
-          </AnimatePresence>
-        </motion.button>
+        <Tooltip content="Não tenho interesse" side="top">
+          <motion.button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
+            whileTap={{ scale: 0.8 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+            className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
+              reaction === 'dislike' ? 'bg-zinc-100 text-zinc-500' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
+            )}>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={reaction === 'dislike' ? 'filled' : 'outline'}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.5, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                style={{ display: 'flex' }}
+              >
+                {reaction === 'dislike' ? <DislikeFilled size={16} /> : <Dislike size={16} />}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
+        </Tooltip>
       </div>
     </div>
   )
