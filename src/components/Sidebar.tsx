@@ -844,7 +844,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       )}
 
       {showSearch && mounted && createPortal(
-        <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} />,
+        <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} userTopics={topics} />,
         document.body
       )}
     </>

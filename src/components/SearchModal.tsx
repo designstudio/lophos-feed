@@ -9,9 +9,10 @@ import { NewsCard } from './NewsCard'
 interface SearchModalProps {
   isOpen: boolean
   onClose: () => void
+  userTopics?: string[]
 }
 
-export function SearchModal({ isOpen, onClose }: SearchModalProps) {
+export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalProps) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -46,9 +47,20 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       return
     }
 
+    // Guarda: sem tópicos carregados, não expõe o banco inteiro
+    if (userTopics.length === 0) {
+      setResults([])
+      return
+    }
+
     setLoading(true)
     try {
-      const res = await fetch(`/api/articles/search?q=${encodeURIComponent(searchQuery)}&limit=20`)
+      const params = new URLSearchParams({
+        q: searchQuery,
+        limit: '20',
+        topics: userTopics.join(','),
+      })
+      const res = await fetch(`/api/articles/search?${params}`)
       const data = await res.json()
       setResults(data.items || [])
     } catch (err) {
@@ -57,7 +69,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [userTopics])
 
   const handleQueryChange = (value: string) => {
     setQuery(value)
