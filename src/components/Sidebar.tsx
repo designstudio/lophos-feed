@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -702,9 +702,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     })
   }
 
-  const isCollapsed = collapsed ?? true
-  const isReady = collapsed !== null
-  const resolvedWidth = collapsed === null ? 'var(--sidebar-width, 3.5rem)' : (isCollapsed ? '3.5rem' : '16.1rem')
+  const isCollapsed = collapsed ?? true;
+  const isReady = collapsed !== null;
+  let resolvedWidth = 'var(--sidebar-width, 3.5rem)';
+  if (collapsed !== null) {
+    resolvedWidth = isCollapsed ? '3.5rem' : '16.1rem';
+  }
 
   return (
     <>
