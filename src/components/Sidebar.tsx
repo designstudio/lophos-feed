@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   Feed, Refresh, AltArrowLeft, AltArrowRight,
-  Settings, Logout, CloseCircle, UserRounded, Bookmark, Magnifer
+  Settings, Logout, CloseCircle, UserRounded, HeartAngle, Magnifer
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
@@ -795,14 +795,14 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           </Link>
 
           <Link href="/favorites"
-            title={collapsed ? 'Meus Favoritos' : undefined}
+            title={collapsed ? 'Minhas curtidas' : undefined}
             className={cn(
               'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
               collapsed ? 'justify-center' : '',
               path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
             )}>
-            <Bookmark size={18} className="flex-shrink-0" />
-            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meus Favoritos</span>}
+            <HeartAngle size={18} className="flex-shrink-0" />
+            {!collapsed && <span className="whitespace-nowrap overflow-hidden">Minhas curtidas</span>}
           </Link>
 
           <button

@@ -3,24 +3,25 @@ export const dynamic = 'force-dynamic'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
-// GET /api/favorites/articles — full article data for user's favorites
+// GET /api/favorites/articles — artigos curtidos (reaction = 'like') pelo usuário
 export async function GET() {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const db = getSupabaseAdmin()
 
-  // Fetch favorite article IDs
-  const { data: favs, error: favError } = await db
-    .from('user_favorites')
+  // Busca IDs dos artigos curtidos (like) mais recentes
+  const { data: liked, error: likedError } = await db
+    .from('user_reactions')
     .select('article_id, created_at')
     .eq('user_id', userId)
+    .eq('reaction', 'like')
     .order('created_at', { ascending: false })
 
-  if (favError) return NextResponse.json({ error: favError.message }, { status: 500 })
-  if (!favs?.length) return NextResponse.json({ items: [] })
+  if (likedError) return NextResponse.json({ error: likedError.message }, { status: 500 })
+  if (!liked?.length) return NextResponse.json({ items: [] })
 
-  const ids = favs.map((f: any) => f.article_id)
+  const ids = liked.map((r: any) => r.article_id)
 
   const { data: rows, error } = await db
     .from('articles')
@@ -29,7 +30,7 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Sort by favorite order (most recently favorited first)
+  // Mantém ordem por mais recentemente curtido
   const ordered = ids
     .map((id: string) => (rows || []).find((r: any) => r.id === id))
     .filter(Boolean)

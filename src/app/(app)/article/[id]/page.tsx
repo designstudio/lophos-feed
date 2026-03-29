@@ -5,8 +5,8 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
-import { SquareTopDown, ClockCircle, CloseCircle, Documents, ArrowLeft, Bookmark, Share } from '@solar-icons/react-perf/Linear'
-import { Bookmark as BookmarkFilled } from '@solar-icons/react-perf/Bold'
+import { SquareTopDown, ClockCircle, CloseCircle, Documents, ArrowLeft, HeartAngle, Share } from '@solar-icons/react-perf/Linear'
+import { Heart as HeartFilled } from '@solar-icons/react-perf/Bold'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -97,8 +97,8 @@ export default function ArticlePage() {
   const [transitioning, setTransitioning] = useState(false)
   const [showAllSources, setShowAllSources] = useState(false)
   const [related, setRelated] = useState<RelatedItem[]>([])
-  const [favorited, setFavorited] = useState(false)
-  const [favLoading, setFavLoading] = useState(false)
+  const [liked, setLiked] = useState(false)
+  const [likeLoading, setLikeLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -136,30 +136,30 @@ export default function ArticlePage() {
       .catch(() => {})
   }, [id])
 
-  // Load favorite state
+  // Carrega estado de like via reactions API (mesma fonte de verdade do feed)
   useEffect(() => {
     if (!isSignedIn) return
-    fetch('/api/favorites')
+    fetch('/api/reactions')
       .then((r) => r.json())
-      .then((data) => setFavorited((data.ids || []).includes(id)))
+      .then((data) => setLiked((data.reactions ?? {})[id] === 'like'))
       .catch(() => {})
   }, [id, isSignedIn])
 
-  const toggleFavorite = async () => {
-    if (!isSignedIn || favLoading) return
-    setFavLoading(true)
-    const newState = !favorited
-    setFavorited(newState)
+  const toggleLike = async () => {
+    if (!isSignedIn || likeLoading) return
+    setLikeLoading(true)
+    const newLiked = !liked
+    setLiked(newLiked) // optimistic
     try {
-      await fetch('/api/favorites', {
-        method: newState ? 'POST' : 'DELETE',
+      await fetch('/api/reactions', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId: id }),
+        body: JSON.stringify({ articleId: id, topic: item?.topic ?? '', reaction: newLiked ? 'like' : null }),
       })
     } catch {
-      setFavorited(!newState)
+      setLiked(!newLiked) // reverte se falhar
     }
-    setFavLoading(false)
+    setLikeLoading(false)
   }
 
   const shareArticle = () => {
@@ -231,16 +231,16 @@ export default function ArticlePage() {
 
             {/* Action buttons */}
             <div className="flex items-center gap-1 flex-shrink-0">
-              {/* Bookmark — icon only */}
+              {/* Like — sincronizado com o coração do feed */}
               {isSignedIn && (
                 <button
-                  onClick={toggleFavorite}
-                  title={favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors hover:bg-bg-secondary"
+                  onClick={toggleLike}
+                  title={liked ? 'Descurtir' : 'Curtir'}
+                  className={`spring-press flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${liked ? 'text-red-500 hover:bg-red-50' : 'text-ink-secondary hover:bg-bg-secondary'}`}
                 >
-                  {favorited
-                    ? <BookmarkFilled size={18} style={{ color: 'var(--color-accent)' }} />
-                    : <Bookmark size={18} className="text-ink-secondary" />
+                  {liked
+                    ? <HeartFilled size={18} />
+                    : <HeartAngle size={18} />
                   }
                 </button>
               )}
