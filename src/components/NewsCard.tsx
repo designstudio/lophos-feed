@@ -193,7 +193,10 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.displayTopic ?? item.topic}</span>
-          <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
+          <h2
+            className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
+            style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
+          >{item.title}</h2>
           <div className="hidden md:block">
             <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
           </div>
@@ -224,7 +227,10 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
       </div>
       <div className="flex-1 min-w-0">
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-        <h2 className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1">{item.title}</h2>
+        <h2
+          className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
+          style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
+        >{item.title}</h2>
         <div className="hidden md:block">
           <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
         </div>
