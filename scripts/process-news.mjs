@@ -64,145 +64,43 @@ function getSourceHint(topic) {
   return 'Reuters, AP, BBC, The Guardian'
 }
 
-async function callGroqApi(model, topic, results, existingTitles) {
-  const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const context = results.map((r, i) =>
-    `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`
-  ).join('\n\n')
 
-  const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
-    : ''
+// FASE 1: Triagem Leve (Metadados) — Agrupa TODOS os títulos em UMA requisição
+async function triageMetadataPhase(topic, results) {
+  if (!results.length) return []
 
-  const sourceHint = getSourceHint(topic)
+  console.log(`[${topic}] Fase 1: Triagem de metadados (${results.length} fontes)...`)
 
-  const prompt = `Você é o Curador-Chefe do Lophos, um hub de inteligência focado em eficiência e clareza. Sua missão é destilar o conteúdo bruto em um resumo que respeite o tempo do leitor e a alma da fonte original.
-
-**CONTEXTO:**
-- Data atual: ${today}
-- Tópico: "${topic}"
-- Conteúdo já publicado: ${existingContext}
-- Fontes disponíveis (conteúdo completo): ${context}
-
-**DIRETRIZES DE CONTEÚDO:**
-
-**Fidelidade à Substância (O "Sumo"):**
-- Comece sempre pelo fato, história ou conceito mais impactante.
-- Exemplo: Se o texto fala de uma escola militar sobrenatural em 1910, isso vem antes da data de estreia. Se fala de inflação, o preço no bolso vem antes do nome do ministro.
-- O que o leitor precisa saber primeiro? Coloque lá.
-
-**Preservação do Colorido Original:**
-- Se o autor usou uma analogia única (ex: "é como um cereal genérico") ou um tom específico, mantenha isso.
-- Não neutralize nem "limpe" a personalidade da fonte.
-- Se o texto é sarcástico, mantenha o sarcasmo. Se é técnico e denso, mantenha a densidade.
-
-**Banimento de Clichês IA:**
-É TERMINANTEMENTE PROIBIDO usar frases como:
-- "Em uma nova era", "O futuro promete", "Um lembrete de"
-- "A equipe trabalha arduamente", "Os fãs estão ansiosos"
-- "Abrindo novos caminhos", "Mudando o jogo", "Quebrando barreiras"
-- "Inovador", "revolucionário", "nunca antes visto"
-Se não for um fato ou opinião explícita da fonte, delete.
-
-**Tom "Colega Especialista":**
-- Escreva como um profissional resumindo um artigo para outro colega pelo Slack.
-- Direto, sem enrolação e sem "introduções de redação escolar".
-- Informal é aceitável. Robótico é proibido.
-
-**ESTRUTURA JSON:**
-- \`title\`: Direto, usando termos literais da fonte em pt-BR.
-- \`summary\`: Um parágrafo denso (2-4 frases). Proibido introduções genéricas. Vá direto ao ponto principal.
-  **⚠️ OBRIGATÓRIO:** Se a fonte menciona números (datas, valores, placares, estatísticas), mudanças técnicas (patch notes, features, algoritmos), ou citações (de fãs, experts, desenvolvedores), esses dados DEVEM estar no resumo. Um resumo sem dados específicos é considerado uma falha.
-  **⚠️ NÃO FAÇA:** Resumos de uma única frase. Isso é insuficiente.
-  Exemplo RUIM: "Os fãs estão felizes com a mudança."
-  Exemplo BOM: "Os desenvolvedores aumentaram o dano do personagem em 15% (de 20 para 23 por hit), uma mudança que os fãs pediam há meses."
-- \`sections\`: 1 a 3 seções (apenas o necessário). Não invente texto para preencher espaço. Qualidade sobre quantidade.
-- \`sourceIndexes\`: Apenas fontes que realmente cobrem este evento.
-- \`keywords\`: 5-15 termos específicos em minúsculas.
-
-**FILTRAGEM OBRIGATÓRIA:**
-- Descarte vendas, cupons, ofertas (se deixaria de existir sem o desconto).
-- Mantenha lançamentos, análises técnicas, atualizações.
-- Cada notícia = UM evento principal. Nunca misture eventos diferentes.
-- Se o evento já foi publicado (mesmo em tópico diferente), retorne \`[]\`.
-
-**RESPOSTA:**
-Retorne EXCLUSIVAMENTE um array JSON válido. Sem markdown, sem comentários. Se não houver conteúdo válido, retorne \`[]\`.
-
-**⚠️ VERIFICAÇÃO FINAL ANTES DE RETORNAR:**
-1. Cada resumo contém dados específicos (números, mudanças técnicas, citações)?
-2. Nenhum resumo é uma única frase genérica?
-3. Se a fonte menciona: "Patch 2.5 aumenta dano em 15%", isso está no seu resumo (não "a comunidade gostou")?
-4. Se a fonte menciona citação de usuário/expert, reproduza ou parafraseie fielmente (não summarize como "as pessoas concordam")?
-
-Se a resposta for NÃO para alguma pergunta, revise. Um resumo sem dados específicos é uma falha.
-
-Você tem 2000 caracteres de contexto real. Use cada um deles. Não use clichês para preencher o vazio.
-
-FONTES:
-${context}`
-
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_KEY}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.1,
-      max_tokens: 2000,
-    }),
-  })
-
-  if (!res.ok) {
-    const status = res.status
-    const err = await res.text()
-    throw { status, message: `Groq error ${status}: ${err.slice(0, 200)}` }
-  }
-
-  const data = await res.json()
-  const raw = data.choices?.[0]?.message?.content ?? ''
-  const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
-  if (!match) return []
-
-  try {
-    return JSON.parse(match[0])
-  } catch {
-    return []
-  }
-}
-
-// FASE 1: Agrupamento leve por títulos (apenas títulos e URLs)
-async function groupEventsByTitles(topic, results) {
   const titlesContext = results.map((r, i) =>
     `[${i + 1}] "${r.title}" (${new URL(r.url).hostname.replace('www.', '')})`
   ).join('\n')
 
-  const phase1Prompt = `Você é um analisador de eventos para deduplicação. Analise estes títulos e agrupe as URLs que cobrem o MESMO evento.
+  const phase1Prompt = `Você é um analisador de eventos para deduplicação. Analise estes títulos e agrupe as URLs que cobrem o MESMO evento real.
 
-TÍTULOS:
+TÍTULOS E FONTES:
 ${titlesContext}
 
-RESPOSTA: Retorne EXCLUSIVAMENTE um JSON com este formato (sem markdown):
+RESPOSTA: Retorne EXCLUSIVAMENTE um JSON (sem markdown, sem comentários):
 {
-  "groups": [
+  "events": [
     {
-      "event": "Descrição breve do evento",
-      "urlIndexes": [1, 3, 5]
+      "name": "Descrição breve e clara do evento",
+      "sourceIndexes": [1, 3, 5]
     },
     {
-      "event": "Outro evento diferente",
-      "urlIndexes": [2, 4]
+      "name": "Outro evento independente",
+      "sourceIndexes": [2, 4]
     }
   ]
 }
 
-Regras:
-- Cada grupo = UM evento independente
-- Retorne APENAS um array JSON válido, nada mais
-- Se não conseguir agrupar, retorne: {"groups": []}`
+Regras RÍGIDAS:
+- Cada evento = UM assunto independente (não misture)
+- sourceIndexes usa os números [1-${results.length}] dos títulos acima
+- Se um título é sobre "Novo patch do Valorant", agrupe com outros sobre o mesmo patch
+- Se é sobre "Novo skin do Valorant", é EVENTO DIFERENTE
+- Retorne APENAS o JSON válido, nada mais
+- Se não conseguir agrupar, retorne: {"events": []}`
 
   try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -220,34 +118,49 @@ Regras:
     })
 
     if (!res.ok) {
+      const status = res.status
       const err = await res.text()
-      console.error(`[${topic}] Fase 1 error: ${res.status}`)
-      // Fallback: criar grupos individuais se Fase 1 falhar
-      return results.map((_, i) => ({ event: 'Evento', urlIndexes: [i + 1] }))
+      console.error(`[${topic}] Fase 1 error ${status}`)
+      // Fallback: criar evento individual para cada fonte
+      return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
     }
 
     const data = await res.json()
     const raw = data.choices?.[0]?.message?.content ?? ''
     const match = raw.replace(/```json|```/g, '').match(/\{[\s\S]*\}/)
-    if (!match) return results.map((_, i) => ({ event: 'Evento', urlIndexes: [i + 1] }))
+    if (!match) {
+      console.warn(`[${topic}] Fase 1: Nenhuma resposta válida, criando eventos individuais`)
+      return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
+    }
 
     const parsed = JSON.parse(match[0])
-    return parsed.groups || results.map((_, i) => ({ event: 'Evento', urlIndexes: [i + 1] }))
+    const events = parsed.events || []
+
+    if (!events.length) {
+      return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
+    }
+
+    console.log(`[${topic}] Fase 1: ${events.length} evento(s) identificado(s)`)
+    return events
   } catch (err) {
     console.error(`[${topic}] Fase 1 exception:`, err.message)
-    return results.map((_, i) => ({ event: 'Evento', urlIndexes: [i + 1] }))
+    return results.map((r, i) => ({ name: r.title, sourceIndexes: [i + 1] }))
   }
 }
 
-// FASE 2: Processamento denso de cada evento agrupado
-async function processEventGroup(topic, group, results, existingTitles) {
-  const groupResults = group.urlIndexes
+// FASE 2: Processamento Denso (Conteúdo) — Processa cada evento com conteúdo completo
+async function processDensePhase(topic, event, results, existingTitles) {
+  const eventSourceIndexes = event.sourceIndexes || []
+  const eventResults = eventSourceIndexes
     .map(idx => results[idx - 1])
     .filter(r => r)
 
-  if (!groupResults.length) return []
+  if (!eventResults.length) return []
 
-  const context = groupResults.map((r, i) =>
+  console.log(`[${topic}] Fase 2: Processando "${event.name}" (${eventResults.length} fonte(s))...`)
+
+  // Monta contexto denso com conteúdo completo de cada fonte
+  const context = eventResults.map((r, i) =>
     `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 2000)}`
   ).join('\n\n')
 
@@ -262,7 +175,7 @@ async function processEventGroup(topic, group, results, existingTitles) {
 **CONTEXTO:**
 - Data atual: ${today}
 - Tópico: "${topic}"
-- Evento: ${group.event}
+- Evento: ${event.name}
 - Conteúdo já publicado: ${existingContext}
 - Fontes disponíveis (conteúdo completo): ${context}
 
@@ -299,7 +212,7 @@ Se não for um fato ou opinião explícita da fonte, delete.
   Exemplo RUIM: "Os fãs estão felizes com a mudança."
   Exemplo BOM: "Os desenvolvedores aumentaram o dano do personagem em 15% (de 20 para 23 por hit), uma mudança que os fãs pediam há meses."
 - \`sections\`: 1 a 3 seções (apenas o necessário). Não invente texto para preencher espaço. Qualidade sobre quantidade.
-- \`sourceIndexes\`: Array contendo números de 1 a ${groupResults.length}, referenciando as fontes deste grupo.
+- \`sourceIndexes\`: Array com números 1 a ${eventResults.length}, referenciando as fontes deste evento.
 - \`keywords\`: 5-15 termos específicos em minúsculas.
 
 **FILTRAGEM OBRIGATÓRIA:**
@@ -311,13 +224,13 @@ Se não for um fato ou opinião explícita da fonte, delete.
 Retorne EXCLUSIVAMENTE um array JSON válido. Sem markdown, sem comentários. Se não houver conteúdo válido, retorne \`[]\`.
 
 **⚠️ VERIFICAÇÃO FINAL ANTES DE RETORNAR:**
-1. Cada resumo contém dados específicos (números, mudanças técnicas, citações)?
-2. Nenhum resumo é uma única frase genérica?
-3. Se a fonte menciona números ou mudanças técnicas, elas estão no resumo?
+1. O resumo contém dados específicos (números, mudanças técnicas, citações)?
+2. O resumo NÃO é uma única frase genérica?
+3. Se as fontes mencionam números ou mudanças técnicas, elas estão no resumo?
 
-Se a resposta for NÃO para alguma pergunta, revise. Um resumo sem dados específicos é uma falha.
+Um resumo sem dados específicos é considerado uma falha.
 
-Você tem contexto real das ${groupResults.length} fonte(s). Use cada bit deles. Não use clichês para preencher o vazio.
+Você tem conteúdo denso das ${eventResults.length} fonte(s) sobre este evento. Use-o. Não use clichês para preencher o vazio.
 
 FONTES:
 ${context}`
@@ -355,26 +268,6 @@ ${context}`
   }
 }
 
-async function callGroqWithFallback(topic, results, existingTitles) {
-  try {
-    // Tenta primeiro com o modelo 70B
-    return await callGroqApi(GROQ_MODEL_PRIMARY, topic, results, existingTitles)
-  } catch (err) {
-    // Se receber erro 429 (Rate Limit), tenta com o modelo fallback
-    if (err.status === 429) {
-      console.log(`[${topic}] Limite atingido no 70B, tentando fallback com llama-3.1-8b-instant...`)
-      try {
-        return await callGroqApi(GROQ_MODEL_FALLBACK, topic, results, existingTitles)
-      } catch (fallbackErr) {
-        console.error(`[${topic}] Fallback com ${GROQ_MODEL_FALLBACK} também falhou:`, fallbackErr.message || fallbackErr)
-        return []
-      }
-    }
-    // Outros erros: apenas loga e retorna array vazio
-    console.error(`[${topic}] Erro ao processar:`, err.message || err)
-    return []
-  }
-}
 
 async function processTopic(topic, rawItems, existingTitles) {
   const results = rawItems.map(item => ({
@@ -386,37 +279,48 @@ async function processTopic(topic, rawItems, existingTitles) {
 
   if (!results.length) return []
 
-  // FASE 1: Agrupamento leve por títulos
-  console.log(`[${topic}] Fase 1: Agrupando eventos por títulos...`)
-  const eventGroups = await groupEventsByTitles(topic, results)
-  console.log(`[${topic}] Fase 1: ${eventGroups.length} grupos identificados`)
+  // ═══════════════════════════════════════════════════════════════
+  // FASE 1: TRIAGEM DE METADADOS (Leve) — Agrupa TODOS os títulos
+  // ═══════════════════════════════════════════════════════════════
+  const events = await triageMetadataPhase(topic, results)
+
+  if (!events.length) {
+    console.log(`[${topic}] Nenhum evento identificado na Fase 1`)
+    return []
+  }
 
   const now = new Date().toISOString()
   const newsItems = []
 
-  // FASE 2: Processamento de cada grupo
-  for (let gi = 0; gi < eventGroups.length; gi++) {
-    const group = eventGroups[gi]
-    console.log(`[${topic}] Fase 2 (${gi + 1}/${eventGroups.length}): Processando "${group.event}"...`)
+  // ═══════════════════════════════════════════════════════════════
+  // FASE 2: PROCESSAMENTO DENSO (Conteúdo) — Processa cada evento
+  // ═══════════════════════════════════════════════════════════════
+  for (let ei = 0; ei < events.length; ei++) {
+    const event = events[ei]
 
-    const parsed = await processEventGroup(topic, group, results, existingTitles)
+    const parsed = await processDensePhase(topic, event, results, existingTitles)
 
-    // Pequeno delay entre grupos
-    if (gi < eventGroups.length - 1) {
+    // Delay entre eventos para evitar sobrecarga
+    if (ei < events.length - 1) {
       await new Promise(r => setTimeout(r, MINIBATCH_DELAY_MS))
     }
 
     for (const item of parsed) {
       if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) continue
 
-      // Ajusta sourceIndexes para índices reais (os índices vêm do grupo)
-      const groupIdxs = group.urlIndexes.map(i => i - 1)
-      const itemIdxs = item.sourceIndexes.map(n => groupIdxs[n - 1]).filter(i => i !== undefined)
+      // Mapeia sourceIndexes para índices reais do evento
+      const eventIdxs = event.sourceIndexes || []
+      const itemIdxs = item.sourceIndexes
+        .map(n => {
+          const eventIdx = eventIdxs[n - 1]
+          return eventIdx ? eventIdx - 1 : undefined
+        })
+        .filter(i => i !== undefined)
 
       if (!itemIdxs.length) continue
       if (!isGeneratedItemRelevant(item, results)) continue
 
-      // Find first valid image
+      // Busca primeira imagem válida
       let imageUrl
       for (const idx of itemIdxs) {
         const candidate = results[idx]?.image
