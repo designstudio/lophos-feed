@@ -158,16 +158,17 @@ async function processDensePhaseWithRetry(topic, event, results, existingTitles,
     // Se for erro 429 (Rate Limit) e ainda temos tentativas
     if (err.status === 429 && attempt < MAX_RETRIES) {
       const waitTime = RATE_LIMIT_RETRY_DELAY_MS / 1000
-      console.warn(`[${topic}] Erro 429 na tentativa ${attempt}/${MAX_RETRIES}. Aguardando ${waitTime}s antes de tentar novamente...`)
+      console.warn(`⚠️  [${topic}] Erro 429 detectado em "${event.name}" (tentativa ${attempt}/${MAX_RETRIES}). Aguardando ${waitTime}s...`)
       await new Promise(r => setTimeout(r, RATE_LIMIT_RETRY_DELAY_MS))
+      console.log(`🔄 [${topic}] Tentando novamente "${event.name}"...`)
       return processDensePhaseWithRetry(topic, event, results, existingTitles, attempt + 1)
     }
 
     // Se esgotou as tentativas ou é outro erro
     if (err.status === 429) {
-      console.error(`[${topic}] Erro 429 após ${MAX_RETRIES} tentativas. Pulando evento.`)
+      console.error(`❌ [${topic}] Erro 429 após ${MAX_RETRIES} tentativas em "${event.name}". Pulando evento.`)
     } else {
-      console.error(`[${topic}] Erro ao processar evento:`, err.message)
+      console.error(`❌ [${topic}] Erro ao processar "${event.name}":`, err.message)
     }
     return []
   }
@@ -289,8 +290,8 @@ ${context}`
 
     return JSON.parse(match[0])
   } catch (err) {
-    console.error(`[${topic}] Fase 2 error:`, err.message)
-    return []
+    // Re-lança o erro para que processDensePhaseWithRetry possa fazer retry em 429
+    throw err
   }
 }
 
