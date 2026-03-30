@@ -59,6 +59,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     setCollapsed(v => {
       const next = !v
       localStorage.setItem('sidebar_collapsed', String(next))
+      window.dispatchEvent(new CustomEvent('sidebar:toggle', { detail: { collapsed: next } }))
       return next
     })
   }

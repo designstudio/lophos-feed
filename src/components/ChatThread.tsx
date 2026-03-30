@@ -60,13 +60,25 @@ export function ChatThread({
       setSidebarCollapsed(updated)
     }
 
+    const handleSidebarToggle = (event: Event) => {
+      const customEvent = event as CustomEvent<{ collapsed?: boolean }>
+      if (typeof customEvent.detail?.collapsed === 'boolean') {
+        setSidebarCollapsed(customEvent.detail.collapsed)
+      }
+    }
+
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
+    window.addEventListener('sidebar:toggle', handleSidebarToggle)
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('sidebar:toggle', handleSidebarToggle)
+    }
   }, [])
 
-  // Dynamic padding based on sidebar state (matches sidebar transition: cubic-bezier(0.4, 0, 0.2, 1))
-  const paddingLeft = sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
-  const sidebarWidth = sidebarCollapsed ? 80 : 256 // 80px = 20*4, 256px = 64*4 (in Tailwind units)
+  // Dynamic offset based on sidebar state (sidebar appears from md breakpoint)
+  const paddingLeft = sidebarCollapsed ? 'md:pl-[3.5rem]' : 'md:pl-[16.1rem]'
+  const composerOffset = sidebarCollapsed ? 'md:left-[3.5rem]' : 'md:left-[16.1rem]'
 
   // Auto-expand textarea on input change
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -411,10 +423,9 @@ export function ChatThread({
 
       {/* Input Area - Fixed bottom */}
       <div
-        className="fixed bottom-0 left-0 right-0 border-t border-border bg-white dark:bg-[#1a1a1a]"
-        style={{ paddingLeft: `${sidebarWidth}px` }}
+        className={`fixed bottom-0 left-0 right-0 ${composerOffset} border-t border-border bg-white dark:bg-[#1a1a1a] transition-all duration-300`}
       >
-        <div className={isEmbedded ? 'p-4 relative' : 'p-6 relative article-layout mx-auto'}>
+        <div className={isEmbedded ? 'p-4 md:p-6 relative article-layout mx-auto' : 'p-6 relative article-layout mx-auto'}>
           {/* Loading state feedback for embedded mode */}
           {isSending && isEmbedded && (
             <motion.div
@@ -447,7 +458,7 @@ export function ChatThread({
           <button
             onClick={handleSend}
             disabled={isLoading || isSending || !inputValue.trim()}
-            className="absolute right-6 p-2 rounded-lg text-accent hover:bg-bg-secondary dark:hover:bg-[#333] disabled:text-[#ccc] dark:disabled:text-[#555] transition-colors spring-press"
+            className="absolute right-4 md:right-6 p-2 rounded-lg text-accent hover:bg-bg-secondary dark:hover:bg-[#333] disabled:text-[#ccc] dark:disabled:text-[#555] transition-colors spring-press"
             style={{ top: isEmbedded ? '1.5rem' : '1.5rem' }}
             aria-label="Enviar mensagem"
           >
