@@ -62,10 +62,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
-    // Fetch article details from articles table
+    // Fetch article details from articles table (to validate ID and get title)
     const { data: article, error: articleError } = await db
       .from('articles')
-      .select('id, title, sections, content')
+      .select('id, title, sections')
       .eq('id', articleId)
       .maybeSingle()
 
@@ -77,21 +77,30 @@ export async function POST(request: Request) {
       )
     }
 
-    // Try to fetch raw article content from raw_items (if available)
-    // Otherwise, build content from article sections
+    // Fetch raw article content from raw_items using article title as link
+    const { data: rawItem, error: rawError } = await db
+      .from('raw_items')
+      .select('content, title')
+      .eq('title', article.title)
+      .maybeSingle()
+
     let articleContent = ''
 
-    if (article.content) {
-      articleContent = article.content
-    } else if (article.sections && Array.isArray(article.sections)) {
-      // Fallback: construct content from sections
+    // Primary source: raw_items.content
+    if (rawItem?.content) {
+      articleContent = rawItem.content
+      console.log('[chat POST] Using content from raw_items for article:', article.title)
+    }
+    // Fallback: reconstruct from article.sections
+    else if (article.sections && Array.isArray(article.sections)) {
+      console.log('[chat POST] raw_items not found, using sections fallback for article:', article.title)
       articleContent = article.sections
         .map((section: any) => `${section.heading}\n${section.body}`)
         .join('\n\n')
     }
 
     if (!articleContent) {
-      console.error('[chat POST] Article has no content or sections:', { articleId })
+      console.error('[chat POST] Article has no content in raw_items or sections:', { articleId, title: article.title })
       return NextResponse.json(
         { error: 'Article content not found' },
         { status: 404 }
