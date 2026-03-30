@@ -324,11 +324,11 @@ export function ChatThread({
   }
 
   return (
-    <div className={`flex flex-col h-full ${mounted ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
+    <div className={`flex flex-col ${isEmbedded ? 'h-full' : 'min-h-screen'} ${mounted ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
       {/* Messages Container */}
       <div
         ref={containerRef}
-        className={`flex-1 overflow-y-auto p-4 space-y-4 pb-[200px] ${paddingLeft} transition-all duration-300`}
+        className={`flex-1 overflow-y-auto p-4 space-y-4 ${isEmbedded ? 'pb-[200px]' : 'pb-8'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
@@ -343,8 +343,8 @@ export function ChatThread({
               <div
                 className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                   msg.role === 'user'
-                    ? 'bg-blue-500 text-white rounded-br-none'
-                    : 'bg-[#F0F0F0] dark:bg-[#2a2a2a] text-black dark:text-white rounded-bl-none'
+                    ? 'bg-accent text-white rounded-br-none'
+                    : 'bg-bg-secondary dark:bg-[#2a2a2a] text-ink-primary dark:text-white rounded-bl-none'
                 }`}
               >
                 {msg.role === 'user' ? (
@@ -357,14 +357,14 @@ export function ChatThread({
 
                 {/* Follow-up Suggestions */}
                 {msg.role === 'assistant' && msg.followUpSuggestions && msg.followUpSuggestions.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-[#ddd] dark:border-[#3a3a3a]">
-                    <p className="text-xs font-semibold mb-2 opacity-70">Próximas perguntas:</p>
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <p className="text-xs font-semibold mb-2 text-ink-tertiary">Próximas perguntas:</p>
                     <div className="space-y-1.5">
                       {msg.followUpSuggestions.map((suggestion, i) => (
                         <button
                           key={i}
                           onClick={() => handleFollowUp(suggestion)}
-                          className="w-full text-left text-xs p-2 rounded bg-[#e8f0ff] dark:bg-[#1a3a5c] text-blue-600 dark:text-blue-300 hover:bg-[#d0e0ff] dark:hover:bg-[#2a4a7c] transition-colors"
+                          className="w-full text-left text-xs p-2 rounded-lg bg-accent/10 dark:bg-accent/10 text-accent hover:bg-accent/20 dark:hover:bg-accent/20 transition-colors"
                         >
                           {suggestion}
                         </button>
@@ -387,9 +387,9 @@ export function ChatThread({
             animate={{ opacity: 1 }}
             className="flex gap-2 p-4"
           >
-            <div className="w-2 h-2 rounded-full bg-[#ccc] dark:bg-[#555] animate-bounce" />
-            <div className="w-2 h-2 rounded-full bg-[#ccc] dark:bg-[#555] animate-bounce" style={{ animationDelay: '0.1s' }} />
-            <div className="w-2 h-2 rounded-full bg-[#ccc] dark:bg-[#555] animate-bounce" style={{ animationDelay: '0.2s' }} />
+            <div className="w-2 h-2 rounded-full bg-ink-tertiary animate-bounce" />
+            <div className="w-2 h-2 rounded-full bg-ink-tertiary animate-bounce" style={{ animationDelay: '0.1s' }} />
+            <div className="w-2 h-2 rounded-full bg-ink-tertiary animate-bounce" style={{ animationDelay: '0.2s' }} />
           </motion.div>
         )}
 
@@ -398,31 +398,31 @@ export function ChatThread({
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg p-3 text-sm text-red-700 dark:text-red-300"
+            className="bg-red-100/50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg p-3 text-sm text-red-700 dark:text-red-300"
           >
             ❌ {error}
           </motion.div>
         )}
       </div>
 
-      {/* Fixed Input Area */}
+      {/* Input Area - Fixed for embedded, static for full-page */}
       <div
-        className={`fixed bottom-0 left-0 right-0 border-t border-[#E9E9E9] dark:border-[#2a2a2a] bg-white dark:bg-[#1a1a1a] ${paddingLeft} transition-all duration-300`}
+        className={`${isEmbedded ? 'fixed bottom-0 left-0 right-0' : 'sticky bottom-0'} border-t border-border bg-white dark:bg-[#1a1a1a] ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
-        <div className="p-4 relative">
+        <div className={isEmbedded ? 'p-4 relative' : 'p-4 relative max-w-4xl mx-auto'}>
           {/* Loading state feedback for embedded mode */}
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-3 px-4 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 text-sm font-medium flex items-center gap-2"
+              className="mb-3 px-4 py-2 rounded-lg bg-accent/10 dark:bg-accent/10 text-accent text-sm font-medium flex items-center gap-2"
             >
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                 className="w-4 h-4"
               >
-                <div className="w-full h-full rounded-full border-2 border-blue-300 dark:border-blue-600 border-t-blue-600 dark:border-t-blue-300" />
+                <div className="w-full h-full rounded-full border-2 border-accent/30 border-t-accent" />
               </motion.div>
               Criando conversa...
             </motion.div>
@@ -436,13 +436,14 @@ export function ChatThread({
             placeholder="Faça uma pergunta sobre este artigo..."
             rows={1}
             disabled={isSending}
-            className="w-full px-4 py-3 pr-12 rounded-xl border border-[#E9E9E9] dark:border-[#2a2a2a] bg-white dark:bg-[#2a2a2a] text-black dark:text-white placeholder-[#999] focus:outline-none focus:border-blue-500 dark:focus:border-blue-400 resize-none disabled:opacity-50 transition-colors"
+            className="w-full px-4 py-3 pr-12 rounded-xl border border-border bg-white dark:bg-[#2a2a2a] text-black dark:text-white placeholder-ink-muted focus:outline-none focus:border-accent dark:focus:border-accent resize-none disabled:opacity-50 transition-colors"
           />
 
           <button
             onClick={handleSend}
             disabled={isLoading || isSending || !inputValue.trim()}
-            className="absolute bottom-6 right-6 p-2 rounded-lg text-blue-500 hover:bg-blue-50 dark:hover:bg-[#333] disabled:text-[#ccc] dark:disabled:text-[#555] transition-colors spring-press"
+            className="absolute right-6 p-2 rounded-lg text-accent hover:bg-bg-secondary dark:hover:bg-[#333] disabled:text-[#ccc] dark:disabled:text-[#555] transition-colors spring-press"
+            style={{ top: isEmbedded ? '1.5rem' : '1.5rem' }}
             aria-label="Enviar mensagem"
           >
             <ArrowUp width={20} height={20} />

@@ -94,59 +94,71 @@ export default async function ThreadPage({
   })
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-[#1a1a1a]">
-      {/* Header */}
-      <div className="sticky top-0 z-20 border-b border-[#E9E9E9] dark:border-[#2a2a2a] px-4 md:px-8 bg-[#F9F9F9] dark:bg-[#1f1f1f]">
-        <div className="flex items-center h-14 gap-3 max-w-3xl mx-auto">
-          <Link
-            href={`/article/${article.id}`}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E9E9E9] dark:border-[#2a2a2a] hover:bg-[#F0F0F0] dark:hover:bg-[#2a2a2a] text-sm text-[#666] dark:text-[#999] transition-colors"
-          >
-            <ArrowLeft size={16} />
-            <span className="hidden sm:inline">Voltar</span>
-          </Link>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-semibold text-black dark:text-white truncate">
-              {thread.title}
-            </h1>
-          </div>
-        </div>
-      </div>
+    <div className="flex flex-1 min-w-0 overflow-hidden">
+      {/* Main scrollable content area */}
+      <div className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
 
-      {/* Article Reference Card */}
-      <div className="border-b border-[#E9E9E9] dark:border-[#2a2a2a] px-4 md:px-8 py-4 bg-[#F9F9F9] dark:bg-[#1f1f1f]">
-        <div className="max-w-3xl mx-auto flex gap-3">
-          {article.image_url && (
-            <img
-              src={article.image_url}
-              alt={article.title}
-              className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold text-[#666] dark:text-[#999] uppercase tracking-wider">
-                {article.topic}
+        {/* ── Sticky header ── */}
+        <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
+          <div className="flex items-center h-12 md:h-14 gap-3">
+            <Link
+              href={`/article/${article.id}`}
+              className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
+            >
+              <ArrowLeft size={15} className="flex-shrink-0" />
+              <span className="hidden sm:inline">Voltar para artigo</span>
+            </Link>
+
+            {/* Thread title */}
+            <div className="flex-1 flex justify-center overflow-hidden px-2">
+              <span className="text-[0.875rem] font-medium text-ink-primary truncate max-w-lg">
+                {thread.title}
               </span>
             </div>
-            <h2 className="font-bold text-sm leading-tight text-black dark:text-white line-clamp-2">
-              {article.title}
-            </h2>
-            <p className="text-xs text-[#888] dark:text-[#aaa] mt-1">
-              {new Date(article.published_at).toLocaleDateString('pt-BR')}
-            </p>
+
+            <div className="w-20 flex-shrink-0" /> {/* Spacer for symmetry */}
           </div>
         </div>
-      </div>
 
-      {/* Chat Container */}
-      <ChatThread
-        threadId={threadId}
-        articleId={article.id}
-        initialMessages={transformedMessages}
-        isEmbedded={false}
-        autoRespond={true}
-      />
+        {/* Article Reference Card */}
+        <div className="border-b border-border px-4 md:px-8 py-4 bg-bg-secondary">
+          <div className="article-layout mx-auto flex gap-3">
+            {article.image_url && (
+              <img
+                src={article.image_url}
+                alt={article.title}
+                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-semibold text-ink-tertiary uppercase tracking-wider">
+                  {article.topic}
+                </span>
+              </div>
+              <h2 className="font-bold text-sm leading-tight text-ink-primary line-clamp-2">
+                {article.title}
+              </h2>
+              <p className="text-xs text-ink-muted mt-1">
+                {new Date(article.published_at).toLocaleDateString('pt-BR')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Chat Content Area */}
+        <main className="page-scroll">
+          <div className="article-layout mx-auto py-6 px-6 pb-24 md:pb-8">
+            <ChatThread
+              threadId={threadId}
+              articleId={article.id}
+              initialMessages={transformedMessages}
+              isEmbedded={false}
+              autoRespond={true}
+            />
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
