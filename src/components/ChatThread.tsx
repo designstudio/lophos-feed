@@ -172,22 +172,26 @@ export function ChatThread({
 
       let fullResponse = ''
       let suggestions: string[] = []
+      const DELIMITER = '---LOPHOS_SUGGESTIONS---'
 
       // Parse streaming response
       for await (const chunk of parseNDJSON(response)) {
         if (chunk.token) {
           fullResponse += chunk.token
 
+          // Strip delimiter and suggestions from display content
+          const displayContent = fullResponse.split(DELIMITER)[0].trim()
+
           // Update last message in real-time (assistant message)
           setMessages((prev) => {
             const updated = [...prev]
             if (updated[updated.length - 1]?.role === 'assistant') {
-              updated[updated.length - 1].content = fullResponse
+              updated[updated.length - 1].content = displayContent
             } else {
               updated.push({
                 id: `assistant-${Date.now()}`,
                 role: 'assistant',
-                content: fullResponse,
+                content: displayContent,
                 createdAt: new Date().toISOString(),
               })
             }

@@ -235,14 +235,31 @@ ${fullContext}
 - Transparência: Se expandir com knowledge, faça como insight, não como disclaimer
 - Estrutura: Parágrafos coesos, não listas, não separações
 
-# DELIMITADOR FINAL (ÚNICO):
+# INSTRUÇÃO TÉCNICA ABSOLUTA DE FORMATAÇÃO:
 
+**⚠️ CRÍTICO - Não negotiate isto:**
+
+1. Sua resposta TERMINA estritamente no último ponto final do parágrafo explicativo
+2. NUNCA inclua "Próximas perguntas:" ou qualquer sugestão dentro do corpo markdown
+3. NUNCA numere (1., 2., 3.) as perguntas sugeridas
+4. Após sua resposta, coloque este delimitador exato: ---LOPHOS_SUGGESTIONS---
+5. Depois do delimitador, liste as 3 perguntas COM FORMATAÇÃO:
+   **Próximas perguntas:**
+   1. [pergunta profunda]
+   2. [pergunta profunda]
+   3. [pergunta profunda]
+
+# EXEMPLO DE FLUXO CORRETO:
+
+[Seu texto da resposta termina aqui.]
+
+---LOPHOS_SUGGESTIONS---
 **Próximas perguntas:**
-1. [pergunta profunda]
-2. [pergunta profunda]
-3. [pergunta profunda]
+1. [pergunta 1]
+2. [pergunta 2]
+3. [pergunta 3]
 
-⚠️ ARQUITETURA: Este delimitador é PURO METADADO. Nada dele aparece no corpo da resposta.`
+⚠️ ARQUITETURA: O frontend captura tudo APÓS ---LOPHOS_SUGGESTIONS---. Nada disto deve aparecer no conteúdo markdown principal.`
 
     console.log('[streamGroqResponse] Starting Groq (Lophos Intelligence v1.0) stream for threadId:', threadId)
     console.log('[streamGroqResponse] Full context length:', fullContext.length, 'chars')
@@ -289,8 +306,11 @@ ${fullContext}
       contentLength: fullResponse.length,
     })
 
-    // Extract follow-up suggestions from response
-    const suggestions = extractFollowUpSuggestions(fullResponse)
+    // Split response on delimiter to separate content from suggestions
+    const { content: responseContent, suggestions } = separateContentAndSuggestions(fullResponse)
+
+    console.log('[streamGroqResponse] Content length:', responseContent.length, 'chars')
+    console.log('[streamGroqResponse] Suggestions extracted:', suggestions.length)
 
     // Send completion signal with suggestions
     await writer.write(
@@ -302,12 +322,12 @@ ${fullContext}
       )
     )
 
-    // Save assistant message to database
+    // Save assistant message to database (content only, without delimiter and suggestions)
     const { error: messageError } = await db.from('chat_messages').insert({
       thread_id: threadId,
       user_id: userId,
       role: 'assistant',
-      content: fullResponse,
+      content: responseContent,
       follow_up_suggestions: suggestions,
     })
 
@@ -334,45 +354,37 @@ ${fullContext}
 }
 
 /**
- * Extract follow-up suggestions from response
- * Looks for 3 questions in the format:
- * **Próximas perguntas:**
- * 1. Question?
- * 2. Question?
- * 3. Question?
+ * Separate response content from suggestions using delimiter
+ * Format: [content]---LOPHOS_SUGGESTIONS---[suggestions]
+ * Extracts numbered questions from the suggestions section
  */
-function extractFollowUpSuggestions(response: string): string[] {
+function separateContentAndSuggestions(fullResponse: string): {
+  content: string
+  suggestions: string[]
+} {
+  const DELIMITER = '---LOPHOS_SUGGESTIONS---'
   const suggestions: string[] = []
 
-  // Look for the "Próximas perguntas:" section
-  const match = response.match(
-    /\*\*Próximas perguntas:\*\*\s*([\s\S]*?)(?:$|---)/i
-  )
+  // Split on delimiter
+  const parts = fullResponse.split(DELIMITER)
+  const content = parts[0].trim()
 
-  if (match) {
-    const suggestionsText = match[1]
-    const lines = suggestionsText.split('\n')
+  // If delimiter exists, parse suggestions from second part
+  if (parts.length > 1) {
+    const suggestionsSection = parts[1]
+    const lines = suggestionsSection.split('\n')
 
     for (const line of lines) {
-      // Match numbered questions
-      const questionMatch = line.match(/^\d+\.\s*(.+?)$/)
+      // Match numbered questions (1. Question?, 2. Question?, etc)
+      const questionMatch = line.match(/^\d+\.\s*(.+?)(?:\?)?$/)
       if (questionMatch && suggestions.length < 3) {
-        const question = questionMatch[1].trim()
+        let question = questionMatch[1].trim()
+        // Ensure question ends with ?
+        if (!question.endsWith('?')) {
+          question += '?'
+        }
         if (question.length > 10) {
           suggestions.push(question)
-        }
-      }
-    }
-  }
-
-  // Fallback to parsing any lines ending with ?
-  if (suggestions.length < 3) {
-    const lines = response.split('\n')
-    for (const line of lines) {
-      if (line.includes('?') && suggestions.length < 3) {
-        const cleaned = line.replace(/^[\s\d\.\)\-\*]*/, '').trim()
-        if (cleaned.length > 10 && !suggestions.includes(cleaned)) {
-          suggestions.push(cleaned)
         }
       }
     }
@@ -385,8 +397,14 @@ function extractFollowUpSuggestions(response: string): string[] {
       'Quais são as implicações práticas?',
       'Como isto se conecta com outros fatos do artigo?',
     ]
-    return [...suggestions, ...fallbacks.slice(0, 3 - suggestions.length)]
+    return {
+      content,
+      suggestions: [...suggestions, ...fallbacks.slice(0, 3 - suggestions.length)],
+    }
   }
 
-  return suggestions.slice(0, 3)
+  return {
+    content,
+    suggestions: suggestions.slice(0, 3),
+  }
 }
