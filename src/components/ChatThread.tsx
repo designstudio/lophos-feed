@@ -66,6 +66,7 @@ export function ChatThread({
 
   // Dynamic padding based on sidebar state (matches sidebar transition: cubic-bezier(0.4, 0, 0.2, 1))
   const paddingLeft = sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+  const sidebarWidth = sidebarCollapsed ? 80 : 256 // 80px = 20*4, 256px = 64*4 (in Tailwind units)
 
   // Auto-expand textarea on input change
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -407,7 +408,8 @@ export function ChatThread({
 
       {/* Input Area - Fixed bottom with responsive width */}
       <div
-        className={`fixed bottom-0 left-0 right-0 border-t border-border bg-white dark:bg-[#1a1a1a] ${paddingLeft} transition-all duration-300`}
+        className="fixed bottom-0 left-0 right-0 border-t border-border bg-white dark:bg-[#1a1a1a] transition-all duration-300"
+        style={{ paddingLeft: `${sidebarWidth}px` }}
       >
         <div className={isEmbedded ? 'p-4 relative' : 'p-6 relative article-layout mx-auto'}>
           {/* Loading state feedback for embedded mode */}
