@@ -91,6 +91,7 @@ export async function POST(request: Request) {
     // Save first user message to database
     const { error: messageError } = await db.from('chat_messages').insert({
       thread_id: newThread.id,
+      user_id: userId,
       role: 'user',
       content: message,
     })

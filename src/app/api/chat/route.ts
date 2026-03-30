@@ -110,6 +110,7 @@ export async function POST(request: Request) {
     // Save user message to database
     const { error: userMessageError } = await db.from('chat_messages').insert({
       thread_id: threadId,
+      user_id: userId,
       role: 'user',
       content: message,
     })
@@ -257,6 +258,7 @@ Formato de sugestões de follow-up:
     // Save assistant message to database
     const { error: messageError } = await db.from('chat_messages').insert({
       thread_id: threadId,
+      user_id: userId,
       role: 'assistant',
       content: fullResponse,
       follow_up_suggestions: suggestions,
