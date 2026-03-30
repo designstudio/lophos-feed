@@ -324,11 +324,11 @@ export function ChatThread({
   }
 
   return (
-    <div className={`flex flex-col ${isEmbedded ? 'h-full' : 'min-h-screen'} ${mounted ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
+    <div className={`flex flex-col ${isEmbedded ? 'h-full' : 'min-h-screen'} ${isEmbedded ? '' : 'relative'} ${mounted ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
       {/* Messages Container */}
       <div
         ref={containerRef}
-        className={`flex-1 overflow-y-auto p-4 space-y-4 ${isEmbedded ? 'pb-[200px]' : 'pb-8'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`flex-1 overflow-y-auto space-y-4 ${isEmbedded ? 'p-4 pb-[200px]' : 'pb-32'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
@@ -405,11 +405,11 @@ export function ChatThread({
         )}
       </div>
 
-      {/* Input Area - Fixed for embedded, static for full-page */}
+      {/* Input Area - Fixed for embedded, absolute for full-page */}
       <div
-        className={`${isEmbedded ? 'fixed bottom-0 left-0 right-0' : 'sticky bottom-0'} border-t border-border bg-white dark:bg-[#1a1a1a] ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`${isEmbedded ? 'fixed bottom-0 left-0 right-0' : 'absolute bottom-0 left-0 right-0'} border-t border-border bg-white dark:bg-[#1a1a1a] ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
-        <div className={isEmbedded ? 'p-4 relative' : 'p-4 relative max-w-4xl mx-auto'}>
+        <div className={isEmbedded ? 'p-4 relative' : 'p-6 relative article-layout mx-auto'}>
           {/* Loading state feedback for embedded mode */}
           {isSending && isEmbedded && (
             <motion.div

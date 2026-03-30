@@ -89,7 +89,7 @@ export function ThreadPageClient({
         <div ref={titleRef} className="border-b border-border px-4 md:px-8 py-4">
           <Link
             href={`/article/${article.id}`}
-            className="article-layout mx-auto flex gap-3 p-4 rounded-[1rem] border border-border hover:border-border-strong hover:bg-bg-secondary transition-all group cursor-pointer"
+            className="article-layout mx-auto flex gap-3 p-4 rounded-[1rem] hover:bg-bg-secondary transition-all group cursor-pointer"
           >
             {article.image_url && (
               <img
