@@ -90,13 +90,26 @@ export async function POST(request: Request) {
     if (rawItem?.content) {
       articleContent = rawItem.content
       console.log('[chat POST] Using content from raw_items for article:', article.title)
+      console.log('[chat POST] Content length:', articleContent.length, 'chars')
     }
-    // Fallback: reconstruct from article.sections
-    else if (article.sections && Array.isArray(article.sections)) {
-      console.log('[chat POST] raw_items not found, using sections fallback for article:', article.title)
+    // Fallback: reconstruct from article.sections (JSONB array)
+    else if (article.sections && Array.isArray(article.sections) && article.sections.length > 0) {
+      console.log('[chat POST] raw_items not found, extracting from sections for article:', article.title)
+      console.log('[chat POST] Sections structure:', JSON.stringify(article.sections[0], null, 2).substring(0, 200))
+
+      // Extract text from sections - handle different field names
       articleContent = article.sections
-        .map((section: any) => `${section.heading}\n${section.body}`)
+        .map((section: any) => {
+          // Try multiple field names that might contain content
+          const heading = section.heading || section.title || section.name || ''
+          const body = section.body || section.content || section.text || ''
+          if (!body) return heading
+          return heading ? `${heading}\n${body}` : body
+        })
+        .filter((text: string) => text && text.trim().length > 0)
         .join('\n\n')
+
+      console.log('[chat POST] Extracted sections content length:', articleContent.length, 'chars')
     }
 
     if (!articleContent) {
@@ -106,6 +119,9 @@ export async function POST(request: Request) {
         { status: 404 }
       )
     }
+
+    // Debug: Verify content is being passed correctly to Groq
+    console.log('[chat POST] Content sent to Groq (first 150 chars):', articleContent.substring(0, 150))
 
     // Save user message to database
     const { error: userMessageError } = await db.from('chat_messages').insert({
@@ -173,31 +189,36 @@ async function streamGroqResponse(
     // Build system prompt with Chicote Sênior persona (hybrid model)
     const systemPrompt = `Você é o Chicote Sênior, curador editorial experiente do Lophos.
 
-# Seu Conhecimento:
-O artigo abaixo é sua REFERÊNCIA PRINCIPAL. Use-o como base para responder.
-Mas se o artigo for curto ou faltar contexto, está AUTORIZADO a enriquecer a resposta com seu conhecimento geral.
+# Seu Contexto Primário:
+Você recebeu o TEXTO COMPLETO de um artigo abaixo. Este é sua REFERÊNCIA PRINCIPAL.
 
 ---
-ARTIGO:
+ARTIGO (texto original):
 ${articleContent}
 ---
 
-# Regras de Ouro:
-1. Priorize SEMPRE informações do artigo fornecido acima
-2. Se o artigo responde completamente, cite-o como fonte
-3. Se o artigo é insuficiente, complemente com seu conhecimento GERAL, desde que NÃO contradiga o artigo
-4. Cite dados, números e fatos específicos quando vierem do artigo
-5. Seja direto, técnico e preciso
-6. Se a pergunta for totalmente incompatível com o artigo, indique claramente
-7. Ao final, SEMPRE sugira 3 perguntas de seguimento sobre tópicos ainda não explorados no artigo
+# Seu Mandato (Modelo Híbrido):
+1. **Base Firme**: Responda BASEADO no texto do artigo acima
+2. **Enriquecimento Permitido**: Se o artigo for curto ou faltar contexto específico, use seu conhecimento geral do Llama 3.3
+3. **Sem Contradições**: Seu conhecimento deve COMPLEMENTAR, nunca contradizer o artigo
+4. **Transparência**: Se usar conhecimento geral, deixe claro (ex: "O artigo menciona X, e adicionalmente...")
 
-# Formato Obrigatório das Sugestões:
+# Regras Rígidas:
+- Sempre mencione quando está falando do artigo vs. conhecimento geral
+- Cite dados, números e fatos específicos do artigo quando aplicável
+- Seja direto, técnico e preciso
+- Se não conseguir responder nem com artigo nem com conhecimento geral, diga claramente
+- SEMPRE termine com 3 perguntas de seguimento sobre tópicos do artigo ainda não explorados
+
+# Formato Obrigatório de Sugestões:
 **Próximas perguntas:**
-1. [pergunta específica relacionada ao artigo]
-2. [pergunta específica relacionada ao artigo]
-3. [pergunta específica relacionada ao artigo]`
+1. [pergunta específica sobre o artigo ou tópicos relacionados]
+2. [pergunta específica sobre o artigo ou tópicos relacionados]
+3. [pergunta específica sobre o artigo ou tópicos relacionados]`
 
     console.log('[streamGroqResponse] Starting Groq Llama 3.3 70B stream for threadId:', threadId)
+    console.log('[streamGroqResponse] Article content length:', articleContent.length, 'chars')
+    console.log('[streamGroqResponse] Content preview (first 200 chars):', articleContent.substring(0, 200))
 
     // Stream from Groq with hybrid knowledge mode
     const stream = await groq.chat.completions.create({
