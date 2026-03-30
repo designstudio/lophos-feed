@@ -407,7 +407,7 @@ export function ChatThread({
 
       {/* Input Area - Fixed bottom with responsive width */}
       <div
-        className={`fixed bottom-0 left-0 right-0 border-t border-border bg-white dark:bg-[#1a1a1a] ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`fixed bottom-0 left-0 right-0 border-t border-border bg-white dark:bg-[#1a1a1a] ${paddingLeft} transition-all duration-300`}
       >
         <div className={isEmbedded ? 'p-4 relative' : 'p-6 relative article-layout mx-auto'}>
           {/* Loading state feedback for embedded mode */}
