@@ -62,15 +62,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
-    // Fetch raw article content from raw_items
-    const { data: rawItem, error: rawError } = await db
-      .from('raw_items')
-      .select('content, title, topic')
+    // Fetch article details from articles table
+    const { data: article, error: articleError } = await db
+      .from('articles')
+      .select('id, title, sections, content')
       .eq('id', articleId)
       .maybeSingle()
 
-    if (rawError || !rawItem?.content) {
-      console.error('[chat POST] Raw item not found or has no content:', rawError)
+    if (articleError || !article) {
+      console.error('[chat POST] Article not found:', articleError)
+      return NextResponse.json(
+        { error: 'Article not found' },
+        { status: 404 }
+      )
+    }
+
+    // Try to fetch raw article content from raw_items (if available)
+    // Otherwise, build content from article sections
+    let articleContent = ''
+
+    if (article.content) {
+      articleContent = article.content
+    } else if (article.sections && Array.isArray(article.sections)) {
+      // Fallback: construct content from sections
+      articleContent = article.sections
+        .map((section: any) => `${section.heading}\n${section.body}`)
+        .join('\n\n')
+    }
+
+    if (!articleContent) {
+      console.error('[chat POST] Article has no content or sections:', { articleId })
       return NextResponse.json(
         { error: 'Article content not found' },
         { status: 404 }
@@ -104,7 +125,7 @@ export async function POST(request: Request) {
       threadId,
       userId,
       db,
-      rawItem.content,
+      articleContent,
       message
     ).catch((err) => {
       console.error('[chat POST] Streaming error:', err)
