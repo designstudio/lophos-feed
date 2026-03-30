@@ -17,9 +17,7 @@ function getGeminiClient() {
   if (!apiKey) {
     throw new Error('GOOGLE_AI_API_KEY or GEMINI_API_KEY environment variable is not set')
   }
-  const genAI = new GoogleGenerativeAI(apiKey)
-  // Configure to use v1 API
-  return genAI
+  return new GoogleGenerativeAI(apiKey)
 }
 
 /**
@@ -172,15 +170,11 @@ async function streamGeminiResponse(
   try {
     const genAI = getGeminiClient()
 
-    // Initialize Gemini 3 Flash Preview model with v1 API
-    const model = genAI.getGenerativeModel(
-      {
-        model: 'gemini-3-flash-preview',
-      },
-      {
-        apiVersion: 'v1',
-      }
-    )
+    // Initialize Gemini 3 Flash Preview model with v1 API (exact syntax from process-news)
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-3-flash-preview',
+      apiVersion: 'v1',
+    } as any)
 
     // Build system prompt with Chicote Sênior persona
     const systemPrompt = `Você é o Chicote Sênior, curador editorial experiente do Lophos.
