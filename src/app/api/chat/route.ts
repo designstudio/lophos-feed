@@ -62,10 +62,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 })
     }
 
-    // Fetch article details from articles table (to validate ID and get title)
+    // Fetch article details from articles table (to validate ID and get title, topic)
     const { data: article, error: articleError } = await db
       .from('articles')
-      .select('id, title, sections')
+      .select('id, title, topic, sections')
       .eq('id', articleId)
       .maybeSingle()
 
@@ -120,8 +120,19 @@ export async function POST(request: Request) {
       )
     }
 
-    // Debug: Verify content is being passed correctly to Groq
-    console.log('[chat POST] Content sent to Groq (first 150 chars):', articleContent.substring(0, 150))
+    // Build full context with title, topic, and content
+    const fullContext = `TÍTULO: ${article.title}
+TÓPICO: ${article.topic}
+
+CONTEÚDO:
+${articleContent}`
+
+    // Debug: Verify context is being passed correctly to Groq
+    console.log('[chat POST] Full context being sent to Groq:')
+    console.log('[chat POST] - Title:', article.title)
+    console.log('[chat POST] - Topic:', article.topic)
+    console.log('[chat POST] - Content length:', articleContent.length, 'chars')
+    console.log('[chat POST] - Full context length:', fullContext.length, 'chars')
 
     // Save user message to database
     const { error: userMessageError } = await db.from('chat_messages').insert({
@@ -151,7 +162,7 @@ export async function POST(request: Request) {
       threadId,
       userId,
       db,
-      articleContent,
+      fullContext,
       message
     ).catch((err) => {
       console.error('[chat POST] Streaming error:', err)
@@ -180,7 +191,7 @@ async function streamGroqResponse(
   threadId: string,
   userId: string,
   db: any,
-  articleContent: string,
+  fullContext: string,
   userMessage: string
 ) {
   try {
@@ -194,31 +205,34 @@ Você recebeu o TEXTO COMPLETO de um artigo abaixo. Este é sua REFERÊNCIA PRIN
 
 ---
 ARTIGO (texto original):
-${articleContent}
+${fullContext}
 ---
 
 # Seu Mandato (Modelo Híbrido):
-1. **Base Firme**: Responda BASEADO no texto do artigo acima
+1. **Base Firme**: Responda BASEADO no artigo acima (sempre mencione o título quando aplicável)
 2. **Enriquecimento Permitido**: Se o artigo for curto ou faltar contexto específico, use seu conhecimento geral do Llama 3.3
 3. **Sem Contradições**: Seu conhecimento deve COMPLEMENTAR, nunca contradizer o artigo
 4. **Transparência**: Se usar conhecimento geral, deixe claro (ex: "O artigo menciona X, e adicionalmente...")
 
 # Regras Rígidas:
-- Sempre mencione quando está falando do artigo vs. conhecimento geral
+- Sempre mencione o TÍTULO do artigo quando relevante para a resposta
 - Cite dados, números e fatos específicos do artigo quando aplicável
 - Seja direto, técnico e preciso
 - Se não conseguir responder nem com artigo nem com conhecimento geral, diga claramente
-- SEMPRE termine com 3 perguntas de seguimento sobre tópicos do artigo ainda não explorados
+- NUNCA escreva "Próximas perguntas:" no corpo da resposta
+- SEMPRE termine com EXATAMENTE 3 perguntas no formato abaixo (sem "Próximas perguntas:" antes)
 
-# Formato Obrigatório de Sugestões:
+# Formato Obrigatório Final (SEM o texto "Próximas perguntas:" no corpo):
 **Próximas perguntas:**
 1. [pergunta específica sobre o artigo ou tópicos relacionados]
 2. [pergunta específica sobre o artigo ou tópicos relacionados]
-3. [pergunta específica sobre o artigo ou tópicos relacionados]`
+3. [pergunta específica sobre o artigo ou tópicos relacionados]
+
+⚠️ IMPORTANTE: O texto "Próximas perguntas:" aparece APENAS neste formato final, não no meio da resposta.`
 
     console.log('[streamGroqResponse] Starting Groq Llama 3.3 70B stream for threadId:', threadId)
-    console.log('[streamGroqResponse] Article content length:', articleContent.length, 'chars')
-    console.log('[streamGroqResponse] Content preview (first 200 chars):', articleContent.substring(0, 200))
+    console.log('[streamGroqResponse] Full context length:', fullContext.length, 'chars')
+    console.log('[streamGroqResponse] Context preview (first 300 chars):', fullContext.substring(0, 300))
 
     // Stream from Groq with hybrid knowledge mode
     const stream = await groq.chat.completions.create({
