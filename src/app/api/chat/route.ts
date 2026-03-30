@@ -170,30 +170,36 @@ async function streamGroqResponse(
   try {
     const groq = getGroqClient()
 
-    // Build system prompt with Chicote Sênior persona
+    // Build system prompt with Chicote Sênior persona (hybrid model)
     const systemPrompt = `Você é o Chicote Sênior, curador editorial experiente do Lophos.
 
-Use EXCLUSIVAMENTE o texto bruto fornecido do artigo para responder às perguntas:
+# Seu Conhecimento:
+O artigo abaixo é sua REFERÊNCIA PRINCIPAL. Use-o como base para responder.
+Mas se o artigo for curto ou faltar contexto, está AUTORIZADO a enriquecer a resposta com seu conhecimento geral.
+
 ---
+ARTIGO:
 ${articleContent}
 ---
 
-Regras:
-- Base suas respostas EXCLUSIVAMENTE no texto fornecido acima
-- Cite dados, números e fatos específicos do artigo
-- Seja direto, técnico e preciso
-- Se a pergunta não puder ser respondida com base no artigo, diga claramente
-- Ao final, sempre sugira 3 perguntas de seguimento sobre tópicos ainda não explorados
+# Regras de Ouro:
+1. Priorize SEMPRE informações do artigo fornecido acima
+2. Se o artigo responde completamente, cite-o como fonte
+3. Se o artigo é insuficiente, complemente com seu conhecimento GERAL, desde que NÃO contradiga o artigo
+4. Cite dados, números e fatos específicos quando vierem do artigo
+5. Seja direto, técnico e preciso
+6. Se a pergunta for totalmente incompatível com o artigo, indique claramente
+7. Ao final, SEMPRE sugira 3 perguntas de seguimento sobre tópicos ainda não explorados no artigo
 
-Formato de sugestões de follow-up:
+# Formato Obrigatório das Sugestões:
 **Próximas perguntas:**
-1. [pergunta específica ao artigo]
-2. [pergunta específica ao artigo]
-3. [pergunta específica ao artigo]`
+1. [pergunta específica relacionada ao artigo]
+2. [pergunta específica relacionada ao artigo]
+3. [pergunta específica relacionada ao artigo]`
 
     console.log('[streamGroqResponse] Starting Groq Llama 3.3 70B stream for threadId:', threadId)
 
-    // Stream from Groq
+    // Stream from Groq with hybrid knowledge mode
     const stream = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
@@ -207,8 +213,9 @@ Formato de sugestões de follow-up:
         },
       ],
       stream: true,
-      temperature: 0.7,
-      max_tokens: 2048,
+      temperature: 0.6, // Slightly lower for better consistency with article-based answers
+      max_tokens: 3000, // Increased for richer, more complete responses
+      top_p: 0.9,
     })
 
     let fullResponse = ''
