@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // 60 seconds for streaming
@@ -12,17 +12,17 @@ interface ChatRequest {
   message: string
 }
 
-function getGeminiClient() {
-  const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY
+function getGroqClient() {
+  const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
-    throw new Error('GOOGLE_AI_API_KEY or GEMINI_API_KEY environment variable is not set')
+    throw new Error('GROQ_API_KEY environment variable is not set')
   }
-  return new GoogleGenerativeAI(apiKey)
+  return new Groq({ apiKey })
 }
 
 /**
  * POST /api/chat
- * Stream Gemini 2.0 Flash response and save to database
+ * Stream Groq Llama 3.3 70B response and save to database
  */
 export async function POST(request: Request) {
   const { userId } = await auth()
@@ -128,8 +128,8 @@ export async function POST(request: Request) {
     const stream = new TransformStream()
     const writer = stream.writable.getWriter()
 
-    // Stream Gemini response in background
-    streamGeminiResponse(
+    // Stream Groq response in background
+    streamGroqResponse(
       writer,
       encoder,
       threadId,
@@ -156,9 +156,9 @@ export async function POST(request: Request) {
 }
 
 /**
- * Stream Gemini 2.0 Flash response and save to database
+ * Stream Groq Llama 3.3 70B response and save to database
  */
-async function streamGeminiResponse(
+async function streamGroqResponse(
   writer: WritableStreamDefaultWriter<Uint8Array>,
   encoder: TextEncoder,
   threadId: string,
@@ -168,12 +168,7 @@ async function streamGeminiResponse(
   userMessage: string
 ) {
   try {
-    const genAI = getGeminiClient()
-
-    // Initialize Gemini 2.0 Flash model (faster, no daily limits)
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
-    })
+    const groq = getGroqClient()
 
     // Build system prompt with Chicote Sênior persona
     const systemPrompt = `Você é o Chicote Sênior, curador editorial experiente do Lophos.
@@ -196,36 +191,32 @@ Formato de sugestões de follow-up:
 2. [pergunta específica ao artigo]
 3. [pergunta específica ao artigo]`
 
-    console.log('[streamGeminiResponse] Starting Gemini 2.0 Flash stream for threadId:', threadId)
+    console.log('[streamGroqResponse] Starting Groq Llama 3.3 70B stream for threadId:', threadId)
 
-    // Stream from Gemini
-    const stream = await model.generateContentStream({
-      contents: [
+    // Stream from Groq
+    const stream = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
         {
-          role: 'user',
-          parts: [
-            {
-              text: systemPrompt,
-            },
-          ],
+          role: 'system',
+          content: systemPrompt,
         },
         {
           role: 'user',
-          parts: [
-            {
-              text: userMessage,
-            },
-          ],
+          content: userMessage,
         },
       ],
+      stream: true,
+      temperature: 0.7,
+      max_tokens: 2048,
     })
 
     let fullResponse = ''
     let tokenCount = 0
 
     // Stream tokens to client
-    for await (const chunk of stream.stream) {
-      const text = chunk.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content || ''
       if (text) {
         fullResponse += text
         tokenCount++
@@ -236,7 +227,7 @@ Formato de sugestões de follow-up:
       }
     }
 
-    console.log('[streamGeminiResponse] Gemini stream complete:', {
+    console.log('[streamGroqResponse] Groq stream complete:', {
       threadId,
       tokenCount,
       contentLength: fullResponse.length,
@@ -265,7 +256,7 @@ Formato de sugestões de follow-up:
     })
 
     if (messageError) {
-      console.error('[streamGeminiResponse] Error saving assistant message:', messageError)
+      console.error('[streamGroqResponse] Error saving assistant message:', messageError)
     }
 
     // Update thread's updated_at timestamp
@@ -276,7 +267,7 @@ Formato de sugestões de follow-up:
 
     await writer.close()
   } catch (err) {
-    console.error('[streamGeminiResponse] Error:', err)
+    console.error('[streamGroqResponse] Error:', err)
     const errorMsg = JSON.stringify({
       error: 'Failed to generate response',
       complete: true,
@@ -287,7 +278,7 @@ Formato de sugestões de follow-up:
 }
 
 /**
- * Extract follow-up suggestions from Gemini response
+ * Extract follow-up suggestions from response
  * Looks for 3 questions in the format:
  * **Próximas perguntas:**
  * 1. Question?
