@@ -329,7 +329,7 @@ export function ChatThread({
       {/* Messages Container */}
       <div
         ref={containerRef}
-        className={`flex-1 overflow-y-auto space-y-4 ${isEmbedded ? 'p-4 pb-[200px]' : 'pb-[180px]'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`flex-1 overflow-y-auto space-y-4 ${isEmbedded ? 'p-4 pb-[200px]' : ''} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
@@ -406,10 +406,13 @@ export function ChatThread({
         )}
       </div>
 
-      {/* Input Area - Fixed bottom with responsive width */}
+      {/* Spacer for fixed input (prevents content overlap) */}
+      {!isEmbedded && <div className="pointer-events-none" style={{ height: '120px' }} />}
+
+      {/* Input Area - Fixed bottom */}
       <div
-        className="fixed bottom-0 right-0 border-t border-border bg-white dark:bg-[#1a1a1a] transition-all duration-300"
-        style={{ left: `${sidebarWidth}px` }}
+        className="fixed bottom-0 left-0 right-0 border-t border-border bg-white dark:bg-[#1a1a1a]"
+        style={{ paddingLeft: `${sidebarWidth}px` }}
       >
         <div className={isEmbedded ? 'p-4 relative' : 'p-6 relative article-layout mx-auto'}>
           {/* Loading state feedback for embedded mode */}
