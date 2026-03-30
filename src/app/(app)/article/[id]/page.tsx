@@ -10,6 +10,7 @@ import { Heart as HeartFilled } from '@solar-icons/react-perf/Bold'
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { ChatThread } from '@/components/ChatThread'
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
@@ -293,6 +294,7 @@ export default function ArticlePage() {
             )}
 
             {!loading && item && (
+              <>
               <article className="animate-fade-in">
                 {/* Topic + title */}
                 <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
@@ -417,6 +419,19 @@ export default function ArticlePage() {
                   </div>
                 )}
               </article>
+
+              {/* Chat Embedded */}
+              <div className="mt-12 border-t border-border pt-8">
+                <h2 className="text-lg font-semibold text-ink-primary mb-4">Converse sobre este artigo</h2>
+                <ChatThread
+                  threadId="new"
+                  articleId={id}
+                  initialMessages={[]}
+                  isEmbedded={true}
+                  autoRespond={false}
+                />
+              </div>
+              </>
             )}
           </div>
         </main>
