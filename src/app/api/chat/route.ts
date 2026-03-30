@@ -17,12 +17,14 @@ function getGeminiClient() {
   if (!apiKey) {
     throw new Error('GOOGLE_AI_API_KEY or GEMINI_API_KEY environment variable is not set')
   }
-  return new GoogleGenerativeAI(apiKey)
+  const genAI = new GoogleGenerativeAI(apiKey)
+  // Configure to use v1 API
+  return genAI
 }
 
 /**
  * POST /api/chat
- * Stream Gemini 3 Flash response and save to database
+ * Stream Gemini 3 Flash Preview response and save to database
  */
 export async function POST(request: Request) {
   const { userId } = await auth()
@@ -156,7 +158,7 @@ export async function POST(request: Request) {
 }
 
 /**
- * Stream Gemini 3 Flash response and save to database
+ * Stream Gemini 3 Flash Preview response and save to database
  */
 async function streamGeminiResponse(
   writer: WritableStreamDefaultWriter<Uint8Array>,
@@ -170,10 +172,15 @@ async function streamGeminiResponse(
   try {
     const genAI = getGeminiClient()
 
-    // Initialize Gemini 3 Flash model
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-3-flash',
-    })
+    // Initialize Gemini 3 Flash Preview model with v1 API
+    const model = genAI.getGenerativeModel(
+      {
+        model: 'gemini-3-flash-preview',
+      },
+      {
+        apiVersion: 'v1',
+      }
+    )
 
     // Build system prompt with Chicote Sênior persona
     const systemPrompt = `Você é o Chicote Sênior, curador editorial experiente do Lophos.
@@ -196,7 +203,7 @@ Formato de sugestões de follow-up:
 2. [pergunta específica ao artigo]
 3. [pergunta específica ao artigo]`
 
-    console.log('[streamGeminiResponse] Starting Gemini 3 Flash stream for threadId:', threadId)
+    console.log('[streamGeminiResponse] Starting Gemini 3 Flash Preview stream for threadId:', threadId)
 
     // Stream from Gemini
     const stream = await model.generateContentStream({
