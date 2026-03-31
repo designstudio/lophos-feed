@@ -36,7 +36,7 @@ const model = genAI.getGenerativeModel({
   model: 'gemini-2.5-flash-lite'
 })
 
-const BATCH_SIZE = 3           // cluster size (unchanged, still optimal for quality)
+const BATCH_SIZE = 15          // raw_items limit per topic (PAID TIER: fetch more items per run)
 const CONTENT_CHARS = 2000     // chars per source (optimal detail level)
 const DELAY_BETWEEN_TOPICS_MS = 1_000  // 1s between topics (PAID TIER: 4K RPM allows this)
 const DELAY_BETWEEN_CLUSTERS_MS = 0    // NO DELAY between clusters (turbo mode!)
