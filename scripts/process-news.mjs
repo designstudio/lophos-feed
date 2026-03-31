@@ -247,6 +247,7 @@ async function processTopic(topic, rawItems, existingTitles) {
       published_at: now,
       cached_at: now,
       matched_topics: keywords,
+      sourceIndexes: item.sourceIndexes, // ✅ Preserva índices para mapeamento de raw_items
     })
   }
 
@@ -361,20 +362,28 @@ async function main() {
               totalMerged++
               console.log(`  ✓ Merge em "${match.title}"`)
               // Marca os raw_items relacionados como processados
+              if (Array.isArray(item.sourceIndexes)) {
+                for (const rawId of item.sourceIndexes) {
+                  const idx = rawId - 1
+                  if (idx >= 0 && idx < rawItems.length) {
+                    successfullyProcessedRawIds.add(rawItems[idx].id)
+                  }
+                }
+              } else {
+                console.warn(`[${topic}] ⚠️  sourceIndexes inválido no merge: ${typeof item.sourceIndexes}. Artigo salvo mas mapeamento skipped para revisão.`)
+              }
+            }
+          } else {
+            // Sem mudanças, mas merge bem-sucedido
+            if (Array.isArray(item.sourceIndexes)) {
               for (const rawId of item.sourceIndexes) {
                 const idx = rawId - 1
                 if (idx >= 0 && idx < rawItems.length) {
                   successfullyProcessedRawIds.add(rawItems[idx].id)
                 }
               }
-            }
-          } else {
-            // Sem mudanças, mas merge bem-sucedido
-            for (const rawId of item.sourceIndexes) {
-              const idx = rawId - 1
-              if (idx >= 0 && idx < rawItems.length) {
-                successfullyProcessedRawIds.add(rawItems[idx].id)
-              }
+            } else {
+              console.warn(`[${topic}] ⚠️  sourceIndexes inválido (sem mudanças): ${typeof item.sourceIndexes}. Artigo salvo mas mapeamento skipped para revisão.`)
             }
           }
         } else {
@@ -402,11 +411,15 @@ async function main() {
               matched_topics: item.matched_topics || [],
             })
             // Marca os raw_items relacionados como processados
-            for (const rawId of item.sourceIndexes) {
-              const idx = rawId - 1
-              if (idx >= 0 && idx < rawItems.length) {
-                successfullyProcessedRawIds.add(rawItems[idx].id)
+            if (Array.isArray(item.sourceIndexes)) {
+              for (const rawId of item.sourceIndexes) {
+                const idx = rawId - 1
+                if (idx >= 0 && idx < rawItems.length) {
+                  successfullyProcessedRawIds.add(rawItems[idx].id)
+                }
               }
+            } else {
+              console.warn(`[${topic}] ⚠️  sourceIndexes inválido no novo artigo: ${typeof item.sourceIndexes}. Artigo salvo mas mapeamento skipped para revisão.`)
             }
           }
           console.log(`  ✓ ${dedupedItems.length} artigos salvos`)
@@ -417,16 +430,22 @@ async function main() {
 
       // ✅ Confirmação de Escrita: Só marque como processado os IDs que foram realmente salvos
       if (successfullyProcessedRawIds.size > 0) {
-        const processedIds = Array.from(successfullyProcessedRawIds)
-        const { error: updateError } = await db.from('raw_items')
-          .update({ processed: true })
-          .in('id', processedIds)
+        try {
+          const processedIds = Array.from(successfullyProcessedRawIds)
+          const { error: updateError } = await db.from('raw_items')
+            .update({ processed: true })
+            .in('id', processedIds)
 
-        if (updateError) {
-          console.error(`[${topic}] ⚠️  Failed to mark items as processed: ${updateError.message}`)
-        } else {
-          console.log(`[${topic}] ✓ ${processedIds.length} items marcados como processados`)
+          if (updateError) {
+            console.error(`[${topic}] ⚠️  Failed to mark items as processed: ${updateError.message}`)
+          } else {
+            console.log(`[${topic}] ✓ ${processedIds.length} items marcados como processados`)
+          }
+        } catch (err) {
+          console.error(`[${topic}] ⚠️  Erro crítico ao marcar items como processados: ${err.message}. Items serão retidos para retry manual.`)
         }
+      } else {
+        console.warn(`[${topic}] ⚠️  Nenhum item marcado como processado (verifique sourceIndexes no JSON da IA)`)
       }
 
       // Delay para respeitar rate limit (15 req/min)
