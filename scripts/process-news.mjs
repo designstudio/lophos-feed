@@ -87,20 +87,41 @@ async function clusterRawItems(topic, items) {
 
   const clusterPrompt = `VOCÊ DEVE RETORNAR APENAS UM ARRAY JSON PURO. NADA MAIS. NEM MARKDOWN, NEM COMENTÁRIOS, NEM EXPLICAÇÕES.
 
-🚨 CLUSTERING RÍGIDO (QUALIDADE MÁXIMA):
-Agrupe APENAS notícias que tratam do EXATO mesmo assunto/evento/franquia.
+🚨 CLUSTERING CIRÚRGICO (MÁXIMA PRECISÃO):
+Agrupe APENAS notícias que tratam do EXATO mesmo FATO (verbo + objeto idêntico).
 
-🏆 REGRA DE OURO DO LOPHOS:
-Agrupe por ENTIDADE/ASSUNTO, não por domínio da fonte.
+🏆 REGRA DE OURO DO LOPHOS v2:
+Agrupe por FATO, não por marca/entidade. Cada fato novo é seu próprio artigo.
 
-REGRAS:
-1. **MESMO ASSUNTO = AGRUPA**: Múltiplas fontes sobre o mesmo produto/filme/evento = [[1,2,3]]
-2. **ASSUNTOS DIFERENTES = SEPARA**: Fonte A sobre "iPhone 16" + Fonte B sobre "Galaxy S25" = [[1], [2]]
-3. **Franquias Completamente Diferentes = NUNCA**: Super Mario ≠ Cape Fear = [[1], [2]]
-4. **Na Dúvida, AGRUPE por Assunto**: Se 2+ fontes falam do mesmo filme/diretor/produto/evento = 1 cluster
+REGRA 1: VERBO + OBJETO IDÊNTICOS (OBRIGATÓRIO)
+- "Google LANÇA Pixel 9" + "Google ANUNCIA Pixel 9" = AGRUPA (mesmo fato)
+- "Google LANÇA Pixel 9" + "Google PROÍBE Sideloading" = SEPARA (verbos/objetos diferentes!)
+- "Gmail PERMITE trocar nome" + "Canaltech DIZ que Gmail deixa trocar nome" = AGRUPA (mesmo objeto)
+- "Gmail mudança" + "Google notícia" = NUNCA (genérico demais!)
 
-EXEMPLO ERRADO ❌: [[1,2,3]] onde 1=iPhone 16, 2=Galaxy S25, 3=Pixel 9 (3 marcas/produtos!)
-EXEMPLO CORRETO ✅: [[1,2], [3], [4]] onde 1,2=iPhone 16 (AGRUPA), 3=Galaxy S25, 4=outro
+REGRA 2: VETO POR ENTIDADE SECUNDÁRIA (CRÍTICO!)
+- ❌ "Google + CBF" e "Google + Sideloading" NO MESMO CLUSTER = PROIBIDO!
+- ✅ Cada entidade secundária DIFERENTE = artigo separado
+- Exemplo: 1=Google + Sideloading, 2=Google + CBF, 3=Google + Pixel → [[1], [2], [3]]
+
+REGRA 3: PROIBIÇÃO DE ROUNDUPS
+- ❌ "Resumo do dia na Google" + "Google faz X, Y, Z" = RETORNAR []
+- ✅ "Google lança Pixel 9" (fato específico) = OK
+- Sem compilações. Cada notícia DIFERENTE é seu próprio artigo.
+
+REGRA 4: LIMITE DE 3 FONTES MÁXIMO
+- Se cluster tem 4+ fontes E títulos são DIFERENTES, desmembra em clusters menores
+- Exemplo: [[1,2,3,4,5]] com 5 títulos distintos = INVÁLIDO → [[1,2], [3,4], [5]]
+
+REGRA 5: TESTE DE SOBREPOSIÇÃO
+- Títulos do cluster devem ser 90%+ idênticos em informação
+- Se apenas a fonte muda, OK. Se o FATO muda, SEPARA!
+
+EXEMPLO ERRADO ❌: [[1,2,3,4,5,6,7,8,9,10,11,12]]
+(12 notícias diferentes da Google = "salada de Google")
+
+EXEMPLO CORRETO ✅: [[1,2], [3], [4,5], [6], [7,8,9], ...]
+(Cada fato DIFERENTE é seu próprio cluster)
 
 FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8]]
 

@@ -84,20 +84,41 @@ async function clusterRawItems(topic, items) {
 
   const clusterPrompt = `VOCÊ DEVE RETORNAR APENAS UM ARRAY JSON PURO. NADA MAIS. NEM MARKDOWN, NEM COMENTÁRIOS, NEM EXPLICAÇÕES.
 
-🚨 CLUSTERING RÍGIDO (QUALIDADE MÁXIMA):
-Agrupe APENAS notícias que tratam do EXATO mesmo assunto/evento/franquia.
+🚨 CLUSTERING CIRÚRGICO (MÁXIMA PRECISÃO):
+Agrupe APENAS notícias que tratam do EXATO mesmo FATO (verbo + objeto idêntico).
 
-🏆 REGRA DE OURO DO LOPHOS:
-Agrupe por ENTIDADE/ASSUNTO, não por domínio da fonte.
+🏆 REGRA DE OURO DO LOPHOS v2:
+Agrupe por FATO, não por marca/entidade. Cada fato novo é seu próprio artigo.
 
-REGRAS:
-1. **MESMO ASSUNTO = AGRUPA**: Dread Central + Nightmare Magazine sobre "Fall 2 Trailer" = [[1,2]]
-2. **ASSUNTOS DIFERENTES = SEPARA**: Dread Central sobre "Fall 2" + Nightmare sobre "Terrifier 3" = [[1], [2]]
-3. **Franquias Completamente Diferentes = NUNCA**: Super Mario ≠ Cape Fear = [[1], [2]]
-4. **Na Dúvida, AGRUPE por Assunto**: Se 2+ fontes falam do mesmo filme/diretor/evento = 1 cluster
+REGRA 1: VERBO + OBJETO IDÊNTICOS (OBRIGATÓRIO)
+- "Fall 2 GANHA trailer" + "Fall 2 ANUNCIA novo trailer" = AGRUPA (mesmo fato)
+- "Fall 2 GANHA trailer" + "Terrifier 3 ESTREIA" = SEPARA (filmes/verbos diferentes!)
+- "Fall 2 trailer" + "Canaltech fala sobre Fall 2 trailer" = AGRUPA (mesmo objeto)
+- "horror notícia" + "filme notícia" = NUNCA (genérico demais!)
 
-EXEMPLO ERRADO ❌: [[1,2,3]] onde 1=Fall 2, 2=Terrifier 3, 3=Another Movie (3 filmes!)
-EXEMPLO CORRETO ✅: [[1,2], [3], [4]] onde 1,2=Fall 2 (AGRUPA), 3=Terrifier 3, 4=outro filme
+REGRA 2: VETO POR ENTIDADE SECUNDÁRIA (CRÍTICO!)
+- ❌ "Fall 2 + Diretor" e "Terrifier 3 + Elenco" NO MESMO CLUSTER = PROIBIDO!
+- ✅ Cada filme/entidade DIFERENTE = artigo separado
+- Exemplo: 1=Fall 2 novo, 2=Terrifier 3 novo, 3=Another Movie novo → [[1], [2], [3]]
+
+REGRA 3: PROIBIÇÃO DE ROUNDUPS
+- ❌ "Resumo de horror da semana" + "Horror faz X, Y, Z" = RETORNAR []
+- ✅ "Fall 2 ganha novo trailer" (fato específico) = OK
+- Sem compilações. Cada notícia DIFERENTE é seu próprio artigo.
+
+REGRA 4: LIMITE DE 3 FONTES MÁXIMO
+- Se cluster tem 4+ fontes E títulos são DIFERENTES, desmembra em clusters menores
+- Exemplo: [[1,2,3,4,5]] com 5 títulos distintos = INVÁLIDO → [[1,2], [3,4], [5]]
+
+REGRA 5: TESTE DE SOBREPOSIÇÃO
+- Títulos do cluster devem ser 90%+ idênticos em informação
+- Se apenas a fonte muda, OK. Se o FATO muda, SEPARA!
+
+EXEMPLO ERRADO ❌: [[1,2,3,4,5,6,7,8,9,10,11,12]]
+(12 notícias diferentes de horror = "salada de horror")
+
+EXEMPLO CORRETO ✅: [[1,2], [3], [4,5], [6], [7,8,9], ...]
+(Cada fato DIFERENTE é seu próprio cluster)
 
 FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8]]
 
