@@ -1,12 +1,17 @@
 /**
- * Lophos News Processing — Gemini 2.5 Flash-Lite Edition (Token-Optimized)
+ * Lophos News Processing — Dual-Model Clustering Architecture
  *
- * Nova Arquitetura:
- * ✅ Modelo Eficiente: Gemini 2.5 Flash-Lite (menor taxa de tokens)
- * ✅ Processamento em Mini-Lotes: 3 fontes por vez (evita token limit)
- * ✅ Delay Estratégico: 20s entre tópicos para resetar quota de tokens/min
- * ✅ Proteção Free Tier: Chunks inteligentes evitam bloqueio do Google
- * ✅ Segurança de Dados: Transactional integrity contra perda de dados
+ * Fase 1: Agrupamento Inteligente (Gemini 2.5 Flash-Lite)
+ * ✅ Agrupa os 15 títulos em clusters de mesmo assunto
+ * ✅ Retorna apenas IDs agrupados (poucos tokens)
+ * ✅ Evita duplicatas na origem
+ *
+ * Fase 2: Geração de Conteúdo (Gemini 2.0 Flash)
+ * ✅ Processa cada cluster com conteúdo completo
+ * ✅ Gera artigos ricos com múltiplas fontes
+ * ✅ Merging real: 5 fontes sobre iPhone = 1 artigo
+ *
+ * Benefício: Inteligência de curadoria, não repetição.
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -19,8 +24,15 @@ const db = createClient(
 )
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-const model = genAI.getGenerativeModel({
+
+// Fase 1: Agrupamento leve e rápido
+const modelLite = genAI.getGenerativeModel({
   model: 'gemini-2.5-flash-lite'
+})
+
+// Fase 2: Geração de conteúdo qualitativo
+const modelFull = genAI.getGenerativeModel({
+  model: 'gemini-2.0-flash'
 })
 
 const BATCH_SIZE = 3           // mini-batch per Gemini call (token optimization)
@@ -59,32 +71,102 @@ function isGeneratedItemRelevant(item, results) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// GEMINI: Processamento em Mini-Lotes (Token-Optimized)
+// FASE 1: Agrupamento Inteligente (Clustering Leve)
 // ═══════════════════════════════════════════════════════════════
-async function processTopicWithGemini(topic, results, existingTitles) {
-  if (!results.length) return []
+async function clusterRawItems(topic, items) {
+  if (items.length <= 1) {
+    // Só 1 item = 1 cluster
+    return [[0]]
+  }
+
+  // Criar lista curta com títulos + resumo (economia de tokens)
+  const titlesContext = items.map((item, i) =>
+    `${i + 1}. ${item.title}`
+  ).join('\n')
+
+  const clusterPrompt = `Você é um editor de notícias. Agrupe estes ${items.length} títulos em clusters de notícias que falam do MESMO assunto/evento real.
+
+IMPORTANTE:
+- Retorne APENAS um array JSON com arrays de números (IDs)
+- Exemplo: [[1,3,5], [2,4], [6,7,8,9,10,11,12,13,14,15]]
+- Agrupe agressivamente: se 3 títulos falam do mesmo iPhone, devem estar no mesmo cluster
+- Retorne apenas os numbers, sem markdown, comentários ou texto extra
+
+TÍTULOS:
+${titlesContext}
+
+RESPOSTA (apenas JSON):
+`
+
+  try {
+    const result = await modelLite.generateContent(clusterPrompt)
+    const response = result.response
+    const text = response.text()
+
+    // Extrai array JSON da resposta
+    const match = text.replace(/```json|```/g, '').match(/\[\[?\d[\d,\[\]]*\]/)
+    if (!match) {
+      console.warn(`[${topic}] ⚠️  Clustering falhou, usando fallback (1 cluster por item)`)
+      // Fallback: cada item é seu próprio cluster
+      return items.map((_, i) => [i])
+    }
+
+    const clusters = JSON.parse(match[0])
+
+    // Validar que todos os índices são válidos
+    const flatIndexes = clusters.flat()
+    const validClusters = clusters.filter(cluster =>
+      Array.isArray(cluster) &&
+      cluster.every(idx => typeof idx === 'number' && idx >= 1 && idx <= items.length)
+    )
+
+    if (validClusters.length === 0) {
+      console.warn(`[${topic}] ⚠️  Clusters inválidos, usando fallback`)
+      return items.map((_, i) => [i])
+    }
+
+    // Converter de 1-indexed para 0-indexed
+    const zeroIndexedClusters = validClusters.map(cluster =>
+      cluster.map(idx => idx - 1)
+    )
+
+    console.log(`[${topic}] ✓ Clustering: ${items.length} itens → ${zeroIndexedClusters.length} clusters`)
+    return zeroIndexedClusters
+  } catch (err) {
+    console.error(`[${topic}] ⚠️  Erro no clustering: ${err.message}. Usando fallback.`)
+    return items.map((_, i) => [i])
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FASE 2: Processamento de Conteúdo (Geração de Artigos)
+// ═══════════════════════════════════════════════════════════════
+async function processTopicWithGemini(topic, results, existingTitles, clusters) {
+  if (!results.length || !clusters.length) return []
 
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const allParsedItems = []
 
-  // Dividir em mini-lotes para evitar token limit
-  for (let chunkIdx = 0; chunkIdx < results.length; chunkIdx += BATCH_SIZE) {
-    const chunk = results.slice(chunkIdx, chunkIdx + BATCH_SIZE)
-    const chunkNum = Math.floor(chunkIdx / BATCH_SIZE) + 1
-    const totalChunks = Math.ceil(results.length / BATCH_SIZE)
+  // Processar cada cluster (não mini-lotes aleatórios)
+  for (let clusterIdx = 0; clusterIdx < clusters.length; clusterIdx++) {
+    const cluster = clusters[clusterIdx]
+    const clusterNum = clusterIdx + 1
 
-    console.log(`[${topic}] Mini-lote ${chunkNum}/${totalChunks}: Processando ${chunk.length} fontes (token-optimized)...`)
+    // Itens deste cluster (mantém índices originais)
+    const clusterItems = cluster.map(idx => results[idx])
 
-    // Contexto otimizado: 2000 chars por fonte para evitar estourar limite
-    const context = chunk.map((r, i) =>
-      `[${chunkIdx + i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`
+    console.log(`[${topic}] Cluster ${clusterNum}/${clusters.length}: Processando ${clusterItems.length} fontes relacionadas...`)
+
+    // Contexto com índices ORIGINAIS (importante para sourceIndexes)
+    const context = cluster.map(origIdx =>
+      `[${origIdx + 1}] ${new URL(results[origIdx].url).hostname.replace('www.', '')} — "${results[origIdx].title}"\n${(results[origIdx].content || '').slice(0, CONTENT_CHARS)}`
     ).join('\n\n')
 
     const existingContext = existingTitles.length > 0
       ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
       : ''
 
-    const prompt = `Você é o Curador-Chefe do Lophos. Sua missão: destilar ${chunk.length} fontes em artigos precisos e substanciais.
+    const prompt = `Você é o Curador-Chefe do Lophos. Sua missão: destilar ${clusterItems.length} fontes RELACIONADAS (mesmo assunto) em 1 artigo rico e substancial.
 
 **INSTRUÇÕES CRÍTICAS:**
 
@@ -123,12 +205,12 @@ async function processTopicWithGemini(topic, results, existingTitles) {
 - Data: ${today}
 - Tópico: "${topic}"
 - Artigos já publicados: ${existingContext}
-- Mini-lote ${chunkNum}/${totalChunks}: ${chunk.length} fontes disponíveis com até 2000 chars cada
+- Cluster ${clusterNum}/${clusters.length}: ${clusterItems.length} fontes RELACIONADAS com até 2000 chars cada
 
 **RESPOSTA:**
-Retorne EXCLUSIVAMENTE um array JSON válido. Sem markdown, comentários ou texto extra.
+Retorne EXCLUSIVAMENTE um array JSON com UM artigo (ou [] se vazio). Sem markdown, comentários ou texto extra.
 
-Se não houver conteúdo válido, retorne: []
+Se as fontes não forem coerentes ou não gerarem conteúdo válido, retorne: []
 
 [
   {
@@ -153,29 +235,29 @@ FONTES:
 ${context}`
 
     try {
-      const result = await model.generateContent(prompt)
+      const result = await modelFull.generateContent(prompt)
       const response = result.response
       const text = response.text()
 
       // Extrai JSON da resposta
       const match = text.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
       if (!match) {
-        console.warn(`[${topic}] Mini-lote ${chunkNum}: Nenhuma resposta JSON válida`)
+        console.warn(`[${topic}] Cluster ${clusterNum}: Nenhuma resposta JSON válida`)
       } else {
         const parsed = JSON.parse(match[0])
         allParsedItems.push(...parsed)
-        console.log(`[${topic}] Mini-lote ${chunkNum}: ${parsed.length} artigos gerados ✓`)
+        console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) ✓`)
       }
     } catch (err) {
       // Gemini error (503, 429, etc) — NÃO marcar como processado
       const statusCode = err.status || err.message.match(/\d{3}/)
-      console.error(`[${topic}] ⚠️  Erro na IA (mini-lote ${chunkNum}, ${statusCode}): ${err.message}. Mantendo items como não-processados para retry.`)
+      console.error(`[${topic}] ⚠️  Erro na IA (cluster ${clusterNum}, ${statusCode}): ${err.message}. Mantendo items como não-processados para retry.`)
       throw err // Re-throw para que processTopic capture e retorne geminiError: true
     }
 
-    // Delay inteligente entre chunks para respeitar token/min quota
-    if (chunkIdx + BATCH_SIZE < results.length) {
-      console.log(`[${topic}] Aguardando ${DELAY_BETWEEN_CHUNKS_MS / 1000}s antes do próximo mini-lote...\n`)
+    // Delay entre clusters para respeitar token/min quota
+    if (clusterIdx < clusters.length - 1) {
+      console.log(`[${topic}] Aguardando ${DELAY_BETWEEN_CHUNKS_MS / 1000}s antes do próximo cluster...\n`)
       await new Promise(r => setTimeout(r, DELAY_BETWEEN_CHUNKS_MS))
     }
   }
@@ -193,10 +275,17 @@ async function processTopic(topic, rawItems, existingTitles) {
 
   if (!results.length) return { newsItems: [], success: true }
 
-  // Processa tudo em lote único com Gemini
+  // ═══════════════════════════════════════════════════════════════
+  // FASE 1: Clustering Inteligente
+  // ═══════════════════════════════════════════════════════════════
+  const clusters = await clusterRawItems(topic, rawItems)
+
+  // ═══════════════════════════════════════════════════════════════
+  // FASE 2: Processamento de Conteúdo (por Cluster)
+  // ═══════════════════════════════════════════════════════════════
   let parsed
   try {
-    parsed = await processTopicWithGemini(topic, results, existingTitles)
+    parsed = await processTopicWithGemini(topic, results, existingTitles, clusters)
   } catch (err) {
     // Gemini error (503, 429, etc) — NÃO marcar como processado
     const statusCode = err.status || err.message.match(/\d{3}/)
