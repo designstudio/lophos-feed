@@ -423,9 +423,12 @@ export function ChatThread({
 
       {/* Input Area - Fixed bottom */}
       <div
-        className={`fixed bottom-0 left-0 right-0 ${composerOffset} border-t border-border bg-white dark:bg-[#1a1a1a] transition-all duration-300`}
+        className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 transition-all duration-300 pointer-events-none`}
       >
-        <div className={isEmbedded ? 'p-4 md:p-6 relative article-layout mx-auto' : 'p-6 relative article-layout mx-auto'}>
+        {/* ChatGPT-like fade/blur backdrop so content can pass "behind" the composer */}
+        <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/95 via-bg-primary/85 to-transparent backdrop-blur-sm" />
+
+        <div className={isEmbedded ? 'p-4 md:p-6 relative article-layout mx-auto pointer-events-auto' : 'p-6 relative article-layout mx-auto pointer-events-auto'}>
           {/* Loading state feedback for embedded mode */}
           {isSending && isEmbedded && (
             <motion.div
