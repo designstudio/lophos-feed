@@ -1,15 +1,17 @@
 /**
- * 🎬 HORROR TEST SUITE — Teste Isolado de Clustering Rígido
+ * 🎬 HORROR TEST SUITE — Teste Isolado de Clustering SMART
  *
  * ⚡ Modo Teste Controlado:
  * ✅ Processa APENAS topic="horror" (isolado)
  * ✅ BATCH_SIZE=10 (controle fino)
  * ✅ Verbose logging em cada etapa
- * ✅ Valida clustering rígido (80% similarity)
+ * ✅ Clustering SMART por ASSUNTO (não por domínio)
  * ✅ Detecta mishmashes em tempo real
  *
- * Objetivo: Validar que "Dread Central" + "Nightmare Magazine"
- * agrupam corretamente, mas horror ≠ sci-fi
+ * 🏆 Regra de Ouro:
+ * ✅ Dread Central + Nightmare Magazine sobre "Fall 2" = 1 artigo (MESMO FILME)
+ * ❌ Dread Central sobre "Fall 2" + Nightmare sobre "Terrifier 3" = 2 artigos (FILMES DIFERENTES)
+ * ❌ Horror ≠ Sci-Fi (franquias/assuntos completamente diferentes)
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -85,14 +87,17 @@ async function clusterRawItems(topic, items) {
 🚨 CLUSTERING RÍGIDO (QUALIDADE MÁXIMA):
 Agrupe APENAS notícias que tratam do EXATO mesmo assunto/evento/franquia.
 
-REGRAS ANTI-MISTURA:
-1. **Nomes Próprios Idênticos**: "Super Mario" vs "Cape Fear" = NUNCA agrupar (franquias diferentes!)
-2. **80% Similaridade Semântica**: Se títulos não compartilham contexto claro (jogo, filme, empresa), NÃO agrupe
-3. **Na Dúvida, NÃO Agrupe**: Super Mario 6 e Mario Kart = OK (mesma franquia). Mario e Cape Fear = NUNCA.
-4. **Um item = um cluster**: Se isolado, volta sozinho. Não force agrupamento.
+🏆 REGRA DE OURO DO LOPHOS:
+Agrupe por ENTIDADE/ASSUNTO, não por domínio da fonte.
 
-EXEMPLO ERRADO ❌: [[1,2,3]] onde 1=Super Mario, 2=Cape Fear, 3=Fall 2
-EXEMPLO CORRETO ✅: [[1], [2], [3]] (cada um isolado)
+REGRAS:
+1. **MESMO ASSUNTO = AGRUPA**: Dread Central + Nightmare Magazine sobre "Fall 2 Trailer" = [[1,2]]
+2. **ASSUNTOS DIFERENTES = SEPARA**: Dread Central sobre "Fall 2" + Nightmare sobre "Terrifier 3" = [[1], [2]]
+3. **Franquias Completamente Diferentes = NUNCA**: Super Mario ≠ Cape Fear = [[1], [2]]
+4. **Na Dúvida, AGRUPE por Assunto**: Se 2+ fontes falam do mesmo filme/diretor/evento = 1 cluster
+
+EXEMPLO ERRADO ❌: [[1,2,3]] onde 1=Fall 2, 2=Terrifier 3, 3=Another Movie (3 filmes!)
+EXEMPLO CORRETO ✅: [[1,2], [3], [4]] onde 1,2=Fall 2 (AGRUPA), 3=Terrifier 3, 4=outro filme
 
 FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8]]
 
