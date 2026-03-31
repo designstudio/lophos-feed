@@ -376,17 +376,21 @@ ${context}`
       console.log(`[${topic}] 🖼️  Imagem de ${imageSourceDomain}`)
     }
 
-    // ✅ CONSTRUIR SOURCES: Apenas as usadas neste artigo (não todas do cluster)
-    const sources = sourceIndexes
-      .filter(idx => idx >= 0 && idx < clusterItems.length)
-      .map(idx => {
-        const r = clusterItems[idx]
+    // ✅ CONSTRUIR SOURCES: Usar articleSourceIds (UUIDs validados) para buscar fontes reais
+    const sources = articleSourceIds
+      .map(uuid => {
+        const rawItem = rawItemsMap.get(uuid)
+        if (!rawItem?.url) {
+          console.warn(`[${topic}] ⚠️  UUID ${uuid.substring(0, 8)}... sem URL no raw_items`)
+          return null
+        }
         return {
-          name: new URL(r.url).hostname.replace('www.', ''),
-          url: r.url,
-          favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
+          name: new URL(rawItem.url).hostname.replace('www.', ''),
+          url: rawItem.url,
+          favicon: `https://www.google.com/s2/favicons?domain=${rawItem.url}&sz=32`,
         }
       })
+      .filter(Boolean) // Remove nulls
 
     const keywords = Array.isArray(item.keywords)
       ? [...new Set([topic, ...item.keywords.map(k => String(k).toLowerCase().trim())])]
