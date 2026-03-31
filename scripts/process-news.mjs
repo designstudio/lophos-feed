@@ -68,7 +68,7 @@ function isGeneratedItemRelevant(item, results) {
     .filter(i => i >= 0 && i < results.length)
     .map(i => `${results[i].title || ''} ${results[i].content || ''}`)
     .join(' ')
-  return textOverlapScore(genText, sourceText) >= 0.10  // MODO FAXINA: threshold reduzido para capturar mais notícias
+  return textOverlapScore(genText, sourceText) >= 0.01  // DERRUBE OS MUROS: threshold mínimo (0.01) — Conteúdo Premium não pode ser censurado
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -302,22 +302,27 @@ ${context}`
       continue
     }
 
-    if (!isGeneratedItemRelevant(item, results)) {
-      console.warn(`[${topic}] ⚠️  DESCARTE: Relevância baixa (<0.10) - "${item.title?.slice(0, 50)}"`)
-      continue
+    // ✅ DERRUBE OS MUROS: Se a IA gerou, salva. Sem censura de relevância.
+    // const relevance = isGeneratedItemRelevant(item, results)
+    // if (!relevance) console.warn(`[${topic}] ℹ️  Relevância baixa (0.01 check) - "${item.title?.slice(0, 50)}" (PROCESSADO)`)
+
+    // ✅ FALLBACK sourceIndexes: Se a IA não retornou, usa todas as fontes do cluster
+    let idxs = (item.sourceIndexes || []).map(n => n - 1)
+    if (idxs.length === 0) {
+      console.warn(`[${topic}] ⚠️  sourceIndexes vazio — fallback para todas as ${results.length} fontes`)
+      idxs = results.map((_, i) => i) // Todas as fontes
     }
 
-    const idxs = item.sourceIndexes.map(n => n - 1)
-
-    // Find first valid image
+    // Find first valid image (conteúdo vem primeiro que estética)
     let imageUrl
     for (const idx of idxs) {
       const candidate = results[idx]?.image
       if (candidate && !isLazyLoadImage(candidate)) { imageUrl = candidate; break }
     }
+    // ✅ FAILSAFE: placeholder em vez de descartar por falta de imagem
     if (!imageUrl) {
-      console.warn(`[${topic}] ⚠️  DESCARTE: Sem imagem válida - "${item.title?.slice(0, 50)}"`)
-      continue
+      imageUrl = `https://via.placeholder.com/1200x630?text=${encodeURIComponent(item.title?.slice(0, 30) || 'Lophos News')}`
+      console.warn(`[${topic}] 📸 Placeholder usado — conteúdo preservado: "${item.title?.slice(0, 50)}"`)
     }
 
     const sources = idxs
