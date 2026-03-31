@@ -72,67 +72,84 @@ function isGeneratedItemRelevant(item, results) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// FASE 1: Agrupamento Inteligente (Clustering Leve)
+// FASE 1: Agrupamento Inteligente (Clustering Inquebrável)
 // ═══════════════════════════════════════════════════════════════
 async function clusterRawItems(topic, items) {
   if (items.length <= 1) {
-    // Só 1 item = 1 cluster
-    return [[0]]
+    // Só 1 item = 1 cluster com seu ID real
+    return [[items[0].id]]
   }
 
-  // Criar lista curta com títulos + resumo (economia de tokens)
+  // Criar lista com índices 1-based (para o prompt) e títulos
   const titlesContext = items.map((item, i) =>
     `${i + 1}. ${item.title}`
   ).join('\n')
 
-  const clusterPrompt = `Você é um editor de notícias. Agrupe estes ${items.length} títulos em clusters de notícias que falam do MESMO assunto/evento real.
+  const clusterPrompt = `VOCÊ DEVE RETORNAR APENAS UM ARRAY JSON PURO. NADA MAIS. NEM MARKDOWN, NEM COMENTÁRIOS, NEM EXPLICAÇÕES.
 
-IMPORTANTE:
-- Retorne APENAS um array JSON com arrays de números (IDs)
-- Exemplo: [[1,3,5], [2,4], [6,7,8,9,10,11,12,13,14,15]]
-- Agrupe agressivamente: se 3 títulos falam do mesmo iPhone, devem estar no mesmo cluster
-- Retorne apenas os numbers, sem markdown, comentários ou texto extra
+Agrupe estes ${items.length} títulos em clusters de notícias que falam do MESMO assunto/evento real.
+
+FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8,9,10,11,12,13,14,15]]
+
+REGRAS:
+- Use números 1-based (baseado na posição na lista abaixo)
+- Agrupe agressivamente: 5 títulos sobre iPhone = 1 cluster
+- Retorne APENAS um array aninhado de números
+- Nenhuma outra coisa. Nem um caractere extra.
 
 TÍTULOS:
 ${titlesContext}
 
-RESPOSTA (apenas JSON):
+RESPONDA APENAS COM O JSON, NADA MAIS:
 `
 
   try {
     const result = await model.generateContent(clusterPrompt)
     const response = result.response
-    const text = response.text()
+    const text = response.text().trim()
 
-    // Extrai array JSON da resposta
-    const match = text.replace(/```json|```/g, '').match(/\[\[?\d[\d,\[\]]*\]/)
-    if (!match) {
-      console.warn(`[${topic}] ⚠️  Clustering falhou, usando fallback (1 cluster por item)`)
-      // Fallback: cada item é seu próprio cluster
-      return items.map((_, i) => [i])
+    // PARSER INQUEBRÁVEL: Extrai tudo entre [ e ] mais externo
+    const firstBracket = text.indexOf('[')
+    const lastBracket = text.lastIndexOf(']')
+
+    if (firstBracket === -1 || lastBracket === -1 || firstBracket >= lastBracket) {
+      console.warn(`[${topic}] ⚠️  Clustering falhou (JSON inválido), usando fallback`)
+      return items.map(item => [item.id])
     }
 
-    const clusters = JSON.parse(match[0])
+    const jsonStr = text.substring(firstBracket, lastBracket + 1)
+    let clusters
 
-    // Validar que todos os índices são válidos
-    const flatIndexes = clusters.flat()
-    const validClusters = clusters.filter(cluster =>
-      Array.isArray(cluster) &&
-      cluster.every(idx => typeof idx === 'number' && idx >= 1 && idx <= items.length)
-    )
-
-    if (validClusters.length === 0) {
-      console.warn(`[${topic}] ⚠️  Clusters inválidos, usando fallback`)
-      return items.map((_, i) => [i])
+    try {
+      clusters = JSON.parse(jsonStr)
+    } catch (parseErr) {
+      console.warn(`[${topic}] ⚠️  Parse JSON falhou: ${parseErr.message}. Fallback ativado.`)
+      return items.map(item => [item.id])
     }
 
-    // Converter de 1-indexed para 0-indexed
-    const zeroIndexedClusters = validClusters.map(cluster =>
-      cluster.map(idx => idx - 1)
-    )
+    // Validar estrutura: deve ser array of arrays
+    if (!Array.isArray(clusters)) {
+      console.warn(`[${topic}] ⚠️  Clusters não é array, fallback`)
+      return items.map(item => [item.id])
+    }
 
-    console.log(`[${topic}] ✓ Clustering: ${items.length} itens → ${zeroIndexedClusters.length} clusters`)
-    return zeroIndexedClusters
+    // Converter índices 1-based para IDs reais
+    const mappedClusters = clusters
+      .filter(cluster => Array.isArray(cluster) && cluster.length > 0)
+      .map(cluster =>
+        cluster
+          .filter(idx => typeof idx === 'number' && idx >= 1 && idx <= items.length)
+          .map(idx => items[idx - 1].id)
+      )
+      .filter(cluster => cluster.length > 0)
+
+    if (mappedClusters.length === 0) {
+      console.warn(`[${topic}] ⚠️  Nenhum cluster válido, fallback`)
+      return items.map(item => [item.id])
+    }
+
+    console.log(`[${topic}] ✓ Clustering: ${items.length} itens → ${mappedClusters.length} clusters`)
+    return mappedClusters
   } catch (err) {
     console.error(`[${topic}] ⚠️  Erro no clustering: ${err.message}. Usando fallback.`)
     return items.map((_, i) => [i])
@@ -142,25 +159,30 @@ RESPOSTA (apenas JSON):
 // ═══════════════════════════════════════════════════════════════
 // FASE 2: Processamento de Conteúdo (Geração de Artigos)
 // ═══════════════════════════════════════════════════════════════
-async function processTopicWithGemini(topic, results, existingTitles, clusters) {
+async function processTopicWithGemini(topic, results, existingTitles, clusters, rawItemsMap) {
   if (!results.length || !clusters.length) return []
 
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-  const allParsedItems = []
+  const allParsedItems = [] // Array de { item, clusterSourceIds }
 
-  // Processar cada cluster (não mini-lotes aleatórios)
+  // Processar cada cluster (contém source_ids reais, não índices)
   for (let clusterIdx = 0; clusterIdx < clusters.length; clusterIdx++) {
-    const cluster = clusters[clusterIdx]
+    const clusterSourceIds = clusters[clusterIdx]  // IDs reais dos raw_items
     const clusterNum = clusterIdx + 1
 
-    // Itens deste cluster (mantém índices originais)
-    const clusterItems = cluster.map(idx => results[idx])
+    // Mapear IDs para resultados (para obter conteúdo)
+    const clusterItems = clusterSourceIds
+      .map(sourceId => {
+        const rawItem = rawItemsMap.get(sourceId)
+        return rawItem ? results.find(r => r.url === rawItem.url) : null
+      })
+      .filter(Boolean)
 
-    console.log(`[${topic}] Cluster ${clusterNum}/${clusters.length}: Processando ${clusterItems.length} fontes relacionadas...`)
+    console.log(`[${topic}] Cluster ${clusterNum}/${clusters.length}: Processando ${clusterItems.length} fontes relacionadas (source_ids: ${clusterSourceIds.join(',')})...`)
 
-    // Contexto com índices ORIGINAIS (importante para sourceIndexes)
-    const context = cluster.map(origIdx =>
-      `[${origIdx + 1}] ${new URL(results[origIdx].url).hostname.replace('www.', '')} — "${results[origIdx].title}"\n${(results[origIdx].content || '').slice(0, CONTENT_CHARS)}`
+    // Contexto com os itens do cluster (para geração do artigo)
+    const context = clusterItems.map((r, i) =>
+      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`
     ).join('\n\n')
 
     const existingContext = existingTitles.length > 0
@@ -240,14 +262,25 @@ ${context}`
       const response = result.response
       const text = response.text()
 
-      // Extrai JSON da resposta
-      const match = text.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
-      if (!match) {
-        console.warn(`[${topic}] Cluster ${clusterNum}: Nenhuma resposta JSON válida`)
+      // Extrai JSON da resposta (com parser robusto)
+      const firstBracket = text.indexOf('[')
+      const lastBracket = text.lastIndexOf(']')
+
+      if (firstBracket === -1 || lastBracket === -1) {
+        console.warn(`[${topic}] Cluster ${clusterNum}: JSON inválido`)
       } else {
-        const parsed = JSON.parse(match[0])
-        allParsedItems.push(...parsed)
-        console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) ✓`)
+        try {
+          const jsonStr = text.substring(firstBracket, lastBracket + 1)
+          const parsed = JSON.parse(jsonStr)
+
+          // Vincula cada item ao seu cluster source_ids
+          parsed.forEach(item => {
+            allParsedItems.push({ item, clusterSourceIds })
+          })
+          console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) ✓`)
+        } catch (parseErr) {
+          console.warn(`[${topic}] Cluster ${clusterNum}: Parse JSON falhou: ${parseErr.message}`)
+        }
       }
     } catch (err) {
       // Gemini error (503, 429, etc) — NÃO marcar como processado
@@ -275,6 +308,9 @@ async function processTopic(topic, rawItems, existingTitles) {
 
   if (!results.length) return { newsItems: [], success: true }
 
+  // Map para rastrear raw_items por ID
+  const rawItemsMap = new Map(rawItems.map(item => [item.id, item]))
+
   // ═══════════════════════════════════════════════════════════════
   // FASE 1: Clustering Inteligente
   // ═══════════════════════════════════════════════════════════════
@@ -285,7 +321,7 @@ async function processTopic(topic, rawItems, existingTitles) {
   // ═══════════════════════════════════════════════════════════════
   let parsed
   try {
-    parsed = await processTopicWithGemini(topic, results, existingTitles, clusters)
+    parsed = await processTopicWithGemini(topic, results, existingTitles, clusters, rawItemsMap)
   } catch (err) {
     // Gemini error (503, 429, etc) — NÃO marcar como processado
     const statusCode = err.status || err.message.match(/\d{3}/)
@@ -296,7 +332,8 @@ async function processTopic(topic, rawItems, existingTitles) {
   const now = new Date().toISOString()
   const newsItems = []
 
-  for (const item of parsed) {
+  // allParsedItems agora contém { item, clusterSourceIds } para rastreamento
+  for (const { item, clusterSourceIds } of allParsedItems) {
     if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) continue
     if (!isGeneratedItemRelevant(item, results)) continue
 
@@ -336,7 +373,7 @@ async function processTopic(topic, rawItems, existingTitles) {
       published_at: now,
       cached_at: now,
       matched_topics: keywords,
-      sourceIndexes: item.sourceIndexes, // ✅ Preserva índices para mapeamento de raw_items
+      source_ids: clusterSourceIds, // ✅ IDs reais dos raw_items deste artigo
     })
   }
 
@@ -451,28 +488,18 @@ async function main() {
               totalMerged++
               console.log(`  ✓ Merge em "${match.title}"`)
               // Marca os raw_items relacionados como processados
-              if (Array.isArray(item.sourceIndexes)) {
-                for (const rawId of item.sourceIndexes) {
-                  const idx = rawId - 1
-                  if (idx >= 0 && idx < rawItems.length) {
-                    successfullyProcessedRawIds.add(rawItems[idx].id)
-                  }
-                }
+              if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
+                item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
               } else {
-                console.warn(`[${topic}] ⚠️  sourceIndexes inválido no merge: ${typeof item.sourceIndexes}. Artigo salvo mas mapeamento skipped para revisão.`)
+                console.warn(`[${topic}] ⚠️  source_ids inválido no merge: ${typeof item.source_ids}. Artigo salvo mas mapeamento skipped para revisão.`)
               }
             }
           } else {
             // Sem mudanças, mas merge bem-sucedido
-            if (Array.isArray(item.sourceIndexes)) {
-              for (const rawId of item.sourceIndexes) {
-                const idx = rawId - 1
-                if (idx >= 0 && idx < rawItems.length) {
-                  successfullyProcessedRawIds.add(rawItems[idx].id)
-                }
-              }
+            if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
+              item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
             } else {
-              console.warn(`[${topic}] ⚠️  sourceIndexes inválido (sem mudanças): ${typeof item.sourceIndexes}. Artigo salvo mas mapeamento skipped para revisão.`)
+              console.warn(`[${topic}] ⚠️  source_ids inválido (sem mudanças): ${typeof item.source_ids}. Artigo salvo mas mapeamento skipped para revisão.`)
             }
           }
         } else {
@@ -500,15 +527,10 @@ async function main() {
               matched_topics: item.matched_topics || [],
             })
             // Marca os raw_items relacionados como processados
-            if (Array.isArray(item.sourceIndexes)) {
-              for (const rawId of item.sourceIndexes) {
-                const idx = rawId - 1
-                if (idx >= 0 && idx < rawItems.length) {
-                  successfullyProcessedRawIds.add(rawItems[idx].id)
-                }
-              }
+            if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
+              item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
             } else {
-              console.warn(`[${topic}] ⚠️  sourceIndexes inválido no novo artigo: ${typeof item.sourceIndexes}. Artigo salvo mas mapeamento skipped para revisão.`)
+              console.warn(`[${topic}] ⚠️  source_ids inválido no novo artigo: ${typeof item.source_ids}. Artigo salvo mas mapeamento skipped para revisão.`)
             }
           }
           console.log(`  ✓ ${dedupedItems.length} artigos salvos`)
@@ -534,7 +556,7 @@ async function main() {
           console.error(`[${topic}] ⚠️  Erro crítico ao marcar items como processados: ${err.message}. Items serão retidos para retry manual.`)
         }
       } else {
-        console.warn(`[${topic}] ⚠️  Nenhum item marcado como processado (verifique sourceIndexes no JSON da IA)`)
+        console.warn(`[${topic}] ⚠️  Nenhum item marcado como processado (verifique source_ids na resposta da IA ou clustering)`)
       }
 
       // Delay para respeitar rate limit (15 req/min)
