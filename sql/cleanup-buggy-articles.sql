@@ -5,8 +5,7 @@
 SELECT
   image_url,
   COUNT(*) as quantidade,
-  STRING_AGG(id::text, ', ') as article_ids,
-  STRING_AGG(title, ' | ') as titles
+  STRING_AGG(id::text, ', ') as article_ids
 FROM articles
 WHERE image_url IS NOT NULL
   AND image_url NOT LIKE '%placeholder%'
@@ -19,14 +18,13 @@ ORDER BY COUNT(*) DESC;
 -- Só execute se tiver verificado o resultado acima
 
 DELETE FROM articles
-WHERE id IN (
-  SELECT id FROM articles a
-  WHERE EXISTS (
-    SELECT 1 FROM articles b
-    WHERE a.image_url = b.image_url
-      AND a.id != b.id
-      AND a.image_url NOT LIKE '%placeholder%'
-  )
+WHERE image_url IN (
+  SELECT image_url
+  FROM articles
+  WHERE image_url IS NOT NULL
+    AND image_url NOT LIKE '%placeholder%'
+  GROUP BY image_url
+  HAVING COUNT(*) > 1
 )
 RETURNING id, title, image_url;
 
