@@ -279,9 +279,9 @@ ${context}`
           // ✅ Marca este cluster como processado com sucesso (mesmo que 0 artigos)
           clusterSourceIds.forEach(id => allProcessedClusterSourceIds.add(id))
 
-          // Vincula cada item ao seu cluster source_ids
+          // ✅ ISOLAMENTO: Vincula cada item com seu cluster source_ids E clusterItems
           parsed.forEach(item => {
-            allParsedItems.push({ item, clusterSourceIds })
+            allParsedItems.push({ item, clusterSourceIds, clusterItems })
           })
           console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) ✓`)
         } catch (parseErr) {
@@ -306,47 +306,55 @@ ${context}`
   const now = new Date().toISOString()
   const newsItems = []
 
-  for (const { item, clusterSourceIds } of allParsedItems) {
+  for (const { item, clusterSourceIds, clusterItems } of allParsedItems) {
     if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) {
       console.warn(`[${topic}] ⚠️  DESCARTE: sourceIndexes ausente/inválido em artigo gerado`)
       continue
     }
 
-    // ✅ DERRUBE OS MUROS: Se a IA gerou, salva. Sem censura de relevância.
-    // const relevance = isGeneratedItemRelevant(item, results)
-    // if (!relevance) console.warn(`[${topic}] ℹ️  Relevância baixa (0.01 check) - "${item.title?.slice(0, 50)}" (PROCESSADO)`)
+    // ✅ ISOLAMENTO DE LOOP: Variáveis locais resetadas a cada iteração
+    const sourceIndexes = item.sourceIndexes.map(n => n - 1) // Converter 1-based → 0-based
 
-    // ✅ FALLBACK sourceIndexes: Se a IA não retornou, usa todas as fontes do cluster
-    let idxs = (item.sourceIndexes || []).map(n => n - 1)
-    if (idxs.length === 0) {
-      console.warn(`[${topic}] ⚠️  sourceIndexes vazio — fallback para todas as ${results.length} fontes`)
-      idxs = results.map((_, i) => i) // Todas as fontes
+    // ✅ MAPEAMENTO DE FONTES: Apenas os IDs REALMENTE usados neste artigo
+    const articleSourceIds = sourceIndexes
+      .filter(idx => idx >= 0 && idx < clusterItems.length)
+      .map(idx => clusterSourceIds[idx]) // Mapear índice para ID real
+      .filter(Boolean)
+
+    if (articleSourceIds.length === 0) {
+      console.warn(`[${topic}] ⚠️  Nenhum source_id válido mapeado para: "${item.title?.slice(0, 50)}"`)
+      continue
     }
 
-    // ✅ Buscar imagem INDIVIDUAL por artigo (evita reutilização entre artigos)
+    // ✅ EXTRAÇÃO DE IMAGEM PER-SOURCE: Buscar de cada fonte específica
     let imageUrl = null
     let imageSource = null
-    for (const idx of idxs) {
-      const candidate = results[idx]?.image
+    let imageSourceDomain = null
+
+    for (const idx of sourceIndexes) {
+      if (idx < 0 || idx >= clusterItems.length) continue
+      const candidate = clusterItems[idx]?.image
       if (candidate && !isLazyLoadImage(candidate)) {
         imageUrl = candidate
-        imageSource = results[idx].url
+        imageSource = clusterItems[idx].url
+        imageSourceDomain = new URL(imageSource).hostname.replace('www.', '')
         break
       }
     }
 
-    // ✅ FAILSAFE: placeholder + diagnóstico
+    // ✅ FAILSAFE: placeholder se não encontrar
     if (!imageUrl) {
       imageUrl = `https://via.placeholder.com/1200x630?text=${encodeURIComponent(item.title?.slice(0, 30) || 'Lophos News')}`
-      console.warn(`[${topic}] 📸 Placeholder — ${item.title?.slice(0, 50)} (nenhuma imagem válida em ${idxs.length} fontes)`)
+      console.warn(`[${topic}] 📸 Placeholder — ${item.title?.slice(0, 50)}`)
     } else {
-      console.log(`[${topic}] 🖼️  Imagem de: ${imageSource?.split('/')[2]}`)
+      console.log(`[${topic}] 🖼️  Imagem de ${imageSourceDomain}`)
     }
 
-    const sources = idxs
-      .filter(idx => idx >= 0 && idx < results.length)
+    // ✅ CONSTRUIR SOURCES: Apenas as usadas neste artigo (não todas do cluster)
+    const sources = sourceIndexes
+      .filter(idx => idx >= 0 && idx < clusterItems.length)
       .map(idx => {
-        const r = results[idx]
+        const r = clusterItems[idx]
         return {
           name: new URL(r.url).hostname.replace('www.', ''),
           url: r.url,
@@ -369,7 +377,7 @@ ${context}`
       published_at: now,
       cached_at: now,
       matched_topics: keywords,
-      source_ids: clusterSourceIds, // ✅ IDs reais dos raw_items (UUIDs)
+      source_ids: articleSourceIds, // ✅ APENAS os IDs deste artigo específico
     })
   }
 
