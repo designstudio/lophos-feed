@@ -305,8 +305,15 @@ ${context}`
   const newsItems = []
 
   for (const { item, clusterSourceIds } of allParsedItems) {
-    if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) continue
-    if (!isGeneratedItemRelevant(item, results)) continue
+    if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) {
+      console.warn(`[${topic}] ⚠️  DESCARTE: sourceIndexes ausente/inválido em artigo gerado`)
+      continue
+    }
+
+    if (!isGeneratedItemRelevant(item, results)) {
+      console.warn(`[${topic}] ⚠️  DESCARTE: Relevância baixa (<0.15) - "${item.title?.slice(0, 50)}"`)
+      continue
+    }
 
     const idxs = item.sourceIndexes.map(n => n - 1)
 
@@ -316,7 +323,10 @@ ${context}`
       const candidate = results[idx]?.image
       if (candidate && !isLazyLoadImage(candidate)) { imageUrl = candidate; break }
     }
-    if (!imageUrl) continue
+    if (!imageUrl) {
+      console.warn(`[${topic}] ⚠️  DESCARTE: Sem imagem válida - "${item.title?.slice(0, 50)}"`)
+      continue
+    }
 
     const sources = idxs
       .filter(idx => idx >= 0 && idx < results.length)
@@ -458,8 +468,8 @@ async function main() {
       }
 
       const dedupedItems = []
-      // ✅ Inicia com os source_ids de clusters já processados com sucesso (mesmo que 0 artigos)
-      const successfullyProcessedRawIds = new Set((processedClusterSourceIds || []))
+      // ✅ TRANSAÇÃO: Lista limpa - APENAS IDs que foram realmente salvos com sucesso
+      const successfullyProcessedRawIds = new Set()
 
       for (const item of newsItems) {
         const match = allProcessedArticles.find(
