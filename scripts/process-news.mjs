@@ -87,15 +87,19 @@ async function clusterRawItems(topic, items) {
 
   const clusterPrompt = `VOCÊ DEVE RETORNAR APENAS UM ARRAY JSON PURO. NADA MAIS. NEM MARKDOWN, NEM COMENTÁRIOS, NEM EXPLICAÇÕES.
 
-Agrupe estes ${items.length} títulos em clusters de notícias que falam do MESMO assunto/evento real.
+🚨 CLUSTERING RÍGIDO (QUALIDADE MÁXIMA):
+Agrupe APENAS notícias que tratam do EXATO mesmo assunto/evento/franquia.
 
-FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8,9,10,11,12,13,14,15]]
+REGRAS ANTI-MISTURA:
+1. **Nomes Próprios Idênticos**: "Super Mario" vs "Cape Fear" = NUNCA agrupar (franquias diferentes!)
+2. **80% Similaridade Semântica**: Se títulos não compartilham contexto claro (jogo, filme, empresa), NÃO agrupe
+3. **Na Dúvida, NÃO Agrupe**: Super Mario 6 e Mario Kart = OK (mesma franquia). Mario e Cape Fear = NUNCA.
+4. **Um item = um cluster**: Se isolado, volta sozinho. Não force agrupamento.
 
-REGRAS:
-- Use números 1-based (baseado na posição na lista abaixo)
-- Agrupe agressivamente: 5 títulos sobre iPhone = 1 cluster
-- Retorne APENAS um array aninhado de números
-- Nenhuma outra coisa. Nem um caractere extra.
+EXEMPLO ERRADO ❌: [[1,2,3]] onde 1=Super Mario, 2=Cape Fear, 3=Fall 2
+EXEMPLO CORRETO ✅: [[1], [2], [3]] (cada um isolado)
+
+FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8]]
 
 TÍTULOS:
 ${titlesContext}
@@ -199,6 +203,12 @@ Sua missão: transformar um cluster de fontes relacionadas no artigo mais denso,
 - Se um dado não estiver claramente escrito nas fontes, não inclua.
 - Números, datas, nomes e especificações devem ser literais. Se a fonte diz "aumento significativo", NÃO transforme em "15%".
 - Tom seco, direto e jornalístico. Sem introduções poéticas ou floreios.
+
+🚨 **REJEIÇÃO INTERNA (CLUSTERING CORRETO):**
+- **Se o cluster contiver assuntos claramente distintos**, ignore e retorne [].
+- Exemplo ERRADO: 1 fonte sobre "Super Mario 6", 1 sobre "Cape Fear", 1 sobre "Fall 2" → RETORNAR []
+- Exemplo CORRETO: 3 fontes sobre "Nintendo Switch 2 lançamento" → 1 artigo unificado
+- **Na dúvida sobre coesão do cluster: RETORNE []**. Qualidade > volume.
 
 **2. CRITÉRIOS DE NOTICIABILIDADE (FILTRO DE QUALIDADE):**
 - **GERAR ARTIGO:** Lançamentos de produtos/hardware (Galaxy S26, PS5, Switch 2), trailers, anúncios de filmes/séries, atualizações de games (patch notes), mudanças de preços de mercado (gasolina, dólar, ações), contratações relevantes e colaborações (ex: Ed Sheeran x Pokémon).
@@ -313,16 +323,24 @@ ${context}`
       idxs = results.map((_, i) => i) // Todas as fontes
     }
 
-    // Find first valid image (conteúdo vem primeiro que estética)
-    let imageUrl
+    // ✅ Buscar imagem INDIVIDUAL por artigo (evita reutilização entre artigos)
+    let imageUrl = null
+    let imageSource = null
     for (const idx of idxs) {
       const candidate = results[idx]?.image
-      if (candidate && !isLazyLoadImage(candidate)) { imageUrl = candidate; break }
+      if (candidate && !isLazyLoadImage(candidate)) {
+        imageUrl = candidate
+        imageSource = results[idx].url
+        break
+      }
     }
-    // ✅ FAILSAFE: placeholder em vez de descartar por falta de imagem
+
+    // ✅ FAILSAFE: placeholder + diagnóstico
     if (!imageUrl) {
       imageUrl = `https://via.placeholder.com/1200x630?text=${encodeURIComponent(item.title?.slice(0, 30) || 'Lophos News')}`
-      console.warn(`[${topic}] 📸 Placeholder usado — conteúdo preservado: "${item.title?.slice(0, 50)}"`)
+      console.warn(`[${topic}] 📸 Placeholder — ${item.title?.slice(0, 50)} (nenhuma imagem válida em ${idxs.length} fontes)`)
+    } else {
+      console.log(`[${topic}] 🖼️  Imagem de: ${imageSource?.split('/')[2]}`)
     }
 
     const sources = idxs
