@@ -90,14 +90,17 @@ async function clusterRawItems(topic, items) {
 🚨 CLUSTERING RÍGIDO (QUALIDADE MÁXIMA):
 Agrupe APENAS notícias que tratam do EXATO mesmo assunto/evento/franquia.
 
-REGRAS ANTI-MISTURA:
-1. **Nomes Próprios Idênticos**: "Super Mario" vs "Cape Fear" = NUNCA agrupar (franquias diferentes!)
-2. **80% Similaridade Semântica**: Se títulos não compartilham contexto claro (jogo, filme, empresa), NÃO agrupe
-3. **Na Dúvida, NÃO Agrupe**: Super Mario 6 e Mario Kart = OK (mesma franquia). Mario e Cape Fear = NUNCA.
-4. **Um item = um cluster**: Se isolado, volta sozinho. Não force agrupamento.
+🏆 REGRA DE OURO DO LOPHOS:
+Agrupe por ENTIDADE/ASSUNTO, não por domínio da fonte.
 
-EXEMPLO ERRADO ❌: [[1,2,3]] onde 1=Super Mario, 2=Cape Fear, 3=Fall 2
-EXEMPLO CORRETO ✅: [[1], [2], [3]] (cada um isolado)
+REGRAS:
+1. **MESMO ASSUNTO = AGRUPA**: Múltiplas fontes sobre o mesmo produto/filme/evento = [[1,2,3]]
+2. **ASSUNTOS DIFERENTES = SEPARA**: Fonte A sobre "iPhone 16" + Fonte B sobre "Galaxy S25" = [[1], [2]]
+3. **Franquias Completamente Diferentes = NUNCA**: Super Mario ≠ Cape Fear = [[1], [2]]
+4. **Na Dúvida, AGRUPE por Assunto**: Se 2+ fontes falam do mesmo filme/diretor/produto/evento = 1 cluster
+
+EXEMPLO ERRADO ❌: [[1,2,3]] onde 1=iPhone 16, 2=Galaxy S25, 3=Pixel 9 (3 marcas/produtos!)
+EXEMPLO CORRETO ✅: [[1,2], [3], [4]] onde 1,2=iPhone 16 (AGRUPA), 3=Galaxy S25, 4=outro
 
 FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8]]
 
