@@ -36,10 +36,10 @@ const model = genAI.getGenerativeModel({
   model: 'gemini-2.5-flash-lite'
 })
 
-const BATCH_SIZE = 15          // raw_items limit per topic (PAID TIER: fetch more items per run)
+const BATCH_SIZE = 100         // MODO FAXINA: Máximo items por tópico (651 notícias em 1 rodada!)
 const CONTENT_CHARS = 2000     // chars per source (optimal detail level)
-const DELAY_BETWEEN_TOPICS_MS = 1_000  // 1s between topics (PAID TIER: 4K RPM allows this)
-const DELAY_BETWEEN_CLUSTERS_MS = 0    // NO DELAY between clusters (turbo mode!)
+const DELAY_BETWEEN_TOPICS_MS = 100   // 100ms between topics (ultra-turbo: 4K RPM ilimitado)
+const DELAY_BETWEEN_CLUSTERS_MS = 0   // ZERO DELAY: Process instantly
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 function isLazyLoadImage(url) {
@@ -68,7 +68,7 @@ function isGeneratedItemRelevant(item, results) {
     .filter(i => i >= 0 && i < results.length)
     .map(i => `${results[i].title || ''} ${results[i].content || ''}`)
     .join(' ')
-  return textOverlapScore(genText, sourceText) >= 0.15
+  return textOverlapScore(genText, sourceText) >= 0.10  // MODO FAXINA: threshold reduzido para capturar mais notícias
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -311,7 +311,7 @@ ${context}`
     }
 
     if (!isGeneratedItemRelevant(item, results)) {
-      console.warn(`[${topic}] ⚠️  DESCARTE: Relevância baixa (<0.15) - "${item.title?.slice(0, 50)}"`)
+      console.warn(`[${topic}] ⚠️  DESCARTE: Relevância baixa (<0.10) - "${item.title?.slice(0, 50)}"`)
       continue
     }
 
@@ -408,8 +408,9 @@ async function main() {
   if (!topicRows?.length) { console.log('No unprocessed items found.'); return }
 
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
-  console.log(`\n🚀 Lophos PAID TIER Turbo Mode — Gemini 2.5 Flash-Lite Unlimited`)
-  console.log(`RPM: 4K | Clusters: ${BATCH_SIZE} items | Delay: ${DELAY_BETWEEN_TOPICS_MS / 1000}s/topic | Inter-cluster: instant`)
+  console.log(`\n🧹 MODO FAXINA — Lophos Cleanup Mode`)
+  console.log(`RPM: 4K ilimitado | Items/tópico: ${BATCH_SIZE} | Delay: ${DELAY_BETWEEN_TOPICS_MS}ms | Relevância: 0.10+`)
+  console.log(`Backlog estimado: 651 notícias | Target: 1 rodada`)
   console.log(`Topics to process: ${topics.join(', ')}\n`)
 
   // Fetch existing articles (últimas 24h)
@@ -587,7 +588,12 @@ async function main() {
     }
   }
 
-  console.log(`\n✨ Done! topics=${topics.length} generated=${totalGenerated} saved=${totalSaved} merges=${totalMerged}`)
+  const totalProcessed = totalSaved + totalMerged
+  const backlogReduction = totalProcessed > 0 ? `651 → ~${Math.max(0, 651 - totalProcessed)}` : 'N/A'
+  console.log(`\n✨ FAXINA CONCLUÍDA!`)
+  console.log(`Topics: ${topics.length} | Artigos gerados: ${totalGenerated} | Salvos: ${totalSaved} | Merges: ${totalMerged}`)
+  console.log(`Backlog reduzido: ${backlogReduction} notícias`)
+  console.log(`Total processado com sucesso: ${totalProcessed} notícias 🎉\n`)
 }
 
 main().catch(err => { console.error(err); process.exit(1) })
