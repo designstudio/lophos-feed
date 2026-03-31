@@ -171,10 +171,19 @@ async function processTopic(topic, rawItems, existingTitles) {
     image: item.image_url,
   }))
 
-  if (!results.length) return []
+  if (!results.length) return { newsItems: [], success: true }
 
   // Processa tudo em lote único com Gemini
-  const parsed = await processTopicWithGemini(topic, results, existingTitles)
+  let parsed
+  try {
+    parsed = await processTopicWithGemini(topic, results, existingTitles)
+  } catch (err) {
+    // Gemini error (503, 429, etc) — NÃO marcar como processado
+    const statusCode = err.status || err.message.match(/\d{3}/)
+    console.error(`[${topic}] ⚠️  Erro na IA (${statusCode}): ${err.message}. Mantendo items como não-processados para retry.`)
+    return { newsItems: [], success: false, geminiError: true }
+  }
+
   const now = new Date().toISOString()
   const newsItems = []
 
@@ -221,7 +230,7 @@ async function processTopic(topic, rawItems, existingTitles) {
     })
   }
 
-  return newsItems
+  return { newsItems, success: true }
 }
 
 async function main() {
@@ -267,7 +276,7 @@ async function main() {
       // Fetch unprocessed items for this topic
       const { data: rawItems } = await db
         .from('raw_items')
-        .select('url, title, content, image_url, topic')
+        .select('id, url, title, content, image_url, topic')
         .eq('topic', topic)
         .eq('processed', false)
         .order('pub_date', { ascending: false })
@@ -276,9 +285,25 @@ async function main() {
       if (!rawItems?.length) continue
 
       console.log(`[${topic}] ${rawItems.length} items → Gemini`)
-      const newsItems = await processTopic(topic, rawItems, allProcessedArticles.map(a => a.title))
+
+      // Bloco Try/Catch Robusto: Se Gemini falhar, não marca como processado
+      const { newsItems, success: geminiSuccess, geminiError } = await processTopic(
+        topic,
+        rawItems,
+        allProcessedArticles.map(a => a.title)
+      )
+
+      // Se houve erro no Gemini (503, 429), pula este tópico e tenta no próximo batch
+      if (geminiError) {
+        if (ti < topics.length - 1) {
+          console.log(`Aguardando ${DELAY_BETWEEN_TOPICS_MS / 1000}s antes do próximo tópico...\n`)
+          await new Promise(r => setTimeout(r, DELAY_BETWEEN_TOPICS_MS))
+        }
+        continue
+      }
 
       const dedupedItems = []
+      const successfullyProcessedRawIds = new Set()
 
       for (const item of newsItems) {
         const match = allProcessedArticles.find(
@@ -306,13 +331,29 @@ async function main() {
               .eq('id', match.id)
 
             if (mergeError) {
-              console.error(`[${topic}] Merge error:`, mergeError.message)
+              console.error(`[${topic}] ⚠️  Merge error: ${mergeError.message}. Item não será marcado como processado.`)
+              // NÃO marca como processado se houver erro
             } else {
               match.sources = mergedSources
               match.keywords = mergedKeywords
               match.matched_topics = mergedMatchedTopics
               totalMerged++
               console.log(`  ✓ Merge em "${match.title}"`)
+              // Marca os raw_items relacionados como processados
+              for (const rawId of item.sourceIndexes) {
+                const idx = rawId - 1
+                if (idx >= 0 && idx < rawItems.length) {
+                  successfullyProcessedRawIds.add(rawItems[idx].id)
+                }
+              }
+            }
+          } else {
+            // Sem mudanças, mas merge bem-sucedido
+            for (const rawId of item.sourceIndexes) {
+              const idx = rawId - 1
+              if (idx >= 0 && idx < rawItems.length) {
+                successfullyProcessedRawIds.add(rawItems[idx].id)
+              }
             }
           }
         } else {
@@ -320,13 +361,15 @@ async function main() {
         }
       }
 
+      // Salvar artigos deduplicados com confirmação de sucesso
       if (dedupedItems.length > 0) {
         const { error: saveError } = await db.from('articles').upsert(
           dedupedItems,
           { onConflict: 'id' }
         )
         if (saveError) {
-          console.error(`[${topic}] Save error:`, saveError.message)
+          console.error(`[${topic}] ⚠️  Save error: ${saveError.message}. ${dedupedItems.length} items não serão marcados como processados para retry.`)
+          // NÃO marca como processado se houver erro de salvamento
         } else {
           totalSaved += dedupedItems.length
           for (const item of dedupedItems) {
@@ -337,6 +380,13 @@ async function main() {
               keywords: item.keywords || [],
               matched_topics: item.matched_topics || [],
             })
+            // Marca os raw_items relacionados como processados
+            for (const rawId of item.sourceIndexes) {
+              const idx = rawId - 1
+              if (idx >= 0 && idx < rawItems.length) {
+                successfullyProcessedRawIds.add(rawItems[idx].id)
+              }
+            }
           }
           console.log(`  ✓ ${dedupedItems.length} artigos salvos`)
         }
@@ -344,10 +394,19 @@ async function main() {
 
       totalGenerated += dedupedItems.length
 
-      // Mark items as processed
-      await db.from('raw_items').update({ processed: true })
-        .eq('topic', topic)
-        .eq('processed', false)
+      // ✅ Confirmação de Escrita: Só marque como processado os IDs que foram realmente salvos
+      if (successfullyProcessedRawIds.size > 0) {
+        const processedIds = Array.from(successfullyProcessedRawIds)
+        const { error: updateError } = await db.from('raw_items')
+          .update({ processed: true })
+          .in('id', processedIds)
+
+        if (updateError) {
+          console.error(`[${topic}] ⚠️  Failed to mark items as processed: ${updateError.message}`)
+        } else {
+          console.log(`[${topic}] ✓ ${processedIds.length} items marcados como processados`)
+        }
+      }
 
       // Delay para respeitar rate limit (15 req/min)
       if (ti < topics.length - 1) {
@@ -355,7 +414,7 @@ async function main() {
         await new Promise(r => setTimeout(r, DELAY_BETWEEN_TOPICS_MS))
       }
     } catch (err) {
-      console.error(`[${topic}] Error:`, err.message)
+      console.error(`[${topic}] ⚠️  Erro crítico: ${err.message}. Items não serão marcados como processados.`)
     }
   }
 
