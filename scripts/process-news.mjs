@@ -313,16 +313,42 @@ ${context}`
     }
 
     // ✅ ISOLAMENTO DE LOOP: Variáveis locais resetadas a cada iteração
-    const sourceIndexes = item.sourceIndexes.map(n => n - 1) // Converter 1-based → 0-based
+    const sourceIndexes = item.sourceIndexes.map(n => n - 1) // Converter 1-base → 0-based
 
-    // ✅ MAPEAMENTO DE FONTES: Apenas os IDs REALMENTE usados neste artigo
-    const articleSourceIds = sourceIndexes
-      .filter(idx => idx >= 0 && idx < clusterItems.length)
-      .map(idx => clusterSourceIds[idx]) // Mapear índice para ID real
-      .filter(Boolean)
+    // 🔧 LÓGICA ROBUSTA: Mapeamento com fallback inteligente
+    let articleSourceIds = []
+
+    if (clusterSourceIds.length === 1) {
+      // ✅ SINGLE SOURCE: Força usar esse UUID, ignora índice da IA
+      articleSourceIds = [clusterSourceIds[0]]
+      console.log(`[${topic}] 🔗 Single source: forçando ${clusterSourceIds[0]}`)
+    } else {
+      // ✅ MULTI-SOURCE: Valida índices e mapeia corretamente
+      articleSourceIds = sourceIndexes
+        .filter(idx => idx >= 0 && idx < clusterSourceIds.length)
+        .map(idx => clusterSourceIds[idx])
+        .filter(Boolean)
+
+      // 🐛 DEBUG LOG: Mostrar mismatch se houver
+      if (articleSourceIds.length !== sourceIndexes.length) {
+        const iaRetornou = item.sourceIndexes.join(', ')
+        const clusterUUIDs = clusterSourceIds.map(id => id.substring(0, 8)).join(', ')
+        console.warn(`[${topic}] 🔍 DEBUG INDEX MISMATCH:`)
+        console.warn(`   IA retornou sourceIndexes: [${iaRetornou}]`)
+        console.warn(`   Cluster tem ${clusterSourceIds.length} fontes (UUIDs: ${clusterUUIDs}...)`)
+        console.warn(`   Artigo: "${item.title?.slice(0, 50)}"`)
+        console.warn(`   Mapeados: ${articleSourceIds.length}/${sourceIndexes.length} indices válidos`)
+      }
+    }
 
     if (articleSourceIds.length === 0) {
-      console.warn(`[${topic}] ⚠️  Nenhum source_id válido mapeado para: "${item.title?.slice(0, 50)}"`)
+      const iaRetornou = item.sourceIndexes.join(', ')
+      const clusterUUIDs = clusterSourceIds.map(id => id.substring(0, 8)).join(', ')
+      console.error(`[${topic}] ❌ ERRO: Nenhum source_id válido mapeado!`)
+      console.error(`   Artigo: "${item.title?.slice(0, 50)}"`)
+      console.error(`   IA retornou sourceIndexes: [${iaRetornou}]`)
+      console.error(`   Cluster tem ${clusterSourceIds.length} fontes: [${clusterUUIDs}...]`)
+      console.error(`   Causa provável: índices fora do range ou mismatch`)
       continue
     }
 
