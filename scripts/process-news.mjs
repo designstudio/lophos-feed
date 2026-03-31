@@ -295,44 +295,10 @@ ${context}`
     }
   }
 
-  return allParsedItems
-}
-
-async function processTopic(topic, rawItems, existingTitles) {
-  const results = rawItems.map(item => ({
-    url: item.url,
-    title: item.title,
-    content: item.content || '',
-    image: item.image_url,
-  }))
-
-  if (!results.length) return { newsItems: [], success: true }
-
-  // Map para rastrear raw_items por ID
-  const rawItemsMap = new Map(rawItems.map(item => [item.id, item]))
-
-  // ═══════════════════════════════════════════════════════════════
-  // FASE 1: Clustering Inteligente
-  // ═══════════════════════════════════════════════════════════════
-  const clusters = await clusterRawItems(topic, rawItems)
-
-  // ═══════════════════════════════════════════════════════════════
-  // FASE 2: Processamento de Conteúdo (por Cluster)
-  // ═══════════════════════════════════════════════════════════════
-  let parsed
-  try {
-    parsed = await processTopicWithGemini(topic, results, existingTitles, clusters, rawItemsMap)
-  } catch (err) {
-    // Gemini error (503, 429, etc) — NÃO marcar como processado
-    const statusCode = err.status || err.message.match(/\d{3}/)
-    console.error(`[${topic}] ⚠️  Erro na IA (${statusCode}): ${err.message}. Mantendo items como não-processados para retry.`)
-    return { newsItems: [], success: false, geminiError: true }
-  }
-
+  // Retorna newsItems construídos com source_ids vinculados
   const now = new Date().toISOString()
   const newsItems = []
 
-  // allParsedItems agora contém { item, clusterSourceIds } para rastreamento
   for (const { item, clusterSourceIds } of allParsedItems) {
     if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) continue
     if (!isGeneratedItemRelevant(item, results)) continue
@@ -373,11 +339,46 @@ async function processTopic(topic, rawItems, existingTitles) {
       published_at: now,
       cached_at: now,
       matched_topics: keywords,
-      source_ids: clusterSourceIds, // ✅ IDs reais dos raw_items deste artigo
+      source_ids: clusterSourceIds, // ✅ IDs reais dos raw_items (UUIDs)
     })
   }
 
   return { newsItems, success: true }
+}
+
+async function processTopic(topic, rawItems, existingTitles) {
+  const results = rawItems.map(item => ({
+    url: item.url,
+    title: item.title,
+    content: item.content || '',
+    image: item.image_url,
+  }))
+
+  if (!results.length) return { newsItems: [], success: true }
+
+  // Map para rastrear raw_items por ID
+  const rawItemsMap = new Map(rawItems.map(item => [item.id, item]))
+
+  // ═══════════════════════════════════════════════════════════════
+  // FASE 1: Clustering Inteligente
+  // ═══════════════════════════════════════════════════════════════
+  const clusters = await clusterRawItems(topic, rawItems)
+
+  // ═══════════════════════════════════════════════════════════════
+  // FASE 2: Processamento de Conteúdo (por Cluster)
+  // ═══════════════════════════════════════════════════════════════
+  let parsed
+  try {
+    parsed = await processTopicWithGemini(topic, results, existingTitles, clusters, rawItemsMap)
+  } catch (err) {
+    // Gemini error (503, 429, etc) — NÃO marcar como processado
+    const statusCode = err.status || err.message.match(/\d{3}/)
+    console.error(`[${topic}] ⚠️  Erro na IA (${statusCode}): ${err.message}. Mantendo items como não-processados para retry.`)
+    return { newsItems: [], success: false, geminiError: true }
+  }
+
+  // parsed.newsItems já contém newsItems prontos com source_ids vinculados
+  return parsed
 }
 
 async function main() {
