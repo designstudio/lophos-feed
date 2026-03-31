@@ -164,6 +164,7 @@ async function processTopicWithGemini(topic, results, existingTitles, clusters, 
 
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const allParsedItems = [] // Array de { item, clusterSourceIds }
+  const allProcessedClusterSourceIds = new Set() // Rastreia TODOS os clusters processados com sucesso
 
   // Processar cada cluster (contém source_ids reais, não índices)
   for (let clusterIdx = 0; clusterIdx < clusters.length; clusterIdx++) {
@@ -273,6 +274,9 @@ ${context}`
           const jsonStr = text.substring(firstBracket, lastBracket + 1)
           const parsed = JSON.parse(jsonStr)
 
+          // ✅ Marca este cluster como processado com sucesso (mesmo que 0 artigos)
+          clusterSourceIds.forEach(id => allProcessedClusterSourceIds.add(id))
+
           // Vincula cada item ao seu cluster source_ids
           parsed.forEach(item => {
             allParsedItems.push({ item, clusterSourceIds })
@@ -280,6 +284,7 @@ ${context}`
           console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) ✓`)
         } catch (parseErr) {
           console.warn(`[${topic}] Cluster ${clusterNum}: Parse JSON falhou: ${parseErr.message}`)
+          // NÃO marca como processado se parse falhar
         }
       }
     } catch (err) {
@@ -343,7 +348,7 @@ ${context}`
     })
   }
 
-  return { newsItems, success: true }
+  return { newsItems, success: true, processedClusterSourceIds: Array.from(allProcessedClusterSourceIds) }
 }
 
 async function processTopic(topic, rawItems, existingTitles) {
@@ -377,7 +382,8 @@ async function processTopic(topic, rawItems, existingTitles) {
     return { newsItems: [], success: false, geminiError: true }
   }
 
-  // parsed.newsItems já contém newsItems prontos com source_ids vinculados
+  // parsed contém { newsItems, success, processedClusterSourceIds }
+  // ✅ Todos os clusters processados com sucesso são marcados para rastreamento
   return parsed
 }
 
@@ -436,7 +442,7 @@ async function main() {
       console.log(`[${topic}] ${rawItems.length} items → Gemini`)
 
       // Bloco Try/Catch Robusto: Se Gemini falhar, não marca como processado
-      const { newsItems, success: geminiSuccess, geminiError } = await processTopic(
+      const { newsItems, success: geminiSuccess, geminiError, processedClusterSourceIds } = await processTopic(
         topic,
         rawItems,
         allProcessedArticles.map(a => a.title)
@@ -452,7 +458,8 @@ async function main() {
       }
 
       const dedupedItems = []
-      const successfullyProcessedRawIds = new Set()
+      // ✅ Inicia com os source_ids de clusters já processados com sucesso (mesmo que 0 artigos)
+      const successfullyProcessedRawIds = new Set((processedClusterSourceIds || []))
 
       for (const item of newsItems) {
         const match = allProcessedArticles.find(
