@@ -1,12 +1,12 @@
 /**
- * Lophos News Processing — Gemini 2.0 Flash Edition
+ * Lophos News Processing — Gemini 2.5 Flash-Lite Edition (Token-Optimized)
  *
  * Nova Arquitetura:
- * ✅ Contexto Brutal: 4000 chars por fonte (máximo de detalhes)
- * ✅ Processamento em Lote Único: Todas as 15 fontes de uma vez
- * ✅ Deduplicação Perfeita: Gemini com suporte a 1M tokens agrupa tudo
- * ✅ Código Limpo: Sem chunks complexos, fluxo direto
- * ✅ Rate Limit Friendly: 8s entre tópicos (15 req/min)
+ * ✅ Modelo Eficiente: Gemini 2.5 Flash-Lite (menor taxa de tokens)
+ * ✅ Processamento em Mini-Lotes: 3 fontes por vez (evita token limit)
+ * ✅ Delay Estratégico: 20s entre tópicos para resetar quota de tokens/min
+ * ✅ Proteção Free Tier: Chunks inteligentes evitam bloqueio do Google
+ * ✅ Segurança de Dados: Transactional integrity contra perda de dados
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -20,12 +20,13 @@ const db = createClient(
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 const model = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash'
+  model: 'gemini-2.5-flash-lite'
 })
 
-const BATCH_SIZE = 15          // max sources per Gemini call
-const CONTENT_CHARS = 4000     // chars per source — BRUTAL CONTEXT
-const DELAY_BETWEEN_TOPICS_MS = 8_000 // 8s between topics (15 req/min free tier)
+const BATCH_SIZE = 3           // mini-batch per Gemini call (token optimization)
+const CONTENT_CHARS = 2000     // reduced chars per source (token efficiency)
+const DELAY_BETWEEN_TOPICS_MS = 20_000 // 20s between topics (token/min quota reset)
+const DELAY_BETWEEN_CHUNKS_MS = 3_000  // 3s between mini-batch chunks (safety margin)
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 function isLazyLoadImage(url) {
@@ -58,25 +59,32 @@ function isGeneratedItemRelevant(item, results) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// GEMINI: Processamento em Lote Único (Contexto Brutal)
+// GEMINI: Processamento em Mini-Lotes (Token-Optimized)
 // ═══════════════════════════════════════════════════════════════
 async function processTopicWithGemini(topic, results, existingTitles) {
   if (!results.length) return []
 
-  console.log(`[${topic}] Gemini: Processando ${results.length} fontes em lote único...`)
-
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const allParsedItems = []
 
-  // Contexto brutal: 4000 chars por fonte
-  const context = results.map((r, i) =>
-    `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`
-  ).join('\n\n')
+  // Dividir em mini-lotes para evitar token limit
+  for (let chunkIdx = 0; chunkIdx < results.length; chunkIdx += BATCH_SIZE) {
+    const chunk = results.slice(chunkIdx, chunkIdx + BATCH_SIZE)
+    const chunkNum = Math.floor(chunkIdx / BATCH_SIZE) + 1
+    const totalChunks = Math.ceil(results.length / BATCH_SIZE)
 
-  const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
-    : ''
+    console.log(`[${topic}] Mini-lote ${chunkNum}/${totalChunks}: Processando ${chunk.length} fontes (token-optimized)...`)
 
-  const prompt = `Você é o Curador-Chefe do Lophos. Sua missão: destilar ${results.length} fontes em artigos precisos e substanciais.
+    // Contexto otimizado: 2000 chars por fonte para evitar estourar limite
+    const context = chunk.map((r, i) =>
+      `[${chunkIdx + i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`
+    ).join('\n\n')
+
+    const existingContext = existingTitles.length > 0
+      ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
+      : ''
+
+    const prompt = `Você é o Curador-Chefe do Lophos. Sua missão: destilar ${chunk.length} fontes em artigos precisos e substanciais.
 
 **INSTRUÇÕES CRÍTICAS:**
 
@@ -115,7 +123,7 @@ async function processTopicWithGemini(topic, results, existingTitles) {
 - Data: ${today}
 - Tópico: "${topic}"
 - Artigos já publicados: ${existingContext}
-- ${results.length} fontes disponíveis com até 4000 chars cada
+- Mini-lote ${chunkNum}/${totalChunks}: ${chunk.length} fontes disponíveis com até 2000 chars cada
 
 **RESPOSTA:**
 Retorne EXCLUSIVAMENTE um array JSON válido. Sem markdown, comentários ou texto extra.
@@ -144,23 +152,35 @@ Se não houver conteúdo válido, retorne: []
 FONTES:
 ${context}`
 
-  try {
-    const result = await model.generateContent(prompt)
-    const response = result.response
-    const text = response.text()
+    try {
+      const result = await model.generateContent(prompt)
+      const response = result.response
+      const text = response.text()
 
-    // Extrai JSON da resposta
-    const match = text.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
-    if (!match) {
-      console.warn(`[${topic}] Gemini: Nenhuma resposta JSON válida`)
-      return []
+      // Extrai JSON da resposta
+      const match = text.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
+      if (!match) {
+        console.warn(`[${topic}] Mini-lote ${chunkNum}: Nenhuma resposta JSON válida`)
+      } else {
+        const parsed = JSON.parse(match[0])
+        allParsedItems.push(...parsed)
+        console.log(`[${topic}] Mini-lote ${chunkNum}: ${parsed.length} artigos gerados ✓`)
+      }
+    } catch (err) {
+      // Gemini error (503, 429, etc) — NÃO marcar como processado
+      const statusCode = err.status || err.message.match(/\d{3}/)
+      console.error(`[${topic}] ⚠️  Erro na IA (mini-lote ${chunkNum}, ${statusCode}): ${err.message}. Mantendo items como não-processados para retry.`)
+      throw err // Re-throw para que processTopic capture e retorne geminiError: true
     }
 
-    return JSON.parse(match[0])
-  } catch (err) {
-    console.error(`[${topic}] Gemini error:`, err.message)
-    return []
+    // Delay inteligente entre chunks para respeitar token/min quota
+    if (chunkIdx + BATCH_SIZE < results.length) {
+      console.log(`[${topic}] Aguardando ${DELAY_BETWEEN_CHUNKS_MS / 1000}s antes do próximo mini-lote...\n`)
+      await new Promise(r => setTimeout(r, DELAY_BETWEEN_CHUNKS_MS))
+    }
   }
+
+  return allParsedItems
 }
 
 async function processTopic(topic, rawItems, existingTitles) {
@@ -244,7 +264,8 @@ async function main() {
   if (!topicRows?.length) { console.log('No unprocessed items found.'); return }
 
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
-  console.log(`\n🦖 Lophos x Gemini 2.0 Flash`)
+  console.log(`\n🦖 Lophos x Gemini 2.5 Flash-Lite (Token-Optimized)`)
+  console.log(`Mini-batches: ${BATCH_SIZE} items | Delay: ${DELAY_BETWEEN_TOPICS_MS / 1000}s/topic`)
   console.log(`Topics to process: ${topics.join(', ')}\n`)
 
   // Fetch existing articles (últimas 24h)
