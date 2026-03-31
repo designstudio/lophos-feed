@@ -575,18 +575,54 @@ async function main() {
         }
       }
 
-      // Salvar artigos deduplicados com confirmação de sucesso
-      if (dedupedItems.length > 0) {
+      // ✅ INJEÇÃO OBRIGATÓRIA + FAILSAFE: Validar antes de salvar
+      const validArticles = []
+      const invalidArticles = []
+
+      for (const item of dedupedItems) {
+        // FAILSAFE: Artigo DEVE ter fontes
+        if (!Array.isArray(item.source_ids) || item.source_ids.length === 0) {
+          console.error(`[${topic}] ❌ REJEIÇÃO: Artigo com ZERO fontes! "${item.title?.slice(0, 50)}"`)
+          console.error(`   source_ids: ${item.source_ids}`)
+          console.error(`   sources: ${item.sources?.length || 0} fontes`)
+          invalidArticles.push(item)
+          continue
+        }
+
+        if (!Array.isArray(item.sources) || item.sources.length === 0) {
+          console.error(`[${topic}] ❌ REJEIÇÃO: Artigo com array sources vazio! "${item.title?.slice(0, 50)}"`)
+          console.error(`   source_ids: ${item.source_ids.join(', ')}`)
+          invalidArticles.push(item)
+          continue
+        }
+
+        // ✅ PASSOU: Artigo tem fontes
+        validArticles.push(item)
+      }
+
+      // Salvar APENAS artigos válidos
+      if (validArticles.length > 0) {
+        // 📋 LOG DE AUDITORIA: Mostra IDs ANTES de salvar
+        console.log(`[${topic}] 📦 Gravando no BD: ${validArticles.length} artigos`)
+        validArticles.forEach((item, i) => {
+          const sourceIdStr = item.source_ids.map(id => id.substring(0, 8)).join(', ')
+          console.log(`   ${i + 1}. "${item.title?.slice(0, 60)}" | Fontes: [${sourceIdStr}...]`)
+        })
+
         const { error: saveError } = await db.from('articles').upsert(
-          dedupedItems,
+          validArticles,
           { onConflict: 'id' }
         )
+
         if (saveError) {
-          console.error(`[${topic}] ⚠️  Save error: ${saveError.message}. ${dedupedItems.length} items não serão marcados como processados para retry.`)
-          // NÃO marca como processado se houver erro de salvamento
+          console.error(`[${topic}] ⚠️  Save error: ${saveError.message}. ${validArticles.length} items não serão marcados como processados.`)
+          // NÃO marca como processado se houver erro
         } else {
-          totalSaved += dedupedItems.length
-          for (const item of dedupedItems) {
+          console.log(`[${topic}] ✅ ${validArticles.length} artigos salvos com sucesso`)
+          totalSaved += validArticles.length
+
+          // Marca como processado APENAS os artigos salvos com sucesso
+          for (const item of validArticles) {
             allProcessedArticles.push({
               id: item.id,
               title: item.title,
@@ -594,15 +630,15 @@ async function main() {
               keywords: item.keywords || [],
               matched_topics: item.matched_topics || [],
             })
-            // Marca os raw_items relacionados como processados
-            if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
-              item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
-            } else {
-              console.warn(`[${topic}] ⚠️  source_ids inválido no novo artigo: ${typeof item.source_ids}. Artigo salvo mas mapeamento skipped para revisão.`)
-            }
+            // ✅ Injeta obrigatoriamente os source_ids
+            item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
           }
-          console.log(`  ✓ ${dedupedItems.length} artigos salvos`)
         }
+      }
+
+      // ⚠️  Log dos artigos REJEITADOS
+      if (invalidArticles.length > 0) {
+        console.warn(`[${topic}] ⚠️  ${invalidArticles.length} artigos rejeitados (zero fontes)`)
       }
 
       totalGenerated += dedupedItems.length

@@ -586,33 +586,60 @@ async function main() {
         }
       }
 
-      // 🧪 TESTE: Salvar artigos (ou simular com DRY_RUN)
-      if (dedupedItems.length > 0) {
-        console.log(`\n[${topic}] 📦 ${dedupedItems.length} artigos novos para salvar:`)
-        dedupedItems.forEach((item, i) => {
-          console.log(`  ${i+1}. "${item.title}" (${item.sources.length} fontes, image: ${item.image_url?.substring(0, 40)}...)`)
+      // ✅ INJEÇÃO OBRIGATÓRIA + FAILSAFE: Validar antes de salvar
+      const validArticles = []
+      const invalidArticles = []
+
+      for (const item of dedupedItems) {
+        // FAILSAFE: Artigo DEVE ter fontes
+        if (!Array.isArray(item.source_ids) || item.source_ids.length === 0) {
+          console.error(`[${topic}] ❌ REJEIÇÃO: Artigo com ZERO fontes! "${item.title?.slice(0, 50)}"`)
+          console.error(`   source_ids: ${item.source_ids}`)
+          console.error(`   sources: ${item.sources?.length || 0} fontes`)
+          invalidArticles.push(item)
+          continue
+        }
+
+        if (!Array.isArray(item.sources) || item.sources.length === 0) {
+          console.error(`[${topic}] ❌ REJEIÇÃO: Artigo com array sources vazio! "${item.title?.slice(0, 50)}"`)
+          console.error(`   source_ids: ${item.source_ids.join(', ')}`)
+          invalidArticles.push(item)
+          continue
+        }
+
+        // ✅ PASSOU: Artigo tem fontes
+        validArticles.push(item)
+      }
+
+      // 🧪 TESTE: Salvar APENAS artigos válidos (ou simular com DRY_RUN)
+      if (validArticles.length > 0) {
+        // 📋 LOG DE AUDITORIA: Mostra IDs ANTES de salvar
+        console.log(`\n[${topic}] 📦 Gravando no BD: ${validArticles.length} artigos`)
+        validArticles.forEach((item, i) => {
+          const sourceIdStr = item.source_ids.map(id => id.substring(0, 8)).join(', ')
+          console.log(`   ${i + 1}. "${item.title?.slice(0, 60)}" | Fontes: [${sourceIdStr}...]`)
         })
 
         let saveError = null
         if (!DRY_RUN) {
           const result = await db.from('articles').upsert(
-            dedupedItems,
+            validArticles,
             { onConflict: 'id' }
           )
           saveError = result.error
         }
 
         if (saveError) {
-          console.error(`[${topic}] ⚠️  Save error: ${saveError.message}. ${dedupedItems.length} items não marcados como processados.`)
+          console.error(`[${topic}] ⚠️  Save error: ${saveError.message}. ${validArticles.length} items não marcados como processados.`)
           // NÃO marca como processado se houver erro
         } else {
           if (DRY_RUN) {
-            console.log(`[${topic}] 🟡 DRY RUN: ${dedupedItems.length} artigos SIM seriam salvos`)
+            console.log(`[${topic}] 🟡 DRY RUN: ${validArticles.length} artigos SIM seriam salvos`)
           } else {
-            console.log(`[${topic}] ✅ ${dedupedItems.length} artigos salvos com sucesso`)
+            console.log(`[${topic}] ✅ ${validArticles.length} artigos salvos com sucesso`)
           }
-          totalSaved += dedupedItems.length
-          for (const item of dedupedItems) {
+          totalSaved += validArticles.length
+          for (const item of validArticles) {
             allProcessedArticles.push({
               id: item.id,
               title: item.title,
@@ -620,15 +647,15 @@ async function main() {
               keywords: item.keywords || [],
               matched_topics: item.matched_topics || [],
             })
-            // Marca os raw_items relacionados como processados
-            if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
-              item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
-            } else {
-              console.warn(`[${topic}] ⚠️  source_ids inválido no novo artigo: ${typeof item.source_ids}. Artigo salvo mas mapeamento skipped para revisão.`)
-            }
+            // ✅ Injeta obrigatoriamente os source_ids
+            item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
           }
-          console.log(`  ✓ ${dedupedItems.length} artigos salvos`)
         }
+      }
+
+      // ⚠️  Log dos artigos REJEITADOS
+      if (invalidArticles.length > 0) {
+        console.warn(`[${topic}] ⚠️  ${invalidArticles.length} artigos rejeitados (zero fontes)`)
       }
 
       totalGenerated += dedupedItems.length
