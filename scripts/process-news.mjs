@@ -1,10 +1,10 @@
 /**
- * Lophos News Processing — Gemini 1.5 Flash Edition
+ * Lophos News Processing — Gemini 2.0 Flash Edition
  *
  * Nova Arquitetura:
  * ✅ Contexto Brutal: 4000 chars por fonte (máximo de detalhes)
  * ✅ Processamento em Lote Único: Todas as 15 fontes de uma vez
- * ✅ Deduplicação Perfeita: Gemini com 1M tokens agrupa tudo
+ * ✅ Deduplicação Perfeita: Gemini com suporte a 1M tokens agrupa tudo
  * ✅ Código Limpo: Sem chunks complexos, fluxo direto
  * ✅ Rate Limit Friendly: 8s entre tópicos (15 req/min)
  */
@@ -20,8 +20,7 @@ const db = createClient(
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 const model = genAI.getGenerativeModel({
-  model: 'gemini-3-flash-preview',
-  apiVersion: 'v1'
+  model: 'gemini-2.0-flash'
 })
 
 const BATCH_SIZE = 15          // max sources per Gemini call
@@ -236,7 +235,7 @@ async function main() {
   if (!topicRows?.length) { console.log('No unprocessed items found.'); return }
 
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
-  console.log(`\n🦖 Lophos x Gemini 1.5 Flash`)
+  console.log(`\n🦖 Lophos x Gemini 2.0 Flash`)
   console.log(`Topics to process: ${topics.join(', ')}\n`)
 
   // Fetch existing articles (últimas 24h)
