@@ -1,17 +1,23 @@
 /**
- * Lophos News Processing — Dual-Model Clustering Architecture
+ * Lophos News Processing — PAID TIER TURBO MODE 🚀
  *
  * Fase 1: Agrupamento Inteligente (Gemini 2.5 Flash-Lite)
  * ✅ Agrupa os 15 títulos em clusters de mesmo assunto
  * ✅ Retorna apenas IDs agrupados (poucos tokens)
  * ✅ Evita duplicatas na origem
  *
- * Fase 2: Geração de Conteúdo (Gemini 2.0 Flash)
+ * Fase 2: Geração de Conteúdo (Gemini 2.5 Flash-Lite)
  * ✅ Processa cada cluster com conteúdo completo
  * ✅ Gera artigos ricos com múltiplas fontes
  * ✅ Merging real: 5 fontes sobre iPhone = 1 artigo
  *
- * Benefício: Inteligência de curadoria, não repetição.
+ * PAID TIER OPTIMIZATIONS:
+ * ✅ Cota ilimitada (4K RPM)
+ * ✅ Sem delays entre clusters (execução imediata)
+ * ✅ Delay mínimo entre tópicos (1s apenas)
+ * ✅ Processa backlog em segundos
+ *
+ * Benefício: Inteligência de curadoria a velocidade MÁXIMA.
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -25,20 +31,15 @@ const db = createClient(
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 
-// Fase 1: Agrupamento leve e rápido
-const modelLite = genAI.getGenerativeModel({
+// PAID TIER: Gemini 2.5 Flash-Lite para TUDO (ilimitado, mais barato)
+const model = genAI.getGenerativeModel({
   model: 'gemini-2.5-flash-lite'
 })
 
-// Fase 2: Geração de conteúdo qualitativo
-const modelFull = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash'
-})
-
-const BATCH_SIZE = 3           // mini-batch per Gemini call (token optimization)
-const CONTENT_CHARS = 2000     // reduced chars per source (token efficiency)
-const DELAY_BETWEEN_TOPICS_MS = 20_000 // 20s between topics (token/min quota reset)
-const DELAY_BETWEEN_CHUNKS_MS = 3_000  // 3s between mini-batch chunks (safety margin)
+const BATCH_SIZE = 3           // cluster size (unchanged, still optimal for quality)
+const CONTENT_CHARS = 2000     // chars per source (optimal detail level)
+const DELAY_BETWEEN_TOPICS_MS = 1_000  // 1s between topics (PAID TIER: 4K RPM allows this)
+const DELAY_BETWEEN_CLUSTERS_MS = 0    // NO DELAY between clusters (turbo mode!)
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 function isLazyLoadImage(url) {
@@ -99,7 +100,7 @@ RESPOSTA (apenas JSON):
 `
 
   try {
-    const result = await modelLite.generateContent(clusterPrompt)
+    const result = await model.generateContent(clusterPrompt)
     const response = result.response
     const text = response.text()
 
@@ -235,7 +236,7 @@ FONTES:
 ${context}`
 
     try {
-      const result = await modelFull.generateContent(prompt)
+      const result = await model.generateContent(prompt)
       const response = result.response
       const text = response.text()
 
@@ -255,10 +256,9 @@ ${context}`
       throw err // Re-throw para que processTopic capture e retorne geminiError: true
     }
 
-    // Delay entre clusters para respeitar token/min quota
+    // PAID TIER: Sem delay entre clusters (turbo mode!)
     if (clusterIdx < clusters.length - 1) {
-      console.log(`[${topic}] Aguardando ${DELAY_BETWEEN_CHUNKS_MS / 1000}s antes do próximo cluster...\n`)
-      await new Promise(r => setTimeout(r, DELAY_BETWEEN_CHUNKS_MS))
+      // Processamento imediato para próximo cluster
     }
   }
 
@@ -354,8 +354,8 @@ async function main() {
   if (!topicRows?.length) { console.log('No unprocessed items found.'); return }
 
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
-  console.log(`\n🦖 Lophos x Gemini 2.5 Flash-Lite (Token-Optimized)`)
-  console.log(`Mini-batches: ${BATCH_SIZE} items | Delay: ${DELAY_BETWEEN_TOPICS_MS / 1000}s/topic`)
+  console.log(`\n🚀 Lophos PAID TIER Turbo Mode — Gemini 2.5 Flash-Lite Unlimited`)
+  console.log(`RPM: 4K | Clusters: ${BATCH_SIZE} items | Delay: ${DELAY_BETWEEN_TOPICS_MS / 1000}s/topic | Inter-cluster: instant`)
   console.log(`Topics to process: ${topics.join(', ')}\n`)
 
   // Fetch existing articles (últimas 24h)
