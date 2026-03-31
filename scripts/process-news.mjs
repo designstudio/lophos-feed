@@ -190,70 +190,62 @@ async function processTopicWithGemini(topic, results, existingTitles, clusters, 
       ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
       : ''
 
-    const prompt = `Você é o Curador-Chefe do Lophos. Sua missão: destilar ${clusterItems.length} fontes RELACIONADAS (mesmo assunto) em 1 artigo rico e substancial.
+    const prompt = `Você é o Curador-Chefe do Lophos, o portal de notícias líder em 2026.
+Sua missão: transformar um cluster de fontes relacionadas no artigo mais denso, factual e relevante possível.
 
-**INSTRUÇÕES CRÍTICAS:**
+**1. REGRAS ANTI-ALUCINAÇÃO (PRIORIDADE MÁXIMA):**
+- Utilize apenas informações explícitas nas fontes fornecidas.
+- Proibido inferir, assumir ou completar dados ("é provável que", "fãs sugerem").
+- Se um dado não estiver claramente escrito nas fontes, não inclua.
+- Números, datas, nomes e especificações devem ser literais. Se a fonte diz "aumento significativo", NÃO transforme em "15%".
+- Tom seco, direto e jornalístico. Sem introduções poéticas ou floreios.
 
-1. **Agrupamento de Eventos**: Identifique qual URL fala do MESMO evento real. Se 3 URLs cobrem o lançamento do PS5, agrupe como UM evento.
+**2. CRITÉRIOS DE NOTICIABILIDADE (FILTRO DE QUALIDADE):**
+- **GERAR ARTIGO:** Lançamentos de produtos/hardware (Galaxy S26, PS5, Switch 2), trailers, anúncios de filmes/séries, atualizações de games (patch notes), mudanças de preços de mercado (gasolina, dólar, ações), contratações relevantes e colaborações (ex: Ed Sheeran x Pokémon).
+- **IGNORAR (Retornar []):** Listas puras de cupons, ofertas de "madrugada" sem fato novo, anúncios genéricos de "compre agora" ou promoções de varejo sem contexto de lançamento.
+- **NA DÚVIDA:** Gere o artigo. O Lophos prefere informar ao silenciar.
 
-2. **Fidelidade Brutal**:
-   - Se menciona "dano aumentou 15%", comente com "15%"
-   - Se menciona "CEO João Silva", cite "João Silva"
-   - Se menciona "preço caiu de R$100 para R$80", reproduza os valores
-   - SEM GENÉRICOS: Nada de "fãs estão felizes" sem detalhes
+**INSTRUÇÕES DE PROCESSAMENTO:**
+- Agrupamento: Una fontes que tratem exatamente do mesmo evento factual.
+- Fidelidade Brutal: Todo número, nome, valor ou mudança deve vir diretamente das fontes.
+- Citações: reproduza ou parafraseie fielmente (nunca resuma demais)
+- Proibido: "fãs estão animados", "diversos itens", "muitos usuários"
 
-3. **Extração de Dados**:
-   - Números: datas, porcentagens, valores, placares, estatísticas
-   - Mudanças Técnicas: patch notes, features, atualizações
-   - Citações: reproduza ou parafraseie fielmente (não resuma)
-   - Nomes: use nomes reais de pessoas, empresas, produtos
+**Tom:**
+Direto, jornalístico, sem floreios. Comece pelo fato mais impactante.
 
-4. **Tom Direto**: Comece pelo fato mais impactante. Sem "Em um mundo onde..." ou "O futuro promete".
+**RESPOSTA:**
+Retorne EXCLUSIVAMENTE um array JSON com UM artigo (ou [] se vazio). Sem markdown, comentários ou texto extra.
 
-5. **Estrutura JSON Obrigatória**:
-   - Cada artigo = UM evento
-   - title: Direto em pt-BR, termos da fonte
-   - summary: 2-4 frases densas COM DADOS (números, mudanças, citações)
-   - sections: 1-3 seções (não invente para preencher)
-   - sourceIndexes: [1,2,5] apenas as fontes que cobrem ESTE evento
-   - keywords: 5-15 termos em minúsculas
+[
+  {
+    "title": "manchete forte, clara, com termos da fonte",
+    "summary": "2-4 frases carregadas de dados",
+    "sections": [
+      {
+        "heading": "seção 1 (só crie se houver informação suficiente)",
+        "body": "conteúdo denso com números e dados"
+      }
+    ],
+    "sourceIndexes": [1, 3, 5],
+    "keywords": ["termo1", "termo2", "termo3"],
+    "relevance": 0.95
+  }
+]
 
-6. **Diferenciação de Conteúdo**:
-   - Hard news (fatos, dados, eventos reais): artigo factual isolado
-   - Opinião/Análise/Retrospectiva: seção separada OU artigo distinto
-   - NUNCA misture análise histórica de uma marca com bilheteria de outro filme
-   - SOMENTE mescle conteúdos diferentes se forem do MESMO evento factual
-   - Se houver dúvida, errar para o lado de gerar artigos separados
+**REGRAS FINAIS:**
+- Retorne EXCLUSIVAMENTE o array JSON.
+- Se as fontes forem lixo (cupons, promoções vazias etc.), retorne [].
+- Nunca adicione markdown, explicação ou texto fora do JSON.
+- sourceIndexes: obrigatório, só as fontes realmente usadas
+- keywords: 5 a 15 termos em minúsculo, separados por vírgula, otimizados para SEO
+- relevance: float de 0.0 a 1.0 (seja generoso com hard news e cultura pop)
 
 **CONTEXTO:**
 - Data: ${today}
 - Tópico: "${topic}"
 - Artigos já publicados: ${existingContext}
 - Cluster ${clusterNum}/${clusters.length}: ${clusterItems.length} fontes RELACIONADAS com até 2000 chars cada
-
-**RESPOSTA:**
-Retorne EXCLUSIVAMENTE um array JSON com UM artigo (ou [] se vazio). Sem markdown, comentários ou texto extra.
-
-Se as fontes não forem coerentes ou não gerarem conteúdo válido, retorne: []
-
-[
-  {
-    "title": "PS5 Pro Lançado com Upgrade de GPU",
-    "summary": "Sony anuncia PS5 Pro com GPU 45% mais rápida (vs PS5 base). Preço: $799 (lançamento em novembro). Especialistas apontam melhora em ray-tracing e resolução.",
-    "sections": [
-      {
-        "heading": "Especificações Técnicas",
-        "body": "A GPU aumenta de 10.28 TFLOPS (PS5 original) para 16.7 TFLOPS. CPU mantém os mesmos 3.5GHz. 16GB de GDDR6 total (10 padrão + 6 para I/O)."
-      },
-      {
-        "heading": "Preço e Disponibilidade",
-        "body": "Custa $799 USD, $200 a mais que a versão original. Disponível a partir de novembro de 2024. Não inclui disco Blu-ray — acoplador opcional custa $80."
-      }
-    ],
-    "sourceIndexes": [1, 3, 5],
-    "keywords": ["ps5", "playstation", "gpu", "sony", "console", "gaming", "hardware", "upgrade", "2024"]
-  }
-]
 
 FONTES:
 ${context}`
