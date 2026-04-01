@@ -69,13 +69,33 @@ async function fetchOgImage(url) {
     }
     reader.cancel()
 
-    const match =
+    let match =
       html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
       html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
       html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
 
-    const imageUrl = match?.[1]
+    let imageUrl = match?.[1]
+
+    // Fallback: se não encontrou meta tags, tenta extrair de HTML direto
+    if (!imageUrl) {
+      // Tenta <figure> > <img>
+      match = html.match(/<figure[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
+      imageUrl = match?.[1]
+    }
+
+    if (!imageUrl) {
+      // Tenta <picture> > <img>
+      match = html.match(/<picture[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
+      imageUrl = match?.[1]
+    }
+
+    if (!imageUrl) {
+      // Tenta primeira <img> tag direto
+      match = html.match(/<img[^>]+src=["']([^"']+)["']/i)
+      imageUrl = match?.[1]
+    }
+
     if (!imageUrl || LAZY_IMAGE_PATTERNS.some(p => imageUrl.toLowerCase().includes(p))) return null
     try { return new URL(imageUrl, url).href } catch { return imageUrl }
   } catch {

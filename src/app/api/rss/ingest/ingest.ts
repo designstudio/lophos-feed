@@ -225,7 +225,21 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
           image_url = item.enclosure['@_url']
         } else {
           const htmlContent = extractText(item['content:encoded']) || extractText(item.description) || ''
-          const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i)
+
+          // Tentar extrair imagem em ordem de prioridade
+          // 1. Primeira <img> tag direta
+          let imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i)
+
+          // 2. Se não encontrou, tenta dentro de <figure> tag
+          if (!imgMatch) {
+            imgMatch = htmlContent.match(/<figure[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
+          }
+
+          // 3. Se ainda não encontrou, tenta <picture> tag
+          if (!imgMatch) {
+            imgMatch = htmlContent.match(/<picture[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
+          }
+
           if (imgMatch?.[1]) {
             const src = imgMatch[1]
             if (!src.includes('favicon') && !src.includes('icon') && !src.includes('logo') && !isYouTubeOrVimeo(src)) {
