@@ -465,7 +465,12 @@ export default function FeedPage() {
   }
 
   const visibleItems = items.filter(i => reactions[i.id] !== 'dislike')
-  const filteredItems = activeFilter ? visibleItems.filter(i => toTitleCase(i.displayTopic ?? i.topic) === activeFilter) : visibleItems
+  const filteredItems = activeFilter
+    ? visibleItems.filter(i => {
+        const itemTopic = toTitleCase(i.displayTopic ?? i.topic)
+        return itemTopic === activeFilter || itemTopic.toLowerCase() === activeFilter.toLowerCase()
+      })
+    : visibleItems
   const topicsInFeed  = [...new Set(items.map(i => toTitleCase(i.displayTopic ?? i.topic)))]
   const allBlocks     = splitIntoBlocks(filteredItems)
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
