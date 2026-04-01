@@ -22,16 +22,21 @@ DECLARE
   v_normalized TEXT;
   v_canonical TEXT;
 BEGIN
-  v_normalized := LOWER(TRIM(p_topic));
+  v_normalized := LOWER(TRIM(COALESCE(p_topic, '')));
+
+  -- Se vazio, retorna vazio
+  IF v_normalized = '' THEN
+    RETURN '';
+  END IF;
 
   -- Verifica se é um alias e retorna o canônico
   SELECT canonical_topic INTO v_canonical
   FROM topic_aliases
-  WHERE aliases @> ARRAY[v_normalized]
+  WHERE aliases @> ARRAY[v_normalized]::text[]
   LIMIT 1;
 
   -- Se encontrou como alias, retorna o canônico; senão, retorna o normalizado
-  RETURN COALESCE(v_canonical, v_normalized);
+  RETURN TRIM(COALESCE(v_canonical, v_normalized));
 END;
 $$ LANGUAGE plpgsql STABLE;
 
