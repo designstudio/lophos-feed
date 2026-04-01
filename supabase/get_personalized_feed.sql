@@ -22,19 +22,24 @@ DECLARE
   v_normalized_excluded TEXT[];
 BEGIN
   -- Normaliza tópicos do usuário (converte aliases para canônicos)
-  SELECT ARRAY_AGG(DISTINCT normalize_topic(t))
+  -- Remove NULL/empty e normaliza cada um
+  SELECT ARRAY_AGG(DISTINCT normalize_topic(TRIM(t)))
   INTO v_normalized_topics
-  FROM UNNEST(p_topics) AS t;
+  FROM UNNEST(p_topics) AS t
+  WHERE t IS NOT NULL AND TRIM(t) != '';
+
+  -- Se nenhum tópico foi normalizado, usa os originais como fallback
+  IF v_normalized_topics IS NULL OR ARRAY_LENGTH(v_normalized_topics, 1) = 0 THEN
+    v_normalized_topics := p_topics;
+  END IF;
 
   -- Normaliza tópicos excluídos
-  SELECT ARRAY_AGG(DISTINCT normalize_topic(t))
+  SELECT ARRAY_AGG(DISTINCT normalize_topic(TRIM(t)))
   INTO v_normalized_excluded
   FROM UNNEST(p_excluded_topics) AS t
-  WHERE t IS NOT NULL AND t != '';
+  WHERE t IS NOT NULL AND TRIM(t) != '';
 
-  -- Fallback se arrays forem vazios
-  v_normalized_topics := COALESCE(v_normalized_topics, p_topics);
-  v_normalized_excluded := COALESCE(v_normalized_excluded, p_excluded_topics);
+  -- v_normalized_excluded pode ficar NULL, que é ok (significa não há excluídos)
 
   -- 1. Agrega as keywords dos artigos que o usuário curtiu nas últimas 48h
   SELECT ARRAY_AGG(DISTINCT kw)
@@ -61,11 +66,15 @@ BEGIN
   FROM articles a
   WHERE
     -- Pertence a pelo menos um tópico do usuário (usando tópicos normalizados)
-    a.matched_topics && v_normalized_topics
+    -- v_normalized_topics nunca é NULL neste ponto
+    (a.matched_topics IS NOT NULL AND ARRAY_LENGTH(a.matched_topics, 1) > 0)
+    AND a.matched_topics && v_normalized_topics
 
     -- Não pertence a tópico excluído (usando tópicos normalizados)
+    -- Se v_normalized_excluded é NULL, este filtro é skipped
     AND (
-      ARRAY_LENGTH(v_normalized_excluded, 1) IS NULL
+      v_normalized_excluded IS NULL
+      OR ARRAY_LENGTH(v_normalized_excluded, 1) = 0
       OR NOT (a.matched_topics && v_normalized_excluded)
     )
 
