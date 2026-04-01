@@ -23,10 +23,13 @@ export async function POST(req: NextRequest) {
       .from('user_topics').select('topic').eq('user_id', userId)
       .order('created_at', { ascending: true })
     topics = (data ?? []).map((r: any) => r.topic)
+    console.log(`[feed] Fetched ${topics.length} topics from user_topics for user ${userId}: ${JSON.stringify(topics)}`)
   }
 
-  if (topics.length === 0)
+  if (topics.length === 0) {
+    console.warn(`[feed] No topics found for user ${userId}`)
     return new Response(JSON.stringify({ error: 'No topics' }), { status: 400 })
+  }
 
   // Load excluded topics for this user
   const { data: excludedData } = await db
@@ -52,6 +55,7 @@ export async function POST(req: NextRequest) {
 
     // Feed personalizado via RPC — ordenado por afinidade de keywords com likes recentes,
     // depois por data. Dislikes e tópicos excluídos são filtrados no banco.
+    console.log(`[feed] Calling get_personalized_feed with topics=${JSON.stringify(topics)}, days=${days}, excluded=${JSON.stringify(excludedTopics)}`)
     const { data: allArticles, error } = await db.rpc('get_personalized_feed', {
       p_user_id: userId,
       p_topics: topics,
@@ -61,6 +65,11 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('[feed] RPC error:', error)
+    } else {
+      console.log(`[feed] RPC returned ${(allArticles ?? []).length} articles`)
+      if ((allArticles ?? []).length > 0) {
+        console.log(`[feed] First article: title="${allArticles[0].title}", matched_topics=${JSON.stringify(allArticles[0].matched_topics)}`)
+      }
     }
 
     const allExisting = (allArticles ?? []).map((row: any) => rowToItem(row, topics))
