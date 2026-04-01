@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
-import { processRawBatch } from '@/lib/news'
+import { processRawBatch, findDuplicateTitle } from '@/lib/news'
 import { randomUUID } from 'crypto'
 
 export const maxDuration = 300
@@ -63,6 +63,20 @@ export async function POST(req: NextRequest) {
 
         totalProcessed += rawItems.length
 
+        // Fetch existing articles for this topic (to detect duplicates)
+        const { data: existingArticles, error: existingError } = await db
+          .from('articles')
+          .select('id, title')
+          .eq('topic', topic)
+          .order('published_at', { ascending: false })
+          .limit(50)
+
+        if (existingError) {
+          console.warn(`[process-all-feeds] Could not fetch existing articles for ${topic}:`, existingError)
+        }
+
+        const existingTitles = (existingArticles || []).map(a => a.title)
+
         // Convert to format expected by processRawBatch
         const sourceResults = rawItems.map(item => ({
           url: item.url,
@@ -75,7 +89,7 @@ export async function POST(req: NextRequest) {
         const newsItems = await processRawBatch(
           topic,
           sourceResults,
-          [], // No existing titles for now
+          existingTitles,
           (stats) => {
             console.log(`[process-all-feeds] Gemini stats for ${topic}:`, stats)
           }
@@ -83,32 +97,88 @@ export async function POST(req: NextRequest) {
 
         totalGenerated += newsItems.length
 
-        // Save to articles
+        // Save to articles with duplicate detection and merge
         if (newsItems.length > 0) {
-          const { error: saveError } = await db
-            .from('articles')
-            .upsert(
-              newsItems.map(item => ({
-                id: item.id,
-                topic: item.topic,
-                title: item.title,
-                summary: item.summary,
-                sections: item.sections,
-                conclusion: item.conclusion,
-                sources: item.sources,
-                image_url: item.imageUrl,
-                published_at: item.publishedAt,
-                cached_at: item.cachedAt,
-              })),
-              { onConflict: 'id' }
-            )
+          let itemsToInsert = []
+          let duplicateMerges = 0
 
-          if (saveError) {
-            console.error(`[process-all-feeds] Save error for ${topic}:`, saveError)
-            results.push({ topic, status: 'error', error: saveError.message, generated: newsItems.length })
-          } else {
-            totalSaved += newsItems.length
-            results.push({ topic, status: 'success', itemsProcessed: rawItems.length, itemsGenerated: newsItems.length, itemsSaved: newsItems.length })
+          for (const newsItem of newsItems) {
+            // Check if this is a duplicate of an existing article
+            const duplicate = findDuplicateTitle(newsItem.title, existingArticles || [])
+
+            if (duplicate && duplicate.id) {
+              // Merge: add sources to existing article
+              const { data: existingArticle } = await db
+                .from('articles')
+                .select('sources')
+                .eq('id', duplicate.id)
+                .single()
+
+              if (existingArticle) {
+                const existingSources = existingArticle.sources || []
+                const mergedSources = [
+                  ...existingSources,
+                  ...newsItem.sources.filter((ns: any) =>
+                    !existingSources.some((es: any) => es.url === ns.url)
+                  )
+                ]
+
+                const { error: mergeError } = await db
+                  .from('articles')
+                  .update({ sources: mergedSources })
+                  .eq('id', duplicate.id)
+
+                if (!mergeError) {
+                  duplicateMerges++
+                  console.log(`[process-all-feeds] Merged sources for existing article ${duplicate.id} (similarity: ${(duplicate.score * 100).toFixed(0)}%)`)
+                }
+              }
+            } else {
+              // New article
+              itemsToInsert.push({
+                id: newsItem.id,
+                topic: newsItem.topic,
+                title: newsItem.title,
+                summary: newsItem.summary,
+                sections: newsItem.sections,
+                conclusion: newsItem.conclusion,
+                sources: newsItem.sources,
+                image_url: newsItem.imageUrl,
+                published_at: newsItem.publishedAt,
+                cached_at: newsItem.cachedAt,
+              })
+            }
+          }
+
+          // Insert new articles
+          if (itemsToInsert.length > 0) {
+            const { error: saveError } = await db
+              .from('articles')
+              .upsert(itemsToInsert, { onConflict: 'id' })
+
+            if (saveError) {
+              console.error(`[process-all-feeds] Save error for ${topic}:`, saveError)
+              results.push({ topic, status: 'error', error: saveError.message, generated: newsItems.length, merged: duplicateMerges })
+            } else {
+              totalSaved += itemsToInsert.length
+              results.push({
+                topic,
+                status: 'success',
+                itemsProcessed: rawItems.length,
+                itemsGenerated: newsItems.length,
+                itemsSaved: itemsToInsert.length,
+                merged: duplicateMerges
+              })
+            }
+          } else if (duplicateMerges > 0) {
+            results.push({
+              topic,
+              status: 'success',
+              itemsProcessed: rawItems.length,
+              itemsGenerated: newsItems.length,
+              itemsSaved: 0,
+              merged: duplicateMerges
+            })
           }
         } else {
           results.push({ topic, status: 'no_output', itemsProcessed: rawItems.length })

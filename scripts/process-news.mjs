@@ -47,6 +47,42 @@ function isLazyLoadImage(url) {
   return LAZY_IMAGE_PATTERNS.some(p => url.toLowerCase().includes(p))
 }
 
+// Busca og:image da URL (fallback para imagens não encontradas no RSS)
+async function fetchOgImage(url) {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!res.ok) return null
+
+    let html = ''
+    const reader = res.body.getReader()
+    while (html.length < 50000) {
+      const { done, value } = await reader.read()
+      if (done) break
+      html += new TextDecoder().decode(value)
+      if (html.includes('og:image') && html.includes('</head>')) break
+    }
+    reader.cancel()
+
+    const match =
+      html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i) ||
+      html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i)
+
+    const imageUrl = match?.[1]
+    if (!imageUrl || LAZY_IMAGE_PATTERNS.some(p => imageUrl.toLowerCase().includes(p))) return null
+    try { return new URL(imageUrl, url).href } catch { return imageUrl }
+  } catch {
+    return null
+  }
+}
+
 function normalizeText(s) {
   return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
 }
@@ -113,15 +149,21 @@ REGRA 4: LIMITE DE 3 FONTES MÁXIMO
 - Se cluster tem 4+ fontes E títulos são DIFERENTES, desmembra em clusters menores
 - Exemplo: [[1,2,3,4,5]] com 5 títulos distintos = INVÁLIDO → [[1,2], [3,4], [5]]
 
-REGRA 5: TESTE DE SOBREPOSIÇÃO
-- Títulos do cluster devem ser 90%+ idênticos em informação
-- Se apenas a fonte muda, OK. Se o FATO muda, SEPARA!
+REGRA 5: TESTE DE SOBREPOSIÇÃO & VARIAÇÕES DE MESMO ANÚNCIO
+- O **FATO PRINCIPAL** deve ser idêntico (verbo + objeto core)
+- Variações de títulos são ESPERADAS e OK: diferentes ênfases do mesmo anúncio
+- Exemplo HARRY POTTER:
+  - "Série Harry Potter estreará no Natal e não terá lançamentos anuais"
+  - "HBO confirma série Harry Potter sem lançamentos anuais"
+  - "Série HP da HBO: sem lançamentos anuais, Executivos confirmam"
+  - = AGRUPA [[1,2,3]] (mesmo anúncio HBO sobre Harry Potter, múltiplas fontes)
+- Se a PROPRIEDADE PRINCIPAL muda (fato completamente diferente), SEPARA!
 
 EXEMPLO ERRADO ❌: [[1,2,3,4,5,6,7,8,9,10,11,12]]
 (12 notícias diferentes da Google = "salada de Google")
 
-EXEMPLO CORRETO ✅: [[1,2], [3], [4,5], [6], [7,8,9], ...]
-(Cada fato DIFERENTE é seu próprio cluster)
+EXEMPLO CORRETO ✅: [[1,2,3], [4], [5,6], [7], [8,9,10], ...]
+(Cada fato DIFERENTE é seu próprio cluster, mas variações do mesmo fato = AGRUPA)
 
 FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8]]
 
@@ -236,10 +278,18 @@ Sua missão: transformar um cluster de fontes relacionadas no artigo mais denso,
 
 **2. CRITÉRIOS DE NOTICIABILIDADE (FILTRO DE QUALIDADE):**
 - **GERAR ARTIGO:** Lançamentos de produtos/hardware (Galaxy S26, PS5, Switch 2), trailers, anúncios de filmes/séries, atualizações de games (patch notes), mudanças de preços de mercado (gasolina, dólar, ações), contratações relevantes e colaborações (ex: Ed Sheeran x Pokémon).
-- **IGNORAR (Retornar []):** Listas puras de cupons, ofertas de "madrugada" sem fato novo, anúncios genéricos de "compre agora" ou promoções de varejo sem contexto de lançamento.
+- **IGNORAR (Retornar []):**
+  - Promoções, descontos, black friday, cupons, ofertas relâmpago
+  - Listas puras de cupons sem contexto de lançamento
+  - Anúncios genéricos de "compre agora" ou "economize X%" ou "madrugada"
+  - Palavras-chave PROIBIDAS: "promoção", "desconto", "oferta", "cupom", "black friday", "% off", "économize", "madrugada", "deal"
+  - Se a notícia é APENAS sobre preço/desconto de um produto, IGNORAR completamente.
 - **NA DÚVIDA:** Gere o artigo. O Lophos prefere informar ao silenciar.
 
 **INSTRUÇÕES DE PROCESSAMENTO:**
+- **Clustering Validado:** Este cluster já foi validado por IA como variações do MESMO fato.
+- **REGRA DE OURO:** Múltiplas fontes sobre o MESMO fato = **1 ARTIGO ÚNICO** com todas as fontes
+- Exemplo: "HBO anuncia Harry Potter" (3 fontes) = 1 artigo com 3 fontes, NÃO 3 artigos separados
 - Agrupamento: Una fontes que tratem exatamente do mesmo evento factual.
 - Fidelidade Brutal: Todo número, nome, valor ou mudança deve vir diretamente das fontes.
 - Citações: reproduza ou parafraseie fielmente (nunca resuma demais)
@@ -381,6 +431,7 @@ ${context}`
     let imageSource = null
     let imageSourceDomain = null
 
+    // Fase 1: Tenta pegar imagem das fontes (RSS)
     for (const idx of sourceIndexes) {
       if (idx < 0 || idx >= clusterItems.length) continue
       const candidate = clusterItems[idx]?.image
@@ -392,11 +443,27 @@ ${context}`
       }
     }
 
-    // ✅ FAILSAFE: placeholder se não encontrar
+    // Fase 2: Fallback - busca og:image das URLs se não encontrou no RSS
+    if (!imageUrl) {
+      for (const idx of sourceIndexes) {
+        if (idx < 0 || idx >= clusterItems.length) continue
+        const sourceUrl = clusterItems[idx]?.url
+        if (sourceUrl) {
+          imageUrl = await fetchOgImage(sourceUrl)
+          if (imageUrl) {
+            imageSourceDomain = new URL(sourceUrl).hostname.replace('www.', '')
+            console.log(`[${topic}] 🖼️  og:image encontrada de ${imageSourceDomain}`)
+            break
+          }
+        }
+      }
+    }
+
+    // Fase 3: FAILSAFE - placeholder se nada funcionar
     if (!imageUrl) {
       imageUrl = `https://via.placeholder.com/1200x630?text=${encodeURIComponent(item.title?.slice(0, 30) || 'Lophos News')}`
       console.warn(`[${topic}] 📸 Placeholder — ${item.title?.slice(0, 50)}`)
-    } else {
+    } else if (imageSourceDomain) {
       console.log(`[${topic}] 🖼️  Imagem de ${imageSourceDomain}`)
     }
 

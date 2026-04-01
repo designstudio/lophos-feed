@@ -167,6 +167,21 @@ function textOverlapScore(a: string, b: string): number {
   return overlap / Math.max(1, Math.min(aWords.size, bWords.size))
 }
 
+// Detecta se um item gerado é duplicado de um título existente (threshold > 0.5)
+export function findDuplicateTitle(generatedTitle: string, existingTitles: { id?: string; title: string }[]): { id?: string; score: number } | null {
+  let bestMatch: { id?: string; score: number } | null = null
+  const threshold = 0.5
+
+  for (const existing of existingTitles) {
+    const score = textOverlapScore(generatedTitle, existing.title)
+    if (score >= threshold && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = { id: existing.id, score }
+    }
+  }
+
+  return bestMatch
+}
+
 function isGeneratedItemRelevant(item: any, sources: NewsSource[], results: any[]): boolean {
   const title = item?.title || ''
   const summary = item?.summary || ''
@@ -243,7 +258,7 @@ export async function processRawBatch(
 
 **REGRAS RÍGIDAS:**
 - Unicidade de Evento: Cada notícia deve cobrir **apenas UM evento principal** claro e independente. É permitido (e desejado) ter várias seções dentro da mesma notícia falando de aspectos diferentes do MESMO evento (ex: elenco + data de estreia + repercussão). O que é PROIBIDO é misturar eventos completamente diferentes (ex: não colocar notícia de Homem-Aranha junto com American Horror Story ou política no mesmo objeto JSON).
-- Foque em anúncios oficiais, lançamentos, patches, revelações de elenco, trailers, resultados importantes, etc. Descarte guias, fóruns, wikis, apostas, quizzes e conteúdo irrelevante.
+- Foque em anúncios oficiais, lançamentos, patches, revelações de elenco, trailers, resultados importantes, etc. Descarte guias, fóruns, wikis, apostas, quizzes, **promoções, descontos, black friday**, cupons e conteúdo irrelevante.
 - Use nomes, números e termos técnicos **exatamente** como aparecem nas fontes (não parafraseie).
 - Cruze informações de múltiplas fontes quando possível. Só inclua no sourceIndexes as fontes que realmente tratam do evento.
 - **Prevenção de Duplicidade:** Se o evento já consta em \`${existingContext}\`, ignore-o. Se não houver fatos novos ou noticiáveis, retorne apenas \`[]\`.
@@ -359,11 +374,12 @@ ${context}`
       }
     }
 
-    // Se não encontrou imagem em nenhuma das fontes, ignora o artigo
+    // Se não encontrou imagem nas fontes, tenta buscar nos metadados das URLs
     if (!imageUrl) {
-      dropped++
-      droppedItems.push({ title: item.title || '(sem título)', score: 0 })
-      continue
+      const sourcesToFetch = idxs
+        .filter((idx) => idx >= 0 && idx < results.length)
+        .map((idx) => ({ url: results[idx].url }))
+      imageUrl = await fetchImageForSources(sourcesToFetch)
     }
 
     const tavilyRaw = idxs
