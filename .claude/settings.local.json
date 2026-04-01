@@ -49,7 +49,16 @@
       "Bash(do if:*)",
       "Bash(then echo:*)",
       "Bash(fi)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(grep -r \"chat_threads\\\\|chat_messages\" C:UsershenriDownloadslophos_feed --include=*.ts --include=*.tsx --include=*.sql)",
+      "Bash(curl -s http://localhost:3001/)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(TaskKill /F /IM node.exe)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(gh pr:*)",
+      "Bash(node --check scripts/process-news.mjs)",
+      "Bash(Artigo salvo mas mapeamento skipped para revisão.\":*)",
+      "Bash(node scripts/process-news.mjs)"
     ]
   }
 }

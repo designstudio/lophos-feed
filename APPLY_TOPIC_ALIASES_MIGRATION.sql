@@ -70,8 +70,10 @@ INSERT INTO topic_aliases (canonical_topic, aliases) VALUES
   ('movies', ARRAY['filmes', 'cinema', 'films', 'movie', 'movies'])
 ON CONFLICT (canonical_topic) DO UPDATE SET aliases = EXCLUDED.aliases;
 
--- 6. Enable RLS
+-- 6. Enable RLS (if not already enabled)
 ALTER TABLE topic_aliases ENABLE ROW LEVEL SECURITY;
+-- Drop and recreate policy to avoid conflicts
+DROP POLICY IF EXISTS "topic_aliases_public" ON topic_aliases;
 CREATE POLICY "topic_aliases_public" ON topic_aliases FOR SELECT USING (TRUE);
 
 -- 7. Test the function
