@@ -18,7 +18,23 @@ AS $$
 DECLARE
   v_liked_kws TEXT[];
   v_cutoff    TIMESTAMPTZ;
+  v_normalized_topics TEXT[];
+  v_normalized_excluded TEXT[];
 BEGIN
+  -- Normaliza tópicos do usuário (converte aliases para canônicos)
+  SELECT ARRAY_AGG(DISTINCT normalize_topic(t))
+  INTO v_normalized_topics
+  FROM UNNEST(p_topics) AS t;
+
+  -- Normaliza tópicos excluídos
+  SELECT ARRAY_AGG(DISTINCT normalize_topic(t))
+  INTO v_normalized_excluded
+  FROM UNNEST(p_excluded_topics) AS t
+  WHERE t IS NOT NULL AND t != '';
+
+  -- Fallback se arrays forem vazios
+  v_normalized_topics := COALESCE(v_normalized_topics, p_topics);
+  v_normalized_excluded := COALESCE(v_normalized_excluded, p_excluded_topics);
   -- 1. Agrega as keywords dos artigos que o usuário curtiu nas últimas 48h
   SELECT ARRAY_AGG(DISTINCT kw)
   INTO v_liked_kws
@@ -43,13 +59,13 @@ BEGIN
   SELECT a.*
   FROM articles a
   WHERE
-    -- Pertence a pelo menos um tópico do usuário
-    a.matched_topics && p_topics
+    -- Pertence a pelo menos um tópico do usuário (usando tópicos normalizados)
+    a.matched_topics && v_normalized_topics
 
-    -- Não pertence a tópico excluído
+    -- Não pertence a tópico excluído (usando tópicos normalizados)
     AND (
-      ARRAY_LENGTH(p_excluded_topics, 1) IS NULL
-      OR NOT (a.matched_topics && p_excluded_topics)
+      ARRAY_LENGTH(v_normalized_excluded, 1) IS NULL
+      OR NOT (a.matched_topics && v_normalized_excluded)
     )
 
     -- Dentro da janela temporal

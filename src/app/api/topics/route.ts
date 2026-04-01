@@ -27,13 +27,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Topics required' }, { status: 400 })
   }
 
-  // Delete existing topics for this user
-  await getSupabaseAdmin().from('user_topics').delete().eq('user_id', userId)
+  const db = getSupabaseAdmin()
 
-  // Insert new topics (normalized to lowercase)
-  const rows = topics.map((topic: string) => ({ user_id: userId, topic: topic.toLowerCase().trim() }))
-  const { error } = await getSupabaseAdmin().from('user_topics').insert(rows)
+  // Delete existing topics for this user
+  await db.from('user_topics').delete().eq('user_id', userId)
+
+  // Normalizar tópicos: converter aliases para canônicos
+  // Usa a função normalize_topic do banco de dados
+  const normalized = await Promise.all(
+    topics.map(async (topic: string) => {
+      const { data, error } = await db.rpc('normalize_topic', { p_topic: topic })
+      if (error) {
+        console.warn(`[topics] Failed to normalize "${topic}":`, error)
+        // Fallback: normalizar manualmente (lowercase + trim)
+        return topic.toLowerCase().trim()
+      }
+      return data || topic.toLowerCase().trim()
+    })
+  )
+
+  // Insert new topics (deduplicated)
+  const uniqueTopics = [...new Set(normalized)]
+  const rows = uniqueTopics.map((topic: string) => ({ user_id: userId, topic }))
+  const { error } = await db.from('user_topics').insert(rows)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, topicsSaved: uniqueTopics })
 }
