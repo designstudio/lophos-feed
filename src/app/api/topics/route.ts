@@ -36,13 +36,20 @@ export async function POST(req: NextRequest) {
   // Usa a função normalize_topic do banco de dados
   const normalized = await Promise.all(
     topics.map(async (topic: string) => {
-      const { data, error } = await db.rpc('normalize_topic', { p_topic: topic })
-      if (error) {
-        console.warn(`[topics] Failed to normalize "${topic}":`, error)
-        // Fallback: normalizar manualmente (lowercase + trim)
+      try {
+        const { data, error } = await db.rpc('normalize_topic', { p_topic: topic })
+        if (error) {
+          console.warn(`[topics] Failed to normalize "${topic}":`, error.message)
+          return topic.toLowerCase().trim()
+        }
+        // A RPC retorna a string diretamente
+        const normalized = String(data).toLowerCase().trim()
+        console.log(`[topics] Normalized "${topic}" -> "${normalized}"`)
+        return normalized
+      } catch (err) {
+        console.error(`[topics] Error normalizing "${topic}":`, err)
         return topic.toLowerCase().trim()
       }
-      return data || topic.toLowerCase().trim()
     })
   )
 
