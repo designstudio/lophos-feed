@@ -35,6 +35,7 @@ BEGIN
   -- Fallback se arrays forem vazios
   v_normalized_topics := COALESCE(v_normalized_topics, p_topics);
   v_normalized_excluded := COALESCE(v_normalized_excluded, p_excluded_topics);
+
   -- 1. Agrega as keywords dos artigos que o usuário curtiu nas últimas 48h
   SELECT ARRAY_AGG(DISTINCT kw)
   INTO v_liked_kws

@@ -20,19 +20,20 @@ CREATE OR REPLACE FUNCTION normalize_topic(p_topic TEXT)
 RETURNS TEXT AS $$
 DECLARE
   v_normalized TEXT;
+  v_canonical TEXT;
 BEGIN
   v_normalized := LOWER(TRIM(p_topic));
 
   -- Verifica se é um alias e retorna o canônico
-  SELECT canonical_topic INTO v_normalized
+  SELECT canonical_topic INTO v_canonical
   FROM topic_aliases
   WHERE aliases @> ARRAY[v_normalized]
   LIMIT 1;
 
-  -- Se não encontrou como alias, retorna o próprio (normalizado)
-  RETURN COALESCE(v_normalized, LOWER(TRIM(p_topic)));
+  -- Se encontrou como alias, retorna o canônico; senão, retorna o normalizado
+  RETURN COALESCE(v_canonical, v_normalized);
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$ LANGUAGE plpgsql STABLE;
 
 -- Inserir exemplos de tópicos com variações
 INSERT INTO topic_aliases (canonical_topic, aliases) VALUES
