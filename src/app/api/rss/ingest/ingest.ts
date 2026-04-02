@@ -59,6 +59,45 @@ function extractVideoFromContent(content: string | undefined): string | undefine
   return undefined
 }
 
+function extractImageUrlFromHtml(html: string | undefined): string | undefined {
+  if (!html) return undefined
+
+  // 1) Atributos WordPress / data-* de alta resolução (prioridade)
+  const dataAttrMatch = html.match(/data-(?:orig-file|large-file|medium-file|permalink)=["']([^"']+)["']/i)
+  if (dataAttrMatch?.[1]) {
+    const url = dataAttrMatch[1].trim()
+    if (!isYouTubeOrVimeo(url)) return url
+  }
+
+  // 2) srcset — pega o maior item (último da lista)
+  const srcsetMatch = html.match(/<img[^>]+srcset=["']([^"']+)["']/i)
+  if (srcsetMatch?.[1]) {
+    const parts = srcsetMatch[1].split(',').map(p => p.trim()).filter(Boolean)
+    if (parts.length) {
+      const last = parts[parts.length - 1].split(/\s+/)[0]
+      if (last && !isYouTubeOrVimeo(last) && !/favicon|icon|logo/i.test(last)) return last
+    }
+  }
+
+  // 3) Atributos lazy (data-src, data-lazy-src, etc.)
+  const lazyMatch = html.match(/<img[^>]+(?:data-src|data-lazy-src|data-original|data-actualsrc)=["']([^"']+)["']/i)
+  if (lazyMatch?.[1]) {
+    const url = lazyMatch[1].trim()
+    if (!isYouTubeOrVimeo(url) && !/favicon|icon|logo/i.test(url)) return url
+  }
+
+  // 4) <img src> direto, dentro de <figure> ou <picture>
+  let imgMatch = html.match(/<img[^>]+src=["']([^"']+)["']/i)
+  if (!imgMatch) imgMatch = html.match(/<figure[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
+  if (!imgMatch) imgMatch = html.match(/<picture[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
+  if (imgMatch?.[1]) {
+    const src = imgMatch[1].trim()
+    if (!/favicon|icon|logo/i.test(src) && !isYouTubeOrVimeo(src)) return src
+  }
+
+  return undefined
+}
+
 function extractVideoUrl(item: RSSItem): string | undefined {
   // 1. Procura em media:content[@url] com type=video
   if (item['media:content']?.['@_type']?.includes('video')) {
@@ -225,27 +264,8 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
           image_url = item.enclosure['@_url']
         } else {
           const htmlContent = extractText(item['content:encoded']) || extractText(item.description) || ''
-
-          // Tentar extrair imagem em ordem de prioridade
-          // 1. Primeira <img> tag direta
-          let imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i)
-
-          // 2. Se não encontrou, tenta dentro de <figure> tag
-          if (!imgMatch) {
-            imgMatch = htmlContent.match(/<figure[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
-          }
-
-          // 3. Se ainda não encontrou, tenta <picture> tag
-          if (!imgMatch) {
-            imgMatch = htmlContent.match(/<picture[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
-          }
-
-          if (imgMatch?.[1]) {
-            const src = imgMatch[1]
-            if (!src.includes('favicon') && !src.includes('icon') && !src.includes('logo') && !isYouTubeOrVimeo(src)) {
-              image_url = src
-            }
-          }
+          const extracted = extractImageUrlFromHtml(htmlContent)
+          if (extracted) image_url = extracted
         }
 
         // Extrair URL de vídeo (apenas YouTube/Vimeo)

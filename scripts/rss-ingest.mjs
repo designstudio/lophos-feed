@@ -39,6 +39,85 @@ function stripHtml(html) {
     .trim()
 }
 
+function isYouTubeOrVimeo(url) {
+  if (!url) return false
+  const lower = url.toLowerCase()
+  return lower.includes('youtube.com') || lower.includes('youtu.be') || lower.includes('vimeo.com')
+}
+
+function extractVideoFromContent(content) {
+  if (!content) return undefined
+  const patterns = [
+    /https?:\/\/(?:www\.)?youtube\.com\/watch\?v=[\w-]+/i,
+    /https?:\/\/youtu\.be\/[\w-]+/i,
+    /https?:\/\/(?:www\.)?youtube\.com\/embed\/[\w-]+/i,
+    /https?:\/\/(?:www\.)?youtube-nocookie\.com\/embed\/[\w-]+/i,
+    /https?:\/\/(?:www\.)?vimeo\.com\/[\d]+/i,
+    /https?:\/\/player\.vimeo\.com\/video\/[\d]+/i,
+  ]
+  for (const pattern of patterns) {
+    const match = content.match(pattern)
+    if (match?.[0]) return match[0]
+  }
+  return undefined
+}
+
+function extractVideoUrl(item) {
+  if (item['media:content']?.['@_type']?.includes('video')) {
+    const url = item['media:content']['@_url'] || item['media:content']['#text']
+    if (isYouTubeOrVimeo(url)) return url
+  }
+  if (item.enclosure?.['@_type']?.includes('video')) {
+    const url = item.enclosure['@_url']
+    if (isYouTubeOrVimeo(url)) return url
+  }
+  if (item['media:player']?.['@_url']) {
+    const url = item['media:player']['@_url']
+    if (isYouTubeOrVimeo(url)) return url
+  }
+  const htmlContent = extractText(item['content:encoded']) || extractText(item.description) || ''
+  return extractVideoFromContent(htmlContent)
+}
+
+function extractImageUrlFromHtml(html) {
+  if (!html) return undefined
+
+  // 1) Atributos WordPress / data-* de alta resolução (prioridade)
+  const dataAttrMatch = html.match(/data-(?:orig-file|large-file|medium-file|permalink)=["']([^"']+)["']/i)
+  if (dataAttrMatch?.[1]) {
+    const url = dataAttrMatch[1].trim()
+    if (!isYouTubeOrVimeo(url)) return url
+  }
+
+  // 2) srcset — pega o maior item (último da lista)
+  const srcsetMatch = html.match(/<img[^>]+srcset=["']([^"']+)["']/i)
+  if (srcsetMatch?.[1]) {
+    const parts = srcsetMatch[1].split(',').map(p => p.trim()).filter(Boolean)
+    if (parts.length) {
+      const last = parts[parts.length - 1].split(/\s+/)[0]
+      if (last && !isYouTubeOrVimeo(last) && !/favicon|icon|logo/i.test(last)) return last
+    }
+  }
+
+  // 3) Atributos lazy (data-src, data-lazy-src, etc.)
+  const lazyMatch = html.match(/<img[^>]+(?:data-src|data-lazy-src|data-original|data-actualsrc)=["']([^"']+)["']/i)
+  if (lazyMatch?.[1]) {
+    const url = lazyMatch[1].trim()
+    if (!isYouTubeOrVimeo(url) && !/favicon|icon|logo/i.test(url)) return url
+  }
+
+  // 4) <img src> direto, dentro de <figure> ou <picture>
+  let imgMatch = html.match(/<img[^>]+src=["']([^"']+)["']/i)
+  if (!imgMatch) imgMatch = html.match(/<figure[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
+  if (!imgMatch) imgMatch = html.match(/<picture[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)
+  if (imgMatch?.[1]) {
+    const src = imgMatch[1].trim()
+    if (!/favicon|icon|logo/i.test(src) && !isYouTubeOrVimeo(src)) return src
+  }
+
+  return undefined
+}
+
 async function fetchAndParseFeed(feed) {
   try {
     const headers = { 'User-Agent': 'Mozilla/5.0 (compatible; Lophos/1.0; +http://localhost)' }
@@ -142,21 +221,18 @@ async function main() {
           image_url = item.enclosure['@_url']
         } else {
           const htmlContent = extractText(item['content:encoded']) || extractText(item.description) || ''
-          const imgMatch = htmlContent.match(/<img[^>]+src=["']([^"']+)["']/i)
-          if (imgMatch?.[1]) {
-            const src = imgMatch[1]
-            if (!src.includes('favicon') && !src.includes('icon') && !src.includes('logo')) {
-              image_url = src
-            }
-          }
+          const extracted = extractImageUrlFromHtml(htmlContent)
+          if (extracted) image_url = extracted
         }
+
+        const video_url = extractVideoUrl(item)
 
         const pub_date = item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()
 
         const { error: insertError } = await db.from('raw_items').insert({
           topic: itemTopic, title, url, content: description,
           summary: description.slice(0, 300), source_name: feed.name,
-          source_url: feed.url, image_url, pub_date,
+          source_url: feed.url, image_url, video_url, pub_date,
           fetched_at: new Date().toISOString(), dedup_hash, processed: false,
         })
 
