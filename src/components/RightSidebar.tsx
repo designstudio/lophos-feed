@@ -22,20 +22,27 @@ export function RightSidebar({ topics }: { topics: string[] }) {
       const scrollTop = window.scrollY
       const sidebarTop = 81 // Offset do header
       const sidebarHeight = sidebar.offsetHeight
+      
+      // Encontrar o container pai (sidebar-right)
+      const container = sidebar.closest('.sidebar-right')
+      if (!container) return
+      
+      // Calcular posição limite baseado no container pai
+      const containerRect = container.getBoundingClientRect()
+      const containerBottom = containerRect.bottom
       const viewportHeight = window.innerHeight
       
-      // Calcular posição limite: sidebar não pode passar do final do conteúdo
-      const maxScrollTop = document.body.scrollHeight - viewportHeight
-      const sidebarBottomLimit = maxScrollTop - sidebarHeight + sidebarTop
+      // A sidebar deve parar quando o final dela atingir o final do container
+      const maxScrollTop = window.scrollY + (containerBottom - viewportHeight - sidebarHeight)
       
-      if (scrollTop > sidebarTop && scrollTop < sidebarBottomLimit) {
+      if (scrollTop > sidebarTop && scrollTop < maxScrollTop) {
         // No meio do scroll: position fixed
         sidebar.style.position = 'fixed'
         sidebar.style.top = `${sidebarTop}px`
-      } else if (scrollTop >= sidebarBottomLimit) {
+      } else if (scrollTop >= maxScrollTop) {
         // No final do conteúdo: position absolute no final
         sidebar.style.position = 'absolute'
-        sidebar.style.top = `${sidebarBottomLimit}px`
+        sidebar.style.top = `${maxScrollTop}px`
       } else {
         // No topo: position static
         sidebar.style.position = 'static'
