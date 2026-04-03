@@ -103,17 +103,76 @@ async function fetchOgImage(url) {
   }
 }
 
+// Stopwords PT + EN + palavras de formato editorial e plataformas de streaming
+const STOPWORDS = new Set([
+  // Português — artigos, preposições, pronomes, verbos comuns
+  'o','a','os','as','um','uma','uns','umas','de','do','da','dos','das','em','no','na','nos','nas',
+  'por','para','com','sem','sob','sobre','entre','ate','apos','que','se','mas','ou','e','ao','aos',
+  'eh','esta','este','estes','estas','isso','aqui','la','nao','sim','ja','so','mais','menos',
+  'muito','pouco','bem','mal','ainda','agora','quando','como','onde','ser','foi','era','sao',
+  'tem','ter','vai','vou','pode','ira','sera','esta','estao','estou','tudo','todos','toda',
+  // Inglês — artigos, preposições, auxiliares
+  'the','an','of','to','in','for','on','with','at','by','from','up','about','into',
+  'is','are','was','were','be','been','being','have','has','had','do','does','did',
+  'will','would','could','should','may','might','not','no','or','and','but','if','as',
+  'it','its','that','this','they','them','their','there','then','than','so','all',
+  'also','just','more','can','we','you','he','she','our','his','her','new',
+  // Palavras de formato/editorial
+  'estreia','estreias','estreou','lancamento','lancamentos','lanca','lancou',
+  'anuncia','anuncio','confirma','confirmado','confirmada','revelado','revelada',
+  'revela','veja','assista','saiba','novo','nova','novos','novas','primeiro','primeira',
+  'ultimas','ultima','ultimo','noticias','exclusivo','exclusiva','especial',
+  'serie','series','filme','filmes','animacao','documentario','temporada',
+  'episodio','episodios','parte','capitulo','trailer','review','critica',
+  // Plataformas de streaming (evita que "netflix" vire o único token relevante)
+  'netflix','disney','hbo','max','prime','amazon','apple','hulu','paramount',
+  'peacock','globo','globoplay','youtube','twitch','spotify',
+])
+
 function normalizeText(s) {
-  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function tokenize(s) {
+  return normalizeText(s).split(' ').filter(w => w.length >= 3 && !STOPWORDS.has(w))
+}
+
+// Jaccard: intersection / union — mais estável que overlap/min
+function jaccardScore(a, b) {
+  const aSet = new Set(tokenize(a))
+  const bSet = new Set(tokenize(b))
+  if (aSet.size === 0 && bSet.size === 0) return 1
+  if (aSet.size === 0 || bSet.size === 0) return 0
+  let intersection = 0
+  for (const w of aSet) if (bSet.has(w)) intersection++
+  const union = aSet.size + bSet.size - intersection
+  return intersection / union
 }
 
 function textOverlapScore(a, b) {
-  const aWords = new Set(normalizeText(a).split(' ').filter(w => w.length >= 3))
-  const bWords = new Set(normalizeText(b).split(' ').filter(w => w.length >= 3))
-  if (aWords.size === 0 || bWords.size === 0) return 0
-  let overlap = 0
-  for (const w of aWords) if (bWords.has(w)) overlap++
-  return overlap / Math.max(1, Math.min(aWords.size, bWords.size))
+  return jaccardScore(a, b)
+}
+
+// Remove parâmetros de rastreamento e fragmento para comparar/salvar URLs canonicamente
+const TRACKING_PARAMS = [
+  'utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id',
+  'fbclid','gclid','msclkid','twclid','dclid','zanpid','rdid',
+]
+function canonicalizeUrl(url) {
+  try {
+    const u = new URL(url)
+    u.hash = ''
+    TRACKING_PARAMS.forEach(p => u.searchParams.delete(p))
+    return u.toString()
+  } catch {
+    return url
+  }
 }
 
 function isGeneratedItemRelevant(item, results) {
@@ -495,10 +554,11 @@ ${context}`
           console.warn(`[${topic}] ⚠️  UUID ${uuid.substring(0, 8)}... sem URL no raw_items`)
           return null
         }
+        const cleanUrl = canonicalizeUrl(rawItem.url)
         return {
-          name: new URL(rawItem.url).hostname.replace('www.', ''),
-          url: rawItem.url,
-          favicon: `https://www.google.com/s2/favicons?domain=${rawItem.url}&sz=32`,
+          name: new URL(cleanUrl).hostname.replace('www.', ''),
+          url: cleanUrl,
+          favicon: `https://www.google.com/s2/favicons?domain=${cleanUrl}&sz=32`,
         }
       })
       .filter(Boolean) // Remove nulls
@@ -577,25 +637,26 @@ async function main() {
   console.log(`Backlog estimado: 651 notícias | Target: 1 rodada`)
   console.log(`Topics to process: ${topics.join(', ')}\n`)
 
-  // Fetch existing articles (últimas 24h)
-  const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+  // Fetch existing articles (últimas 72h — janela ampliada para dedup mais robusto)
+  const since72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
-    .select('id, title, sources, keywords, matched_topics')
-    .gte('published_at', since24h)
+    .select('id, title, summary, sources, keywords, matched_topics')
+    .gte('published_at', since72h)
     .order('published_at', { ascending: false })
-    .limit(100)
+    .limit(300)
 
   const allProcessedArticles = (globalExisting || []).map(r => ({
     id: r.id,
     title: r.title,
+    summary: r.summary || '',
     sources: r.sources || [],
     keywords: r.keywords || [],
     matched_topics: r.matched_topics || [],
   }))
-  console.log(`Artigos existentes (últimas 24h): ${allProcessedArticles.length}\n`)
+  console.log(`Artigos existentes (últimas 72h): ${allProcessedArticles.length}\n`)
 
-  const SIMILARITY_THRESHOLD = 0.85
+  const SIMILARITY_THRESHOLD = 0.35 // Jaccard sem stopwords (equivalente ~0.85 do score anterior)
   let totalGenerated = 0
   let totalMerged = 0
   let totalSaved = 0
@@ -637,13 +698,26 @@ async function main() {
       const successfullyProcessedRawIds = new Set()
 
       for (const item of newsItems) {
-        const match = allProcessedArticles.find(
-          existing => textOverlapScore(item.title, existing.title) >= SIMILARITY_THRESHOLD
-        )
+        // Compara title + summary para match mais robusto
+        const itemText = `${item.title || ''} ${item.summary || ''}`
+
+        // Pega o candidato com MAIOR score (não apenas o primeiro que passa o threshold)
+        let bestMatch = null
+        let bestScore = 0
+        for (const existing of allProcessedArticles) {
+          const existingText = `${existing.title || ''} ${existing.summary || ''}`
+          const score = textOverlapScore(itemText, existingText)
+          if (score >= SIMILARITY_THRESHOLD && score > bestScore) {
+            bestScore = score
+            bestMatch = existing
+          }
+        }
+        const match = bestMatch
 
         if (match) {
-          const existingUrls = new Set((match.sources || []).map(s => s.url))
-          const newSources = item.sources.filter(s => !existingUrls.has(s.url))
+          // Compara URLs canonicalizadas para evitar duplicar por UTM/fragment
+          const existingUrls = new Set((match.sources || []).map(s => canonicalizeUrl(s.url)))
+          const newSources = item.sources.filter(s => !existingUrls.has(canonicalizeUrl(s.url)))
           const mergedKeywords = [...new Set([...match.keywords, ...(item.keywords || [])])]
           const mergedMatchedTopics = [...new Set([...match.matched_topics, ...(item.matched_topics || [])])]
 
@@ -741,6 +815,7 @@ async function main() {
             allProcessedArticles.push({
               id: item.id,
               title: item.title,
+              summary: item.summary || '',
               sources: item.sources,
               keywords: item.keywords || [],
               matched_topics: item.matched_topics || [],
