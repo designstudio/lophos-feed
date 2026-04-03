@@ -53,6 +53,7 @@ export function useSmartStickySidebar({
 
     log('calculateHeights:', { 
       ...heightsRef.current,
+      containerTagName: container.tagName,
       containerClassName: container.className,
       containerOffsetHeight: container.offsetHeight
     })
@@ -72,6 +73,7 @@ export function useSmartStickySidebar({
     // Use container height directly from the element to ensure we get the correct value
     const containerHeight = containerElement.offsetHeight
     log('calculateTranslateY container info:', {
+      containerTagName: containerElement.tagName,
       containerClassName: containerElement.className,
       containerHeight,
       containerOffsetHeight: containerElement.offsetHeight

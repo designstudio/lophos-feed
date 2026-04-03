@@ -12,28 +12,37 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const [scroller, setScroller] = useState<HTMLElement | null>(null)
+  const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const asideRef = useRef<HTMLElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Create a ref object from the state for the hook
+  // Create ref objects from the state for the hook
   const scrollerRef = useRef<HTMLElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null)
   scrollerRef.current = scroller
+  containerRef.current = container
 
-  // Find the scroll container (flex-1.overflow-y-auto)
+  // Find the scroll container (flex-1.overflow-y-auto) and the flex wrapper
   useEffect(() => {
-    const findScroller = () => {
+    const findElements = () => {
       if (asideRef.current) {
+        // Find scroller
         const foundScroller = asideRef.current.closest('.flex-1.overflow-y-auto') as HTMLElement
         if (foundScroller) {
           setScroller(foundScroller)
         }
+
+        // Find the flex.gap-10 wrapper (parent of both columns)
+        const flexWrapper = asideRef.current.closest('.flex.gap-10') as HTMLDivElement
+        if (flexWrapper) {
+          setContainer(flexWrapper)
+        }
       }
     }
 
-    findScroller()
+    findElements()
     
     // Also try after a delay in case DOM isn't ready
-    const timer = setTimeout(findScroller, 100)
+    const timer = setTimeout(findElements, 100)
     return () => clearTimeout(timer)
   }, [])
 
