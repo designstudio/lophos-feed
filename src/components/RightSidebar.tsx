@@ -13,6 +13,16 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const sidebarId = 'right-sidebar'
   const mountedRef = useRef(false)
 
+  // Debug para verificar se o scroll está funcionando
+  useEffect(() => {
+    const handleScroll = () => {
+      console.log('Scroll position:', window.scrollY)
+    }
+    
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   // Update when widgets change
   useEffect(() => {
     if (mountedRef.current) {
@@ -64,7 +74,18 @@ export function RightSidebar({ topics }: { topics: string[] }) {
 
   return (
     <div className="sidebar-right hidden lg:block">
-      <div id={sidebarId} className="sidebar">
+      <div 
+        id={sidebarId} 
+        className="sidebar"
+        style={{
+          position: 'sticky',
+          top: '81px',
+          width: '336px',
+          height: 'fit-content',
+          zIndex: 10,
+          backgroundColor: 'var(--color-bg-primary)'
+        }}
+      >
         <div className="sidebar__inner flex flex-col gap-4 py-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
