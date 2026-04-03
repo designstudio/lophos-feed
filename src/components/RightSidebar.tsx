@@ -13,11 +13,9 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const sidebarId = 'right-sidebar'
   const mountedRef = useRef(false)
-  const isSidebarTransitioning = useRef(false)
-  const toggleFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Setup sticky sidebar v2
-  const { updateStickySidebar, reinitializeStickySidebar } = useStickySidebarV2({
+  const { updateStickySidebar } = useStickySidebarV2({
     sidebarSelector: `#${sidebarId}`,
     containerSelector: '.feed-layout', // O wrapper alto que contém feed + sidebar
     scrollContainer: '.flex-1.overflow-y-auto', // O scroller interno
@@ -28,64 +26,26 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     disabled: false // Habilitar por enquanto
   })
 
-  // Update sticky sidebar when widgets change — skip during sidebar transition
+  // Update sticky sidebar when widgets change (height changes)
   useEffect(() => {
-    if (mountedRef.current && !isSidebarTransitioning.current) {
+    if (mountedRef.current) {
       const timer = setTimeout(() => updateStickySidebar(), 100)
       return () => clearTimeout(timer)
     }
   }, [order, active, topics, updateStickySidebar])
 
-  // On sidebar toggle: freeze updates, wait for width transition to end,
-  // then destroy + reinit the instance with fresh measurements.
+  // Sidebar esquerda não tem mais transition:width — o layout muda em 1 frame.
+  // Um único rAF é suficiente para updateSticky() pegar as medidas finais.
   useEffect(() => {
     const handleSidebarToggle = () => {
-      isSidebarTransitioning.current = true
-
-      // Cancel any previous fallback
-      if (toggleFallbackRef.current !== null) {
-        clearTimeout(toggleFallbackRef.current)
-        toggleFallbackRef.current = null
-      }
-
-      const asideEl = document.querySelector('aside')
-
-      const finalize = async () => {
-        isSidebarTransitioning.current = false
-        await reinitializeStickySidebar()
+      requestAnimationFrame(() => {
+        console.log('[StickySidebar] updateSticky — sidebar toggle')
         updateStickySidebar()
-        console.log('[StickySidebar] reinit + updateSticky — after toggle')
-      }
-
-      if (asideEl) {
-        const onTransitionEnd = (e: TransitionEvent) => {
-          if (e.target === asideEl && e.propertyName === 'width') {
-            asideEl.removeEventListener('transitionend', onTransitionEnd)
-            if (toggleFallbackRef.current !== null) {
-              clearTimeout(toggleFallbackRef.current)
-              toggleFallbackRef.current = null
-            }
-            finalize()
-          }
-        }
-        asideEl.addEventListener('transitionend', onTransitionEnd)
-
-        // 300ms fallback: fires only if transitionend never arrives
-        toggleFallbackRef.current = setTimeout(() => {
-          asideEl.removeEventListener('transitionend', onTransitionEnd)
-          toggleFallbackRef.current = null
-          console.log('[StickySidebar] reinit + updateSticky — 300ms fallback')
-          finalize()
-        }, 300)
-      } else {
-        // No aside found: reinit immediately
-        finalize()
-      }
+      })
     }
-
     window.addEventListener('sidebar:toggle', handleSidebarToggle)
     return () => window.removeEventListener('sidebar:toggle', handleSidebarToggle)
-  }, [reinitializeStickySidebar, updateStickySidebar])
+  }, [updateStickySidebar])
 
   // Mark as mounted after initial render
   useEffect(() => {

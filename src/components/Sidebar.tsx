@@ -98,10 +98,8 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
         style={{
           width: resolvedWidth,
-          transition: mounted ? 'width 0.22s cubic-bezier(0.4, 0, 0.2, 1)' : 'none',
           opacity: isReady ? 1 : 0,
           pointerEvents: isReady ? 'auto' : 'none',
-          willChange: 'width',
         }}
       >
         {/* Header */}
