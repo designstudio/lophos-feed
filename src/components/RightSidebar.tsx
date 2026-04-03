@@ -13,7 +13,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const sidebarId = 'right-sidebar'
   const mountedRef = useRef(false)
 
-  // Sticky positioning com JavaScript (funciona sempre)
+  // Smart sticky positioning igual ao Medium
   useEffect(() => {
     const sidebar = document.getElementById(sidebarId)
     if (!sidebar) return
@@ -21,11 +21,23 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     const handleScroll = () => {
       const scrollTop = window.scrollY
       const sidebarTop = 81 // Offset do header
+      const sidebarHeight = sidebar.offsetHeight
+      const viewportHeight = window.innerHeight
       
-      if (scrollTop > sidebarTop) {
+      // Calcular posição limite: sidebar não pode passar do final do conteúdo
+      const maxScrollTop = document.body.scrollHeight - viewportHeight
+      const sidebarBottomLimit = maxScrollTop - sidebarHeight + sidebarTop
+      
+      if (scrollTop > sidebarTop && scrollTop < sidebarBottomLimit) {
+        // No meio do scroll: position fixed
         sidebar.style.position = 'fixed'
         sidebar.style.top = `${sidebarTop}px`
+      } else if (scrollTop >= sidebarBottomLimit) {
+        // No final do conteúdo: position absolute no final
+        sidebar.style.position = 'absolute'
+        sidebar.style.top = `${sidebarBottomLimit}px`
       } else {
+        // No topo: position static
         sidebar.style.position = 'static'
         sidebar.style.top = 'auto'
       }
