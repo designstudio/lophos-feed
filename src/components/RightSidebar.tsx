@@ -19,7 +19,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     sidebarSelector: `#${sidebarId}`,
     containerSelector: '.feed-layout', // O wrapper alto que contém feed + sidebar
     scrollContainer: '.flex-1.overflow-y-auto', // O scroller interno
-    topSpacing: 57, // Altura do header
+    topSpacing: 57, // Altura real do header medido (57px)
     bottomSpacing: 24, // Espaçamento inferior
     innerWrapperSelector: '.sidebar__inner', // Wrapper interno do conteúdo
     minWidth: 1024, // Só ativar em desktop (lg breakpoint)

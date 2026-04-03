@@ -150,15 +150,6 @@ html, body {
      .sidebar-sticky, que tem espaço para "deslizar" dentro desta coluna alta. */
 }
 
-.sidebar-sticky {
-  /* Position controlado via transform pelo hook useSmartStickySidebar */
-  /* REMOVIDO: position: sticky, top, qualquer posicionamento CSS */
-  will-change: transform;
-  /* Garantir que não há posicionamento conflitante */
-  position: relative !important;
-  top: auto !important;
-}
-
 /* Sticky Sidebar v2 styles */
 .sidebar {
   will-change: min-height;
