@@ -37,6 +37,19 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     }
   }, [order, active, topics, updateStickySidebar])
 
+  // Update sticky sidebar when left sidebar opens/closes (layout shifts)
+  useEffect(() => {
+    const handleSidebarToggle = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          updateStickySidebar()
+        })
+      })
+    }
+    window.addEventListener('sidebar:toggle', handleSidebarToggle)
+    return () => window.removeEventListener('sidebar:toggle', handleSidebarToggle)
+  }, [updateStickySidebar])
+
   // Mark as mounted after initial render
   useEffect(() => {
     mountedRef.current = true
