@@ -17,6 +17,17 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   useEffect(() => {
     const handleScroll = () => {
       console.log('Scroll position:', window.scrollY)
+      const sidebar = document.getElementById(sidebarId)
+      if (sidebar) {
+        console.log('Sidebar element:', sidebar)
+        console.log('Sidebar styles:', {
+          position: getComputedStyle(sidebar).position,
+          top: getComputedStyle(sidebar).top,
+          display: getComputedStyle(sidebar).display,
+          visibility: getComputedStyle(sidebar).visibility,
+          opacity: getComputedStyle(sidebar).opacity
+        })
+      }
     }
     
     window.addEventListener('scroll', handleScroll)
