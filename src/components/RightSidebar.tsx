@@ -11,17 +11,21 @@ const DEFAULT_ORDER = ['weather', 'valorant', 'lol', 'series']
 export function RightSidebar({ topics }: { topics: string[] }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
+  const [scroller, setScroller] = useState<HTMLElement | null>(null)
   const asideRef = useRef<HTMLElement>(null)
-  const containerRef = useRef<HTMLElement>(null)
-  const scrollerRef = useRef<HTMLElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Create a ref object from the state for the hook
+  const scrollerRef = useRef<HTMLElement | null>(null)
+  scrollerRef.current = scroller
 
   // Find the scroll container (flex-1.overflow-y-auto)
   useEffect(() => {
     const findScroller = () => {
       if (asideRef.current) {
-        const scroller = asideRef.current.closest('.flex-1.overflow-y-auto') as HTMLElement
-        if (scroller) {
-          scrollerRef.current = scroller
+        const foundScroller = asideRef.current.closest('.flex-1.overflow-y-auto') as HTMLElement
+        if (foundScroller) {
+          setScroller(foundScroller)
         }
       }
     }

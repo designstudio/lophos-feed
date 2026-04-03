@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from 'react'
 interface UseSmartStickySidebarProps {
   scrollerRef: React.RefObject<HTMLElement>
   sidebarRef: React.RefObject<HTMLElement>
-  containerRef: React.RefObject<HTMLElement>
+  containerRef: React.RefObject<HTMLDivElement>
   topOffset?: number
 }
 
