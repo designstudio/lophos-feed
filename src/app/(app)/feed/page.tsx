@@ -570,7 +570,7 @@ export default function FeedPage() {
 
         {/* ── Feed + Right sidebar ── */}
         <div className="feed-layout mx-auto px-4 md:px-8">
-          <div className="flex gap-10 pt-0 pb-24 md:py-6 md:pb-6">
+          <div className="flex gap-10 items-start pt-0 pb-24 md:py-6 md:pb-6">
             <div className="flex-1 min-w-0">
 
               {coldStartLoading && (
