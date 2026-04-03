@@ -13,6 +13,9 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const sidebarId = 'right-sidebar'
   const mountedRef = useRef(false)
+  const rafRef = useRef<number | null>(null)
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const transitionCleanupRef = useRef<(() => void) | null>(null)
 
   // Setup sticky sidebar v2
   const { updateStickySidebar } = useStickySidebarV2({
@@ -37,48 +40,60 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     }
   }, [order, active, topics, updateStickySidebar])
 
-  // Fires updateSticky at multiple points to cover the 220ms width transition
+  // Coalesced: cancels any pending updates before scheduling new ones.
+  // Happy path: rAF×2 + transitionend [+ idle] = max 3 calls.
+  // Fallback path (no transitionend): rAF×2 + 280ms = 2 calls.
   const scheduleStickyUpdate = useCallback(() => {
-    // rAF×2: first paint after state change
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+    // Cancel pending
+    if (rafRef.current !== null) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
+    if (fallbackTimerRef.current !== null) { clearTimeout(fallbackTimerRef.current); fallbackTimerRef.current = null }
+    if (transitionCleanupRef.current) { transitionCleanupRef.current(); transitionCleanupRef.current = null }
+
+    // 1. rAF×2: first clean frame after layout change
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = requestAnimationFrame(() => {
         console.log('[StickySidebar] updateSticky — rAF×2')
         updateStickySidebar()
+        rafRef.current = null
       })
     })
-    // 50ms: mid-transition
-    setTimeout(() => {
-      console.log('[StickySidebar] updateSticky — 50ms')
-      updateStickySidebar()
-    }, 50)
-    // 250ms: after transition (220ms) settles
-    setTimeout(() => {
-      console.log('[StickySidebar] updateSticky — 250ms')
-      updateStickySidebar()
-    }, 250)
+
+    // Attach transitionend directly to the animating <aside> (e.target === el guard)
+    const asideEl = document.querySelector('aside')
+    if (asideEl) {
+      const onTransitionEnd = (e: TransitionEvent) => {
+        if (e.target === asideEl && e.propertyName === 'width') {
+          console.log('[StickySidebar] updateSticky — transitionend')
+          updateStickySidebar()
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => updateStickySidebar())
+          }
+          cleanup()
+        }
+      }
+      const cleanup = () => {
+        asideEl.removeEventListener('transitionend', onTransitionEnd)
+        if (fallbackTimerRef.current !== null) { clearTimeout(fallbackTimerRef.current); fallbackTimerRef.current = null }
+        transitionCleanupRef.current = null
+      }
+      transitionCleanupRef.current = cleanup
+      asideEl.addEventListener('transitionend', onTransitionEnd)
+
+      // 2. 280ms fallback: fires only if transitionend never arrives
+      fallbackTimerRef.current = setTimeout(() => {
+        console.log('[StickySidebar] updateSticky — 280ms fallback')
+        updateStickySidebar()
+        cleanup()
+      }, 280)
+    }
   }, [updateStickySidebar])
 
   // Update sticky sidebar when left sidebar opens/closes (width transition = 220ms)
   useEffect(() => {
-    const handleSidebarToggle = () => {
-      scheduleStickyUpdate()
-
-      // Also fire on transitionend of the sidebar <aside> (width property)
-      const handleTransitionEnd = (e: TransitionEvent) => {
-        if (e.propertyName === 'width' && (e.target as HTMLElement)?.tagName === 'ASIDE') {
-          console.log('[StickySidebar] updateSticky — transitionend')
-          updateStickySidebar()
-          document.removeEventListener('transitionend', handleTransitionEnd)
-        }
-      }
-      document.addEventListener('transitionend', handleTransitionEnd)
-      // Safety cleanup in case transitionend never fires
-      setTimeout(() => document.removeEventListener('transitionend', handleTransitionEnd), 500)
-    }
-
+    const handleSidebarToggle = () => scheduleStickyUpdate()
     window.addEventListener('sidebar:toggle', handleSidebarToggle)
     return () => window.removeEventListener('sidebar:toggle', handleSidebarToggle)
-  }, [scheduleStickyUpdate, updateStickySidebar])
+  }, [scheduleStickyUpdate])
 
   // Mark as mounted after initial render
   useEffect(() => {
