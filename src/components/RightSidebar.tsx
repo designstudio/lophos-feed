@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
 import { useStickySidebarV2 } from '@/hooks/useStickySidebarV2'
@@ -37,18 +37,48 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     }
   }, [order, active, topics, updateStickySidebar])
 
-  // Update sticky sidebar when left sidebar opens/closes (layout shifts)
+  // Fires updateSticky at multiple points to cover the 220ms width transition
+  const scheduleStickyUpdate = useCallback(() => {
+    // rAF×2: first paint after state change
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        console.log('[StickySidebar] updateSticky — rAF×2')
+        updateStickySidebar()
+      })
+    })
+    // 50ms: mid-transition
+    setTimeout(() => {
+      console.log('[StickySidebar] updateSticky — 50ms')
+      updateStickySidebar()
+    }, 50)
+    // 250ms: after transition (220ms) settles
+    setTimeout(() => {
+      console.log('[StickySidebar] updateSticky — 250ms')
+      updateStickySidebar()
+    }, 250)
+  }, [updateStickySidebar])
+
+  // Update sticky sidebar when left sidebar opens/closes (width transition = 220ms)
   useEffect(() => {
     const handleSidebarToggle = () => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      scheduleStickyUpdate()
+
+      // Also fire on transitionend of the sidebar <aside> (width property)
+      const handleTransitionEnd = (e: TransitionEvent) => {
+        if (e.propertyName === 'width' && (e.target as HTMLElement)?.tagName === 'ASIDE') {
+          console.log('[StickySidebar] updateSticky — transitionend')
           updateStickySidebar()
-        })
-      })
+          document.removeEventListener('transitionend', handleTransitionEnd)
+        }
+      }
+      document.addEventListener('transitionend', handleTransitionEnd)
+      // Safety cleanup in case transitionend never fires
+      setTimeout(() => document.removeEventListener('transitionend', handleTransitionEnd), 500)
     }
+
     window.addEventListener('sidebar:toggle', handleSidebarToggle)
     return () => window.removeEventListener('sidebar:toggle', handleSidebarToggle)
-  }, [updateStickySidebar])
+  }, [scheduleStickyUpdate, updateStickySidebar])
 
   // Mark as mounted after initial render
   useEffect(() => {
