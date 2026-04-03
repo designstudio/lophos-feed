@@ -159,6 +159,20 @@ function textOverlapScore(a, b) {
   return jaccardScore(a, b)
 }
 
+// Tokens "fortes": len >= 5 e não-stopword — nomes próprios, títulos, termos técnicos
+function strongTokenize(s) {
+  return normalizeText(s).split(' ').filter(w => w.length >= 5 && !STOPWORDS.has(w))
+}
+
+// Retorna os tokens fortes compartilhados (usados para âncora e auditoria)
+function strongIntersection(a, b) {
+  const aSet = new Set(strongTokenize(a))
+  const bSet = new Set(strongTokenize(b))
+  const common = []
+  for (const w of aSet) if (bSet.has(w)) common.push(w)
+  return common
+}
+
 // Remove parâmetros de rastreamento e fragmento para comparar/salvar URLs canonicamente
 const TRACKING_PARAMS = [
   'utm_source','utm_medium','utm_campaign','utm_term','utm_content','utm_id',
@@ -656,7 +670,11 @@ async function main() {
   }))
   console.log(`Artigos existentes (últimas 72h): ${allProcessedArticles.length}\n`)
 
-  const SIMILARITY_THRESHOLD = 0.35 // Jaccard sem stopwords (equivalente ~0.85 do score anterior)
+  const SIMILARITY_THRESHOLD = 0.30 // Jaccard sem stopwords — 0.30 cobre variações editoriais PT/EN dentro do mesmo idioma
+  // Âncora anti-falso-positivo: nº mínimo de tokens fortes (len>=5) em comum para confirmar merge
+  const MIN_STRONG_TOKENS = 3
+  // DEBUG_DEDUP=1 → loga cada NEW com melhor candidato rejeitado e âncoras
+  const DEBUG_DEDUP = process.env.DEBUG_DEDUP === '1'
   let totalGenerated = 0
   let totalMerged = 0
   let totalSaved = 0
@@ -701,20 +719,53 @@ async function main() {
         // Compara title + summary para match mais robusto
         const itemText = `${item.title || ''} ${item.summary || ''}`
 
-        // Pega o candidato com MAIOR score (não apenas o primeiro que passa o threshold)
         let bestMatch = null
         let bestScore = 0
+        let bestStrongCommon = []
+        // Auditoria: melhor candidato descartado (threshold baixo ou âncora insuficiente)
+        let auditScore = 0
+        let auditReason = ''
+        let auditTitle = ''
+
         for (const existing of allProcessedArticles) {
           const existingText = `${existing.title || ''} ${existing.summary || ''}`
           const score = textOverlapScore(itemText, existingText)
-          if (score >= SIMILARITY_THRESHOLD && score > bestScore) {
+
+          if (score < SIMILARITY_THRESHOLD) {
+            if (score > auditScore) {
+              auditScore = score
+              auditReason = `below-threshold(${score.toFixed(3)}<${SIMILARITY_THRESHOLD})`
+              auditTitle = existing.title
+            }
+            continue
+          }
+
+          // Regra de âncora: tokens fortes (len>=5) em comum — bloqueia falsos positivos
+          // por palavras genéricas como datas, verbos editoriais ou nomes de plataformas
+          const strongCommon = strongIntersection(itemText, existingText)
+          if (strongCommon.length < MIN_STRONG_TOKENS) {
+            if (score > auditScore) {
+              auditScore = score
+              auditReason = `anchor-miss([${strongCommon.join(',')}] ${strongCommon.length}/${MIN_STRONG_TOKENS})`
+              auditTitle = existing.title
+            }
+            if (DEBUG_DEDUP) {
+              console.log(`  [DEDUP] ⚓ ANCHOR-MISS score=${score.toFixed(3)} tokens=[${strongCommon.join(',')}](${strongCommon.length}<${MIN_STRONG_TOKENS}) existing="${existing.title?.slice(0, 55)}"`)
+            }
+            continue
+          }
+
+          if (score > bestScore) {
             bestScore = score
             bestMatch = existing
+            bestStrongCommon = strongCommon
           }
         }
+
         const match = bestMatch
 
         if (match) {
+          console.log(`  [DEDUP] 🔀 MERGE score=${bestScore.toFixed(3)} anchor=[${bestStrongCommon.join(',')}] id=${match.id?.slice(0, 8)} | existing="${match.title?.slice(0, 55)}" → new="${item.title?.slice(0, 55)}"`)
           // Compara URLs canonicalizadas para evitar duplicar por UTM/fragment
           const existingUrls = new Set((match.sources || []).map(s => canonicalizeUrl(s.url)))
           const newSources = item.sources.filter(s => !existingUrls.has(canonicalizeUrl(s.url)))
@@ -743,7 +794,6 @@ async function main() {
               match.keywords = mergedKeywords
               match.matched_topics = mergedMatchedTopics
               totalMerged++
-              console.log(`  ✓ Merge em "${match.title}"`)
               // Marca os raw_items relacionados como processados
               if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
                 item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
@@ -760,6 +810,12 @@ async function main() {
             }
           }
         } else {
+          if (DEBUG_DEDUP) {
+            const auditMsg = auditScore > 0
+              ? `best-rejected=${auditScore.toFixed(3)} reason=${auditReason} candidate="${auditTitle?.slice(0, 50)}"`
+              : 'no-candidates'
+            console.log(`  [DEDUP] ✨ NEW "${item.title?.slice(0, 60)}" | ${auditMsg}`)
+          }
           dedupedItems.push(item)
         }
       }
