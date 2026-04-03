@@ -11,30 +11,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const sidebarId = 'right-sidebar'
-  const sidebarRef = useRef<HTMLDivElement>(null)
   const mountedRef = useRef(false)
-
-  // Sticky positioning simples como o Medium
-  useEffect(() => {
-    const sidebar = sidebarRef.current
-    if (!sidebar) return
-
-    const handleScroll = () => {
-      const scrollTop = window.scrollY
-      const sidebarTop = 81 // Offset do header
-      
-      if (scrollTop > sidebarTop) {
-        sidebar.style.position = 'fixed'
-        sidebar.style.top = `${sidebarTop}px`
-      } else {
-        sidebar.style.position = 'static'
-        sidebar.style.top = 'auto'
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
 
   // Update when widgets change
   useEffect(() => {
@@ -42,10 +19,11 @@ export function RightSidebar({ topics }: { topics: string[] }) {
       // Pequeno delay para garantir que DOM foi atualizado
       const timer = setTimeout(() => {
         // Trigger reflow se necessário
-        if (sidebarRef.current) {
-          sidebarRef.current.style.display = 'none'
-          sidebarRef.current.offsetHeight // Force reflow
-          sidebarRef.current.style.display = ''
+        const sidebar = document.getElementById(sidebarId)
+        if (sidebar) {
+          sidebar.style.display = 'none'
+          sidebar.offsetHeight // Force reflow
+          sidebar.style.display = ''
         }
       }, 100)
       return () => clearTimeout(timer)
@@ -87,7 +65,6 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   return (
     <div className="sidebar-right hidden lg:block">
       <div 
-        ref={sidebarRef}
         id={sidebarId} 
         className="sidebar"
         style={{
