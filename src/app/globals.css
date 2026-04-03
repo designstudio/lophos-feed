@@ -152,8 +152,11 @@ html, body {
 
 .sidebar-sticky {
   /* Position controlado via transform pelo hook useSmartStickySidebar */
-  /* Sem position: sticky, sem overflow, sem transform inicial */
+  /* REMOVIDO: position: sticky, top, qualquer posicionamento CSS */
   will-change: transform;
+  /* Garantir que não há posicionamento conflitante */
+  position: relative !important;
+  top: auto !important;
 }
 
 .article-image {
