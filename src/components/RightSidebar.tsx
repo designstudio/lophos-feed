@@ -14,21 +14,17 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const sidebarRef = useRef<HTMLDivElement>(null)
   const mountedRef = useRef(false)
 
-  // Sticky positioning para scroll interno
+  // Sticky positioning simples como o Medium
   useEffect(() => {
     const sidebar = sidebarRef.current
     if (!sidebar) return
 
-    // Encontrar o container de scroll interno
-    const scrollContainer = sidebar.closest('.flex-1.overflow-y-auto') as HTMLElement
-    if (!scrollContainer) return
-
     const handleScroll = () => {
-      const scrollTop = scrollContainer.scrollTop
+      const scrollTop = window.scrollY
       const sidebarTop = 81 // Offset do header
       
       if (scrollTop > sidebarTop) {
-        sidebar.style.position = 'sticky'
+        sidebar.style.position = 'fixed'
         sidebar.style.top = `${sidebarTop}px`
       } else {
         sidebar.style.position = 'static'
@@ -36,8 +32,8 @@ export function RightSidebar({ topics }: { topics: string[] }) {
       }
     }
 
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
-    return () => scrollContainer.removeEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   // Update when widgets change
