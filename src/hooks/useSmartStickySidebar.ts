@@ -9,15 +9,30 @@ interface UseSmartStickySidebarProps {
   debug?: boolean
 }
 
+// Helper function to get offsetTop within a specific parent
+function getOffsetTopWithin(scroller: HTMLElement, element: HTMLElement): number {
+  let offsetTop = 0
+  let current: HTMLElement | null = element
+  
+  while (current && current !== scroller) {
+    offsetTop += current.offsetTop
+    current = current.offsetParent as HTMLElement
+  }
+  
+  return offsetTop
+}
+
+const DEBUG = false // Global debug flag
+
 export function useSmartStickySidebar({
   scrollerRef,
   sidebarRef,
   containerRef,
-  topOffset = 56,
-  debug = false
+  topOffset = 56
 }: UseSmartStickySidebarProps) {
   const animationFrameRef = useRef<number>()
   const resizeObserverRef = useRef<ResizeObserver>()
+  const currentYRef = useRef(0)
   const lastScrollTopRef = useRef(0)
   const heightsRef = useRef({
     sidebar: 0,
@@ -26,7 +41,7 @@ export function useSmartStickySidebar({
     scrollerContent: 0
   })
 
-  const log = debug ? console.log : () => {}
+  const log = DEBUG ? console.log : () => {}
 
   // Calculate all heights and bounds
   const calculateHeights = useCallback(() => {
@@ -35,7 +50,6 @@ export function useSmartStickySidebar({
     const container = containerRef.current
 
     if (!scroller || !sidebar || !container) {
-      log('calculateHeights: missing elements', { scroller: !!scroller, sidebar: !!sidebar, container: !!container })
       return heightsRef.current
     }
 
@@ -51,118 +65,79 @@ export function useSmartStickySidebar({
       scrollerContent
     }
 
-    log('calculateHeights:', { 
-      ...heightsRef.current,
-      containerTagName: container.tagName,
-      containerClassName: container.className,
-      containerOffsetHeight: container.offsetHeight
-    })
     return heightsRef.current
   }, [])
 
-  // Calculate the optimal translateY for the sidebar
-  const calculateTranslateY = useCallback((scrollTop: number) => {
-    const { sidebar, viewport, scrollerContent } = heightsRef.current
-    const scroller = scrollerRef.current
-    const containerElement = containerRef.current
-    if (!scroller || !containerElement) {
-      log('calculateTranslateY: missing elements')
-      return 0
-    }
-
-    // Use container height directly from the element to ensure we get the correct value
-    const containerHeight = containerElement.offsetHeight
-    log('calculateTranslateY container info:', {
-      containerTagName: containerElement.tagName,
-      containerClassName: containerElement.className,
-      containerHeight,
-      containerOffsetHeight: containerElement.offsetHeight
-    })
-
-    // Available space for sidebar to move within
-    const containerTop = containerElement.offsetTop
-    const containerBottom = containerTop + containerHeight
-    
-    // Viewport boundaries
-    const viewportTop = scrollTop + topOffset
-    const viewportBottom = scrollTop + viewport
-    
-    // Sidebar boundaries (if positioned at topOffset)
-    const sidebarTop = containerTop + topOffset
-    const sidebarBottom = sidebarTop + sidebar
-
-    // Calculate constraints
-    // 1. Don't go above container top + topOffset
-    const maxTop = topOffset
-    // 2. Don't go below container bottom - sidebar height
-    const maxBottom = containerHeight - sidebar
-    if (maxBottom < maxTop) {
-      // Container is smaller than sidebar, clamp to top
-      log('calculateTranslateY: container smaller than sidebar, clamp to top', { 
-        containerHeight, 
-        sidebar, 
-        maxBottom, 
-        maxTop 
-      })
-      return maxTop
-    }
-
-    // Calculate ideal position based on scroll
-    let translateY = 0
-
-    // When scrolling down, sidebar should stick to viewport top
-    if (sidebarTop < viewportTop) {
-      translateY = viewportTop - containerTop
-      log('calculateTranslateY: scrolling down, stick to top', { translateY })
-    }
-    
-    // When scrolling up, sidebar should stick to viewport bottom if needed
-    if (sidebarBottom > viewportBottom) {
-      translateY = viewportBottom - sidebar - containerTop
-      log('calculateTranslateY: scrolling up, stick to bottom', { translateY })
-    }
-
-    // Clamp within container bounds
-    translateY = Math.max(maxTop, Math.min(maxBottom, translateY))
-
-    log('calculateTranslateY final:', { 
-      scrollTop, 
-      containerTop, 
-      containerHeight,
-      translateY, 
-      sidebarTop, 
-      viewportTop,
-      sidebarBottom,
-      viewportBottom,
-      maxBottom
-    })
-
-    return translateY
-  }, [topOffset])
-
-  // Update sidebar position
+  // Update sidebar position using delta scroll
   const updateSidebarPosition = useCallback(() => {
     const scroller = scrollerRef.current
     const sidebar = sidebarRef.current
-    if (!scroller || !sidebar) {
-      log('updateSidebarPosition: missing elements')
+    const container = containerRef.current
+    
+    if (!scroller || !sidebar || !container) {
       return
     }
 
-    const scrollTop = scroller.scrollTop
-    const translateY = calculateTranslateY(scrollTop)
-
-    // Apply transform
-    sidebar.style.transform = `translateY(${translateY}px)`
-    lastScrollTopRef.current = scrollTop
+    const { sidebar: sidebarHeight, container: containerHeight, viewport } = heightsRef.current
     
-    log('updateSidebarPosition applied:', { scrollTop, translateY })
-  }, [calculateTranslateY])
+    // Get positions relative to scroller
+    const containerTopInScroller = getOffsetTopWithin(scroller, container)
+    const sidebarTopInScroller = getOffsetTopWithin(scroller, sidebar)
+    
+    // Current scroll position
+    const scrollTop = scroller.scrollTop
+    const deltaScroll = scrollTop - lastScrollTopRef.current
+    lastScrollTopRef.current = scrollTop
 
-  // Scroll handler with requestAnimationFrame
+    // Calculate bounds
+    const minY = topOffset
+    const maxY = containerHeight - sidebarHeight
+    
+    // Calculate ideal Y position based on scroll
+    let targetY = currentYRef.current
+    
+    // When scrolling down
+    if (deltaScroll > 0) {
+      const viewportTop = scrollTop + topOffset
+      if (sidebarTopInScroller + currentYRef.current < viewportTop) {
+        targetY = viewportTop - sidebarTopInScroller
+      }
+    }
+    // When scrolling up
+    else if (deltaScroll < 0) {
+      const viewportBottom = scrollTop + viewport
+      const sidebarBottom = sidebarTopInScroller + currentYRef.current + sidebarHeight
+      if (sidebarBottom > viewportBottom) {
+        targetY = viewportBottom - sidebarBottom
+      }
+    }
+
+    // Clamp within bounds
+    targetY = Math.max(minY, Math.min(maxY, targetY))
+    
+    // Apply with rounding to avoid subpixel jitter
+    const roundedY = Math.round(targetY)
+    sidebar.style.transform = `translate3d(0, ${roundedY}px, 0)`
+    currentYRef.current = targetY
+
+    if (DEBUG) {
+      log('update:', {
+        scrollTop,
+        deltaScroll,
+        containerTopInScroller,
+        sidebarTopInScroller,
+        targetY,
+        roundedY,
+        minY,
+        maxY
+      })
+    }
+  }, [topOffset])
+
+  // Debounced scroll handler with requestAnimationFrame
   const handleScroll = useCallback(() => {
     if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
+      return
     }
     
     animationFrameRef.current = requestAnimationFrame(() => {
@@ -171,48 +146,46 @@ export function useSmartStickySidebar({
     })
   }, [updateSidebarPosition])
 
-  // Setup scroll listener - re-run when refs change
+  // Setup scroll listener
   useEffect(() => {
     const scroller = scrollerRef.current
     if (!scroller) {
-      log('Scroll listener: scroller not available')
       return
     }
 
-    log('Setting up scroll listener on:', scroller.className)
     scroller.addEventListener('scroll', handleScroll, { passive: true })
     
     return () => {
-      log('Cleaning up scroll listener')
       scroller.removeEventListener('scroll', handleScroll)
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [scrollerRef.current, handleScroll]) // Depend on scrollerRef.current to re-run when element changes
+  }, [scrollerRef.current, handleScroll])
 
-  // Setup ResizeObserver to recalculate heights - re-run when refs change
+  // Setup ResizeObserver with debounced updates
   useEffect(() => {
     const scroller = scrollerRef.current
     const sidebar = sidebarRef.current
     const container = containerRef.current
     
     if (!scroller || !sidebar || !container) {
-      log('ResizeObserver: missing elements')
       return
     }
-
-    log('Setting up ResizeObserver')
 
     // Clean up previous observer
     if (resizeObserverRef.current) {
       resizeObserverRef.current.disconnect()
     }
 
+    let resizeTimeout: NodeJS.Timeout
+
     resizeObserverRef.current = new ResizeObserver(() => {
-      log('ResizeObserver triggered')
-      calculateHeights()
-      updateSidebarPosition()
+      clearTimeout(resizeTimeout)
+      resizeTimeout = setTimeout(() => {
+        calculateHeights()
+        updateSidebarPosition()
+      }, 16) // Debounce to ~60fps
     })
 
     // Observe all relevant elements
@@ -221,25 +194,23 @@ export function useSmartStickySidebar({
     resizeObserverRef.current.observe(container)
 
     return () => {
-      log('Cleaning up ResizeObserver')
+      clearTimeout(resizeTimeout)
       resizeObserverRef.current?.disconnect()
     }
   }, [scrollerRef.current, sidebarRef.current, containerRef.current, calculateHeights, updateSidebarPosition])
 
-  // Initial calculation and re-calculation when refs become available
+  // Initial calculation
   useEffect(() => {
     const timer = setTimeout(() => {
-      log('Initial calculation triggered')
       calculateHeights()
       updateSidebarPosition()
-    }, 100) // Small delay to ensure DOM is ready
+    }, 100)
 
     return () => clearTimeout(timer)
   }, [scrollerRef.current, sidebarRef.current, containerRef.current, calculateHeights, updateSidebarPosition])
 
   return {
     recalculate: () => {
-      log('Manual recalculate triggered')
       calculateHeights()
       updateSidebarPosition()
     }

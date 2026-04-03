@@ -51,8 +51,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     scrollerRef,
     sidebarRef: asideRef,
     containerRef,
-    topOffset: 56,
-    debug: true // Enable debug logs
+    topOffset: 56
   })
 
   useEffect(() => {
