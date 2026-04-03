@@ -53,10 +53,11 @@ export function useSmartStickySidebar({
   const calculateTranslateY = useCallback((scrollTop: number) => {
     const { sidebar, container, viewport, scrollerContent } = heightsRef.current
     const scroller = scrollerRef.current
-    if (!scroller) return 0
+    const containerElement = containerRef.current
+    if (!scroller || !containerElement) return 0
 
     // Available space for sidebar to move within
-    const containerTop = container.offsetTop
+    const containerTop = containerElement.offsetTop
     const containerBottom = containerTop + container
     
     // Viewport boundaries
@@ -94,7 +95,7 @@ export function useSmartStickySidebar({
     translateY = Math.max(maxTop, Math.min(maxBottom, translateY))
 
     return translateY
-  }, [scrollerRef, topOffset])
+  }, [scrollerRef, containerRef, topOffset])
 
   // Update sidebar position
   const updateSidebarPosition = useCallback(() => {
