@@ -39,8 +39,10 @@
   --article-max-width:   768px;
   --sidebar-right-width: 336px;
   --article-image-height: 23rem;
-  /* Altura do header sticky no desktop (h-14 = 56px) */
+  /* Altura do header interno sticky no desktop (h-14 = 56px) */
   --header-height: 56px;
+  /* Offset para position:sticky da sidebar = header global (0) + header interno (56px) */
+  --sticky-offset: var(--header-height, 56px);
 }
 
 /* ─── Base ───────────────────────────────────────────────── */
@@ -143,13 +145,17 @@ html, body {
 .sidebar-right {
   width: var(--sidebar-right-width);
   flex-shrink: 0;
-  /* Sticky correto: o elemento col em si é o sticky, dentro do flex-container pai.
-     O pai (flex gap-10 items-start) tem altura = altura do feed principal,
-     então o sticky cola abaixo do header e solta só no final do conteúdo. */
+  /* NÃO sticky aqui — a coluna estica via align-items:stretch (padrão do flex pai),
+     ficando tão alta quanto o feed principal. O sticky fica no wrapper interno
+     .sidebar-sticky, que tem espaço para "deslizar" dentro desta coluna alta. */
+}
+
+.sidebar-sticky {
   position: sticky;
-  top: var(--header-height, 56px);
-  align-self: start;   /* coluna assume altura natural (não estica) → sticky funciona */
-  /* Sem overflow: qualquer overflow aqui quebraria position:sticky nos filhos */
+  /* top = header interno (56px) + nenhum header global neste app.
+     Se um header global for adicionado, somar sua altura aqui. */
+  top: var(--sticky-offset, 56px);
+  /* Sem overflow, sem transform, sem contain — qualquer um desses quebraria sticky */
 }
 
 .article-image {
