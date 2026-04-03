@@ -148,7 +148,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
 
         {/* Nav */}
         <nav className="flex flex-col gap-0.5 flex-1 px-2">
-          <Tooltip content="Início" side="right" disabled={!collapsed} className="w-full">
+          <Tooltip content="Meu feed" side="right" disabled={!collapsed} className="w-full">
             <Link href="/feed"
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
