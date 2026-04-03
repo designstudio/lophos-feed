@@ -64,15 +64,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
 
   return (
     <div className="sidebar-right hidden lg:block">
-      <div 
-        id={sidebarId} 
-        className="sidebar"
-        style={{
-          position: 'sticky',
-          top: '81px',
-          width: '336px'
-        }}
-      >
+      <div id={sidebarId} className="sidebar">
         <div className="sidebar__inner flex flex-col gap-4 py-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
