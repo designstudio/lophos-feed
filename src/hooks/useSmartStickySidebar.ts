@@ -51,13 +51,17 @@ export function useSmartStickySidebar({
       scrollerContent
     }
 
-    log('calculateHeights:', heightsRef.current)
+    log('calculateHeights:', { 
+      ...heightsRef.current,
+      containerClassName: container.className,
+      containerOffsetHeight: container.offsetHeight
+    })
     return heightsRef.current
   }, [])
 
   // Calculate the optimal translateY for the sidebar
   const calculateTranslateY = useCallback((scrollTop: number) => {
-    const { sidebar, container, viewport, scrollerContent } = heightsRef.current
+    const { sidebar, viewport, scrollerContent } = heightsRef.current
     const scroller = scrollerRef.current
     const containerElement = containerRef.current
     if (!scroller || !containerElement) {
@@ -65,9 +69,17 @@ export function useSmartStickySidebar({
       return 0
     }
 
+    // Use container height directly from the element to ensure we get the correct value
+    const containerHeight = containerElement.offsetHeight
+    log('calculateTranslateY container info:', {
+      containerClassName: containerElement.className,
+      containerHeight,
+      containerOffsetHeight: containerElement.offsetHeight
+    })
+
     // Available space for sidebar to move within
     const containerTop = containerElement.offsetTop
-    const containerBottom = containerTop + container
+    const containerBottom = containerTop + containerHeight
     
     // Viewport boundaries
     const viewportTop = scrollTop + topOffset
@@ -81,10 +93,15 @@ export function useSmartStickySidebar({
     // 1. Don't go above container top + topOffset
     const maxTop = topOffset
     // 2. Don't go below container bottom - sidebar height
-    const maxBottom = container - sidebar
+    const maxBottom = containerHeight - sidebar
     if (maxBottom < maxTop) {
       // Container is smaller than sidebar, clamp to top
-      log('calculateTranslateY: container smaller than sidebar, clamp to top')
+      log('calculateTranslateY: container smaller than sidebar, clamp to top', { 
+        containerHeight, 
+        sidebar, 
+        maxBottom, 
+        maxTop 
+      })
       return maxTop
     }
 
@@ -109,11 +126,13 @@ export function useSmartStickySidebar({
     log('calculateTranslateY final:', { 
       scrollTop, 
       containerTop, 
+      containerHeight,
       translateY, 
       sidebarTop, 
       viewportTop,
       sidebarBottom,
-      viewportBottom
+      viewportBottom,
+      maxBottom
     })
 
     return translateY
