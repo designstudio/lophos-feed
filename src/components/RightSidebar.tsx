@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
-import { useStickySidebarV2 } from '@/hooks/useStickySidebarV2'
 
 const STORAGE_KEY = 'lophos_widgets'
 
@@ -12,42 +11,45 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const sidebarId = 'right-sidebar'
+  const sidebarRef = useRef<HTMLDivElement>(null)
   const mountedRef = useRef(false)
 
-  // Setup sticky sidebar v2
-  const { updateStickySidebar } = useStickySidebarV2({
-    sidebarSelector: `#${sidebarId}`,
-    containerSelector: '.feed-layout', // O wrapper alto que contém feed + sidebar
-    scrollContainer: '.flex-1.overflow-y-auto', // O scroller interno
-    topSpacing: 81, // Offset ajustado (81px = 5.063rem)
-    bottomSpacing: 24, // Espaçamento inferior
-    innerWrapperSelector: '.sidebar__inner', // Wrapper interno do conteúdo
-    minWidth: 1024, // Só ativar em desktop (lg breakpoint)
-    disabled: false // Habilitar por enquanto
-  })
+  // Sticky positioning simples como o Medium
+  useEffect(() => {
+    const sidebar = sidebarRef.current
+    if (!sidebar) return
 
-  // Update sticky sidebar when widgets change (height changes)
+    const handleScroll = () => {
+      const scrollTop = window.scrollY
+      const sidebarTop = 81 // Offset do header
+      
+      if (scrollTop > sidebarTop) {
+        sidebar.style.position = 'fixed'
+        sidebar.style.top = `${sidebarTop}px`
+      } else {
+        sidebar.style.position = 'static'
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Update when widgets change
   useEffect(() => {
     if (mountedRef.current) {
-      const timer = setTimeout(() => updateStickySidebar(), 100)
+      // Pequeno delay para garantir que DOM foi atualizado
+      const timer = setTimeout(() => {
+        // Trigger reflow se necessário
+        if (sidebarRef.current) {
+          sidebarRef.current.style.display = 'none'
+          sidebarRef.current.offsetHeight // Force reflow
+          sidebarRef.current.style.display = ''
+        }
+      }, 100)
       return () => clearTimeout(timer)
     }
-  }, [order, active, topics, updateStickySidebar])
-
-  // Sidebar esquerda não tem mais transition:width — o layout muda em 1 frame.
-  // Um único rAF é suficiente para updateSticky() pegar as medidas finais.
-  useEffect(() => {
-    const handleSidebarToggle = () => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          console.log('[StickySidebar] updateSticky — sidebar toggle')
-          updateStickySidebar()
-        })
-      })
-    }
-    window.addEventListener('sidebar:toggle', handleSidebarToggle)
-    return () => window.removeEventListener('sidebar:toggle', handleSidebarToggle)
-  }, [updateStickySidebar])
+  }, [order, active, topics])
 
   // Mark as mounted after initial render
   useEffect(() => {
@@ -83,7 +85,16 @@ export function RightSidebar({ topics }: { topics: string[] }) {
 
   return (
     <div className="sidebar-right hidden lg:block">
-      <div id={sidebarId} className="sidebar">
+      <div 
+        ref={sidebarRef}
+        id={sidebarId} 
+        className="sidebar"
+        style={{
+          position: 'sticky',
+          top: '81px',
+          width: '336px'
+        }}
+      >
         <div className="sidebar__inner flex flex-col gap-4 py-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
