@@ -13,24 +13,26 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const sidebarId = 'right-sidebar'
   const mountedRef = useRef(false)
 
-  // Debug para verificar se o scroll está funcionando
+  // Sticky positioning com JavaScript (funciona sempre)
   useEffect(() => {
+    const sidebar = document.getElementById(sidebarId)
+    if (!sidebar) return
+
     const handleScroll = () => {
-      console.log('Scroll position:', window.scrollY)
-      const sidebar = document.getElementById(sidebarId)
-      if (sidebar) {
-        console.log('Sidebar element:', sidebar)
-        console.log('Sidebar styles:', {
-          position: getComputedStyle(sidebar).position,
-          top: getComputedStyle(sidebar).top,
-          display: getComputedStyle(sidebar).display,
-          visibility: getComputedStyle(sidebar).visibility,
-          opacity: getComputedStyle(sidebar).opacity
-        })
+      const scrollTop = window.scrollY
+      const sidebarTop = 81 // Offset do header
+      
+      if (scrollTop > sidebarTop) {
+        sidebar.style.position = 'fixed'
+        sidebar.style.top = `${sidebarTop}px`
+      } else {
+        sidebar.style.position = 'static'
+        sidebar.style.top = 'auto'
       }
     }
-    
-    window.addEventListener('scroll', handleScroll)
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll() // Executar uma vez no início
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -89,12 +91,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
         id={sidebarId} 
         className="sidebar"
         style={{
-          position: 'sticky',
-          top: '81px',
-          width: '336px',
-          height: 'fit-content',
-          zIndex: 10,
-          backgroundColor: 'var(--color-bg-primary)'
+          width: '336px'
         }}
       >
         <div className="sidebar__inner flex flex-col gap-4 py-6">
