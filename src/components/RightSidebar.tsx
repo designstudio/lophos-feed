@@ -39,8 +39,10 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   useEffect(() => {
     const handleSidebarToggle = () => {
       requestAnimationFrame(() => {
-        console.log('[StickySidebar] updateSticky — sidebar toggle')
-        updateStickySidebar()
+        requestAnimationFrame(() => {
+          console.log('[StickySidebar] updateSticky — sidebar toggle')
+          updateStickySidebar()
+        })
       })
     }
     window.addEventListener('sidebar:toggle', handleSidebarToggle)
