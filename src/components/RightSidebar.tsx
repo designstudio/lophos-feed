@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
+import { useStickySidebarV2 } from '@/hooks/useStickySidebarV2'
 
 const STORAGE_KEY = 'lophos_widgets'
 
@@ -13,64 +14,39 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const sidebarId = 'right-sidebar'
   const mountedRef = useRef(false)
 
-  // Smart sticky positioning igual ao Medium
-  useEffect(() => {
-    const sidebar = document.getElementById(sidebarId)
-    if (!sidebar) return
+  // Setup sticky sidebar v2
+  const { updateStickySidebar } = useStickySidebarV2({
+    sidebarSelector: `#${sidebarId}`,
+    containerSelector: '.feed-layout',
+    topSpacing: 81,
+    bottomSpacing: 24,
+    innerWrapperSelector: '.sidebar__inner',
+    minWidth: 1024,
+    disabled: false
+  })
 
-    const handleScroll = () => {
-      const scrollTop = window.scrollY
-      const sidebarTop = 81 // Offset do header
-      const sidebarHeight = sidebar.offsetHeight
-      
-      // Encontrar o container pai (sidebar-right)
-      const container = sidebar.closest('.sidebar-right')
-      if (!container) return
-      
-      // Calcular posição limite baseado no container pai
-      const containerRect = container.getBoundingClientRect()
-      const containerBottom = containerRect.bottom
-      const viewportHeight = window.innerHeight
-      
-      // A sidebar deve parar quando o final dela atingir o final do container
-      const maxScrollTop = window.scrollY + (containerBottom - viewportHeight - sidebarHeight)
-      
-      if (scrollTop > sidebarTop && scrollTop < maxScrollTop) {
-        // No meio do scroll: position fixed
-        sidebar.style.position = 'fixed'
-        sidebar.style.top = `${sidebarTop}px`
-      } else if (scrollTop >= maxScrollTop) {
-        // No final do conteúdo: position absolute no final
-        sidebar.style.position = 'absolute'
-        sidebar.style.top = `${maxScrollTop}px`
-      } else {
-        // No topo: position static
-        sidebar.style.position = 'static'
-        sidebar.style.top = 'auto'
-      }
-    }
-
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    handleScroll() // Executar uma vez no início
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  // Update when widgets change
+  // Update sticky sidebar when widgets change
   useEffect(() => {
     if (mountedRef.current) {
-      // Pequeno delay para garantir que DOM foi atualizado
-      const timer = setTimeout(() => {
-        // Trigger reflow se necessário
-        const sidebar = document.getElementById(sidebarId)
-        if (sidebar) {
-          sidebar.style.display = 'none'
-          sidebar.offsetHeight // Force reflow
-          sidebar.style.display = ''
-        }
-      }, 100)
+      const timer = setTimeout(() => updateStickySidebar(), 100)
       return () => clearTimeout(timer)
     }
-  }, [order, active, topics])
+  }, [order, active, topics, updateStickySidebar])
+
+  // Sidebar esquerda não tem mais transition:width — o layout muda em 1 frame.
+  // Um único rAF é suficiente para updateSticky() pegar as medidas finais.
+  useEffect(() => {
+    const handleSidebarToggle = () => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          console.log('[StickySidebar] updateSticky — sidebar toggle')
+          updateStickySidebar()
+        })
+      })
+    }
+    window.addEventListener('sidebar:toggle', handleSidebarToggle)
+    return () => window.removeEventListener('sidebar:toggle', handleSidebarToggle)
+  }, [updateStickySidebar])
 
   // Mark as mounted after initial render
   useEffect(() => {
@@ -106,13 +82,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
 
   return (
     <div className="sidebar-right hidden lg:block">
-      <div 
-        id={sidebarId} 
-        className="sidebar"
-        style={{
-          width: '336px'
-        }}
-      >
+      <div id={sidebarId} className="sidebar">
         <div className="sidebar__inner flex flex-col gap-4 py-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />

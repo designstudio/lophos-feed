@@ -145,13 +145,6 @@ html, body {
 .sidebar-right {
   width: var(--sidebar-right-width);
   flex-shrink: 0;
-  min-height: 100vh; /* Forçar altura para sticky funcionar */
-}
-
-.sidebar {
-  position: sticky;
-  top: 81px;
-  height: fit-content;
 }
 
 /* Sticky Sidebar v2 styles */
