@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 // Import sticky-sidebar-v2 dynamically to avoid SSR issues
 let StickySidebar: any = null
@@ -149,9 +149,49 @@ export function useStickySidebarV2({
     }
   }
 
+  // Destroys the current instance and creates a fresh one.
+  // Use after layout shifts (e.g. sidebar toggle) so measurements are clean.
+  const reinitializeStickySidebar = useCallback(async () => {
+    // Destroy first
+    if (sidebarInstanceRef.current) {
+      sidebarInstanceRef.current.destroy()
+      sidebarInstanceRef.current = null
+      initializedRef.current = false
+    }
+
+    try {
+      const StickySidebarClass = await loadStickySidebar()
+      if (!StickySidebarClass) return
+
+      if (!document.querySelector(sidebarSelector)) {
+        console.warn(`[StickySidebar] reinit: element not found: ${sidebarSelector}`)
+        return
+      }
+      if (containerSelector && !document.querySelector(containerSelector)) {
+        console.warn(`[StickySidebar] reinit: container not found: ${containerSelector}`)
+        return
+      }
+      if (scrollContainer && !document.querySelector(scrollContainer)) {
+        console.warn(`[StickySidebar] reinit: scroll container not found: ${scrollContainer}`)
+        return
+      }
+
+      const options: any = { topSpacing, bottomSpacing, innerWrapperSelector, minWidth }
+      if (containerSelector) options.containerSelector = containerSelector
+      if (scrollContainer) options.scrollContainer = scrollContainer
+
+      sidebarInstanceRef.current = new StickySidebarClass(sidebarSelector, options)
+      initializedRef.current = true
+      console.log('[StickySidebar] reinitialized')
+    } catch (err) {
+      console.error('[StickySidebar] reinit error:', err)
+    }
+  }, [sidebarSelector, containerSelector, scrollContainer, topSpacing, bottomSpacing, innerWrapperSelector, minWidth])
+
   return {
     updateStickySidebar,
     destroyStickySidebar,
+    reinitializeStickySidebar,
     isInitialized: () => initializedRef.current
   }
 }
