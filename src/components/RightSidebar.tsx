@@ -2,26 +2,44 @@
 import { useState, useEffect, useRef } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
+import { useSmartStickySidebar } from '@/hooks/useSmartStickySidebar'
 
 const STORAGE_KEY = 'lophos_widgets'
 
 const DEFAULT_ORDER = ['weather', 'valorant', 'lol', 'series']
 
-/** Sobe na árvore até encontrar o primeiro ancestral com overflow-y: auto | scroll */
-function findScrollContainer(el: HTMLElement): HTMLElement | null {
-  let node: HTMLElement | null = el.parentElement
-  while (node) {
-    const oy = getComputedStyle(node).overflowY
-    if (oy === 'auto' || oy === 'scroll') return node
-    node = node.parentElement
-  }
-  return null
-}
-
 export function RightSidebar({ topics }: { topics: string[] }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const asideRef = useRef<HTMLElement>(null)
+  const containerRef = useRef<HTMLElement>(null)
+  const scrollerRef = useRef<HTMLElement>(null)
+
+  // Find the scroll container (flex-1.overflow-y-auto)
+  useEffect(() => {
+    const findScroller = () => {
+      if (asideRef.current) {
+        const scroller = asideRef.current.closest('.flex-1.overflow-y-auto') as HTMLElement
+        if (scroller) {
+          scrollerRef.current = scroller
+        }
+      }
+    }
+
+    findScroller()
+    
+    // Also try after a delay in case DOM isn't ready
+    const timer = setTimeout(findScroller, 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Setup smart sticky behavior
+  useSmartStickySidebar({
+    scrollerRef,
+    sidebarRef: asideRef,
+    containerRef,
+    topOffset: 56
+  })
 
   useEffect(() => {
     const handler = () => {
@@ -47,42 +65,24 @@ export function RightSidebar({ topics }: { topics: string[] }) {
     }
   }, [])
 
-  // ResizeObserver: quando a sidebar muda de altura (skeleton → conteúdo real,
-  // widgets carregando de APIs externas), força o browser a recalcular o sticky.
-  // Técnica: nudge síncrono de scrollTop (+1 / -1) — as duas atribuições ocorrem
-  // no mesmo frame, então o browser não renderiza o estado intermediário.
-  useEffect(() => {
-    const aside = asideRef.current
-    if (!aside) return
-
-    const ro = new ResizeObserver(() => {
-      const sc = findScrollContainer(aside)
-      if (!sc) return
-      const prev = sc.scrollTop
-      sc.scrollTop = prev + 1
-      sc.scrollTop = prev
-    })
-
-    ro.observe(aside)
-    return () => ro.disconnect()
-  }, [])
-
   // Widgets to render in saved order
   const widgetsToRender = order.filter(id => active.includes(id))
 
   return (
-    <aside ref={asideRef} className="sidebar-sticky flex flex-col gap-4 py-6">
-      {widgetsToRender.map(id => {
-        if (id === 'weather') return <WeatherWidget key="weather" />
-        // Each smart widget renders only itself but has access to all topics
-        return (
-          <SmartWidgets
-            key={id}
-            topics={topics}
-            activeWidgets={[id]}
-          />
-        )
-      })}
-    </aside>
+    <div ref={containerRef} className="sidebar-right hidden lg:block">
+      <aside ref={asideRef} className="sidebar-sticky flex flex-col gap-4 py-6">
+        {widgetsToRender.map(id => {
+          if (id === 'weather') return <WeatherWidget key="weather" />
+          // Each smart widget renders only itself but has access to all topics
+          return (
+            <SmartWidgets
+              key={id}
+              topics={topics}
+              activeWidgets={[id]}
+            />
+          )
+        })}
+      </aside>
+    </div>
   )
 }

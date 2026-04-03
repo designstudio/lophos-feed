@@ -151,11 +151,9 @@ html, body {
 }
 
 .sidebar-sticky {
-  position: sticky;
-  /* top = header interno (56px) + nenhum header global neste app.
-     Se um header global for adicionado, somar sua altura aqui. */
-  top: var(--sticky-offset, 56px);
-  /* Sem overflow, sem transform, sem contain — qualquer um desses quebraria sticky */
+  /* Position controlado via transform pelo hook useSmartStickySidebar */
+  /* Sem position: sticky, sem overflow, sem transform inicial */
+  will-change: transform;
 }
 
 .article-image {
