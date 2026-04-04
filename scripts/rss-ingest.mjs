@@ -190,6 +190,57 @@ function extractImageUrlFromHtml(html) {
   return undefined
 }
 
+function isLikelyDirectImageUrl(url) {
+  if (!url) return false
+  try {
+    const { pathname } = new URL(url)
+    return /\.(avif|gif|jpe?g|png|webp|svg)$/i.test(pathname)
+  } catch {
+    return /\.(avif|gif|jpe?g|png|webp|svg)(\?|$)/i.test(url)
+  }
+}
+
+async function resolveImageUrl(candidateUrl) {
+  if (!candidateUrl || isYouTubeOrVimeo(candidateUrl)) return undefined
+  if (isLikelyDirectImageUrl(candidateUrl)) return candidateUrl
+
+  try {
+    const res = await fetch(candidateUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Lophos/1.0; +http://localhost)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8000),
+    })
+
+    if (!res.ok) return candidateUrl
+
+    const finalUrl = res.url || candidateUrl
+    const contentType = (res.headers.get('content-type') || '').toLowerCase()
+
+    if (contentType.startsWith('image/')) {
+      return finalUrl
+    }
+
+    if (contentType.includes('text/html') || contentType.includes('application/xhtml+xml')) {
+      const html = await res.text()
+      const extracted = extractImageUrlFromHtml(html)
+      if (extracted) {
+        try {
+          return new URL(extracted, finalUrl).href
+        } catch {
+          return extracted
+        }
+      }
+    }
+
+    return isLikelyDirectImageUrl(finalUrl) ? finalUrl : candidateUrl
+  } catch {
+    return candidateUrl
+  }
+}
+
 async function fetchAndParseFeed(feed) {
   try {
     const headers = { 'User-Agent': 'Mozilla/5.0 (compatible; Lophos/1.0; +http://localhost)' }
@@ -307,6 +358,10 @@ async function main() {
           const htmlContent = extractText(item['content:encoded']) || extractText(item.description) || ''
           const extracted = extractImageUrlFromHtml(htmlContent)
           if (extracted) image_url = extracted
+        }
+
+        if (image_url) {
+          image_url = await resolveImageUrl(image_url)
         }
 
         const video_url = extractVideoUrl(item)
