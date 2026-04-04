@@ -602,28 +602,38 @@ ${context}`
       continue
     }
 
-    // ✅ EXTRAÇÃO DE IMAGEM PER-SOURCE: Buscar de cada fonte específica
+    const articleRawItems = articleSourceIds
+      .map(uuid => rawItemsMap.get(uuid))
+      .filter(Boolean)
+
+    // ✅ EXTRAÇÃO DE IMAGEM/VÍDEO: usar raw_items reais do artigo
     let imageUrl = null
     let imageSource = null
     let imageSourceDomain = null
+    let videoUrl = null
 
-    // Fase 1: Tenta pegar imagem das fontes (RSS)
-    for (const idx of sourceIndexes) {
-      if (idx < 0 || idx >= clusterItems.length) continue
-      const candidate = clusterItems[idx]?.image
+    // Fase 1: Tenta pegar imagem e vídeo já extraídos no RSS
+    for (const rawItem of articleRawItems) {
+      const candidate = rawItem?.image_url
       if (candidate && !isLazyLoadImage(candidate)) {
         imageUrl = candidate
-        imageSource = clusterItems[idx].url
+        imageSource = rawItem.url
         imageSourceDomain = new URL(imageSource).hostname.replace('www.', '')
+        break
+      }
+    }
+
+    for (const rawItem of articleRawItems) {
+      if (rawItem?.video_url) {
+        videoUrl = rawItem.video_url
         break
       }
     }
 
     // Fase 2: Fallback - busca og:image das URLs se não encontrou no RSS
     if (!imageUrl) {
-      for (const idx of sourceIndexes) {
-        if (idx < 0 || idx >= clusterItems.length) continue
-        const sourceUrl = clusterItems[idx]?.url
+      for (const rawItem of articleRawItems) {
+        const sourceUrl = rawItem?.url
         if (sourceUrl) {
           imageUrl = await fetchOgImage(sourceUrl)
           if (imageUrl) {
@@ -672,6 +682,7 @@ ${context}`
       sections: item.sections || [],
       sources,
       image_url: imageUrl,
+      video_url: videoUrl,
       published_at: now,
       cached_at: now,
       matched_topics: keywords,
@@ -704,6 +715,7 @@ async function processTopic(topic, rawItems, existingTitles) {
     title: item.title,
     content: item.content || '',
     image: item.image_url,
+    video: item.video_url,
   }))
 
   if (!results.length) return { newsItems: [], success: true, rejectedRawIds }
@@ -754,7 +766,7 @@ async function main() {
   const since72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
-    .select('id, title, summary, sources, keywords, matched_topics')
+    .select('id, title, summary, sources, keywords, matched_topics, image_url, video_url')
     .gte('published_at', since72h)
     .order('published_at', { ascending: false })
     .limit(300)
@@ -766,6 +778,8 @@ async function main() {
     sources: r.sources || [],
     keywords: r.keywords || [],
     matched_topics: r.matched_topics || [],
+    image_url: r.image_url || null,
+    video_url: r.video_url || null,
   }))
   console.log(`Artigos existentes (últimas 72h): ${allProcessedArticles.length}\n`)
 
@@ -784,7 +798,7 @@ async function main() {
       // Fetch unprocessed items for this topic
       const { data: rawItems } = await db
         .from('raw_items')
-        .select('id, url, title, content, image_url, topic')
+        .select('id, url, title, content, image_url, video_url, topic')
         .eq('topic', topic)
         .eq('processed', false)
         .order('pub_date', { ascending: false })
@@ -891,19 +905,24 @@ async function main() {
           const newSources = item.sources.filter(s => !existingUrls.has(canonicalizeUrl(s.url)))
           const mergedKeywords = [...new Set([...match.keywords, ...(item.keywords || [])])]
           const mergedMatchedTopics = [...new Set([...match.matched_topics, ...(item.matched_topics || [])])]
+          const shouldBackfillImage = !match.image_url && !!item.image_url
+          const shouldBackfillVideo = !match.video_url && !!item.video_url
 
           const keywordsChanged = mergedKeywords.length > match.keywords.length
           const topicsChanged = mergedMatchedTopics.length > match.matched_topics.length
 
-          if (newSources.length > 0 || keywordsChanged || topicsChanged) {
+          if (newSources.length > 0 || keywordsChanged || topicsChanged || shouldBackfillImage || shouldBackfillVideo) {
             const mergedSources = [...match.sources, ...newSources]
+            const updatePayload = {
+              sources: mergedSources,
+              keywords: mergedKeywords,
+              matched_topics: mergedMatchedTopics,
+            }
+            if (shouldBackfillImage) updatePayload.image_url = item.image_url
+            if (shouldBackfillVideo) updatePayload.video_url = item.video_url
             const { error: mergeError } = await db
               .from('articles')
-              .update({
-                sources: mergedSources,
-                keywords: mergedKeywords,
-                matched_topics: mergedMatchedTopics,
-              })
+              .update(updatePayload)
               .eq('id', match.id)
 
             if (mergeError) {
@@ -913,6 +932,8 @@ async function main() {
               match.sources = mergedSources
               match.keywords = mergedKeywords
               match.matched_topics = mergedMatchedTopics
+              if (shouldBackfillImage) match.image_url = item.image_url
+              if (shouldBackfillVideo) match.video_url = item.video_url
               totalMerged++
               // Marca os raw_items relacionados como processados
               if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
