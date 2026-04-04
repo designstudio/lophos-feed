@@ -1,33 +1,16 @@
 'use client'
-import { RefObject, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
-import { useSmartStickySidebar } from '@/hooks/useSmartStickySidebar'
 
 const STORAGE_KEY = 'lophos_widgets'
 
 const DEFAULT_ORDER = ['weather', 'valorant', 'lol', 'series']
 
-export function RightSidebar({
-  topics,
-  scrollRef,
-}: {
-  topics: string[]
-  scrollRef: RefObject<HTMLDivElement | null>
-}) {
+export function RightSidebar({ topics }: { topics: string[] }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const mountedRef = useRef(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-
-  useSmartStickySidebar({
-    scrollRef,
-    containerRef,
-    contentRef,
-    topOffset: 80,
-    bottomOffset: 24,
-  })
 
   // Mark as mounted after initial render
   useEffect(() => {
@@ -62,9 +45,9 @@ export function RightSidebar({
   const widgetsToRender = order.filter(id => active.includes(id))
 
   return (
-    <aside ref={containerRef} className="sidebar-right hidden lg:block">
+    <aside className="sidebar-right hidden lg:block">
       <div className="sidebar">
-        <div ref={contentRef} className="sidebar__inner flex flex-col gap-4 py-6">
+        <div className="sidebar__inner sidebar__inner--sticky flex flex-col gap-4 py-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
             // Each smart widget renders only itself but has access to all topics
