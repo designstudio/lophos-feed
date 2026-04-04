@@ -44,7 +44,7 @@ export function useSmartStickySidebar({
       content.style.position = 'relative'
       content.style.top = '0px'
       content.style.bottom = 'auto'
-      content.style.transform = 'none'
+      content.style.transform = 'translate3d(0, 0, 0)'
     }
 
     const applyTopSticky = () => {
@@ -52,14 +52,14 @@ export function useSmartStickySidebar({
       content.style.position = 'sticky'
       content.style.top = `${topOffset}px`
       content.style.bottom = 'auto'
-      content.style.transform = 'none'
+      content.style.transform = 'translate3d(0, 0, 0)'
     }
 
     const applyRelativeTop = (top: number) => {
       content.style.position = 'relative'
-      content.style.top = `${Math.round(top)}px`
+      content.style.top = '0px'
       content.style.bottom = 'auto'
-      content.style.transform = 'none'
+      content.style.transform = `translate3d(0, ${Math.round(top)}px, 0)`
     }
 
     const update = () => {
