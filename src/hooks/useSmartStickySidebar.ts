@@ -27,9 +27,8 @@ export function useSmartStickySidebar({
 }: UseSmartStickySidebarOptions) {
   const translateRef = useRef(0)
   const lastScrollTopRef = useRef(0)
-  const lastAppliedTranslateRef = useRef(0)
   const frameRef = useRef<number | null>(null)
-  const EPSILON = 0.75
+  const EPSILON = 0.5
 
   useEffect(() => {
     if (disabled || typeof window === 'undefined') return
@@ -41,10 +40,32 @@ export function useSmartStickySidebar({
     if (!scroller || !container || !content) return
 
     const resetStyles = () => {
-      lastAppliedTranslateRef.current = 0
       content.style.transform = 'translate3d(0, 0, 0)'
       content.style.position = 'relative'
       content.style.top = '0'
+      content.style.bottom = 'auto'
+    }
+
+    const applyStickyStyles = () => {
+      content.style.transform = 'translate3d(0, 0, 0)'
+      content.style.position = 'sticky'
+      content.style.top = `${topOffset}px`
+      content.style.bottom = 'auto'
+    }
+
+    const applyTranslateStyles = (translateY: number) => {
+      content.style.position = 'relative'
+      content.style.top = '0'
+      content.style.bottom = 'auto'
+      content.style.transform = `translate3d(0, ${translateY}px, 0)`
+    }
+
+    const roundTranslate = (value: number) => {
+      return Math.round(value * 2) / 2
+    }
+
+    const clampTranslate = (value: number, maxTranslate: number) => {
+      return clamp(roundTranslate(value), 0, maxTranslate)
     }
 
     const update = () => {
@@ -66,7 +87,13 @@ export function useSmartStickySidebar({
       const availableHeight = viewportHeight - topOffset - bottomOffset
       const maxTranslate = Math.max(containerHeight - sidebarHeight, 0)
       const scrollTop = scroller.scrollTop
-      const scrollDelta = scrollTop - lastScrollTopRef.current
+
+      if (sidebarHeight <= availableHeight) {
+        translateRef.current = 0
+        lastScrollTopRef.current = scrollTop
+        applyStickyStyles()
+        return
+      }
 
       if (maxTranslate <= 0) {
         translateRef.current = 0
@@ -75,43 +102,34 @@ export function useSmartStickySidebar({
         return
       }
 
+      const scrollDelta = scrollTop - lastScrollTopRef.current
+      const viewportTop = scrollTop + topOffset
+      const viewportBottom = scrollTop + viewportHeight - bottomOffset
+      const currentTop = containerTop + translateRef.current
+      const currentBottom = currentTop + sidebarHeight
+
       let nextTranslate = translateRef.current
 
-      if (sidebarHeight <= availableHeight) {
-        nextTranslate = clamp(scrollTop + topOffset - containerTop, 0, maxTranslate)
-      } else {
-        const scrollingDown = scrollDelta > EPSILON
-        const scrollingUp = scrollDelta < -EPSILON
-
-        if (scrollingDown) {
-          const bottomPinnedTranslate =
-            scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
-
-          if (bottomPinnedTranslate > nextTranslate + EPSILON) {
-            nextTranslate = Math.min(bottomPinnedTranslate, maxTranslate)
-          }
-        } else if (scrollingUp) {
-          const topPinnedTranslate = scrollTop + topOffset - containerTop
-
-          if (topPinnedTranslate < nextTranslate - EPSILON) {
-            nextTranslate = Math.max(topPinnedTranslate, 0)
-          }
-        }
+      if (scrollDelta > EPSILON && currentBottom < viewportBottom) {
+        nextTranslate += viewportBottom - currentBottom
+      } else if (scrollDelta < -EPSILON && currentTop > viewportTop) {
+        nextTranslate -= currentTop - viewportTop
       }
 
-      translateRef.current = clamp(nextTranslate, 0, maxTranslate)
+      nextTranslate = clampTranslate(nextTranslate, maxTranslate)
+
+      const isNearTopBoundary = scrollTop + topOffset <= containerTop
+      const isNearBottomBoundary = containerTop + nextTranslate + sidebarHeight >= containerTop + containerHeight - EPSILON
+
+      if (isNearTopBoundary) {
+        nextTranslate = 0
+      } else if (isNearBottomBoundary) {
+        nextTranslate = maxTranslate
+      }
+
+      translateRef.current = clampTranslate(nextTranslate, maxTranslate)
       lastScrollTopRef.current = scrollTop
-
-      const roundedTranslate = Math.round(translateRef.current * 2) / 2
-
-      if (Math.abs(roundedTranslate - lastAppliedTranslateRef.current) <= EPSILON) {
-        return
-      }
-
-      lastAppliedTranslateRef.current = roundedTranslate
-      content.style.transform = `translate3d(0, ${roundedTranslate}px, 0)`
-      content.style.position = 'relative'
-      content.style.top = '0'
+      applyTranslateStyles(translateRef.current)
     }
 
     const scheduleUpdate = () => {
