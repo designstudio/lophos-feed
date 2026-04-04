@@ -633,7 +633,7 @@ export default function FeedPage() {
               )}
             </div>
 
-            <RightSidebar topics={topics} />
+            <RightSidebar topics={topics} scrollRef={scrollRef} />
           </div>
         </div>
       </div>

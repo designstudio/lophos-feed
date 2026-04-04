@@ -156,13 +156,7 @@ html, body {
 
 .sidebar__inner {
   transform: translate3d(0, 0, 0);
-}
-
-.sidebar__inner--sticky {
-  position: sticky;
-  top: 80px;
-  align-self: flex-start;
-  will-change: auto;
+  will-change: transform;
 }
 
 .article-image {

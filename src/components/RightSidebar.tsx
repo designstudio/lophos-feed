@@ -1,54 +1,38 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { RefObject, useEffect, useRef, useState } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
+import { useSmartStickySidebar } from '@/hooks/useSmartStickySidebar'
 
 const STORAGE_KEY = 'lophos_widgets'
 
 const DEFAULT_ORDER = ['weather', 'valorant', 'lol', 'series']
 
-export function RightSidebar({ topics }: { topics: string[] }) {
+export function RightSidebar({
+  topics,
+  scrollRef,
+}: {
+  topics: string[]
+  scrollRef: RefObject<HTMLDivElement | null>
+}) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const mountedRef = useRef(false)
+  const containerRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const [stickyTop, setStickyTop] = useState(80)
+
+  useSmartStickySidebar({
+    scrollRef,
+    containerRef,
+    contentRef,
+    topOffset: 80,
+    bottomOffset: 24,
+  })
 
   // Mark as mounted after initial render
   useEffect(() => {
     mountedRef.current = true
   }, [])
-
-  useEffect(() => {
-    const content = contentRef.current
-    if (!content) return
-
-    const TOP_OFFSET = 80
-    const BOTTOM_OFFSET = 24
-    const DESKTOP_BREAKPOINT = 1024
-
-    const updateStickyTop = () => {
-      if (window.innerWidth < DESKTOP_BREAKPOINT) {
-        setStickyTop(TOP_OFFSET)
-        return
-      }
-
-      const sidebarHeight = content.offsetHeight
-      const viewportHeight = window.innerHeight
-      const nextTop = Math.min(TOP_OFFSET, viewportHeight - sidebarHeight - BOTTOM_OFFSET)
-      setStickyTop(nextTop)
-    }
-
-    const resizeObserver = new ResizeObserver(updateStickyTop)
-    resizeObserver.observe(content)
-    window.addEventListener('resize', updateStickyTop)
-    updateStickyTop()
-
-    return () => {
-      resizeObserver.disconnect()
-      window.removeEventListener('resize', updateStickyTop)
-    }
-  }, [order, active, topics])
 
   useEffect(() => {
     const handler = () => {
@@ -78,13 +62,9 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const widgetsToRender = order.filter(id => active.includes(id))
 
   return (
-    <aside className="sidebar-right hidden lg:block">
+    <aside ref={containerRef} className="sidebar-right hidden lg:block">
       <div className="sidebar">
-        <div
-          ref={contentRef}
-          className="sidebar__inner sidebar__inner--sticky flex flex-col gap-4 py-6"
-          style={{ top: `${stickyTop}px` }}
-        >
+        <div ref={contentRef} className="sidebar__inner flex flex-col gap-4 py-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
             // Each smart widget renders only itself but has access to all topics
