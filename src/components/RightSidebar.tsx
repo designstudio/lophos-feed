@@ -11,11 +11,44 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const mountedRef = useRef(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [stickyTop, setStickyTop] = useState(80)
 
   // Mark as mounted after initial render
   useEffect(() => {
     mountedRef.current = true
   }, [])
+
+  useEffect(() => {
+    const content = contentRef.current
+    if (!content) return
+
+    const TOP_OFFSET = 80
+    const BOTTOM_OFFSET = 24
+    const DESKTOP_BREAKPOINT = 1024
+
+    const updateStickyTop = () => {
+      if (window.innerWidth < DESKTOP_BREAKPOINT) {
+        setStickyTop(TOP_OFFSET)
+        return
+      }
+
+      const sidebarHeight = content.offsetHeight
+      const viewportHeight = window.innerHeight
+      const nextTop = Math.min(TOP_OFFSET, viewportHeight - sidebarHeight - BOTTOM_OFFSET)
+      setStickyTop(nextTop)
+    }
+
+    const resizeObserver = new ResizeObserver(updateStickyTop)
+    resizeObserver.observe(content)
+    window.addEventListener('resize', updateStickyTop)
+    updateStickyTop()
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateStickyTop)
+    }
+  }, [order, active, topics])
 
   useEffect(() => {
     const handler = () => {
@@ -47,7 +80,11 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   return (
     <aside className="sidebar-right hidden lg:block">
       <div className="sidebar">
-        <div className="sidebar__inner sidebar__inner--sticky flex flex-col gap-4 py-6">
+        <div
+          ref={contentRef}
+          className="sidebar__inner sidebar__inner--sticky flex flex-col gap-4 py-6"
+          style={{ top: `${stickyTop}px` }}
+        >
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
             // Each smart widget renders only itself but has access to all topics
