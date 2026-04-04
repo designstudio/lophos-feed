@@ -56,14 +56,6 @@ export function useSmartStickySidebar({
       content.style.bottom = 'auto'
     }
 
-    const applyBottomStickyStyles = () => {
-      modeRef.current = 'bottom'
-      content.style.transform = 'none'
-      content.style.position = 'sticky'
-      content.style.top = 'auto'
-      content.style.bottom = `${bottomOffset}px`
-    }
-
     const applyTranslateStyles = (translateY: number) => {
       content.style.transform = 'none'
       content.style.position = 'relative'
@@ -153,11 +145,6 @@ export function useSmartStickySidebar({
 
       if (nextMode === 'top') {
         applyStickyStyles()
-        return
-      }
-
-      if (nextMode === 'bottom') {
-        applyBottomStickyStyles()
         return
       }
 
