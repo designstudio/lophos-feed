@@ -105,48 +105,35 @@ export function useSmartStickySidebar({
       const viewportTop = topOffset
       const viewportBottom = viewportHeight - bottomOffset
       let nextTranslate = translateRef.current
-      let nextMode = modeRef.current
+      let nextMode = modeRef.current === 'natural' ? 'top' : modeRef.current
       const currentTopInViewport = containerTop + translateRef.current - scrollTop
       const currentBottomInViewport = currentTopInViewport + sidebarHeight
+      const topPinnedTranslate = scrollTop + topOffset - containerTop
+      const bottomPinnedTranslate =
+        scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
 
-      if (nextMode === 'natural') {
+      if (nextMode === 'top') {
         if (scrollDelta > EPSILON && currentBottomInViewport <= viewportBottom + EPSILON) {
           nextMode = 'bottom'
-          nextTranslate = scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
-        } else if (scrollDelta < -EPSILON && currentTopInViewport >= viewportTop - EPSILON) {
-          nextMode = 'top'
-          nextTranslate = scrollTop + topOffset - containerTop
+          nextTranslate = bottomPinnedTranslate
+        } else {
+          nextTranslate = topPinnedTranslate
         }
-      } else if (nextMode === 'bottom') {
-        if (scrollDelta > EPSILON) {
-          nextTranslate += scrollDelta
-        } else if (scrollDelta < -EPSILON && currentTopInViewport >= viewportTop - EPSILON) {
+      } else {
+        if (scrollDelta < -EPSILON && currentTopInViewport >= viewportTop - EPSILON) {
           nextMode = 'top'
-          nextTranslate = scrollTop + topOffset - containerTop
-        }
-      } else if (nextMode === 'top') {
-        if (scrollDelta < -EPSILON) {
-          nextTranslate += scrollDelta
-        } else if (scrollDelta > EPSILON && currentBottomInViewport <= viewportBottom + EPSILON) {
-          nextMode = 'bottom'
-          nextTranslate = scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
+          nextTranslate = topPinnedTranslate
+        } else {
+          nextTranslate = bottomPinnedTranslate
         }
       }
 
       nextTranslate = clampTranslate(nextTranslate, maxTranslate)
-      if (nextTranslate <= EPSILON) {
-        nextTranslate = 0
-        nextMode = 'natural'
-      } else if (nextTranslate >= maxTranslate - EPSILON) {
-        nextTranslate = maxTranslate
-        nextMode = 'natural'
-      }
-
       lastScrollTopRef.current = scrollTop
       translateRef.current = nextTranslate
       modeRef.current = nextMode
 
-      if (nextMode === 'top') {
+      if (nextMode === 'top' && nextTranslate <= EPSILON) {
         applyStickyStyles()
         return
       }
@@ -160,8 +147,6 @@ export function useSmartStickySidebar({
     }
 
     const resizeObserver = new ResizeObserver(scheduleUpdate)
-    resizeObserver.observe(scroller)
-    resizeObserver.observe(container)
     resizeObserver.observe(content)
 
     scroller.addEventListener('scroll', scheduleUpdate, { passive: true })
