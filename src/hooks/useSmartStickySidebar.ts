@@ -28,6 +28,7 @@ export function useSmartStickySidebar({
   const translateRef = useRef(0)
   const lastScrollTopRef = useRef(0)
   const frameRef = useRef<number | null>(null)
+  const modeRef = useRef<'natural' | 'top' | 'bottom'>('natural')
   const EPSILON = 0.5
 
   useEffect(() => {
@@ -40,32 +41,30 @@ export function useSmartStickySidebar({
     if (!scroller || !container || !content) return
 
     const resetStyles = () => {
-      content.style.transform = 'translate3d(0, 0, 0)'
+      modeRef.current = 'natural'
+      content.style.transform = 'none'
       content.style.position = 'relative'
       content.style.top = '0'
       content.style.bottom = 'auto'
     }
 
     const applyStickyStyles = () => {
-      content.style.transform = 'translate3d(0, 0, 0)'
+      modeRef.current = 'top'
+      content.style.transform = 'none'
       content.style.position = 'sticky'
       content.style.top = `${topOffset}px`
       content.style.bottom = 'auto'
     }
 
     const applyTranslateStyles = (translateY: number) => {
+      content.style.transform = 'none'
       content.style.position = 'relative'
-      content.style.top = '0'
+      content.style.top = `${Math.round(translateY)}px`
       content.style.bottom = 'auto'
-      content.style.transform = `translate3d(0, ${translateY}px, 0)`
-    }
-
-    const roundTranslate = (value: number) => {
-      return Math.round(value * 2) / 2
     }
 
     const clampTranslate = (value: number, maxTranslate: number) => {
-      return clamp(roundTranslate(value), 0, maxTranslate)
+      return clamp(Math.round(value), 0, maxTranslate)
     }
 
     const update = () => {
@@ -103,33 +102,56 @@ export function useSmartStickySidebar({
       }
 
       const scrollDelta = scrollTop - lastScrollTopRef.current
-      const viewportTop = scrollTop + topOffset
-      const viewportBottom = scrollTop + viewportHeight - bottomOffset
-      const currentTop = containerTop + translateRef.current
-      const currentBottom = currentTop + sidebarHeight
-
+      const viewportTop = topOffset
+      const viewportBottom = viewportHeight - bottomOffset
       let nextTranslate = translateRef.current
+      let nextMode = modeRef.current
+      const currentTopInViewport = containerTop + translateRef.current - scrollTop
+      const currentBottomInViewport = currentTopInViewport + sidebarHeight
 
-      if (scrollDelta > EPSILON && currentBottom < viewportBottom) {
-        nextTranslate += viewportBottom - currentBottom
-      } else if (scrollDelta < -EPSILON && currentTop > viewportTop) {
-        nextTranslate -= currentTop - viewportTop
+      if (nextMode === 'natural') {
+        if (scrollDelta > EPSILON && currentBottomInViewport <= viewportBottom + EPSILON) {
+          nextMode = 'bottom'
+          nextTranslate = scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
+        } else if (scrollDelta < -EPSILON && currentTopInViewport >= viewportTop - EPSILON) {
+          nextMode = 'top'
+          nextTranslate = scrollTop + topOffset - containerTop
+        }
+      } else if (nextMode === 'bottom') {
+        if (scrollDelta > EPSILON) {
+          nextTranslate += scrollDelta
+        } else if (scrollDelta < -EPSILON && currentTopInViewport >= viewportTop - EPSILON) {
+          nextMode = 'top'
+          nextTranslate = scrollTop + topOffset - containerTop
+        }
+      } else if (nextMode === 'top') {
+        if (scrollDelta < -EPSILON) {
+          nextTranslate += scrollDelta
+        } else if (scrollDelta > EPSILON && currentBottomInViewport <= viewportBottom + EPSILON) {
+          nextMode = 'bottom'
+          nextTranslate = scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
+        }
       }
 
       nextTranslate = clampTranslate(nextTranslate, maxTranslate)
-
-      const isNearTopBoundary = scrollTop + topOffset <= containerTop
-      const isNearBottomBoundary = containerTop + nextTranslate + sidebarHeight >= containerTop + containerHeight - EPSILON
-
-      if (isNearTopBoundary) {
+      if (nextTranslate <= EPSILON) {
         nextTranslate = 0
-      } else if (isNearBottomBoundary) {
+        nextMode = 'natural'
+      } else if (nextTranslate >= maxTranslate - EPSILON) {
         nextTranslate = maxTranslate
+        nextMode = 'natural'
       }
 
-      translateRef.current = clampTranslate(nextTranslate, maxTranslate)
       lastScrollTopRef.current = scrollTop
-      applyTranslateStyles(translateRef.current)
+      translateRef.current = nextTranslate
+      modeRef.current = nextMode
+
+      if (nextMode === 'top') {
+        applyStickyStyles()
+        return
+      }
+
+      applyTranslateStyles(nextTranslate)
     }
 
     const scheduleUpdate = () => {
