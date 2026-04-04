@@ -42,6 +42,89 @@ const DELAY_BETWEEN_TOPICS_MS = 100   // 100ms between topics (ultra-turbo: 4K R
 const DELAY_BETWEEN_CLUSTERS_MS = 0   // ZERO DELAY: Process instantly
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
+const HARD_BLOCK_PATTERNS = [
+  /\bcasino(s)?\b/i,
+  /\bcassino(s)?\b/i,
+  /\bgambling\b/i,
+  /\bbet(ting)?\b/i,
+  /\bapostas?\b/i,
+  /\bslots?\b/i,
+  /\bpoker\b/i,
+  /\broulette\b/i,
+  /\broleta\b/i,
+  /\bjackpot\b/i,
+  /\bbonus\b/i,
+  /\bb[oô]nus\b/i,
+  /\bno deposit\b/i,
+  /\bsem dep[oó]sito\b/i,
+  /\bsweepstakes?\b/i,
+  /\bbookmaker\b/i,
+  /\bcassino online\b/i,
+]
+
+const DEAL_HINT_PATTERNS = [
+  /\bdesconto\b/i,
+  /\bdescontos\b/i,
+  /\bpromo(cao|ção|coes|ções)\b/i,
+  /\boferta(s)?\b/i,
+  /\bcupom(ns)?\b/i,
+  /\bcoupon(s)?\b/i,
+  /\bblack friday\b/i,
+  /\bdeal(s)?\b/i,
+  /\bliquida(cao|ção)\b/i,
+  /\bfrete gr[aá]tis\b/i,
+  /\bgr[aá]tis\b/i,
+  /\beconomize\b/i,
+  /\bimperd[ií]vel\b/i,
+  /\bmais barato\b/i,
+  /\bmenor pre[cç]o\b/i,
+  /\bpre[cç]o baixo\b/i,
+  /\bpor r\$/i,
+  /\bpor us\$/i,
+  /\b\d{1,3}%\s*(off|de desconto)\b/i,
+]
+
+const DEAL_SOURCE_HINTS = [
+  'promobit',
+  'pelando',
+  'buscape',
+  'zoom.com',
+  'cuponomia',
+  'meliuz',
+]
+
+function countMatches(text, patterns) {
+  return patterns.reduce((total, pattern) => total + (pattern.test(text) ? 1 : 0), 0)
+}
+
+function shouldRejectContent({ title, summary = '', sections = [], urls = [], sourceNames = [], rawTexts = [] }) {
+  const sectionText = Array.isArray(sections)
+    ? sections.map(section => `${section?.heading || ''} ${section?.body || ''}`).join(' \n ')
+    : ''
+
+  const haystack = [
+    title,
+    summary,
+    sectionText,
+    ...urls,
+    ...sourceNames,
+    ...rawTexts,
+  ].filter(Boolean).join(' \n ').toLowerCase()
+
+  if (countMatches(haystack, HARD_BLOCK_PATTERNS) >= 1) {
+    return { reject: true, reason: 'blocked-gambling' }
+  }
+
+  const dealSignals = countMatches(haystack, DEAL_HINT_PATTERNS)
+  const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
+
+  if (dealSignals >= 2 || (dealSignals >= 1 && sourceLooksPromo)) {
+    return { reject: true, reason: 'blocked-deal' }
+  }
+
+  return { reject: false, reason: null }
+}
+
 function isLazyLoadImage(url) {
   if (!url) return false
   return LAZY_IMAGE_PATTERNS.some(p => url.toLowerCase().includes(p))
@@ -600,22 +683,38 @@ ${context}`
 }
 
 async function processTopic(topic, rawItems, existingTitles) {
-  const results = rawItems.map(item => ({
+  const rejectedRawIds = []
+  const allowedRawItems = rawItems.filter((item) => {
+    const decision = shouldRejectContent({
+      title: item.title,
+      summary: item.content || '',
+      urls: [item.url],
+      rawTexts: [item.content || ''],
+    })
+    if (decision.reject) {
+      console.log(`[${topic}] ⛔ raw filtered (${decision.reason}): ${item.title?.slice(0, 90)}`)
+      rejectedRawIds.push(item.id)
+      return false
+    }
+    return true
+  })
+
+  const results = allowedRawItems.map(item => ({
     url: item.url,
     title: item.title,
     content: item.content || '',
     image: item.image_url,
   }))
 
-  if (!results.length) return { newsItems: [], success: true }
+  if (!results.length) return { newsItems: [], success: true, rejectedRawIds }
 
   // Map para rastrear raw_items por ID
-  const rawItemsMap = new Map(rawItems.map(item => [item.id, item]))
+  const rawItemsMap = new Map(allowedRawItems.map(item => [item.id, item]))
 
   // ═══════════════════════════════════════════════════════════════
   // FASE 1: Clustering Inteligente
   // ═══════════════════════════════════════════════════════════════
-  const clusters = await clusterRawItems(topic, rawItems)
+  const clusters = await clusterRawItems(topic, allowedRawItems)
 
   // ═══════════════════════════════════════════════════════════════
   // FASE 2: Processamento de Conteúdo (por Cluster)
@@ -627,12 +726,12 @@ async function processTopic(topic, rawItems, existingTitles) {
     // Gemini error (503, 429, etc) — NÃO marcar como processado
     const statusCode = err.status || err.message.match(/\d{3}/)
     console.error(`[${topic}] ⚠️  Erro na IA (${statusCode}): ${err.message}. Mantendo items como não-processados para retry.`)
-    return { newsItems: [], success: false, geminiError: true }
+    return { newsItems: [], success: false, geminiError: true, rejectedRawIds }
   }
 
   // parsed contém { newsItems, success, processedClusterSourceIds }
   // ✅ Todos os clusters processados com sucesso são marcados para rastreamento
-  return parsed
+  return { ...parsed, rejectedRawIds }
 }
 
 async function main() {
@@ -693,17 +792,27 @@ async function main() {
 
       if (!rawItems?.length) continue
 
-      console.log(`[${topic}] ${rawItems.length} items → Gemini`)
+      console.log(`[${topic}] ${rawItems.length} items → triagem/Gemini`)
 
       // Bloco Try/Catch Robusto: Se Gemini falhar, não marca como processado
-      const { newsItems, success: geminiSuccess, geminiError, processedClusterSourceIds } = await processTopic(
+      const { newsItems, success: geminiSuccess, geminiError, processedClusterSourceIds, rejectedRawIds = [] } = await processTopic(
         topic,
         rawItems,
         allProcessedArticles.map(a => a.title)
       )
 
+      const dedupedItems = []
+      // ✅ TRANSAÇÃO: Lista limpa - APENAS IDs que foram realmente salvos com sucesso
+      const successfullyProcessedRawIds = new Set()
+      rejectedRawIds.forEach(id => successfullyProcessedRawIds.add(id))
+
       // Se houve erro no Gemini (503, 429), pula este tópico e tenta no próximo batch
       if (geminiError) {
+        if (successfullyProcessedRawIds.size > 0) {
+          await db.from('raw_items')
+            .update({ processed: true })
+            .in('id', Array.from(successfullyProcessedRawIds))
+        }
         if (ti < topics.length - 1) {
           console.log(`Aguardando ${DELAY_BETWEEN_TOPICS_MS / 1000}s antes do próximo tópico...\n`)
           await new Promise(r => setTimeout(r, DELAY_BETWEEN_TOPICS_MS))
@@ -711,11 +820,22 @@ async function main() {
         continue
       }
 
-      const dedupedItems = []
-      // ✅ TRANSAÇÃO: Lista limpa - APENAS IDs que foram realmente salvos com sucesso
-      const successfullyProcessedRawIds = new Set()
-
       for (const item of newsItems) {
+        const contentDecision = shouldRejectContent({
+          title: item.title,
+          summary: item.summary,
+          sections: item.sections || [],
+          urls: Array.isArray(item.sources) ? item.sources.map(source => source?.url).filter(Boolean) : [],
+          sourceNames: Array.isArray(item.sources) ? item.sources.map(source => source?.name).filter(Boolean) : [],
+        })
+        if (contentDecision.reject) {
+          console.log(`[${topic}] ⛔ article filtered (${contentDecision.reason}): ${item.title?.slice(0, 90)}`)
+          if (Array.isArray(item.source_ids)) {
+            item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
+          }
+          continue
+        }
+
         // Compara title + summary para match mais robusto
         const itemText = `${item.title || ''} ${item.summary || ''}`
 

@@ -20,6 +20,78 @@ function createDedupHash(title) {
   return crypto.createHash('md5').update(title.toLowerCase().trim()).digest('hex')
 }
 
+const HARD_BLOCK_PATTERNS = [
+  /\bcasino(s)?\b/i,
+  /\bcassino(s)?\b/i,
+  /\bgambling\b/i,
+  /\bbet(ting)?\b/i,
+  /\bapostas?\b/i,
+  /\bslots?\b/i,
+  /\bpoker\b/i,
+  /\broulette\b/i,
+  /\broleta\b/i,
+  /\bjackpot\b/i,
+  /\bbonus\b/i,
+  /\bb[oô]nus\b/i,
+  /\bno deposit\b/i,
+  /\bsem dep[oó]sito\b/i,
+  /\bsweepstakes?\b/i,
+  /\bbookmaker\b/i,
+  /\bcassino online\b/i,
+]
+
+const DEAL_HINT_PATTERNS = [
+  /\bdesconto\b/i,
+  /\bdescontos\b/i,
+  /\bpromo(cao|ção|coes|ções)\b/i,
+  /\boferta(s)?\b/i,
+  /\bcupom(ns)?\b/i,
+  /\bcoupon(s)?\b/i,
+  /\bblack friday\b/i,
+  /\bdeal(s)?\b/i,
+  /\bliquida(cao|ção)\b/i,
+  /\bfrete gr[aá]tis\b/i,
+  /\bgr[aá]tis\b/i,
+  /\beconomize\b/i,
+  /\bimperd[ií]vel\b/i,
+  /\bmais barato\b/i,
+  /\bmenor pre[cç]o\b/i,
+  /\bpre[cç]o baixo\b/i,
+  /\bpor r\$/i,
+  /\bpor us\$/i,
+  /\b\d{1,3}%\s*(off|de desconto)\b/i,
+]
+
+const DEAL_SOURCE_HINTS = [
+  'promobit',
+  'pelando',
+  'buscape',
+  'zoom.com',
+  'cuponomia',
+  'meliuz',
+]
+
+function matchesAnyPattern(text, patterns) {
+  return patterns.some((pattern) => pattern.test(text))
+}
+
+function shouldRejectRawItem({ title, description, url, sourceName }) {
+  const haystack = [title, description, url, sourceName].filter(Boolean).join(' \n ').toLowerCase()
+
+  if (matchesAnyPattern(haystack, HARD_BLOCK_PATTERNS)) {
+    return { reject: true, reason: 'blocked-gambling' }
+  }
+
+  const dealSignals = DEAL_HINT_PATTERNS.filter((pattern) => pattern.test(haystack)).length
+  const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
+
+  if (dealSignals >= 2 || (dealSignals >= 1 && sourceLooksPromo)) {
+    return { reject: true, reason: 'blocked-deal' }
+  }
+
+  return { reject: false, reason: null }
+}
+
 function extractText(val) {
   if (!val) return ''
   // Some parsers return { '#text': '...', '@_type': 'html' } instead of a plain string
@@ -203,6 +275,18 @@ async function main() {
         const description = stripHtml(extractText(item['content:encoded']) || extractText(item.description) || '')
 
         if (!title || !url) { totalSkipped++; continue }
+
+        const rawDecision = shouldRejectRawItem({
+          title,
+          description,
+          url,
+          sourceName: feed.name,
+        })
+        if (rawDecision.reject) {
+          totalSkipped++
+          console.log(`⛔ ${feed.name}: ${rawDecision.reason} | ${title.slice(0, 90)}`)
+          continue
+        }
 
         const dedup_hash = createDedupHash(title)
         const itemTopic = (feed.topics?.[0] || 'tecnologia').toLowerCase().trim()
