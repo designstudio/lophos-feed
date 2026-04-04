@@ -13,17 +13,17 @@ interface TooltipProps {
 }
 
 const SIDE_INITIAL: Record<string, TargetAndTransition> = {
-  top: { opacity: 0, x: '-50%', y: 4 },
-  right: { opacity: 0, x: -6, y: '-50%' },
-  bottom: { opacity: 0, x: '-50%', y: -4 },
-  left: { opacity: 0, x: 6, y: '-50%' },
+  top: { opacity: 0, x: 0, y: 4 },
+  right: { opacity: 0, x: -6, y: 0 },
+  bottom: { opacity: 0, x: 0, y: -4 },
+  left: { opacity: 0, x: 6, y: 0 },
 }
 
 const SIDE_ANIMATE: Record<string, TargetAndTransition> = {
-  top: { opacity: 1, x: '-50%', y: 0 },
-  right: { opacity: 1, x: 0, y: '-50%' },
-  bottom: { opacity: 1, x: '-50%', y: 0 },
-  left: { opacity: 1, x: 0, y: '-50%' },
+  top: { opacity: 1, x: 0, y: 0 },
+  right: { opacity: 1, x: 0, y: 0 },
+  bottom: { opacity: 1, x: 0, y: 0 },
+  left: { opacity: 1, x: 0, y: 0 },
 }
 
 export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
