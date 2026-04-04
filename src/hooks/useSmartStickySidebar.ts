@@ -28,7 +28,7 @@ export function useSmartStickySidebar({
   const translateRef = useRef(0)
   const lastScrollTopRef = useRef(0)
   const frameRef = useRef<number | null>(null)
-  const modeRef = useRef<'natural' | 'top' | 'bottom'>('natural')
+  const modeRef = useRef<'natural' | 'top' | 'bottom'>('top')
   const EPSILON = 0.5
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export function useSmartStickySidebar({
     if (!scroller || !container || !content) return
 
     const resetStyles = () => {
-      modeRef.current = 'natural'
+      modeRef.current = 'top'
       content.style.transform = 'none'
       content.style.position = 'relative'
       content.style.top = '0'
@@ -54,6 +54,14 @@ export function useSmartStickySidebar({
       content.style.position = 'sticky'
       content.style.top = `${topOffset}px`
       content.style.bottom = 'auto'
+    }
+
+    const applyBottomStickyStyles = () => {
+      modeRef.current = 'bottom'
+      content.style.transform = 'none'
+      content.style.position = 'sticky'
+      content.style.top = 'auto'
+      content.style.bottom = `${bottomOffset}px`
     }
 
     const applyTranslateStyles = (translateY: number) => {
@@ -117,24 +125,24 @@ export function useSmartStickySidebar({
       if (nextMode === 'top') {
         if (scrollingDown) {
           nextMode = 'natural'
-          nextTranslate = topPinnedTranslate
-        } else {
           nextTranslate = clampTranslate(topPinnedTranslate, maxTranslate)
+        } else {
+          nextTranslate = 0
         }
       } else if (nextMode === 'bottom') {
-        if (scrollingUp && currentTopInViewport >= viewportTop - EPSILON) {
-          nextMode = 'top'
-          nextTranslate = topPinnedTranslate
+        if (scrollingUp) {
+          nextMode = 'natural'
+          nextTranslate = clampTranslate(bottomPinnedTranslate, maxTranslate)
         } else {
-          nextTranslate = bottomPinnedTranslate
+          nextTranslate = maxTranslate
         }
       } else {
         if (scrollingDown && currentBottomInViewport <= viewportBottom + EPSILON) {
           nextMode = 'bottom'
-          nextTranslate = bottomPinnedTranslate
+          nextTranslate = clampTranslate(bottomPinnedTranslate, maxTranslate)
         } else if (scrollingUp && currentTopInViewport >= viewportTop - EPSILON) {
           nextMode = 'top'
-          nextTranslate = topPinnedTranslate
+          nextTranslate = clampTranslate(topPinnedTranslate, maxTranslate)
         }
       }
 
@@ -145,6 +153,11 @@ export function useSmartStickySidebar({
 
       if (nextMode === 'top') {
         applyStickyStyles()
+        return
+      }
+
+      if (nextMode === 'bottom') {
+        applyBottomStickyStyles()
         return
       }
 
