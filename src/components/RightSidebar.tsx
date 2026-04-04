@@ -136,7 +136,7 @@ export function RightSidebar({
   return (
     <aside id="right-sidebar-sticky" className="sidebar-right hidden lg:block">
       <div className="sidebar">
-        <div className="sidebar__inner flex flex-col gap-4 pt-0 pb-6">
+        <div className="sidebar__inner flex flex-col gap-4 pt-6 pb-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
             // Each smart widget renders only itself but has access to all topics
