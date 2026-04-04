@@ -72,10 +72,8 @@ export function RightSidebar({
       timeoutIds.forEach(id => window.clearTimeout(id))
       timeoutIds = []
 
-      // Evita "pulinhos" horizontais durante a animação da sidebar esquerda:
-      // desmonta o sticky no início e monta novamente só quando a largura assentou.
-      destroyStickySidebar()
-
+      // Mantemos a sidebar visível durante a animação e só recalculamos
+      // quando a largura da sidebar esquerda terminar de assentar.
       timeoutIds = [
         window.setTimeout(() => {
           reinitializeStickySidebar()
@@ -94,7 +92,7 @@ export function RightSidebar({
       window.removeEventListener('sidebar:toggle', syncStickyAfterLayoutShift)
       window.removeEventListener('resize', syncStickyAfterLayoutShift)
     }
-  }, [destroyStickySidebar, reinitializeStickySidebar, updateStickySidebar, stickyEnabled])
+  }, [reinitializeStickySidebar, updateStickySidebar, stickyEnabled])
 
   useEffect(() => {
     const handler = () => {
