@@ -633,9 +633,7 @@ export default function FeedPage() {
               )}
             </div>
 
-            <div className="sidebar-right hidden lg:block">
-              <RightSidebar topics={topics} />
-            </div>
+            <RightSidebar topics={topics} scrollRef={scrollRef} />
           </div>
         </div>
       </div>

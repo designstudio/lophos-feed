@@ -145,17 +145,18 @@ html, body {
 .sidebar-right {
   width: var(--sidebar-right-width);
   flex-shrink: 0;
+  align-self: stretch;
+  position: relative;
 }
 
-/* Sticky Sidebar v2 styles */
 .sidebar {
-  will-change: min-height;
+  height: 100%;
+  position: relative;
 }
 
 .sidebar__inner {
-  transform: translate(0, 0); /* For browsers don't support translate3d */
   transform: translate3d(0, 0, 0);
-  will-change: position, transform;
+  will-change: transform;
 }
 
 .article-image {
