@@ -152,13 +152,17 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-col gap-0.5 flex-1 px-2">
+        <nav className={cn('flex flex-col flex-1', collapsed ? 'gap-1.5 px-2 pt-1' : 'gap-0.5 px-2')}>
           <Tooltip content="Meu feed" side="right" disabled={!collapsed} className="w-full">
             <Link href="/feed"
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'w-full',
-                path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto rounded-2xl' : 'w-full',
+                path === '/feed'
+                  ? 'bg-bg-secondary text-ink-primary font-medium'
+                  : collapsed
+                    ? 'text-ink-secondary hover:text-ink-primary bg-transparent hover:bg-transparent'
+                    : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <Feed size={18} className="flex-shrink-0" />
               <span
@@ -179,8 +183,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             <Link href="/favorites"
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'w-full',
-                path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto rounded-2xl' : 'w-full',
+                path === '/favorites'
+                  ? 'bg-bg-secondary text-ink-primary font-medium'
+                  : collapsed
+                    ? 'text-ink-secondary hover:text-ink-primary bg-transparent hover:bg-transparent'
+                    : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <HeartAngle size={18} className="flex-shrink-0" />
               <span
@@ -202,8 +210,10 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               onClick={() => setShowSearch(true)}
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'w-full',
-                'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto rounded-2xl' : 'w-full',
+                collapsed
+                  ? 'text-ink-secondary hover:text-ink-primary bg-transparent hover:bg-transparent'
+                  : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <Magnifer size={18} className="flex-shrink-0" />
               <span
@@ -225,7 +235,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               <button onClick={onRefresh} disabled={refreshing}
                 className={cn(
                   'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left',
-                  collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'w-full'
+                  collapsed ? 'justify-center w-10 h-10 p-0 mx-auto rounded-2xl bg-transparent hover:bg-transparent' : 'w-full'
                 )}>
                 <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
                 <span
