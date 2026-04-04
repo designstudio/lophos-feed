@@ -22,7 +22,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --omit=optional
+        run: npm install --omit=optional --ignore-scripts
 
       - name: Process news with Gemini 2.0 Flash
         env:
