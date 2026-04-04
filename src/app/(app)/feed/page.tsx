@@ -485,7 +485,7 @@ export default function FeedPage() {
 
 
   return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
+    <div id="feed-scroll-container" ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header ── */}
         <div className="sticky top-0 z-20 border-b border-border header-blur">
@@ -570,7 +570,7 @@ export default function FeedPage() {
 
         {/* ── Feed + Right sidebar ── */}
         <div className="feed-layout mx-auto px-4 md:px-8">
-          <div className="flex gap-10 pt-0 pb-24 md:py-6 md:pb-6">
+          <div id="feed-main-content" className="flex gap-10 pt-0 pb-24 md:py-6 md:pb-6">
             <div className="flex-1 min-w-0">
 
               {coldStartLoading && (
@@ -633,7 +633,7 @@ export default function FeedPage() {
               )}
             </div>
 
-            <RightSidebar topics={topics} scrollRef={scrollRef} />
+            <RightSidebar topics={topics} />
           </div>
         </div>
       </div>
