@@ -219,6 +219,7 @@ export default function FeedPage() {
   const [visibleBlocks, setVisibleBlocks] = useState(4)
   const sentinelRef  = useRef<HTMLDivElement>(null)
   const abortRef     = useRef<AbortController | null>(null)
+  const scrollRef    = useRef<HTMLDivElement>(null)
   const initialCacheAppliedRef = useRef(false)
   const pendingRef = useRef<NewsItem[]>([])
   const coldStartRef = useRef(false)
@@ -484,9 +485,10 @@ export default function FeedPage() {
 
 
   return (
-    <div className="min-h-screen">
+    <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
+
         {/* ── Sticky header ── */}
-        <div className="sticky top-0 z-20 border-b border-border header-blur bg-bg-primary">
+        <div className="sticky top-0 z-20 border-b border-border header-blur">
 
           {/* Mobile: title (always visible) */}
           <div className="flex items-center h-12 px-4 md:hidden gap-2">
@@ -504,7 +506,7 @@ export default function FeedPage() {
                 return (
                   <button
                     key={t ?? 'top'}
-                    onClick={() => { setActiveFilter(val); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                    onClick={() => { setActiveFilter(val); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                     className={cn(
                       'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
                       active
@@ -525,7 +527,7 @@ export default function FeedPage() {
               <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
               <div className="flex flex-1 justify-center">
                 <button
-                  onClick={() => { setActiveFilter(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                   className={cn(
                     'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
                     activeFilter === null
@@ -538,7 +540,7 @@ export default function FeedPage() {
                 <TopicsDropdown
                   topics={topicsInFeed}
                   activeFilter={activeFilter}
-                  onSelect={(t) => { setActiveFilter(t); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  onSelect={(t) => { setActiveFilter(t); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                 />
               </div>
               <div style={{ width: '12rem' }} className="flex justify-end">
@@ -636,7 +638,7 @@ export default function FeedPage() {
             </div>
           </div>
         </div>
-    </div>
+      </div>
   )
 }
 

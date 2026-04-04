@@ -6,7 +6,7 @@ import { MobileNav } from '@/components/MobileNav'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <FeedProvider>
-      <div className="min-h-screen">
+      <div className="page-shell">
         <div className="hidden md:contents">
           <SidebarWithRefresh />
         </div>
