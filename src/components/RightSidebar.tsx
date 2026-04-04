@@ -16,7 +16,7 @@ export function RightSidebar({
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
   const [stickyEnabled, setStickyEnabled] = useState(false)
-  const { reinitializeStickySidebar, updateStickySidebar } = useStickySidebarV2({
+  const { reinitializeStickySidebar, updateStickySidebar, destroyStickySidebar } = useStickySidebarV2({
     sidebarSelector: '#right-sidebar-sticky',
     containerSelector: '#feed-main-content',
     scrollContainer: '#feed-scroll-container',
@@ -47,7 +47,12 @@ export function RightSidebar({
     if (!scrollContainer) return
 
     const syncStickyMode = () => {
-      setStickyEnabled(scrollContainer.scrollTop > 8)
+      const shouldEnable = scrollContainer.scrollTop > 8
+      setStickyEnabled(shouldEnable)
+
+      if (!shouldEnable) {
+        destroyStickySidebar()
+      }
     }
 
     syncStickyMode()
@@ -56,7 +61,7 @@ export function RightSidebar({
     return () => {
       scrollContainer.removeEventListener('scroll', syncStickyMode)
     }
-  }, [])
+  }, [destroyStickySidebar])
 
   useEffect(() => {
     if (!stickyEnabled) return

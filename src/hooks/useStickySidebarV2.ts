@@ -123,13 +123,6 @@ export function useStickySidebarV2({
         sidebarInstanceRef.current = new StickySidebarClass(sidebarSelector, options)
         initializedRef.current = true
 
-        console.log('StickySidebar v2 initialized:', {
-          sidebarSelector,
-          containerSelector,
-          scrollContainer,
-          options
-        })
-
       } catch (error) {
         console.error('Error initializing StickySidebar:', error)
       }
@@ -206,7 +199,6 @@ export function useStickySidebarV2({
 
       sidebarInstanceRef.current = new StickySidebarClass(sidebarSelector, options)
       initializedRef.current = true
-      console.log('[StickySidebar] reinitialized')
     } catch (err) {
       console.error('[StickySidebar] reinit error:', err)
     }
