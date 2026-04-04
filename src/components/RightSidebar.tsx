@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
-import { useStickySidebarV2 } from '@/hooks/useStickySidebarV2'
 
 const STORAGE_KEY = 'lophos_widgets'
 
@@ -14,39 +13,48 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   const sidebarId = 'right-sidebar'
   const mountedRef = useRef(false)
 
-  // Setup sticky sidebar v2
-  const { updateStickySidebar } = useStickySidebarV2({
-    sidebarSelector: `#${sidebarId}`,
-    containerSelector: '.flex-1.overflow-y-auto', // Container de scroll interno
-    topSpacing: 81,
-    bottomSpacing: 24,
-    innerWrapperSelector: '.sidebar__inner',
-    minWidth: 1024,
-    disabled: false
-  })
-
-  // Update sticky sidebar when widgets change
+  // Simple sticky positioning that works
   useEffect(() => {
-    if (mountedRef.current) {
-      const timer = setTimeout(() => updateStickySidebar(), 100)
-      return () => clearTimeout(timer)
-    }
-  }, [order, active, topics, updateStickySidebar])
+    const sidebar = document.getElementById(sidebarId)
+    if (!sidebar) return
 
-  // Sidebar esquerda não tem mais transition:width — o layout muda em 1 frame.
-  // Um único rAF é suficiente para updateSticky() pegar as medidas finais.
-  useEffect(() => {
-    const handleSidebarToggle = () => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          console.log('[StickySidebar] updateSticky — sidebar toggle')
-          updateStickySidebar()
-        })
-      })
+    const handleScroll = () => {
+      const scrollContainer = document.querySelector('.flex-1.overflow-y-auto') as HTMLElement
+      if (!scrollContainer) return
+
+      const scrollTop = scrollContainer.scrollTop
+      const sidebarTop = 81
+      const sidebarHeight = sidebar.offsetHeight
+      const containerHeight = scrollContainer.offsetHeight
+
+      // Calculate when sidebar should stop
+      const maxScroll = scrollContainer.scrollHeight - containerHeight
+      const stopPosition = maxScroll - sidebarHeight + sidebarTop
+
+      if (scrollTop > sidebarTop && scrollTop < stopPosition) {
+        // Fixed positioning
+        sidebar.style.position = 'fixed'
+        sidebar.style.top = `${sidebarTop}px`
+        sidebar.style.width = '336px'
+      } else if (scrollTop >= stopPosition) {
+        // Absolute at bottom
+        sidebar.style.position = 'absolute'
+        sidebar.style.top = `${stopPosition}px`
+        sidebar.style.width = '336px'
+      } else {
+        // Static at top
+        sidebar.style.position = 'static'
+        sidebar.style.width = '336px'
+      }
     }
-    window.addEventListener('sidebar:toggle', handleSidebarToggle)
-    return () => window.removeEventListener('sidebar:toggle', handleSidebarToggle)
-  }, [updateStickySidebar])
+
+    const scrollContainer = document.querySelector('.flex-1.overflow-y-auto') as HTMLElement
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll, { passive: true })
+      handleScroll() // Initial call
+      return () => scrollContainer.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
 
   // Mark as mounted after initial render
   useEffect(() => {
