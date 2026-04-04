@@ -66,50 +66,35 @@ export function RightSidebar({
   useEffect(() => {
     if (!stickyEnabled) return
 
-    let frame1 = 0
-    let frame2 = 0
     let timeoutIds: number[] = []
 
     const syncStickyAfterLayoutShift = () => {
-      if (frame1) window.cancelAnimationFrame(frame1)
-      if (frame2) window.cancelAnimationFrame(frame2)
       timeoutIds.forEach(id => window.clearTimeout(id))
       timeoutIds = []
 
-      frame1 = window.requestAnimationFrame(() => {
-        frame2 = window.requestAnimationFrame(() => {
-          reinitializeStickySidebar()
+      // Evita "pulinhos" horizontais durante a animação da sidebar esquerda:
+      // desmonta o sticky no início e monta novamente só quando a largura assentou.
+      destroyStickySidebar()
 
-          // Sidebar esquerda agora anima largura por ~280ms.
-          // Atualizamos no início, no meio e no fim para o sticky
-          // acompanhar o layout sem precisar esperar scroll.
-          timeoutIds = [
-            window.setTimeout(() => {
-              updateStickySidebar()
-            }, 40),
-            window.setTimeout(() => {
-              reinitializeStickySidebar()
-            }, 180),
-            window.setTimeout(() => {
-              reinitializeStickySidebar()
-              updateStickySidebar()
-            }, 320),
-          ]
-        })
-      })
+      timeoutIds = [
+        window.setTimeout(() => {
+          reinitializeStickySidebar()
+        }, 320),
+        window.setTimeout(() => {
+          updateStickySidebar()
+        }, 380),
+      ]
     }
 
     window.addEventListener('sidebar:toggle', syncStickyAfterLayoutShift)
     window.addEventListener('resize', syncStickyAfterLayoutShift)
 
     return () => {
-      if (frame1) window.cancelAnimationFrame(frame1)
-      if (frame2) window.cancelAnimationFrame(frame2)
       timeoutIds.forEach(id => window.clearTimeout(id))
       window.removeEventListener('sidebar:toggle', syncStickyAfterLayoutShift)
       window.removeEventListener('resize', syncStickyAfterLayoutShift)
     }
-  }, [reinitializeStickySidebar, updateStickySidebar, stickyEnabled])
+  }, [destroyStickySidebar, reinitializeStickySidebar, updateStickySidebar, stickyEnabled])
 
   useEffect(() => {
     const handler = () => {
