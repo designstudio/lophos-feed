@@ -40,6 +40,7 @@ const BATCH_SIZE = 100         // MODO FAXINA: Máximo items por tópico (651 no
 const CONTENT_CHARS = 2000     // chars per source (optimal detail level)
 const DELAY_BETWEEN_TOPICS_MS = 100   // 100ms between topics (ultra-turbo: 4K RPM ilimitado)
 const DELAY_BETWEEN_CLUSTERS_MS = 0   // ZERO DELAY: Process instantly
+const PROCESS_LOOKBACK_HOURS = 12
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
 
 const HARD_BLOCK_PATTERNS = [
@@ -747,11 +748,14 @@ async function processTopic(topic, rawItems, existingTitles) {
 }
 
 async function main() {
+  const rawLookbackSince = new Date(Date.now() - PROCESS_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString()
+
   // Get all distinct topics with unprocessed items
   const { data: topicRows, error: topicError } = await db
     .from('raw_items')
     .select('topic')
     .eq('processed', false)
+    .gte('pub_date', rawLookbackSince)
 
   if (topicError) throw new Error('DB error: ' + topicError.message)
   if (!topicRows?.length) { console.log('No unprocessed items found.'); return }
@@ -759,6 +763,7 @@ async function main() {
   const topics = [...new Set(topicRows.map(r => r.topic).filter(Boolean))]
   console.log(`\n🧹 MODO FAXINA — Lophos Cleanup Mode`)
   console.log(`RPM: 4K ilimitado | Items/tópico: ${BATCH_SIZE} | Delay: ${DELAY_BETWEEN_TOPICS_MS}ms | Relevância: 0.10+`)
+  console.log(`Janela de processamento: últimas ${PROCESS_LOOKBACK_HOURS}h (${rawLookbackSince})`)
   console.log(`Backlog estimado: 651 notícias | Target: 1 rodada`)
   console.log(`Topics to process: ${topics.join(', ')}\n`)
 
@@ -801,6 +806,7 @@ async function main() {
         .select('id, url, title, content, image_url, video_url, topic')
         .eq('topic', topic)
         .eq('processed', false)
+        .gte('pub_date', rawLookbackSince)
         .order('pub_date', { ascending: false })
         .limit(BATCH_SIZE)
 
