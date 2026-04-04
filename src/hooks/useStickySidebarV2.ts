@@ -12,6 +12,25 @@ const loadStickySidebar = async () => {
   return StickySidebar
 }
 
+const resetStickySidebarStyles = (sidebarSelector: string, innerWrapperSelector: string) => {
+  const sidebarElement = document.querySelector(sidebarSelector) as HTMLElement | null
+  const innerElement = sidebarElement?.querySelector(innerWrapperSelector) as HTMLElement | null
+
+  if (sidebarElement) {
+    sidebarElement.style.minHeight = ''
+  }
+
+  if (innerElement) {
+    innerElement.style.position = ''
+    innerElement.style.top = ''
+    innerElement.style.bottom = ''
+    innerElement.style.left = ''
+    innerElement.style.right = ''
+    innerElement.style.width = ''
+    innerElement.style.transform = ''
+  }
+}
+
 interface UseStickySidebarV2Props {
   sidebarSelector: string
   containerSelector?: string
@@ -44,6 +63,7 @@ export function useStickySidebarV2({
         sidebarInstanceRef.current = null
         initializedRef.current = false
       }
+      resetStickySidebarStyles(sidebarSelector, innerWrapperSelector)
       return
     }
 
@@ -99,6 +119,7 @@ export function useStickySidebarV2({
         }
 
         // Initialize StickySidebar
+        resetStickySidebarStyles(sidebarSelector, innerWrapperSelector)
         sidebarInstanceRef.current = new StickySidebarClass(sidebarSelector, options)
         initializedRef.current = true
 
@@ -123,6 +144,7 @@ export function useStickySidebarV2({
         sidebarInstanceRef.current = null
         initializedRef.current = false
       }
+      resetStickySidebarStyles(sidebarSelector, innerWrapperSelector)
     }
   }, [
     disabled,
@@ -147,6 +169,7 @@ export function useStickySidebarV2({
       sidebarInstanceRef.current = null
       initializedRef.current = false
     }
+    resetStickySidebarStyles(sidebarSelector, innerWrapperSelector)
   }
 
   // Destroys the current instance and creates a fresh one.
@@ -158,6 +181,7 @@ export function useStickySidebarV2({
       sidebarInstanceRef.current = null
       initializedRef.current = false
     }
+    resetStickySidebarStyles(sidebarSelector, innerWrapperSelector)
 
     try {
       const StickySidebarClass = await loadStickySidebar()
