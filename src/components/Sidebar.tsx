@@ -66,6 +66,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
 
   const isCollapsed = collapsed ?? true
   const isReady = collapsed !== null
+  const sidebarTransition = 'width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease'
   let resolvedWidth = 'var(--sidebar-width, 3.5rem)'
   if (collapsed !== null) {
     resolvedWidth = isCollapsed ? '3.5rem' : '16.1rem'
@@ -75,7 +76,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     <div>
       {!isReady && (
         <aside
-          className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
+          className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary overflow-hidden"
           style={{
             width: resolvedWidth,
             transition: 'none',
@@ -95,11 +96,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         </aside>
       )}
       <aside
-        className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
+        className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary overflow-hidden"
         style={{
           width: resolvedWidth,
           opacity: isReady ? 1 : 0,
           pointerEvents: isReady ? 'auto' : 'none',
+          transition: sidebarTransition,
         }}
       >
         {/* Header */}
@@ -124,24 +126,29 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             className="font-display text-lg text-ink-primary flex-1 whitespace-nowrap overflow-hidden ml-2.5"
             style={{
               opacity: collapsed ? 0 : 1,
-              width: collapsed ? 0 : 'auto',
-              transition: 'opacity 0.15s ease',
+              maxWidth: collapsed ? 0 : '10rem',
+              transform: collapsed ? 'translateX(-8px)' : 'translateX(0)',
+              transition: 'max-width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 220ms ease',
               pointerEvents: 'none',
             }}
           >
             Lophos
           </span>
 
-          {!collapsed && (
-            <Tooltip content="Recolher menu" side="right">
-              <button
-                onClick={toggle}
-                className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0 ml-auto"
-              >
-                <AltArrowLeft size={14} />
-              </button>
-            </Tooltip>
-          )}
+          <Tooltip content="Recolher menu" side="right" disabled={isCollapsed}>
+            <button
+              onClick={toggle}
+              className="w-6 h-6 flex items-center justify-center rounded-md text-ink-muted hover:text-ink-primary hover:bg-bg-secondary transition-colors flex-shrink-0 ml-auto"
+              style={{
+                opacity: collapsed ? 0 : 1,
+                transform: collapsed ? 'translateX(8px) scale(0.92)' : 'translateX(0) scale(1)',
+                transition: 'opacity 180ms ease, transform 220ms ease',
+                pointerEvents: collapsed ? 'none' : 'auto',
+              }}
+            >
+              <AltArrowLeft size={14} />
+            </button>
+          </Tooltip>
         </div>
 
         {/* Nav */}
@@ -154,7 +161,17 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <Feed size={18} className="flex-shrink-0" />
-              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Meu Feed</span>}
+              <span
+                className="whitespace-nowrap overflow-hidden"
+                style={{
+                  opacity: collapsed ? 0 : 1,
+                  maxWidth: collapsed ? 0 : '10rem',
+                  transform: collapsed ? 'translateX(-6px)' : 'translateX(0)',
+                  transition: 'max-width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 220ms ease',
+                }}
+              >
+                Meu Feed
+              </span>
             </Link>
           </Tooltip>
 
@@ -166,7 +183,17 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <HeartAngle size={18} className="flex-shrink-0" />
-              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Minhas curtidas</span>}
+              <span
+                className="whitespace-nowrap overflow-hidden"
+                style={{
+                  opacity: collapsed ? 0 : 1,
+                  maxWidth: collapsed ? 0 : '10rem',
+                  transform: collapsed ? 'translateX(-6px)' : 'translateX(0)',
+                  transition: 'max-width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 220ms ease',
+                }}
+              >
+                Minhas curtidas
+              </span>
             </Link>
           </Tooltip>
 
@@ -179,7 +206,17 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <Magnifer size={18} className="flex-shrink-0" />
-              {!collapsed && <span className="whitespace-nowrap overflow-hidden">Buscar</span>}
+              <span
+                className="whitespace-nowrap overflow-hidden"
+                style={{
+                  opacity: collapsed ? 0 : 1,
+                  maxWidth: collapsed ? 0 : '10rem',
+                  transform: collapsed ? 'translateX(-6px)' : 'translateX(0)',
+                  transition: 'max-width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 220ms ease',
+                }}
+              >
+                Buscar
+              </span>
             </button>
           </Tooltip>
 
@@ -191,11 +228,17 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                   collapsed ? 'justify-center' : ''
                 )}>
                 <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
-                {!collapsed && (
-                  <span className="whitespace-nowrap overflow-hidden">
-                    {refreshing ? 'Atualizando...' : (refreshLabel ?? 'Atualizar feed')}
-                  </span>
-                )}
+                <span
+                  className="whitespace-nowrap overflow-hidden"
+                  style={{
+                    opacity: collapsed ? 0 : 1,
+                    maxWidth: collapsed ? 0 : '10rem',
+                    transform: collapsed ? 'translateX(-6px)' : 'translateX(0)',
+                    transition: 'max-width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 220ms ease',
+                  }}
+                >
+                  {refreshing ? 'Atualizando...' : (refreshLabel ?? 'Atualizar feed')}
+                </span>
               </button>
             </Tooltip>
           )}
