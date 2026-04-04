@@ -66,14 +66,27 @@ export function RightSidebar({
   useEffect(() => {
     if (!stickyEnabled) return
 
+    let rafId = 0
     let timeoutIds: number[] = []
 
     const syncStickyAfterLayoutShift = () => {
+      if (rafId) window.cancelAnimationFrame(rafId)
       timeoutIds.forEach(id => window.clearTimeout(id))
       timeoutIds = []
 
-      // Mantemos a sidebar visível durante a animação e só recalculamos
-      // quando a largura da sidebar esquerda terminar de assentar.
+      const start = performance.now()
+      const duration = 320
+
+      const tick = (now: number) => {
+        updateStickySidebar()
+
+        if (now - start < duration) {
+          rafId = window.requestAnimationFrame(tick)
+        }
+      }
+
+      rafId = window.requestAnimationFrame(tick)
+
       timeoutIds = [
         window.setTimeout(() => {
           reinitializeStickySidebar()
@@ -88,6 +101,7 @@ export function RightSidebar({
     window.addEventListener('resize', syncStickyAfterLayoutShift)
 
     return () => {
+      if (rafId) window.cancelAnimationFrame(rafId)
       timeoutIds.forEach(id => window.clearTimeout(id))
       window.removeEventListener('sidebar:toggle', syncStickyAfterLayoutShift)
       window.removeEventListener('resize', syncStickyAfterLayoutShift)
