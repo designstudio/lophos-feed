@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useLayoutEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, TargetAndTransition } from 'framer-motion'
 import { cn } from '@/lib/utils'
@@ -52,13 +52,18 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
     return () => observer.disconnect()
   }, [])
 
-  React.useEffect(() => {
+  useLayoutEffect(() => {
     if (!visible || !triggerRef.current) return
+
+    let rafId = 0
 
     const updatePosition = () => {
       const rect = triggerRef.current?.getBoundingClientRect()
       const tooltipRect = tooltipRef.current?.getBoundingClientRect()
-      if (!rect || !tooltipRect) return
+      if (!rect || !tooltipRect) {
+        rafId = window.requestAnimationFrame(updatePosition)
+        return
+      }
 
       const gap = 8
 
@@ -94,6 +99,7 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
     window.addEventListener('resize', updatePosition)
 
     return () => {
+      if (rafId) window.cancelAnimationFrame(rafId)
       window.removeEventListener('scroll', updatePosition, true)
       window.removeEventListener('resize', updatePosition)
     }
