@@ -96,7 +96,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         </aside>
       )}
       <aside
-        className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary overflow-hidden"
+        className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
         style={{
           width: resolvedWidth,
           opacity: isReady ? 1 : 0,
@@ -157,7 +157,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             <Link href="/feed"
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'justify-center' : '',
+                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'w-full',
                 path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <Feed size={18} className="flex-shrink-0" />
@@ -179,7 +179,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             <Link href="/favorites"
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'justify-center' : '',
+                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'w-full',
                 path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <HeartAngle size={18} className="flex-shrink-0" />
@@ -202,7 +202,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               onClick={() => setShowSearch(true)}
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'justify-center' : '',
+                collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'w-full',
                 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               <Magnifer size={18} className="flex-shrink-0" />
@@ -225,7 +225,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               <button onClick={onRefresh} disabled={refreshing}
                 className={cn(
                   'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left',
-                  collapsed ? 'justify-center' : ''
+                  collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'w-full'
                 )}>
                 <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
                 <span

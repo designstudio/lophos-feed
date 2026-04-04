@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, TargetAndTransition } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -7,45 +8,39 @@ interface TooltipProps {
   content: string
   side?: 'top' | 'right' | 'bottom' | 'left'
   children: React.ReactNode
-  /** Sobrescreve a classe do wrapper. Padrão: relative inline-flex. */
   className?: string
-  /** Desativa o tooltip (renderiza apenas os children sem wrapper). */
   disabled?: boolean
 }
 
-// Posicionamento via style inline para não conflitar com os transforms do Framer Motion
-const SIDE_STYLE: Record<string, React.CSSProperties> = {
-  top:    { position: 'absolute', bottom: '100%', left: '50%', marginBottom: '8px' },
-  right:  { position: 'absolute', left: '100%',  top: '50%',  marginLeft:   '8px' },
-  bottom: { position: 'absolute', top: '100%',   left: '50%', marginTop:    '8px' },
-  left:   { position: 'absolute', right: '100%', top: '50%',  marginRight:  '8px' },
-}
-
-// Slide de 2px na direção correta — Framer Motion só cuida de opacity + translate
 const SIDE_INITIAL: Record<string, TargetAndTransition> = {
-  top:    { opacity: 0, x: '-50%', y: 4  },
-  right:  { opacity: 0, x: -6,    y: '-50%' },
+  top: { opacity: 0, x: '-50%', y: 4 },
+  right: { opacity: 0, x: -6, y: '-50%' },
   bottom: { opacity: 0, x: '-50%', y: -4 },
-  left:   { opacity: 0, x: 6,     y: '-50%' },
+  left: { opacity: 0, x: 6, y: '-50%' },
 }
 
 const SIDE_ANIMATE: Record<string, TargetAndTransition> = {
-  top:    { opacity: 1, x: '-50%', y: 0 },
-  right:  { opacity: 1, x: 0,     y: '-50%' },
+  top: { opacity: 1, x: '-50%', y: 0 },
+  right: { opacity: 1, x: 0, y: '-50%' },
   bottom: { opacity: 1, x: '-50%', y: 0 },
-  left:   { opacity: 1, x: 0,     y: '-50%' },
+  left: { opacity: 1, x: 0, y: '-50%' },
 }
 
 export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
   const [visible, setVisible] = useState(false)
   const [isDark, setIsDark] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [position, setPosition] = useState<React.CSSProperties>({})
+  const triggerRef = React.useRef<HTMLDivElement>(null)
 
-  // Reseta tooltip quando disabled muda
   React.useEffect(() => {
     setVisible(false)
   }, [disabled])
 
-  // Detecta dark mode ao montar
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   React.useEffect(() => {
     const checkDarkMode = () => {
       setIsDark(document.documentElement.classList.contains('dark'))
@@ -56,48 +51,81 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
     return () => observer.disconnect()
   }, [])
 
-  // Sem tooltip: renderiza children diretamente (sem wrapper no DOM)
+  React.useEffect(() => {
+    if (!visible || !triggerRef.current) return
+
+    const updatePosition = () => {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (!rect) return
+
+      const gap = 8
+
+      if (side === 'right') {
+        setPosition({ position: 'fixed', left: rect.right + gap, top: rect.top + rect.height / 2 })
+      } else if (side === 'left') {
+        setPosition({ position: 'fixed', left: rect.left - gap, top: rect.top + rect.height / 2 })
+      } else if (side === 'bottom') {
+        setPosition({ position: 'fixed', left: rect.left + rect.width / 2, top: rect.bottom + gap })
+      } else {
+        setPosition({ position: 'fixed', left: rect.left + rect.width / 2, top: rect.top - gap })
+      }
+    }
+
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [side, visible])
+
   if (disabled || !content) return <>{children}</>
 
   return (
     <div
+      ref={triggerRef}
       className={cn('relative inline-flex', className)}
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
     >
       {children}
 
-      <AnimatePresence>
-        {visible && (
-          <motion.div
-            style={SIDE_STYLE[side]}
-            initial={SIDE_INITIAL[side]}
-            animate={SIDE_ANIMATE[side]}
-            exit={SIDE_INITIAL[side]}
-            transition={{ duration: 0.12, ease: 'easeOut' }}
-            className="z-[9999] pointer-events-none"
-          >
-            <span
-              className="block px-2.5 py-1.5 text-[12px] font-semibold leading-none whitespace-nowrap"
-              style={isDark ? {
-                background: '#2a2a2a',
-                color: '#f2f2f2',
-                border: '1px solid #404040',
-                borderRadius: '0.375rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.30)',
-              } : {
-                background: 'var(--color-bg-secondary)',
-                color: '#0f1419',
-                border: '1px solid #E9E9E9',
-                borderRadius: '0.375rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-              }}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {visible && (
+            <motion.div
+              style={position}
+              initial={SIDE_INITIAL[side]}
+              animate={SIDE_ANIMATE[side]}
+              exit={SIDE_INITIAL[side]}
+              transition={{ duration: 0.12, ease: 'easeOut' }}
+              className="z-[9999] pointer-events-none"
             >
-              {content}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <span
+                className="block px-2.5 py-1.5 text-[12px] font-semibold leading-none whitespace-nowrap"
+                style={isDark ? {
+                  background: '#2a2a2a',
+                  color: '#f2f2f2',
+                  border: '1px solid #404040',
+                  borderRadius: '0.375rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.30)',
+                } : {
+                  background: 'var(--color-bg-secondary)',
+                  color: '#0f1419',
+                  border: '1px solid #E9E9E9',
+                  borderRadius: '0.375rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+                }}
+              >
+                {content}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   )
 }
