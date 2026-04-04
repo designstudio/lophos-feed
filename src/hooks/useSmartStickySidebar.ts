@@ -27,7 +27,9 @@ export function useSmartStickySidebar({
 }: UseSmartStickySidebarOptions) {
   const translateRef = useRef(0)
   const lastScrollTopRef = useRef(0)
+  const lastAppliedTranslateRef = useRef(0)
   const frameRef = useRef<number | null>(null)
+  const EPSILON = 0.75
 
   useEffect(() => {
     if (disabled || typeof window === 'undefined') return
@@ -39,6 +41,7 @@ export function useSmartStickySidebar({
     if (!scroller || !container || !content) return
 
     const resetStyles = () => {
+      lastAppliedTranslateRef.current = 0
       content.style.transform = 'translate3d(0, 0, 0)'
       content.style.position = 'relative'
       content.style.top = '0'
@@ -63,6 +66,7 @@ export function useSmartStickySidebar({
       const availableHeight = viewportHeight - topOffset - bottomOffset
       const maxTranslate = Math.max(containerHeight - sidebarHeight, 0)
       const scrollTop = scroller.scrollTop
+      const scrollDelta = scrollTop - lastScrollTopRef.current
 
       if (maxTranslate <= 0) {
         translateRef.current = 0
@@ -76,19 +80,20 @@ export function useSmartStickySidebar({
       if (sidebarHeight <= availableHeight) {
         nextTranslate = clamp(scrollTop + topOffset - containerTop, 0, maxTranslate)
       } else {
-        const scrollingDown = scrollTop >= lastScrollTopRef.current
+        const scrollingDown = scrollDelta > EPSILON
+        const scrollingUp = scrollDelta < -EPSILON
 
         if (scrollingDown) {
           const bottomPinnedTranslate =
             scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
 
-          if (bottomPinnedTranslate > nextTranslate) {
+          if (bottomPinnedTranslate > nextTranslate + EPSILON) {
             nextTranslate = Math.min(bottomPinnedTranslate, maxTranslate)
           }
-        } else {
+        } else if (scrollingUp) {
           const topPinnedTranslate = scrollTop + topOffset - containerTop
 
-          if (topPinnedTranslate < nextTranslate) {
+          if (topPinnedTranslate < nextTranslate - EPSILON) {
             nextTranslate = Math.max(topPinnedTranslate, 0)
           }
         }
@@ -96,7 +101,15 @@ export function useSmartStickySidebar({
 
       translateRef.current = clamp(nextTranslate, 0, maxTranslate)
       lastScrollTopRef.current = scrollTop
-      content.style.transform = `translate3d(0, ${translateRef.current}px, 0)`
+
+      const roundedTranslate = Math.round(translateRef.current * 2) / 2
+
+      if (Math.abs(roundedTranslate - lastAppliedTranslateRef.current) <= EPSILON) {
+        return
+      }
+
+      lastAppliedTranslateRef.current = roundedTranslate
+      content.style.transform = `translate3d(0, ${roundedTranslate}px, 0)`
       content.style.position = 'relative'
       content.style.top = '0'
     }
