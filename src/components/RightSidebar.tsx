@@ -17,7 +17,7 @@ export function RightSidebar({ topics }: { topics: string[] }) {
   // Setup sticky sidebar v2
   const { updateStickySidebar } = useStickySidebarV2({
     sidebarSelector: `#${sidebarId}`,
-    containerSelector: '.feed-layout',
+    containerSelector: '.flex-1.overflow-y-auto', // Container de scroll interno
     topSpacing: 81,
     bottomSpacing: 24,
     innerWrapperSelector: '.sidebar__inner',
