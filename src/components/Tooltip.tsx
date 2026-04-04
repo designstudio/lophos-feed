@@ -32,6 +32,7 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
   const [mounted, setMounted] = useState(false)
   const [position, setPosition] = useState<React.CSSProperties>({})
   const triggerRef = React.useRef<HTMLDivElement>(null)
+  const tooltipRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     setVisible(false)
@@ -56,18 +57,35 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
 
     const updatePosition = () => {
       const rect = triggerRef.current?.getBoundingClientRect()
-      if (!rect) return
+      const tooltipRect = tooltipRef.current?.getBoundingClientRect()
+      if (!rect || !tooltipRect) return
 
       const gap = 8
 
       if (side === 'right') {
-        setPosition({ position: 'fixed', left: rect.right + gap, top: rect.top + rect.height / 2 })
+        setPosition({
+          position: 'fixed',
+          left: rect.right + gap,
+          top: rect.top + rect.height / 2 - tooltipRect.height / 2,
+        })
       } else if (side === 'left') {
-        setPosition({ position: 'fixed', left: rect.left - gap, top: rect.top + rect.height / 2 })
+        setPosition({
+          position: 'fixed',
+          left: rect.left - tooltipRect.width - gap,
+          top: rect.top + rect.height / 2 - tooltipRect.height / 2,
+        })
       } else if (side === 'bottom') {
-        setPosition({ position: 'fixed', left: rect.left + rect.width / 2, top: rect.bottom + gap })
+        setPosition({
+          position: 'fixed',
+          left: rect.left + rect.width / 2 - tooltipRect.width / 2,
+          top: rect.bottom + gap,
+        })
       } else {
-        setPosition({ position: 'fixed', left: rect.left + rect.width / 2, top: rect.top - gap })
+        setPosition({
+          position: 'fixed',
+          left: rect.left + rect.width / 2 - tooltipRect.width / 2,
+          top: rect.top - tooltipRect.height - gap,
+        })
       }
     }
 
@@ -96,6 +114,7 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
         <AnimatePresence>
           {visible && (
             <motion.div
+              ref={tooltipRef}
               style={position}
               initial={SIDE_INITIAL[side]}
               animate={SIDE_ANIMATE[side]}
