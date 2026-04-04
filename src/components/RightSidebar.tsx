@@ -39,6 +39,38 @@ export function RightSidebar({
   }, [updateStickySidebar])
 
   useEffect(() => {
+    let frame1 = 0
+    let frame2 = 0
+    let timeoutId = 0
+
+    const syncStickyAfterLayoutShift = () => {
+      if (frame1) window.cancelAnimationFrame(frame1)
+      if (frame2) window.cancelAnimationFrame(frame2)
+      if (timeoutId) window.clearTimeout(timeoutId)
+
+      frame1 = window.requestAnimationFrame(() => {
+        frame2 = window.requestAnimationFrame(() => {
+          reinitializeStickySidebar()
+          timeoutId = window.setTimeout(() => {
+            updateStickySidebar()
+          }, 40)
+        })
+      })
+    }
+
+    window.addEventListener('sidebar:toggle', syncStickyAfterLayoutShift)
+    window.addEventListener('resize', syncStickyAfterLayoutShift)
+
+    return () => {
+      if (frame1) window.cancelAnimationFrame(frame1)
+      if (frame2) window.cancelAnimationFrame(frame2)
+      if (timeoutId) window.clearTimeout(timeoutId)
+      window.removeEventListener('sidebar:toggle', syncStickyAfterLayoutShift)
+      window.removeEventListener('resize', syncStickyAfterLayoutShift)
+    }
+  }, [reinitializeStickySidebar, updateStickySidebar])
+
+  useEffect(() => {
     const handler = () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
