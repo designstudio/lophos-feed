@@ -39,6 +39,41 @@ export function RightSidebar({
   }, [updateStickySidebar])
 
   useEffect(() => {
+    const scrollContainer = document.getElementById('feed-scroll-container')
+    if (!scrollContainer) return
+
+    let wasAwayFromTop = false
+    let rafId = 0
+
+    const syncAtTop = () => {
+      const scrollTop = scrollContainer.scrollTop
+
+      if (scrollTop > 8) {
+        wasAwayFromTop = true
+        return
+      }
+
+      if (!wasAwayFromTop) return
+      wasAwayFromTop = false
+
+      if (rafId) window.cancelAnimationFrame(rafId)
+      rafId = window.requestAnimationFrame(() => {
+        reinitializeStickySidebar()
+        window.setTimeout(() => {
+          updateStickySidebar()
+        }, 20)
+      })
+    }
+
+    scrollContainer.addEventListener('scroll', syncAtTop, { passive: true })
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId)
+      scrollContainer.removeEventListener('scroll', syncAtTop)
+    }
+  }, [reinitializeStickySidebar, updateStickySidebar])
+
+  useEffect(() => {
     let frame1 = 0
     let frame2 = 0
     let timeoutIds: number[] = []
