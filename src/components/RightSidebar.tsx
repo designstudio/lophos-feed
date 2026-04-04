@@ -15,6 +15,7 @@ export function RightSidebar({
 }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
+  const [stickyEnabled, setStickyEnabled] = useState(false)
   const { reinitializeStickySidebar, updateStickySidebar } = useStickySidebarV2({
     sidebarSelector: '#right-sidebar-sticky',
     containerSelector: '#feed-main-content',
@@ -22,15 +23,18 @@ export function RightSidebar({
     topSpacing: 80,
     bottomSpacing: 24,
     minWidth: 1024,
+    disabled: !stickyEnabled,
   })
 
   useEffect(() => {
+    if (!stickyEnabled) return
+
     const raf = window.requestAnimationFrame(() => {
       reinitializeStickySidebar()
     })
 
     return () => window.cancelAnimationFrame(raf)
-  }, [reinitializeStickySidebar, order, active, topics])
+  }, [reinitializeStickySidebar, order, active, topics, stickyEnabled])
 
   useEffect(() => {
     const onLoad = () => updateStickySidebar()
@@ -42,38 +46,21 @@ export function RightSidebar({
     const scrollContainer = document.getElementById('feed-scroll-container')
     if (!scrollContainer) return
 
-    let wasAwayFromTop = false
-    let rafId = 0
-
-    const syncAtTop = () => {
-      const scrollTop = scrollContainer.scrollTop
-
-      if (scrollTop > 8) {
-        wasAwayFromTop = true
-        return
-      }
-
-      if (!wasAwayFromTop) return
-      wasAwayFromTop = false
-
-      if (rafId) window.cancelAnimationFrame(rafId)
-      rafId = window.requestAnimationFrame(() => {
-        reinitializeStickySidebar()
-        window.setTimeout(() => {
-          updateStickySidebar()
-        }, 20)
-      })
+    const syncStickyMode = () => {
+      setStickyEnabled(scrollContainer.scrollTop > 8)
     }
 
-    scrollContainer.addEventListener('scroll', syncAtTop, { passive: true })
+    syncStickyMode()
+    scrollContainer.addEventListener('scroll', syncStickyMode, { passive: true })
 
     return () => {
-      if (rafId) window.cancelAnimationFrame(rafId)
-      scrollContainer.removeEventListener('scroll', syncAtTop)
+      scrollContainer.removeEventListener('scroll', syncStickyMode)
     }
-  }, [reinitializeStickySidebar, updateStickySidebar])
+  }, [])
 
   useEffect(() => {
+    if (!stickyEnabled) return
+
     let frame1 = 0
     let frame2 = 0
     let timeoutIds: number[] = []
@@ -117,7 +104,7 @@ export function RightSidebar({
       window.removeEventListener('sidebar:toggle', syncStickyAfterLayoutShift)
       window.removeEventListener('resize', syncStickyAfterLayoutShift)
     }
-  }, [reinitializeStickySidebar, updateStickySidebar])
+  }, [reinitializeStickySidebar, updateStickySidebar, stickyEnabled])
 
   useEffect(() => {
     const handler = () => {
