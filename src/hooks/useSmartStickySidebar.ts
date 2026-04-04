@@ -104,8 +104,10 @@ export function useSmartStickySidebar({
       const scrollDelta = scrollTop - lastScrollTopRef.current
       const viewportTop = topOffset
       const viewportBottom = viewportHeight - bottomOffset
+      const scrollingDown = scrollDelta > EPSILON
+      const scrollingUp = scrollDelta < -EPSILON
       let nextTranslate = translateRef.current
-      let nextMode = modeRef.current === 'natural' ? 'top' : modeRef.current
+      let nextMode = modeRef.current
       const currentTopInViewport = containerTop + translateRef.current - scrollTop
       const currentBottomInViewport = currentTopInViewport + sidebarHeight
       const topPinnedTranslate = scrollTop + topOffset - containerTop
@@ -113,18 +115,26 @@ export function useSmartStickySidebar({
         scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
 
       if (nextMode === 'top') {
-        if (scrollDelta > EPSILON && currentBottomInViewport <= viewportBottom + EPSILON) {
-          nextMode = 'bottom'
-          nextTranslate = bottomPinnedTranslate
-        } else {
+        if (scrollingDown) {
+          nextMode = 'natural'
           nextTranslate = topPinnedTranslate
+        } else {
+          nextTranslate = clampTranslate(topPinnedTranslate, maxTranslate)
         }
-      } else {
-        if (scrollDelta < -EPSILON && currentTopInViewport >= viewportTop - EPSILON) {
+      } else if (nextMode === 'bottom') {
+        if (scrollingUp && currentTopInViewport >= viewportTop - EPSILON) {
           nextMode = 'top'
           nextTranslate = topPinnedTranslate
         } else {
           nextTranslate = bottomPinnedTranslate
+        }
+      } else {
+        if (scrollingDown && currentBottomInViewport <= viewportBottom + EPSILON) {
+          nextMode = 'bottom'
+          nextTranslate = bottomPinnedTranslate
+        } else if (scrollingUp && currentTopInViewport >= viewportTop - EPSILON) {
+          nextMode = 'top'
+          nextTranslate = topPinnedTranslate
         }
       }
 
@@ -133,7 +143,7 @@ export function useSmartStickySidebar({
       translateRef.current = nextTranslate
       modeRef.current = nextMode
 
-      if (nextMode === 'top' && nextTranslate <= EPSILON) {
+      if (nextMode === 'top') {
         applyStickyStyles()
         return
       }
