@@ -145,11 +145,13 @@ html, body {
 .sidebar-right {
   width: var(--sidebar-right-width);
   flex-shrink: 0;
-  align-self: flex-start;
+  align-self: stretch;
+  position: relative;
 }
 
 .sidebar {
   position: relative;
+  height: 100%;
 }
 
 .sidebar__inner {
@@ -159,6 +161,7 @@ html, body {
 .sidebar__inner--sticky {
   position: sticky;
   top: 80px;
+  align-self: flex-start;
   will-change: auto;
 }
 
