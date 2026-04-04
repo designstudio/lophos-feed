@@ -12,13 +12,15 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  // Fetch user's topics and current article in parallel
-  const [{ data: current }, { data: userTopicsRows }] = await Promise.all([
+  // Fetch current article, user topics, and hidden articles in parallel
+  const [{ data: current }, { data: userTopicsRows }, { data: hiddenRows }] = await Promise.all([
     db.from('articles').select('matched_topics').eq('id', id).single(),
     db.from('user_topics').select('topic').eq('user_id', userId),
+    db.from('user_reactions').select('article_id').eq('user_id', userId).eq('reaction', 'dislike'),
   ])
 
   const userTopics: string[] = (userTopicsRows ?? []).map((r: any) => r.topic)
+  const hiddenIds = new Set((hiddenRows ?? []).map((r: any) => r.article_id))
 
   if (!current?.matched_topics?.length || userTopics.length === 0) {
     return NextResponse.json({ items: [] })
@@ -43,16 +45,19 @@ export async function GET(req: NextRequest) {
     .or(orFilter)
     .neq('id', id)
     .order('published_at', { ascending: false })
-    .limit(4)
+    .limit(12)
 
-  const items = (rows || []).map((row: any) => ({
-    id: row.id,
-    topic: row.topic,
-    title: row.title,
-    summary: row.summary,
-    imageUrl: row.image_url,
-    publishedAt: row.published_at,
-  }))
+  const items = (rows || [])
+    .filter((row: any) => !hiddenIds.has(row.id))
+    .slice(0, 4)
+    .map((row: any) => ({
+      id: row.id,
+      topic: row.topic,
+      title: row.title,
+      summary: row.summary,
+      imageUrl: row.image_url,
+      publishedAt: row.published_at,
+    }))
 
   return NextResponse.json({ items })
 }
