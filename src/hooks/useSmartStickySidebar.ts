@@ -28,7 +28,6 @@ export function useSmartStickySidebar({
   const translateRef = useRef(0)
   const lastScrollTopRef = useRef(0)
   const frameRef = useRef<number | null>(null)
-  const modeRef = useRef<'natural' | 'top' | 'bottom'>('top')
   const EPSILON = 0.5
 
   useEffect(() => {
@@ -40,40 +39,35 @@ export function useSmartStickySidebar({
 
     if (!scroller || !container || !content) return
 
-    const resetStyles = () => {
-      modeRef.current = 'top'
-      content.style.transform = 'none'
+    const reset = () => {
+      translateRef.current = 0
       content.style.position = 'relative'
-      content.style.top = '0'
+      content.style.top = '0px'
       content.style.bottom = 'auto'
+      content.style.transform = 'none'
     }
 
-    const applyStickyStyles = () => {
-      modeRef.current = 'top'
-      content.style.transform = 'none'
+    const applyTopSticky = () => {
+      translateRef.current = 0
       content.style.position = 'sticky'
       content.style.top = `${topOffset}px`
       content.style.bottom = 'auto'
-    }
-
-    const applyTranslateStyles = (translateY: number) => {
       content.style.transform = 'none'
-      content.style.position = 'relative'
-      content.style.top = `${Math.round(translateY)}px`
-      content.style.bottom = 'auto'
     }
 
-    const clampTranslate = (value: number, maxTranslate: number) => {
-      return clamp(Math.round(value), 0, maxTranslate)
+    const applyRelativeTop = (top: number) => {
+      content.style.position = 'relative'
+      content.style.top = `${Math.round(top)}px`
+      content.style.bottom = 'auto'
+      content.style.transform = 'none'
     }
 
     const update = () => {
       frameRef.current = null
 
       if (window.innerWidth < minWidth) {
-        translateRef.current = 0
         lastScrollTopRef.current = scroller.scrollTop
-        resetStyles()
+        reset()
         return
       }
 
@@ -88,67 +82,35 @@ export function useSmartStickySidebar({
       const scrollTop = scroller.scrollTop
 
       if (sidebarHeight <= availableHeight) {
-        translateRef.current = 0
         lastScrollTopRef.current = scrollTop
-        applyStickyStyles()
+        applyTopSticky()
         return
       }
 
       if (maxTranslate <= 0) {
-        translateRef.current = 0
         lastScrollTopRef.current = scrollTop
-        resetStyles()
+        reset()
         return
       }
 
       const scrollDelta = scrollTop - lastScrollTopRef.current
-      const viewportTop = topOffset
-      const viewportBottom = viewportHeight - bottomOffset
-      const scrollingDown = scrollDelta > EPSILON
-      const scrollingUp = scrollDelta < -EPSILON
-      let nextTranslate = translateRef.current
-      let nextMode = modeRef.current
-      const currentTopInViewport = containerTop + translateRef.current - scrollTop
-      const currentBottomInViewport = currentTopInViewport + sidebarHeight
       const topPinnedTranslate = scrollTop + topOffset - containerTop
       const bottomPinnedTranslate =
         scrollTop + viewportHeight - bottomOffset - containerTop - sidebarHeight
 
-      if (nextMode === 'top') {
-        if (scrollingDown) {
-          nextMode = 'natural'
-          nextTranslate = clampTranslate(topPinnedTranslate, maxTranslate)
-        } else {
-          nextTranslate = 0
-        }
-      } else if (nextMode === 'bottom') {
-        if (scrollingUp) {
-          nextMode = 'natural'
-          nextTranslate = clampTranslate(bottomPinnedTranslate, maxTranslate)
-        } else {
-          nextTranslate = maxTranslate
-        }
-      } else {
-        if (scrollingDown && currentBottomInViewport <= viewportBottom + EPSILON) {
-          nextMode = 'bottom'
-          nextTranslate = clampTranslate(bottomPinnedTranslate, maxTranslate)
-        } else if (scrollingUp && currentTopInViewport >= viewportTop - EPSILON) {
-          nextMode = 'top'
-          nextTranslate = clampTranslate(topPinnedTranslate, maxTranslate)
-        }
+      let nextTranslate = translateRef.current
+
+      if (scrollDelta > EPSILON) {
+        nextTranslate = Math.max(nextTranslate, bottomPinnedTranslate)
+      } else if (scrollDelta < -EPSILON) {
+        nextTranslate = Math.min(nextTranslate, topPinnedTranslate)
       }
 
-      nextTranslate = clampTranslate(nextTranslate, maxTranslate)
-      lastScrollTopRef.current = scrollTop
+      nextTranslate = clamp(nextTranslate, 0, maxTranslate)
+
       translateRef.current = nextTranslate
-      modeRef.current = nextMode
-
-      if (nextMode === 'top') {
-        applyStickyStyles()
-        return
-      }
-
-      applyTranslateStyles(nextTranslate)
+      lastScrollTopRef.current = scrollTop
+      applyRelativeTop(nextTranslate)
     }
 
     const scheduleUpdate = () => {
@@ -171,7 +133,7 @@ export function useSmartStickySidebar({
       resizeObserver.disconnect()
       scroller.removeEventListener('scroll', scheduleUpdate)
       window.removeEventListener('resize', scheduleUpdate)
-      resetStyles()
+      reset()
     }
   }, [bottomOffset, containerRef, contentRef, disabled, minWidth, scrollRef, topOffset])
 }
