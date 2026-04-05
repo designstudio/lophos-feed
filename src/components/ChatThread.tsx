@@ -81,6 +81,14 @@ async function* parseNDJSON(response: Response) {
   }
 }
 
+function dedupeConsecutiveMessages(messages: ChatMessage[]) {
+  return messages.filter((message, index, allMessages) => {
+    if (index === 0) return true
+    const previous = allMessages[index - 1]
+    return !(previous.role === message.role && previous.content.trim() === message.content.trim())
+  })
+}
+
 export function ChatThread({
   threadId,
   articleId,
@@ -141,7 +149,7 @@ export function ChatThread({
     const lastMessage = messages[messages.length - 1]
     if (lastMessage?.role === 'user') {
       autoResponded.current = true
-      handleStreamMessage(lastMessage.content)
+      handleStreamMessage(lastMessage.content, true)
     }
   }, [isEmbedded, isLoading, messages])
 
@@ -166,7 +174,7 @@ export function ChatThread({
     }
   }
 
-  const handleStreamMessage = async (messageContent: string) => {
+  const handleStreamMessage = async (messageContent: string, skipUserMessagePersist = false) => {
     setIsLoading(true)
     setError(null)
 
@@ -178,6 +186,7 @@ export function ChatThread({
           threadId: currentThreadId,
           articleId,
           message: messageContent,
+          skipUserMessagePersist,
         }),
       })
 
@@ -308,6 +317,8 @@ export function ChatThread({
     return null
   }
 
+  const displayMessages = dedupeConsecutiveMessages(messages)
+
   return (
     <div className={`${isEmbedded ? 'flex h-full flex-col' : 'block'} transition-opacity duration-300`}>
       <div
@@ -315,7 +326,7 @@ export function ChatThread({
         className={`${isEmbedded ? 'flex-1 overflow-y-auto space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-10'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
-          {messages.map((msg) => (
+          {displayMessages.map((msg) => (
             (() => {
               const parsedSuggestions = msg.role === 'assistant' ? extractSuggestionsFromContent(msg.content) : []
               const displayContent = msg.role === 'assistant' ? stripSuggestionArtifacts(msg.content) : msg.content

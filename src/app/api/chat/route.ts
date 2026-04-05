@@ -10,6 +10,7 @@ interface ChatRequest {
   threadId: string
   articleId: string
   message: string
+  skipUserMessagePersist?: boolean
 }
 
 interface StoredMessage {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { threadId, articleId, message } = (await request.json()) as ChatRequest
+    const { threadId, articleId, message, skipUserMessagePersist = false } = (await request.json()) as ChatRequest
 
     if (!threadId || !articleId || !message?.trim()) {
       return NextResponse.json(
@@ -116,15 +117,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Article content not found' }, { status: 404 })
     }
 
-    const { error: userMessageError } = await db.from('chat_messages').insert({
-      thread_id: threadId,
-      user_id: userId,
-      role: 'user',
-      content: message.trim(),
-    })
+    if (!skipUserMessagePersist) {
+      const { error: userMessageError } = await db.from('chat_messages').insert({
+        thread_id: threadId,
+        user_id: userId,
+        role: 'user',
+        content: message.trim(),
+      })
 
-    if (userMessageError) {
-      return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
+      if (userMessageError) {
+        return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
+      }
     }
 
     const { data: historyRows, error: historyError } = await db
