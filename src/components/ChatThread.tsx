@@ -348,7 +348,7 @@ export function ChatThread({
                 {msg.role === 'user' ? (
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <div className={`max-w-none text-body prose dark:prose-invert text-ink-primary ${isEmbedded ? 'prose-sm' : 'prose-p:my-2 prose-headings:mt-0 prose-headings:mb-3 prose-h3:mt-4 prose-h3:mb-2 prose-p:text-[1rem] prose-p:leading-[1.625] prose-li:text-[1rem] prose-li:leading-[1.625] prose-strong:text-ink-primary prose-headings:text-ink-primary'}`}>
+                  <div className={`max-w-none text-body prose dark:prose-invert text-ink-primary ${isEmbedded ? 'prose-sm' : 'prose-p:mt-2 prose-p:mb-2 prose-h3:mt-4 prose-h3:mb-2 prose-p:text-[1rem] prose-p:leading-[1.625] prose-li:text-[1rem] prose-li:leading-[1.625] prose-strong:text-ink-primary prose-headings:text-ink-primary'}`}>
                     <ReactMarkdown>{displayContent}</ReactMarkdown>
                   </div>
                 )}
