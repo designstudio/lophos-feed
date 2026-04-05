@@ -1,10 +1,9 @@
-// This file runs when the Next.js server starts
-// Used for initializing background tasks like cron jobs
+// This file runs when the Next.js server starts.
+// Keep it side-effect free on Vercel/serverless so idle instances do not
+// spin background timers and consume Fluid Active CPU.
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    // Only run cron jobs in the Node.js runtime (not in Edge Runtime)
-    const { startFeedCron } = await import('./lib/cron')
-    startFeedCron()
-  }
+  // Intentionally no-op.
+  // RSS ingest scheduling is owned by GitHub Actions via scripts/rss-ingest.mjs.
+  // Manual refreshes can still call explicit API routes on demand.
 }
