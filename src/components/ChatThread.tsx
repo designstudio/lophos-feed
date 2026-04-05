@@ -349,7 +349,7 @@ export function ChatThread({
                   isEmbedded ? 'max-w-[80%]' : msg.role === 'user' ? 'max-w-[70%]' : 'max-w-full'
                 } ${
                   msg.role === 'user'
-                    ? 'rounded-[1.35rem] rounded-br-md bg-bg-secondary px-4 py-3 text-ink-secondary shadow-sm'
+                    ? 'rounded-[1.35rem] rounded-br-md bg-bg-secondary px-6 py-3 text-ink-secondary shadow-sm'
                     : isEmbedded
                       ? 'rounded-2xl rounded-bl-none bg-bg-secondary px-4 py-3 text-ink-primary dark:bg-[#2a2a2a] dark:text-white'
                       : 'px-6 py-6 text-ink-primary dark:text-white'
