@@ -412,7 +412,7 @@ export function ChatThread({
           <div className="absolute inset-x-0 bottom-0 h-8 bg-bg-primary" />
         )}
 
-        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-2 pt-1'}>
+        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-5 pt-1'}>
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
