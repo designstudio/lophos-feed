@@ -279,7 +279,9 @@ function separateContentAndSuggestions(fullResponse: string): {
   const delimiter = '---LOPHOS_SUGGESTIONS---'
   const suggestions: string[] = []
   const parts = fullResponse.split(delimiter)
-  const content = parts[0].trim()
+  const content = parts[0]
+    .replace(/LOPHOS[_\s-]*SUGGESTIONS[\s\S]*$/i, '')
+    .trim()
 
   if (parts.length > 1) {
     const lines = parts[1].split('\n')

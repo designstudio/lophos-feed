@@ -22,6 +22,13 @@ interface ChatThreadProps {
   autoRespond?: boolean
 }
 
+function stripSuggestionArtifacts(content: string) {
+  return content
+    .replace(/---\s*LOPHOS_SUGGESTIONS\s*---[\s\S]*$/i, '')
+    .replace(/LOPHOS[_\s-]*SUGGESTIONS[\s\S]*$/i, '')
+    .trim()
+}
+
 async function* parseNDJSON(response: Response) {
   const reader = response.body?.getReader()
   if (!reader) return
@@ -161,7 +168,7 @@ export function ChatThread({
       for await (const chunk of parseNDJSON(response)) {
         if (chunk.token) {
           fullResponse += chunk.token
-          const displayContent = fullResponse.split(delimiter)[0].trim()
+          const displayContent = stripSuggestionArtifacts(fullResponse.split(delimiter)[0] ?? fullResponse)
 
           setMessages((prev) => {
             const updated = [...prev]
@@ -311,29 +318,29 @@ export function ChatThread({
                 {msg.role === 'user' ? (
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <div className={`text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none ${isEmbedded ? '' : 'prose-p:my-0 prose-headings:mt-0 prose-headings:mb-3'}`}>
+                  <div className={`max-w-none text-body prose dark:prose-invert text-ink-primary ${isEmbedded ? 'prose-sm' : 'prose-p:my-0 prose-headings:mt-0 prose-headings:mb-3 prose-p:text-[1rem] prose-p:leading-[1.625] prose-li:text-[1rem] prose-li:leading-[1.625] prose-strong:text-ink-primary prose-headings:text-ink-primary'}`}>
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 )}
 
                 {msg.role === 'assistant' && msg.followUpSuggestions && msg.followUpSuggestions.length > 0 && (
-                  <div className={`${isEmbedded ? 'mt-3 pt-3 border-t border-border' : 'mt-5 pt-4 border-t border-border/70'}`}>
-                    <p className="mb-2 text-xs font-semibold text-ink-tertiary">Próximas perguntas</p>
-                    <div className={isEmbedded ? 'space-y-1.5' : 'flex flex-wrap gap-2'}>
+                  <div className={`${isEmbedded ? 'mt-3 pt-3 border-t border-border' : 'mt-6 pt-4 border-t border-border/70'}`}>
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-tertiary">Próximas perguntas</p>
+                    <div className={isEmbedded ? 'space-y-1.5' : 'flex flex-col items-start gap-2'}>
                       {msg.followUpSuggestions.map((suggestion, i) => (
                         <button
                           key={i}
                           onClick={() => handleFollowUp(suggestion)}
-                          className={`${isEmbedded ? 'w-full rounded-lg p-2' : 'rounded-full px-3 py-2'} text-left text-xs bg-accent/10 text-accent hover:bg-accent/20 transition-colors`}
+                          className={`${isEmbedded ? 'w-full rounded-lg p-2' : 'rounded-2xl px-4 py-3'} text-left text-sm leading-relaxed text-ink-secondary bg-[var(--color-hover-subtle)] hover:bg-bg-secondary hover:text-ink-primary transition-colors`}
                         >
-                          {suggestion}
+                          {isEmbedded ? suggestion : `↳ ${suggestion}`}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
 
-                <p className="mt-2 text-xs opacity-60">
+                <p className={`mt-2 text-xs opacity-60 ${isEmbedded ? '' : 'text-ink-muted'}`}>
                   {new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
