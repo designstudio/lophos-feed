@@ -90,7 +90,7 @@ function dedupeConsecutiveMessages(messages: ChatMessage[]) {
   })
 }
 
-const FULLPAGE_COMPOSER_HEIGHT = 112
+const FULLPAGE_COMPOSER_HEIGHT = 88
 
 export function ChatThread({
   threadId,
@@ -409,10 +409,10 @@ export function ChatThread({
 
       <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
         {!isEmbedded && (
-          <div className="absolute inset-x-0 bottom-0 h-12 bg-bg-primary" />
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-bg-primary" />
         )}
 
-        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-3 pt-2'}>
+        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-2 pt-1'}>
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
