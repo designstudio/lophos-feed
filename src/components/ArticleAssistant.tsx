@@ -91,49 +91,39 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
 
   return (
     <section className="mt-10 mb-8">
-      <div className="rounded-[1.5rem] border border-border bg-white/92 shadow-[0_20px_60px_rgba(20,20,20,0.06)] backdrop-blur-sm">
-        <div className="px-5 pt-4 pb-2">
-          <p className="text-sm text-ink-muted">
-            {threadId ? 'Continue a conversa sobre este artigo' : 'Pergunte qualquer coisa sobre este artigo'}
-          </p>
-        </div>
+      <div className="relative flex min-h-16 items-center gap-3 rounded-[1.5rem] border border-border bg-white px-3 py-2 shadow-[0_18px_40px_rgba(20,20,20,0.08)]">
+        <textarea
+          ref={inputRef}
+          value={inputValue}
+          onChange={(event) => {
+            setInputValue(event.target.value)
+            resizeTextarea(event.target)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault()
+              handleSend()
+            }
+          }}
+          rows={1}
+          disabled={isSending}
+          placeholder="Pergunte qualquer coisa"
+          className="min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-black placeholder-ink-muted transition-colors focus:outline-none disabled:opacity-50"
+        />
 
-        <div className="px-4 pb-4">
-          <div className="relative rounded-[1.35rem] border border-border bg-bg-primary shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-            <textarea
-              ref={inputRef}
-              value={inputValue}
-              onChange={(event) => {
-                setInputValue(event.target.value)
-                resizeTextarea(event.target)
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault()
-                  handleSend()
-                }
-              }}
-              rows={1}
-              disabled={isSending}
-              placeholder="Pergunte qualquer coisa"
-              className="w-full min-h-16 resize-none rounded-[1.35rem] bg-transparent px-4 py-4 pr-16 text-[15px] text-ink-primary placeholder:text-ink-muted focus:outline-none disabled:opacity-60"
-            />
-
-            <button
-              onClick={handleSend}
-              disabled={isSending || !inputValue.trim()}
-              className="absolute right-3 bottom-3 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-ui-strong)] text-white shadow-sm transition-opacity disabled:opacity-40"
-              aria-label="Enviar pergunta"
-            >
-              <ArrowUp size={18} />
-            </button>
-          </div>
-
-          {error && (
-            <p className="mt-3 text-sm text-red-600">{error}</p>
-          )}
-        </div>
+        <button
+          onClick={handleSend}
+          disabled={isSending || !inputValue.trim()}
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-ui-strong)] text-white shadow-sm transition-opacity disabled:opacity-40"
+          aria-label="Enviar pergunta"
+        >
+          <ArrowUp size={18} />
+        </button>
       </div>
+
+      {error && (
+        <p className="mt-3 text-sm text-red-600">{error}</p>
+      )}
     </section>
   )
 }
