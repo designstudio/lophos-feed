@@ -312,7 +312,7 @@ export function ChatThread({
     <div className={`${isEmbedded ? 'flex h-full flex-col' : 'block'} transition-opacity duration-300`}>
       <div
         ref={containerRef}
-        className={`${isEmbedded ? 'flex-1 overflow-y-auto space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-[88px]'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`${isEmbedded ? 'flex-1 overflow-y-auto space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-6'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
@@ -391,12 +391,12 @@ export function ChatThread({
         )}
       </div>
 
-      {!isEmbedded && <div className="pointer-events-none" style={{ height: '40px' }} />}
+      {!isEmbedded && <div className="pointer-events-none" style={{ height: '0px' }} />}
 
       <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
         <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/96 via-bg-primary/88 to-transparent backdrop-blur-sm" />
 
-        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-4 pt-2'}>
+        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-2 pt-0'}>
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -428,7 +428,7 @@ export function ChatThread({
           <button
             onClick={() => void handleSend()}
             disabled={isLoading || isSending || !inputValue.trim()}
-            className={`absolute bg-[var(--color-ui-strong)] text-white transition-colors spring-press disabled:opacity-40 ${isEmbedded ? 'right-4 top-6 rounded-lg p-2 md:right-6' : 'bottom-10 right-10 flex h-10 w-10 items-center justify-center rounded-full'}`}
+            className={`absolute bg-[var(--color-ui-strong)] text-white transition-colors spring-press disabled:opacity-40 ${isEmbedded ? 'right-4 top-6 rounded-lg p-2 md:right-6' : 'bottom-8 right-4 flex h-10 w-10 items-center justify-center rounded-full'}`}
             aria-label="Enviar mensagem"
           >
             <ArrowUp width={20} height={20} />
