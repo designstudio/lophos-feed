@@ -358,7 +358,7 @@ export function ChatThread({
                 {msg.role === 'user' ? (
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <div className={`ai-response-content max-w-none text-body text-ink-primary ${isEmbedded ? 'text-sm' : ''}`}>
+                  <div className={`ai-response-content max-w-none text-body ${isEmbedded ? 'text-sm' : ''}`}>
                     <ReactMarkdown>{displayContent}</ReactMarkdown>
                   </div>
                 )}
