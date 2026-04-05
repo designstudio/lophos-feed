@@ -430,25 +430,51 @@ export function ChatThread({
             </motion.div>
           )}
 
-          <textarea
-            ref={inputRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Pergunte qualquer coisa"
-            rows={1}
-            disabled={isSending}
-            className={`w-full resize-none border border-border bg-white text-black placeholder-ink-muted transition-colors focus:border-accent focus:outline-none disabled:opacity-50 dark:bg-[#2a2a2a] dark:text-white dark:focus:border-accent ${isEmbedded ? 'rounded-xl px-4 py-3 pr-12' : 'min-h-16 rounded-[1.5rem] px-5 py-4 pr-16 shadow-[0_18px_40px_rgba(20,20,20,0.08)]'}`}
-          />
+          {isEmbedded ? (
+            <>
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Pergunte qualquer coisa"
+                rows={1}
+                disabled={isSending}
+                className="w-full resize-none rounded-xl border border-border bg-white px-4 py-3 pr-12 text-black placeholder-ink-muted transition-colors focus:border-accent focus:outline-none disabled:opacity-50 dark:bg-[#2a2a2a] dark:text-white dark:focus:border-accent"
+              />
 
-          <button
-            onClick={() => void handleSend()}
-            disabled={isLoading || isSending || !inputValue.trim()}
-            className={`absolute bg-[var(--color-ui-strong)] text-white transition-colors spring-press disabled:opacity-40 ${isEmbedded ? 'right-4 top-6 rounded-lg p-2 md:right-6' : 'right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full'}`}
-            aria-label="Enviar mensagem"
-          >
-            <ArrowUp width={20} height={20} />
-          </button>
+              <button
+                onClick={() => void handleSend()}
+                disabled={isLoading || isSending || !inputValue.trim()}
+                className="absolute right-4 top-6 rounded-lg bg-[var(--color-ui-strong)] p-2 text-white transition-colors spring-press disabled:opacity-40 md:right-6"
+                aria-label="Enviar mensagem"
+              >
+                <ArrowUp width={20} height={20} />
+              </button>
+            </>
+          ) : (
+            <div className="flex min-h-16 items-center gap-3 rounded-[1.5rem] border border-border bg-white px-3 py-2 shadow-[0_18px_40px_rgba(20,20,20,0.08)]">
+              <textarea
+                ref={inputRef}
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder="Pergunte qualquer coisa"
+                rows={1}
+                disabled={isSending}
+                className="min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-black placeholder-ink-muted transition-colors focus:outline-none disabled:opacity-50 dark:text-white"
+              />
+
+              <button
+                onClick={() => void handleSend()}
+                disabled={isLoading || isSending || !inputValue.trim()}
+                className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[var(--color-ui-strong)] text-white transition-colors spring-press disabled:opacity-40"
+                aria-label="Enviar mensagem"
+              >
+                <ArrowUp width={20} height={20} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
