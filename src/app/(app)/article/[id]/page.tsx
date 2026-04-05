@@ -380,7 +380,7 @@ export default function ArticlePage() {
                 )}
 
                 {isSignedIn ? (
-                  <ArticleAssistant articleId={item.id} articleTitle={item.title} />
+                  <ArticleAssistant articleId={item.id} />
                 ) : (
                   <div className="mt-10 mb-8 rounded-[1.5rem] border border-border bg-bg-primary px-5 py-5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">

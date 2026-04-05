@@ -137,7 +137,7 @@ export async function POST(request: Request) {
 
 /**
  * GET /api/chat/threads?articleId=...
- * Return an existing thread and its messages for the current user/article
+ * Return an existing thread/messages for an article or the recent history list
  */
 export async function GET(request: Request) {
   const { userId } = await auth()
@@ -150,11 +150,25 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const articleId = searchParams.get('articleId')
 
-    if (!articleId) {
-      return NextResponse.json({ error: 'Missing articleId' }, { status: 400 })
-    }
-
     const db = getSupabaseAdmin()
+
+    if (!articleId) {
+      const { data: threads, error: threadsError } = await db
+        .from('chat_threads')
+        .select('id, title, article_id, updated_at')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(12)
+
+      if (threadsError) {
+        console.error('[chat/threads GET] Error fetching history:', threadsError)
+        return NextResponse.json({ error: 'Database error' }, { status: 500 })
+      }
+
+      return NextResponse.json({
+        threads: threads || [],
+      })
+    }
 
     const { data: thread, error: threadError } = await db
       .from('chat_threads')

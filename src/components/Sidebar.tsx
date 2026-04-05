@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Feed, Refresh, AltArrowLeft, AltArrowRight,
-  HeartAngle, Magnifer
+  HeartAngle, Magnifer, ChatRoundDots
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
@@ -31,6 +31,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [showSettings, setShowSettings] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [userTopics, setUserTopics] = useState<string[]>([])
+  const [recentThreads, setRecentThreads] = useState<Array<{ id: string; title: string; article_id: string; updated_at: string }>>([])
 
   useEffect(() => {
     fetch('/api/topics')
@@ -38,6 +39,13 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       .then(data => setUserTopics((data.topics || []).map((x: { topic: string }) => x.topic)))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    fetch('/api/chat/threads')
+      .then(r => r.ok ? r.json() : { threads: [] })
+      .then(data => setRecentThreads(data.threads || []))
+      .catch(() => {})
+  }, [path])
 
   useEffect(() => {
     try {
@@ -243,6 +251,40 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             </Tooltip>
           )}
         </nav>
+
+        {!collapsed && recentThreads.length > 0 && (
+          <div className="px-2 pb-4">
+            <div className="px-2.5 pt-4 pb-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-tertiary">
+                Histórico
+              </p>
+            </div>
+            <div className="space-y-1">
+              {recentThreads.map((thread) => {
+                const isActive = path === `/threads/${thread.id}`
+
+                return (
+                  <Link
+                    key={thread.id}
+                    href={`/threads/${thread.id}`}
+                    className={cn(
+                      'flex items-start gap-2.5 rounded-xl px-2.5 py-2 transition-colors',
+                      isActive ? 'bg-bg-secondary text-ink-primary' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
+                    )}
+                  >
+                    <ChatRoundDots size={16} className="mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium leading-5">{thread.title}</p>
+                      <p className="mt-0.5 text-[11px] text-ink-muted">
+                        {new Date(thread.updated_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Bottom user */}
         <div className="border-t border-border pt-3 px-2 pb-5 flex-shrink-0">

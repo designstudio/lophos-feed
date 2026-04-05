@@ -22,16 +22,41 @@ interface ChatThreadProps {
   autoRespond?: boolean
 }
 
+async function* parseNDJSON(response: Response) {
+  const reader = response.body?.getReader()
+  if (!reader) return
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    buffer += decoder.decode(value, { stream: !done })
+
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+
+    for (const line of lines) {
+      if (!line.trim()) continue
+
+      try {
+        yield JSON.parse(line)
+      } catch (err) {
+        console.error('[ChatThread] Failed to parse NDJSON:', err)
+      }
+    }
+
+    if (done) break
+  }
+}
+
 export function ChatThread({
   threadId,
   articleId,
   isEmbedded = true,
   initialMessages = [],
-  autoRespond = false,
 }: ChatThreadProps) {
   const router = useRouter()
-
-  // State Management
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages)
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -40,24 +65,17 @@ export function ChatThread({
   const [mounted, setMounted] = useState(false)
   const [currentThreadId, setCurrentThreadId] = useState(threadId)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
-
-  // Refs
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const textareaHeightRef = useRef<number>(0)
   const autoResponded = useRef(false)
 
-  // Hydration - prevent layout shift
   useEffect(() => {
     setMounted(true)
-    // Read sidebar state from localStorage (matches sidebar.tsx)
     const saved = localStorage.getItem('sidebar_collapsed') === 'true'
     setSidebarCollapsed(saved)
 
-    // Listen for storage changes (sidebar collapse/expand in other tabs)
     const handleStorageChange = () => {
-      const updated = localStorage.getItem('sidebar_collapsed') === 'true'
-      setSidebarCollapsed(updated)
+      setSidebarCollapsed(localStorage.getItem('sidebar_collapsed') === 'true')
     }
 
     const handleSidebarToggle = (event: Event) => {
@@ -76,26 +94,40 @@ export function ChatThread({
     }
   }, [])
 
-  // Dynamic offset based on sidebar state (sidebar appears from md breakpoint)
+  useEffect(() => {
+    if (!containerRef.current) return
+    setTimeout(() => {
+      containerRef.current?.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: 'smooth',
+      })
+    }, 0)
+  }, [messages])
+
+  useEffect(() => {
+    if (isEmbedded || isLoading || autoResponded.current || messages.length === 0) return
+
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage?.role === 'user') {
+      autoResponded.current = true
+      handleStreamMessage(lastMessage.content)
+    }
+  }, [isEmbedded, isLoading, messages])
+
   const paddingLeft = sidebarCollapsed ? 'md:pl-[3.5rem]' : 'md:pl-[16.1rem]'
   const composerOffset = sidebarCollapsed ? 'md:left-[3.5rem]' : 'md:left-[16.1rem]'
 
-  // Auto-expand textarea on input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const textarea = e.target
-    setInputValue(textarea.value)
-
-    // Reset height to auto to get accurate scrollHeight
+  const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto'
-
-    // Calculate new height (min 2 rows ~40px, max 4 rows ~100px)
-    const scrollHeight = textarea.scrollHeight
-    const newHeight = Math.min(Math.max(scrollHeight, 40), 100)
-    textarea.style.height = newHeight + 'px'
-    textareaHeightRef.current = newHeight
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, isEmbedded ? 40 : 64), isEmbedded ? 100 : 160)
+    textarea.style.height = `${newHeight}px`
   }
 
-  // Handle keyboard submission (Enter to send, Shift+Enter for newline)
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value)
+    resizeTextarea(e.target)
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -103,65 +135,6 @@ export function ChatThread({
     }
   }
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (containerRef.current) {
-      setTimeout(() => {
-        containerRef.current?.scrollTo({
-          top: containerRef.current.scrollHeight,
-          behavior: 'smooth',
-        })
-      }, 0)
-    }
-  }, [messages])
-
-  // Auto-response logic for full-page mode
-  useEffect(() => {
-    if (
-      isEmbedded === false && // Only in full-page mode
-      !isLoading &&
-      !autoResponded.current &&
-      messages.length > 0
-    ) {
-      const lastMessage = messages[messages.length - 1]
-      if (lastMessage?.role === 'user') {
-        console.log('[ChatThread] Auto-responding to unanswered user message')
-        autoResponded.current = true
-        handleStreamMessage(lastMessage.content)
-      }
-    }
-  }, [isEmbedded, isLoading, messages.length])
-
-  // Parse NDJSON stream from API
-  async function* parseNDJSON(response: Response) {
-    const reader = response.body?.getReader()
-    if (!reader) return
-
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      buffer += decoder.decode(value, { stream: !done })
-
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (line.trim()) {
-          try {
-            yield JSON.parse(line)
-          } catch (e) {
-            console.error('[ChatThread] Failed to parse JSON line:', line, e)
-          }
-        }
-      }
-
-      if (done) break
-    }
-  }
-
-  // Stream message from Gemini API
   const handleStreamMessage = async (messageContent: string) => {
     setIsLoading(true)
     setError(null)
@@ -183,21 +156,18 @@ export function ChatThread({
 
       let fullResponse = ''
       let suggestions: string[] = []
-      const DELIMITER = '---LOPHOS_SUGGESTIONS---'
+      const delimiter = '---LOPHOS_SUGGESTIONS---'
 
-      // Parse streaming response
       for await (const chunk of parseNDJSON(response)) {
         if (chunk.token) {
           fullResponse += chunk.token
+          const displayContent = fullResponse.split(delimiter)[0].trim()
 
-          // Strip delimiter and suggestions from display content
-          const displayContent = fullResponse.split(DELIMITER)[0].trim()
-
-          // Update last message in real-time (assistant message)
           setMessages((prev) => {
             const updated = [...prev]
-            if (updated[updated.length - 1]?.role === 'assistant') {
-              updated[updated.length - 1].content = displayContent
+            const last = updated[updated.length - 1]
+            if (last?.role === 'assistant') {
+              last.content = displayContent
             } else {
               updated.push({
                 id: `assistant-${Date.now()}`,
@@ -219,37 +189,32 @@ export function ChatThread({
         }
       }
 
-      // Set follow-up suggestions on final message
       setMessages((prev) => {
         const updated = [...prev]
-        if (updated[updated.length - 1]?.role === 'assistant') {
-          updated[updated.length - 1].followUpSuggestions = suggestions
+        const last = updated[updated.length - 1]
+        if (last?.role === 'assistant') {
+          last.followUpSuggestions = suggestions
         }
         return updated
       })
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao processar resposta'
       setError(errorMessage)
-      console.error('[ChatThread] Stream error:', err)
     } finally {
       setIsLoading(false)
       inputRef.current?.focus()
     }
   }
 
-  // Main send handler
   const handleSend = useCallback(async () => {
     const messageText = inputValue.trim()
     if (!messageText || isSending || isLoading) return
 
-    // Clear input immediately
     setInputValue('')
     if (inputRef.current) {
-      inputRef.current.style.height = '40px'
-      textareaHeightRef.current = 40
+      inputRef.current.style.height = isEmbedded ? '40px' : '64px'
     }
 
-    // Add user message to UI
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -259,7 +224,6 @@ export function ChatThread({
 
     setMessages((prev) => [...prev, userMessage])
 
-    // EMBEDDED MODE: Create thread and redirect
     if (isEmbedded && threadId === 'new') {
       setIsSending(true)
       setError(null)
@@ -281,65 +245,47 @@ export function ChatThread({
 
         const responseData = await createResponse.json()
         const newThreadId = responseData.id
-
         if (!newThreadId) {
-          throw new Error('Erro ao criar conversa: ID inválido')
+          throw new Error('Erro ao criar conversa')
         }
 
-        console.log('[ChatThread] Thread created, redirecting to:', newThreadId)
-
-        // Update thread ID first
         setCurrentThreadId(newThreadId)
-
-        // Redirect to thread page (clean URL, no query params)
         router.push(`/threads/${newThreadId}`)
         return
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro ao criar conversa'
         setError(errorMessage)
-        console.error('[ChatThread] Thread creation error:', err)
         setIsSending(false)
         inputRef.current?.focus()
         return
       }
     }
 
-    // FULL-PAGE MODE: Stream response
     setIsSending(true)
     try {
       await handleStreamMessage(messageText)
     } finally {
       setIsSending(false)
     }
-  }, [inputValue, isSending, isLoading, isEmbedded, threadId, articleId, router])
+  }, [articleId, inputValue, isEmbedded, isLoading, isSending, router, threadId])
 
-  // Handle follow-up suggestion click
   const handleFollowUp = (question: string) => {
     setInputValue(question)
     inputRef.current?.focus()
-
-    // Auto-expand textarea for the suggestion
     setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.style.height = 'auto'
-        const scrollHeight = inputRef.current.scrollHeight
-        const newHeight = Math.min(Math.max(scrollHeight, 40), 100)
-        inputRef.current.style.height = newHeight + 'px'
-        textareaHeightRef.current = newHeight
-      }
+      if (inputRef.current) resizeTextarea(inputRef.current)
     }, 0)
   }
 
   if (!mounted) {
-    return null // Prevent hydration mismatch
+    return null
   }
 
   return (
-    <div className={`flex flex-col ${isEmbedded ? 'h-full' : 'min-h-screen'} ${mounted ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}>
-      {/* Messages Container */}
+    <div className={`flex flex-col ${isEmbedded ? 'h-full' : 'min-h-screen'} transition-opacity duration-300`}>
       <div
         ref={containerRef}
-        className={`flex-1 overflow-y-auto space-y-4 ${isEmbedded ? 'p-4 pb-[200px]' : ''} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`flex-1 overflow-y-auto ${isEmbedded ? 'space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-[160px]'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
@@ -352,30 +298,33 @@ export function ChatThread({
               className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                className={`${
+                  isEmbedded ? 'max-w-[80%]' : msg.role === 'user' ? 'max-w-[70%]' : 'max-w-full'
+                } ${
                   msg.role === 'user'
-                    ? 'bg-accent text-white rounded-br-none'
-                    : 'bg-bg-secondary dark:bg-[#2a2a2a] text-ink-primary dark:text-white rounded-bl-none'
+                    ? 'rounded-[1.35rem] rounded-br-md bg-[var(--color-ui-strong)] px-4 py-3 text-white shadow-sm'
+                    : isEmbedded
+                      ? 'rounded-2xl rounded-bl-none bg-bg-secondary px-4 py-3 text-ink-primary dark:bg-[#2a2a2a] dark:text-white'
+                      : 'px-0 py-0 text-ink-primary dark:text-white'
                 }`}
               >
                 {msg.role === 'user' ? (
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+                  <div className={`text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none ${isEmbedded ? '' : 'prose-p:my-0 prose-headings:mt-0 prose-headings:mb-3'}`}>
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 )}
 
-                {/* Follow-up Suggestions */}
                 {msg.role === 'assistant' && msg.followUpSuggestions && msg.followUpSuggestions.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <p className="text-xs font-semibold mb-2 text-ink-tertiary">Próximas perguntas:</p>
-                    <div className="space-y-1.5">
+                  <div className={`${isEmbedded ? 'mt-3 pt-3 border-t border-border' : 'mt-5 pt-4 border-t border-border/70'}`}>
+                    <p className="mb-2 text-xs font-semibold text-ink-tertiary">Próximas perguntas</p>
+                    <div className={isEmbedded ? 'space-y-1.5' : 'flex flex-wrap gap-2'}>
                       {msg.followUpSuggestions.map((suggestion, i) => (
                         <button
                           key={i}
                           onClick={() => handleFollowUp(suggestion)}
-                          className="w-full text-left text-xs p-2 rounded-lg bg-accent/10 dark:bg-accent/10 text-accent hover:bg-accent/20 dark:hover:bg-accent/20 transition-colors"
+                          className={`${isEmbedded ? 'w-full rounded-lg p-2' : 'rounded-full px-3 py-2'} text-left text-xs bg-accent/10 text-accent hover:bg-accent/20 transition-colors`}
                         >
                           {suggestion}
                         </button>
@@ -384,62 +333,51 @@ export function ChatThread({
                   </div>
                 )}
 
-                {/* Timestamp */}
-                <p className="text-xs opacity-60 mt-2">{new Date(msg.createdAt).toLocaleTimeString()}</p>
+                <p className="mt-2 text-xs opacity-60">
+                  {new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
 
-        {/* Loading Spinner */}
         {isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex gap-2 p-4"
-          >
-            <div className="w-2 h-2 rounded-full bg-ink-tertiary animate-bounce" />
-            <div className="w-2 h-2 rounded-full bg-ink-tertiary animate-bounce" style={{ animationDelay: '0.1s' }} />
-            <div className="w-2 h-2 rounded-full bg-ink-tertiary animate-bounce" style={{ animationDelay: '0.2s' }} />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-2 p-4">
+            <div className="h-2 w-2 rounded-full bg-ink-tertiary animate-bounce" />
+            <div className="h-2 w-2 rounded-full bg-ink-tertiary animate-bounce" style={{ animationDelay: '0.1s' }} />
+            <div className="h-2 w-2 rounded-full bg-ink-tertiary animate-bounce" style={{ animationDelay: '0.2s' }} />
           </motion.div>
         )}
 
-        {/* Error Message */}
         {error && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-red-100/50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 rounded-lg p-3 text-sm text-red-700 dark:text-red-300"
+            className="rounded-lg border border-red-300 bg-red-100/50 p-3 text-sm text-red-700 dark:border-red-700 dark:bg-red-900/20 dark:text-red-300"
           >
-            ❌ {error}
+            {error}
           </motion.div>
         )}
       </div>
 
-      {/* Spacer for fixed input (prevents content overlap) */}
-      {!isEmbedded && <div className="pointer-events-none" style={{ height: '120px' }} />}
+      {!isEmbedded && <div className="pointer-events-none" style={{ height: '128px' }} />}
 
-      {/* Input Area - Fixed bottom */}
-      <div
-        className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 transition-all duration-300 pointer-events-none`}
-      >
-        {/* ChatGPT-like fade/blur backdrop so content can pass "behind" the composer */}
-        <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/95 via-bg-primary/85 to-transparent backdrop-blur-sm" />
+      <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
+        <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/96 via-bg-primary/88 to-transparent backdrop-blur-sm" />
 
-        <div className={isEmbedded ? 'p-4 md:p-6 relative article-layout mx-auto pointer-events-auto' : 'p-6 relative article-layout mx-auto pointer-events-auto'}>
-          {/* Loading state feedback for embedded mode */}
+        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout p-6'}>
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-3 px-4 py-2 rounded-lg bg-accent/10 dark:bg-accent/10 text-accent text-sm font-medium flex items-center gap-2"
+              className="mb-3 flex items-center gap-2 rounded-lg bg-accent/10 px-4 py-2 text-sm font-medium text-accent"
             >
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-4 h-4"
+                className="h-4 w-4"
               >
-                <div className="w-full h-full rounded-full border-2 border-accent/30 border-t-accent" />
+                <div className="h-full w-full rounded-full border-2 border-accent/30 border-t-accent" />
               </motion.div>
               Criando conversa...
             </motion.div>
@@ -450,17 +388,16 @@ export function ChatThread({
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Faça uma pergunta sobre este artigo..."
+            placeholder="Pergunte qualquer coisa"
             rows={1}
             disabled={isSending}
-            className="w-full px-4 py-3 pr-12 rounded-xl border border-border bg-white dark:bg-[#2a2a2a] text-black dark:text-white placeholder-ink-muted focus:outline-none focus:border-accent dark:focus:border-accent resize-none disabled:opacity-50 transition-colors"
+            className={`w-full resize-none border border-border bg-white text-black placeholder-ink-muted transition-colors focus:border-accent focus:outline-none disabled:opacity-50 dark:bg-[#2a2a2a] dark:text-white dark:focus:border-accent ${isEmbedded ? 'rounded-xl px-4 py-3 pr-12' : 'min-h-16 rounded-[1.5rem] px-5 py-4 pr-16 shadow-[0_18px_40px_rgba(20,20,20,0.08)]'}`}
           />
 
           <button
             onClick={handleSend}
             disabled={isLoading || isSending || !inputValue.trim()}
-            className="absolute right-4 md:right-6 p-2 rounded-lg text-accent hover:bg-bg-secondary dark:hover:bg-[#333] disabled:text-[#ccc] dark:disabled:text-[#555] transition-colors spring-press"
-            style={{ top: isEmbedded ? '1.5rem' : '1.5rem' }}
+            className={`absolute bg-[var(--color-ui-strong)] text-white transition-colors spring-press disabled:opacity-40 ${isEmbedded ? 'right-4 top-6 rounded-lg p-2 md:right-6' : 'bottom-10 right-10 flex h-10 w-10 items-center justify-center rounded-full'}`}
             aria-label="Enviar mensagem"
           >
             <ArrowUp width={20} height={20} />
