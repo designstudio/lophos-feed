@@ -124,9 +124,7 @@ export function ChatThread({
       messages.length > 0
     ) {
       const lastMessage = messages[messages.length - 1]
-      const hasAssistantResponse = messages.some((m) => m.role === 'assistant')
-
-      if (lastMessage?.role === 'user' && !hasAssistantResponse) {
+      if (lastMessage?.role === 'user') {
         console.log('[ChatThread] Auto-responding to unanswered user message')
         autoResponded.current = true
         handleStreamMessage(lastMessage.content)

@@ -7,11 +7,12 @@ export const dynamic = 'force-dynamic'
 interface CreateThreadRequest {
   articleId: string
   message: string
+  saveMessage?: boolean
 }
 
 /**
  * POST /api/chat/threads
- * Create a new chat thread and save first user message
+ * Create or return a chat thread for the current user/article
  */
 export async function POST(request: Request) {
   const { userId } = await auth()
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { articleId, message } = (await request.json()) as CreateThreadRequest
+    const { articleId, message, saveMessage = true } = (await request.json()) as CreateThreadRequest
 
     if (!articleId || !message) {
       console.error('[chat/threads POST] Missing required fields:', {
@@ -57,6 +58,21 @@ export async function POST(request: Request) {
         userId,
         articleId,
       })
+
+      if (saveMessage) {
+        const { error: existingMessageError } = await db.from('chat_messages').insert({
+          thread_id: existingThread.id,
+          user_id: userId,
+          role: 'user',
+          content: message,
+        })
+
+        if (existingMessageError) {
+          console.error('[chat/threads POST] Error saving message to existing thread:', existingMessageError)
+          return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
+        }
+      }
+
       return NextResponse.json({
         id: existingThread.id,
         title: existingThread.title,
@@ -88,17 +104,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to create thread' }, { status: 500 })
     }
 
-    // Save first user message to database
-    const { error: messageError } = await db.from('chat_messages').insert({
-      thread_id: newThread.id,
-      user_id: userId,
-      role: 'user',
-      content: message,
-    })
+    if (saveMessage) {
+      const { error: messageError } = await db.from('chat_messages').insert({
+        thread_id: newThread.id,
+        user_id: userId,
+        role: 'user',
+        content: message,
+      })
 
-    if (messageError) {
-      console.error('[chat/threads POST] Error saving first message:', messageError)
-      return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
+      if (messageError) {
+        console.error('[chat/threads POST] Error saving first message:', messageError)
+        return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
+      }
     }
 
     console.log('[chat/threads POST] Thread created successfully:', {
@@ -114,6 +131,70 @@ export async function POST(request: Request) {
     })
   } catch (err) {
     console.error('[chat/threads POST] Error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * GET /api/chat/threads?articleId=...
+ * Return an existing thread and its messages for the current user/article
+ */
+export async function GET(request: Request) {
+  const { userId } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { searchParams } = new URL(request.url)
+    const articleId = searchParams.get('articleId')
+
+    if (!articleId) {
+      return NextResponse.json({ error: 'Missing articleId' }, { status: 400 })
+    }
+
+    const db = getSupabaseAdmin()
+
+    const { data: thread, error: threadError } = await db
+      .from('chat_threads')
+      .select('id, title, article_id')
+      .eq('user_id', userId)
+      .eq('article_id', articleId)
+      .maybeSingle()
+
+    if (threadError) {
+      console.error('[chat/threads GET] Error fetching thread:', threadError)
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+    }
+
+    if (!thread) {
+      return NextResponse.json({ thread: null, messages: [] })
+    }
+
+    const { data: messages, error: messagesError } = await db
+      .from('chat_messages')
+      .select('id, role, content, follow_up_suggestions, created_at')
+      .eq('thread_id', thread.id)
+      .order('created_at', { ascending: true })
+
+    if (messagesError) {
+      console.error('[chat/threads GET] Error fetching messages:', messagesError)
+      return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      thread,
+      messages: (messages || []).map((message) => ({
+        id: message.id,
+        role: message.role,
+        content: message.content,
+        followUpSuggestions: message.follow_up_suggestions || undefined,
+        createdAt: message.created_at,
+      })),
+    })
+  } catch (err) {
+    console.error('[chat/threads GET] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

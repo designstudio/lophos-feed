@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
+import { ArticleAssistant } from '@/components/ArticleAssistant'
 import { SquareTopDown, ClockCircle, CloseCircle, Documents, ArrowLeft, HeartAngle, Share } from '@solar-icons/react-perf/Linear'
 import { Heart as HeartFilled } from '@solar-icons/react-perf/Bold'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -375,6 +376,22 @@ export default function ArticlePage() {
                         </button>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {isSignedIn ? (
+                  <ArticleAssistant articleId={item.id} articleTitle={item.title} />
+                ) : (
+                  <div className="mt-10 mb-8 rounded-[1.5rem] border border-border bg-bg-primary px-5 py-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">
+                      AI Chat
+                    </p>
+                    <h2 className="text-[1.05rem] font-semibold text-ink-primary mt-1">
+                      Converse sobre este artigo
+                    </h2>
+                    <p className="text-sm text-ink-secondary mt-2 leading-relaxed">
+                      Entre na sua conta para fazer perguntas sobre o artigo e receber respostas geradas por IA com base no contexto desta pagina.
+                    </p>
                   </div>
                 )}
 
