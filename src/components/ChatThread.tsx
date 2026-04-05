@@ -349,7 +349,7 @@ export function ChatThread({
                   isEmbedded ? 'max-w-[80%]' : msg.role === 'user' ? 'max-w-[70%]' : 'max-w-full'
                 } ${
                   msg.role === 'user'
-                    ? 'rounded-[1.35rem] rounded-br-md bg-[var(--color-ui-strong)] px-4 py-3 text-white shadow-sm'
+                    ? 'rounded-[1.35rem] rounded-br-md bg-bg-secondary px-4 py-3 text-ink-secondary shadow-sm'
                     : isEmbedded
                       ? 'rounded-2xl rounded-bl-none bg-bg-secondary px-4 py-3 text-ink-primary dark:bg-[#2a2a2a] dark:text-white'
                       : 'px-6 py-6 text-ink-primary dark:text-white'
@@ -370,7 +370,7 @@ export function ChatThread({
                         <button
                           key={i}
                           onClick={() => handleFollowUp(suggestion)}
-                          className={`${isEmbedded ? 'w-full rounded-lg p-2' : 'inline-flex items-center gap-2 rounded-xl px-3 py-2'} text-left text-sm leading-relaxed text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary transition-colors`}
+                          className={`${isEmbedded ? 'w-full rounded-lg p-2' : 'inline-flex items-center gap-2 rounded-xl px-3 py-2'} text-left text-sm leading-relaxed text-ink-secondary hover:bg-bg-secondary hover:text-ink-secondary transition-colors`}
                         >
                           {!isEmbedded && <Forward2 size={16} className="flex-shrink-0" />}
                           <span>{suggestion}</span>
