@@ -237,8 +237,8 @@ export function ChatThread({
     }
   }
 
-  const handleSend = useCallback(async () => {
-    const messageText = inputValue.trim()
+  const handleSend = useCallback(async (prefilledMessage?: string) => {
+    const messageText = (prefilledMessage ?? inputValue).trim()
     if (!messageText || isSending || isLoading) return
 
     setInputValue('')
@@ -301,11 +301,7 @@ export function ChatThread({
   }, [articleId, inputValue, isEmbedded, isLoading, isSending, router, threadId])
 
   const handleFollowUp = (question: string) => {
-    setInputValue(question)
-    inputRef.current?.focus()
-    setTimeout(() => {
-      if (inputRef.current) resizeTextarea(inputRef.current)
-    }, 0)
+    void handleSend(question)
   }
 
   if (!mounted) {
@@ -316,7 +312,7 @@ export function ChatThread({
     <div className={`flex flex-col ${isEmbedded ? 'h-full' : 'min-h-screen'} transition-opacity duration-300`}>
       <div
         ref={containerRef}
-        className={`flex-1 overflow-y-auto ${isEmbedded ? 'space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-[160px]'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`flex-1 overflow-y-auto ${isEmbedded ? 'space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-[88px]'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
@@ -395,12 +391,12 @@ export function ChatThread({
         )}
       </div>
 
-      {!isEmbedded && <div className="pointer-events-none" style={{ height: '88px' }} />}
+      {!isEmbedded && <div className="pointer-events-none" style={{ height: '40px' }} />}
 
       <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
         <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/96 via-bg-primary/88 to-transparent backdrop-blur-sm" />
 
-        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout p-6'}>
+        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-4 pt-2'}>
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -430,7 +426,7 @@ export function ChatThread({
           />
 
           <button
-            onClick={handleSend}
+            onClick={() => void handleSend()}
             disabled={isLoading || isSending || !inputValue.trim()}
             className={`absolute bg-[var(--color-ui-strong)] text-white transition-colors spring-press disabled:opacity-40 ${isEmbedded ? 'right-4 top-6 rounded-lg p-2 md:right-6' : 'bottom-10 right-10 flex h-10 w-10 items-center justify-center rounded-full'}`}
             aria-label="Enviar mensagem"
