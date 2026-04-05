@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowUp } from '@solar-icons/react-perf/Linear'
+import { ArrowUp, Forward2 } from '@solar-icons/react-perf/Linear'
 import ReactMarkdown from 'react-markdown'
 
 interface ChatMessage {
@@ -312,37 +312,33 @@ export function ChatThread({
                     ? 'rounded-[1.35rem] rounded-br-md bg-[var(--color-ui-strong)] px-4 py-3 text-white shadow-sm'
                     : isEmbedded
                       ? 'rounded-2xl rounded-bl-none bg-bg-secondary px-4 py-3 text-ink-primary dark:bg-[#2a2a2a] dark:text-white'
-                      : 'px-0 py-0 text-ink-primary dark:text-white'
+                      : 'px-6 py-6 text-ink-primary dark:text-white'
                 }`}
               >
                 {msg.role === 'user' ? (
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <div className={`max-w-none text-body prose dark:prose-invert text-ink-primary ${isEmbedded ? 'prose-sm' : 'prose-p:my-0 prose-headings:mt-0 prose-headings:mb-3 prose-p:text-[1rem] prose-p:leading-[1.625] prose-li:text-[1rem] prose-li:leading-[1.625] prose-strong:text-ink-primary prose-headings:text-ink-primary'}`}>
+                  <div className={`max-w-none text-body prose dark:prose-invert text-ink-primary ${isEmbedded ? 'prose-sm' : 'prose-p:my-2 prose-headings:mt-0 prose-headings:mb-3 prose-h3:mt-4 prose-h3:mb-2 prose-p:text-[1rem] prose-p:leading-[1.625] prose-li:text-[1rem] prose-li:leading-[1.625] prose-strong:text-ink-primary prose-headings:text-ink-primary'}`}>
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 )}
 
                 {msg.role === 'assistant' && msg.followUpSuggestions && msg.followUpSuggestions.length > 0 && (
                   <div className={`${isEmbedded ? 'mt-3 pt-3 border-t border-border' : 'mt-6 pt-4 border-t border-border/70'}`}>
-                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-tertiary">Próximas perguntas</p>
                     <div className={isEmbedded ? 'space-y-1.5' : 'flex flex-col items-start gap-2'}>
                       {msg.followUpSuggestions.map((suggestion, i) => (
                         <button
                           key={i}
                           onClick={() => handleFollowUp(suggestion)}
-                          className={`${isEmbedded ? 'w-full rounded-lg p-2' : 'rounded-2xl px-4 py-3'} text-left text-sm leading-relaxed text-ink-secondary bg-[var(--color-hover-subtle)] hover:bg-bg-secondary hover:text-ink-primary transition-colors`}
+                          className={`${isEmbedded ? 'w-full rounded-lg p-2' : 'inline-flex items-center gap-2 rounded-xl px-3 py-2'} text-left text-sm leading-relaxed text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary transition-colors`}
                         >
-                          {isEmbedded ? suggestion : `↳ ${suggestion}`}
+                          {!isEmbedded && <Forward2 size={16} className="flex-shrink-0" />}
+                          <span>{suggestion}</span>
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
-
-                <p className={`mt-2 text-xs opacity-60 ${isEmbedded ? '' : 'text-ink-muted'}`}>
-                  {new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </p>
               </div>
             </motion.div>
           ))}
