@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Feed, Refresh, AltArrowLeft, AltArrowRight,
-  HeartAngle, Magnifer, ChatRoundDots
+  HeartAngle, Magnifer
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
@@ -255,7 +255,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         {!collapsed && recentThreads.length > 0 && (
           <div className="px-2 pb-4">
             <div className="px-2.5 pt-4 pb-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-tertiary">
+              <p className="text-[0.813rem] font-semibold text-ink-tertiary">
                 Histórico
               </p>
             </div>
@@ -268,17 +268,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                     key={thread.id}
                     href={`/threads/${thread.id}`}
                     className={cn(
-                      'flex items-start gap-2.5 rounded-xl px-2.5 py-2 transition-colors',
+                      'block rounded-xl px-2.5 py-2 transition-colors',
                       isActive ? 'bg-bg-secondary text-ink-primary' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
                     )}
                   >
-                    <ChatRoundDots size={16} className="mt-0.5 flex-shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13px] font-medium leading-5">{thread.title}</p>
-                      <p className="mt-0.5 text-[11px] text-ink-muted">
-                        {new Date(thread.updated_at).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
+                    <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
                   </Link>
                 )
               })}
