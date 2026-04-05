@@ -65,6 +65,67 @@ function buildArticleContext(article: {
     .join('\n')
 }
 
+function extractArticleTitle(fullContext: string) {
+  const titleMatch = fullContext.match(/TITULO:\s*(.+)/i)
+  return titleMatch?.[1]?.trim() || 'este assunto'
+}
+
+function extractQuestions(text: string) {
+  const suggestions: string[] = []
+  const lines = text.split('\n')
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+
+    const numberedMatch = trimmed.match(/^(?:[-*•]\s*|\d+[.)]\s*)(.+?)(?:\?)?$/)
+    const directQuestion = trimmed.endsWith('?') ? trimmed.replace(/^(?:[-*•]\s*)/, '') : null
+    const candidate = numberedMatch?.[1]?.trim() || directQuestion
+
+    if (!candidate) continue
+
+    let question = candidate
+    if (!question.endsWith('?')) {
+      question += '?'
+    }
+
+    if (question.length > 12 && !suggestions.includes(question)) {
+      suggestions.push(question)
+    }
+
+    if (suggestions.length >= 3) break
+  }
+
+  return suggestions
+}
+
+function buildContextualFallbacks(userMessage: string, fullContext: string) {
+  const title = extractArticleTitle(fullContext)
+  const message = userMessage.toLowerCase()
+
+  if (/(filme|serie|livro|jogo|obra|sobre o que)/.test(message)) {
+    return [
+      `Quais sao os temas centrais de ${title}?`,
+      `Quem sao os personagens ou nomes mais importantes ligados a ${title}?`,
+      `Por que ${title} esta sendo citado neste artigo?`,
+    ]
+  }
+
+  if (/(impacto|implicac|consequenc|efeito)/.test(message)) {
+    return [
+      `Quem e mais afetado por isso em ${title}?`,
+      `Qual pode ser o proximo desdobramento dessa historia?`,
+      `Como isso se conecta com o contexto mais amplo do artigo?`,
+    ]
+  }
+
+  return [
+    `Qual e o ponto mais importante de ${title}?`,
+    `O que vale acompanhar daqui para frente nesse assunto?`,
+    `Como isso se conecta com o restante do artigo?`,
+  ]
+}
+
 export async function POST(request: Request) {
   const { userId } = await auth()
 
@@ -242,7 +303,12 @@ Sua resposta deve terminar com o delimitador ---LOPHOS_SUGGESTIONS--- e, depois 
       await writer.write(encoder.encode(JSON.stringify({ token: text, index: tokenCount }) + '\n'))
     }
 
-    const { content: responseContent, suggestions } = separateContentAndSuggestions(fullResponse)
+    const latestUserMessage = [...conversationHistory].reverse().find((message) => message.role === 'user')?.content || ''
+    const { content: responseContent, suggestions } = separateContentAndSuggestions(
+      fullResponse,
+      latestUserMessage,
+      fullContext
+    )
 
     await writer.write(
       encoder.encode(JSON.stringify({ complete: true, suggestions }) + '\n')
@@ -275,45 +341,31 @@ Sua resposta deve terminar com o delimitador ---LOPHOS_SUGGESTIONS--- e, depois 
   }
 }
 
-function separateContentAndSuggestions(fullResponse: string): {
+function separateContentAndSuggestions(
+  fullResponse: string,
+  userMessage: string,
+  fullContext: string
+): {
   content: string
   suggestions: string[]
 } {
   const delimiter = '---LOPHOS_SUGGESTIONS---'
-  const suggestions: string[] = []
   const parts = fullResponse.split(delimiter)
   const content = parts[0]
     .replace(/LOPHOS[_\s-]*SUGGESTIONS[\s\S]*$/i, '')
     .trim()
+  let suggestions: string[] = []
 
   if (parts.length > 1) {
-    const lines = parts[1].split('\n')
-
-    for (const line of lines) {
-      const questionMatch = line.match(/^\d+\.\s*(.+?)(?:\?)?$/)
-      if (!questionMatch || suggestions.length >= 3) continue
-
-      let question = questionMatch[1].trim()
-      if (!question.endsWith('?')) {
-        question += '?'
-      }
-
-      if (question.length > 10) {
-        suggestions.push(question)
-      }
-    }
+    suggestions = extractQuestions(parts[1])
   }
 
   if (suggestions.length < 3) {
-    const fallbacks = [
-      'Qual e o contexto mais amplo disso?',
-      'Quais sao as implicacoes praticas?',
-      'Como isso se conecta com o restante do artigo?',
-    ]
+    const fallbacks = buildContextualFallbacks(userMessage, fullContext)
 
     return {
       content,
-      suggestions: [...suggestions, ...fallbacks.slice(0, 3 - suggestions.length)],
+      suggestions: [...suggestions, ...fallbacks.filter((item) => !suggestions.includes(item)).slice(0, 3 - suggestions.length)],
     }
   }
 
