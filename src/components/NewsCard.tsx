@@ -216,7 +216,6 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
           className="text-card-title text-ink-primary group-hover:text-accent transition-colors line-clamp-3"
           style={{ height: 'calc(3 * 1.625rem)' }}
         >{item.title}</h2>
-        <PublishedMeta publishedAt={item.publishedAt} />
         <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
       </Link>
     )
