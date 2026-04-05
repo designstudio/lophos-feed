@@ -309,10 +309,10 @@ export function ChatThread({
   }
 
   return (
-    <div className={`flex flex-col ${isEmbedded ? 'h-full' : 'min-h-screen'} transition-opacity duration-300`}>
+    <div className={`${isEmbedded ? 'flex h-full flex-col' : 'block'} transition-opacity duration-300`}>
       <div
         ref={containerRef}
-        className={`flex-1 overflow-y-auto ${isEmbedded ? 'space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-[88px]'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`${isEmbedded ? 'flex-1 overflow-y-auto space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-[88px]'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
