@@ -29,6 +29,30 @@ function stripSuggestionArtifacts(content: string) {
     .trim()
 }
 
+function extractSuggestionsFromContent(content: string) {
+  const suggestions: string[] = []
+  const normalized = content
+    .replace(/---\s*LOPHOS_SUGGESTIONS\s*---/i, '\nLOPHOS_SUGGESTIONS\n')
+    .split('\n')
+
+  for (const line of normalized) {
+    const trimmed = line.trim()
+    const questionMatch = trimmed.match(/^\d+\.\s*(.+?)(?:\?)?$/)
+    if (!questionMatch || suggestions.length >= 3) continue
+
+    let question = questionMatch[1].trim()
+    if (!question.endsWith('?')) {
+      question += '?'
+    }
+
+    if (question.length > 10) {
+      suggestions.push(question)
+    }
+  }
+
+  return suggestions
+}
+
 async function* parseNDJSON(response: Response) {
   const reader = response.body?.getReader()
   if (!reader) return
@@ -296,6 +320,12 @@ export function ChatThread({
       >
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
+            (() => {
+              const parsedSuggestions = msg.role === 'assistant' ? extractSuggestionsFromContent(msg.content) : []
+              const displayContent = msg.role === 'assistant' ? stripSuggestionArtifacts(msg.content) : msg.content
+              const effectiveSuggestions = parsedSuggestions.length > 0 ? parsedSuggestions : (msg.followUpSuggestions || [])
+
+              return (
             <motion.div
               key={msg.id}
               initial={{ opacity: 0, y: 8 }}
@@ -319,14 +349,14 @@ export function ChatThread({
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
                   <div className={`max-w-none text-body prose dark:prose-invert text-ink-primary ${isEmbedded ? 'prose-sm' : 'prose-p:my-2 prose-headings:mt-0 prose-headings:mb-3 prose-h3:mt-4 prose-h3:mb-2 prose-p:text-[1rem] prose-p:leading-[1.625] prose-li:text-[1rem] prose-li:leading-[1.625] prose-strong:text-ink-primary prose-headings:text-ink-primary'}`}>
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <ReactMarkdown>{displayContent}</ReactMarkdown>
                   </div>
                 )}
 
-                {msg.role === 'assistant' && msg.followUpSuggestions && msg.followUpSuggestions.length > 0 && (
+                {msg.role === 'assistant' && effectiveSuggestions.length > 0 && (
                   <div className={`${isEmbedded ? 'mt-3 pt-3 border-t border-border' : 'mt-6 pt-4 border-t border-border/70'}`}>
                     <div className={isEmbedded ? 'space-y-1.5' : 'flex flex-col items-start gap-2'}>
-                      {msg.followUpSuggestions.map((suggestion, i) => (
+                      {effectiveSuggestions.map((suggestion, i) => (
                         <button
                           key={i}
                           onClick={() => handleFollowUp(suggestion)}
@@ -341,6 +371,8 @@ export function ChatThread({
                 )}
               </div>
             </motion.div>
+              )
+            })()
           ))}
         </AnimatePresence>
 
@@ -363,7 +395,7 @@ export function ChatThread({
         )}
       </div>
 
-      {!isEmbedded && <div className="pointer-events-none" style={{ height: '128px' }} />}
+      {!isEmbedded && <div className="pointer-events-none" style={{ height: '88px' }} />}
 
       <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
         <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/96 via-bg-primary/88 to-transparent backdrop-blur-sm" />
