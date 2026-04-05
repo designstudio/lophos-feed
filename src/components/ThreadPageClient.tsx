@@ -116,7 +116,7 @@ export function ThreadPageClient({
 
         {/* Chat Content Area */}
         <main className="page-scroll">
-          <div className="article-layout mx-auto px-0 py-6 pb-6">
+          <div className="article-layout mx-auto px-0 py-6 pb-10">
             <ChatThread
               threadId={threadId}
               articleId={article.id}
