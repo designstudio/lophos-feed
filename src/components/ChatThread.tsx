@@ -408,8 +408,6 @@ export function ChatThread({
       {!isEmbedded && <div className="pointer-events-none" style={{ height: `${FULLPAGE_COMPOSER_HEIGHT}px` }} />}
 
       <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
-        <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/96 via-bg-primary/88 to-transparent backdrop-blur-sm" />
-
         <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-3 pt-2'}>
           {isSending && isEmbedded && (
             <motion.div
