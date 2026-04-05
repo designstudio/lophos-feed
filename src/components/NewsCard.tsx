@@ -2,9 +2,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
-import { HeartAngle, Dislike } from '@solar-icons/react-perf/Linear'
+import { HeartAngle, Dislike, ClockCircle } from '@solar-icons/react-perf/Linear'
 import { Heart as HeartFilled, Dislike as DislikeFilled } from '@solar-icons/react-perf/Bold'
 import { motion, AnimatePresence } from 'framer-motion'
+import { format, formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/components/Tooltip'
 
@@ -22,6 +24,22 @@ function getSourceLabel(sources: NewsItem['sources']): string {
   const parts = name.replace(/\s+/g, ' ').split(' ')
   const initials = parts.slice(0, 2).map(p => p[0]).join('').toUpperCase()
   return initials || name.slice(0, 2).toUpperCase()
+}
+
+function getPublishedLabel(publishedAt?: string): string | null {
+  if (!publishedAt) return null
+
+  const date = new Date(publishedAt)
+  if (Number.isNaN(date.getTime())) return null
+
+  const ageMs = Date.now() - date.getTime()
+  const twoDaysMs = 1000 * 60 * 60 * 48
+
+  if (ageMs <= twoDaysMs) {
+    return `Publicado ${formatDistanceToNow(date, { addSuffix: true, locale: ptBR })}`
+  }
+
+  return `Publicado ${format(date, "d 'de' MMM. 'de' yyyy", { locale: ptBR })}`
 }
 
 interface Props {
@@ -146,6 +164,18 @@ function CardImage({ proxiedImage, title, sources, onError }: {
   )
 }
 
+function PublishedMeta({ publishedAt }: { publishedAt?: string }) {
+  const label = getPublishedLabel(publishedAt)
+  if (!label) return null
+
+  return (
+    <div className="flex items-center gap-1.5 mt-2 text-[12px] text-ink-tertiary">
+      <ClockCircle size={14} className="flex-shrink-0" />
+      <span>{label}</span>
+    </div>
+  )
+}
+
 export function NewsCard({ item, variant = 'card', className, initialReaction = null, fadingOut = false, onReactionChange }: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
   const [reacting, setReacting] = useState(false)
@@ -186,6 +216,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
           className="text-card-title text-ink-primary group-hover:text-accent transition-colors line-clamp-3"
           style={{ height: 'calc(3 * 1.625rem)' }}
         >{item.title}</h2>
+        <PublishedMeta publishedAt={item.publishedAt} />
         <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
       </Link>
     )
@@ -216,6 +247,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
             className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
             style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
           >{item.title}</h2>
+          <PublishedMeta publishedAt={item.publishedAt} />
           <div className="hidden md:block">
             <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
           </div>
@@ -250,6 +282,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
           className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
           style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
         >{item.title}</h2>
+        <PublishedMeta publishedAt={item.publishedAt} />
         <div className="hidden md:block">
           <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
         </div>
