@@ -26,7 +26,7 @@ function stripSuggestionArtifacts(content: string) {
   return content
     .replace(/---\s*LOPHOS_SUGGESTIONS\s*---[\s\S]*$/i, '')
     .replace(/LOPHOS[_\s-]*SUGGESTIONS[\s\S]*$/i, '')
-    .replace(/\n-{3,}\s*$/g, '')
+    .replace(/(?:\r?\n)\s*-{3,}\s*$/g, '')
     .trim()
 }
 
@@ -362,7 +362,7 @@ export function ChatThread({
                 )}
 
                 {msg.role === 'assistant' && effectiveSuggestions.length > 0 && (
-                  <div className={`${isEmbedded ? 'mt-3 pt-3 border-t border-border' : 'mt-6 pt-4 border-t border-border/70'}`}>
+                  <div className={`${isEmbedded ? 'mt-3 pt-3 border-t border-border' : 'mt-6 pt-4'}`}>
                     <div className={isEmbedded ? 'space-y-1.5' : 'flex flex-col items-start gap-2'}>
                       {effectiveSuggestions.map((suggestion, i) => (
                         <button
