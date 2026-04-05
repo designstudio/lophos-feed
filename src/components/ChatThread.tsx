@@ -444,7 +444,7 @@ export function ChatThread({
           <button
             onClick={() => void handleSend()}
             disabled={isLoading || isSending || !inputValue.trim()}
-            className={`absolute bg-[var(--color-ui-strong)] text-white transition-colors spring-press disabled:opacity-40 ${isEmbedded ? 'right-4 top-6 rounded-lg p-2 md:right-6' : 'bottom-8 right-3 flex h-10 w-10 items-center justify-center rounded-full'}`}
+            className={`absolute bg-[var(--color-ui-strong)] text-white transition-colors spring-press disabled:opacity-40 ${isEmbedded ? 'right-4 top-6 rounded-lg p-2 md:right-6' : 'right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full'}`}
             aria-label="Enviar mensagem"
           >
             <ArrowUp width={20} height={20} />
