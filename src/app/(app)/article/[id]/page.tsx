@@ -305,6 +305,9 @@ export default function ArticlePage() {
                   <span>Publicado {formatDistanceToNow(new Date(item.publishedAt), { addSuffix: true, locale: ptBR })}</span>
                 </div>
 
+                {/* Summary */}
+                <p className="text-body text-ink-secondary leading-relaxed mb-8">{item.summary}</p>
+
                 {/* Hero media — video or image */}
                 {item.videoUrl ? (
                   <VideoPlayer url={item.videoUrl} title={item.title} />
@@ -331,9 +334,6 @@ export default function ArticlePage() {
                 ) : null}
 
                 {/* Image Modal */}
-
-                {/* Summary */}
-                <p className="text-body text-ink-secondary leading-relaxed mb-8">{item.summary}</p>
 
                 {/* Sections */}
                 {item.sections && item.sections.length > 0 && (
