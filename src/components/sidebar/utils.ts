@@ -26,6 +26,7 @@ export const ACCENT_COLORS = [
 ];
 
 export const WIDGET_OPTIONS = [
+  { id: 'interest-topics', label: 'Tópicos de interesse' },
   { id: 'valorant', label: 'Partidas - Valorant' },
   { id: 'lol',      label: 'Partidas - League of Legends' },
   { id: 'series',   label: 'Próximos episódios' },

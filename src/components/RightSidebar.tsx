@@ -7,7 +7,7 @@ import { useStickySidebarV2 } from '@/hooks/useStickySidebarV2'
 
 const STORAGE_KEY = 'lophos_widgets'
 
-const DEFAULT_ORDER = ['weather', 'valorant', 'lol', 'series']
+const DEFAULT_ORDER = ['weather', 'interest-topics', 'valorant', 'lol', 'series']
 
 export function RightSidebar({
   topics,
@@ -15,7 +15,7 @@ export function RightSidebar({
   topics: string[]
 }) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
-  const [active, setActive] = useState<string[]>(['weather', 'valorant', 'lol', 'series'])
+  const [active, setActive] = useState<string[]>(DEFAULT_ORDER)
   const [stickyEnabled, setStickyEnabled] = useState(false)
   const { reinitializeStickySidebar, updateStickySidebar, destroyStickySidebar } = useStickySidebarV2({
     sidebarSelector: '#right-sidebar-sticky',
@@ -140,9 +140,9 @@ export function RightSidebar({
     <aside id="right-sidebar-sticky" className="sidebar-right hidden lg:block">
       <div className="sidebar">
         <div className="sidebar__inner flex flex-col gap-4 pt-6 pb-6">
-          <InterestTopicsWidget topics={topics} />
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
+            if (id === 'interest-topics') return <InterestTopicsWidget key="interest-topics" topics={topics} />
             // Each smart widget renders only itself but has access to all topics
             return (
               <SmartWidgets
