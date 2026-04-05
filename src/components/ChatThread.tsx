@@ -26,6 +26,7 @@ function stripSuggestionArtifacts(content: string) {
   return content
     .replace(/---\s*LOPHOS_SUGGESTIONS\s*---[\s\S]*$/i, '')
     .replace(/LOPHOS[_\s-]*SUGGESTIONS[\s\S]*$/i, '')
+    .replace(/\n-{3,}\s*$/g, '')
     .trim()
 }
 

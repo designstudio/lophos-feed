@@ -142,6 +142,10 @@ html, body {
   font-weight: 600;
 }
 
+.ai-response-content hr {
+  display: none;
+}
+
 .ai-response-content ul,
 .ai-response-content ol {
   margin-top: 0.5rem;
