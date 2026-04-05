@@ -1,16 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowUp } from '@solar-icons/react-perf/Linear'
-
-interface ThreadLookupResponse {
-  thread?: {
-    id: string
-    title: string
-    article_id: string
-  } | null
-}
 
 interface ArticleAssistantProps {
   articleId: string
@@ -19,32 +11,9 @@ interface ArticleAssistantProps {
 export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
   const router = useRouter()
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const [threadId, setThreadId] = useState<string | null>(null)
   const [inputValue, setInputValue] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-
-    async function loadThread() {
-      try {
-        const response = await fetch(`/api/chat/threads?articleId=${encodeURIComponent(articleId)}`)
-        if (!response.ok) return
-
-        const data = (await response.json()) as ThreadLookupResponse
-        if (!cancelled && data.thread?.id) {
-          setThreadId(data.thread.id)
-        }
-      } catch {
-      }
-    }
-
-    loadThread()
-    return () => {
-      cancelled = true
-    }
-  }, [articleId])
 
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto'
@@ -75,7 +44,7 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
       }
 
       const data = await response.json()
-      const resolvedThreadId = data.id || threadId
+      const resolvedThreadId = data.id
 
       if (!resolvedThreadId) {
         throw new Error('Thread invalida')
@@ -90,7 +59,7 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
   }
 
   return (
-    <section className="mt-10 mb-8">
+    <div className="mt-10 mb-8">
       <div className="relative flex min-h-16 items-center gap-3 rounded-[1.5rem] border border-border bg-white px-3 py-2 shadow-[0_18px_40px_rgba(20,20,20,0.08)]">
         <textarea
           ref={inputRef}
@@ -124,6 +93,6 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
       {error && (
         <p className="mt-3 text-sm text-red-600">{error}</p>
       )}
-    </section>
+    </div>
   )
 }
