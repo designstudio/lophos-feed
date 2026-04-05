@@ -100,7 +100,7 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
           <div key={gameId} className="rounded-2xl border border-border bg-bg-primary p-4">
             <div className="flex items-center gap-2 mb-3">
               <img src={meta.logo} alt={meta.label} width={16} height={16} className="rounded-sm" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-              <h3 className="text-[14px] font-semibold text-ink-primary uppercase tracking-wider">{meta.label}</h3>
+              <h3 className="text-[14px] font-semibold text-ink-primary tracking-wide">{meta.label}</h3>
             </div>
             {loadingMatches && <div className="space-y-2"><div className="skeleton h-8 rounded" /><div className="skeleton h-8 rounded" /></div>}
             {!loadingMatches && matches.length === 0 && <p className="text-[12px] text-ink-tertiary">Nenhuma partida agendada.</p>}
@@ -127,7 +127,7 @@ export function SmartWidgets({ topics, activeWidgets }: Props) {
         <div className="rounded-2xl border border-border bg-bg-primary p-4">
           <div className="flex items-center gap-2 mb-3">
             <Tv size={16} className="text-purple-500" />
-            <h3 className="text-[14px] font-semibold text-ink-primary uppercase tracking-wider">Próximos episódios</h3>
+            <h3 className="text-[14px] font-semibold text-ink-primary tracking-wide">Minhas séries</h3>
           </div>
           {loadingEpisodes && <div className="space-y-2"><div className="skeleton h-10 rounded" /><div className="skeleton h-10 rounded" /></div>}
           {!loadingEpisodes && episodes.length === 0 && (
