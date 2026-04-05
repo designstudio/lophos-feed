@@ -90,6 +90,8 @@ function dedupeConsecutiveMessages(messages: ChatMessage[]) {
   })
 }
 
+const FULLPAGE_COMPOSER_HEIGHT = 112
+
 export function ChatThread({
   threadId,
   articleId,
@@ -324,7 +326,7 @@ export function ChatThread({
     <div className={`${isEmbedded ? 'flex h-full flex-col' : 'block'} transition-opacity duration-300`}>
       <div
         ref={containerRef}
-        className={`${isEmbedded ? 'flex-1 overflow-y-auto space-y-4 p-4 pb-[200px]' : 'space-y-8 pb-10'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
+        className={`${isEmbedded ? 'flex-1 overflow-y-auto space-y-4 p-4 pb-[200px]' : 'space-y-8'} ${isEmbedded ? paddingLeft : ''} transition-all duration-300`}
       >
         <AnimatePresence initial={false}>
           {displayMessages.map((msg) => (
@@ -403,12 +405,12 @@ export function ChatThread({
         )}
       </div>
 
-      {!isEmbedded && <div className="pointer-events-none" style={{ height: '16px' }} />}
+      {!isEmbedded && <div className="pointer-events-none" style={{ height: `${FULLPAGE_COMPOSER_HEIGHT}px` }} />}
 
       <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
         <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/96 via-bg-primary/88 to-transparent backdrop-blur-sm" />
 
-        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-3 pt-1'}>
+        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-3 pt-2'}>
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
