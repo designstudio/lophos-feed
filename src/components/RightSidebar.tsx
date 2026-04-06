@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
 import { InterestTopicsWidget } from './InterestTopicsWidget'
@@ -14,7 +14,6 @@ export function RightSidebar({
 }: {
   topics: string[]
 }) {
-  const innerRef = useRef<HTMLDivElement | null>(null)
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [active, setActive] = useState<string[]>(DEFAULT_ORDER)
   const [stickyEnabled, setStickyEnabled] = useState(false)
@@ -111,34 +110,6 @@ export function RightSidebar({
   }, [reinitializeStickySidebar, updateStickySidebar, stickyEnabled])
 
   useEffect(() => {
-    if (!stickyEnabled || !innerRef.current) return
-
-    const scrollContainer = document.getElementById('feed-scroll-container')
-    if (!scrollContainer) return
-
-    const normalizeDelta = (event: WheelEvent) => {
-      if (event.deltaMode === WheelEvent.DOM_DELTA_LINE) return event.deltaY * 16
-      if (event.deltaMode === WheelEvent.DOM_DELTA_PAGE) return event.deltaY * window.innerHeight
-      return event.deltaY
-    }
-
-    const handleWheel = (event: WheelEvent) => {
-      const deltaY = normalizeDelta(event)
-      if (!deltaY) return
-
-      event.preventDefault()
-      scrollContainer.scrollTop += deltaY
-    }
-
-    const element = innerRef.current
-    element.addEventListener('wheel', handleWheel, { passive: false })
-
-    return () => {
-      element.removeEventListener('wheel', handleWheel)
-    }
-  }, [stickyEnabled])
-
-  useEffect(() => {
     const handler = () => {
       try {
         const saved = localStorage.getItem(STORAGE_KEY)
@@ -168,7 +139,7 @@ export function RightSidebar({
   return (
     <aside id="right-sidebar-sticky" className="sidebar-right hidden lg:block">
       <div className="sidebar">
-        <div ref={innerRef} className="sidebar__inner flex flex-col gap-4 pt-6 pb-6">
+        <div className="sidebar__inner flex flex-col gap-4 pt-6 pb-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
             if (id === 'interest-topics') return <InterestTopicsWidget key="interest-topics" topics={topics} />
