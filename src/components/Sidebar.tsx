@@ -437,7 +437,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           <span
             className="font-display text-ink-primary flex-1 whitespace-nowrap overflow-hidden"
             style={{
-              marginRight: '0.25rem',
+              marginLeft: '0.25rem',
               fontSize: '1.5rem',
               fontWeight: 600,
               letterSpacing: '-0.03em',
