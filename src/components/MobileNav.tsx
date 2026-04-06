@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ImageIndentRight as Feed, Settings01 as Settings } from '@untitledui/icons'
+import { Settings01 as Settings } from '@untitledui/icons'
+import { IconFeed as Feed } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 export function MobileNav() {

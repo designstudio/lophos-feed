@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  ImageIndentRight as Feed,
   RefreshCw05 as Refresh,
   ChevronLeft as AltArrowLeft,
   ChevronRight as AltArrowRight,
@@ -19,6 +18,7 @@ import {
 } from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
+import { IconFeed } from '@/components/icons'
 import { LophosLogo } from '@/components/LophosLogo'
 import { SearchModal } from '@/components/SearchModal'
 import { Tooltip } from '@/components/Tooltip'
