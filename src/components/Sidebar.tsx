@@ -417,7 +417,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           transition: sidebarTransition,
         }}
       >
-        <div className="flex items-center px-3 pt-5 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
+        <div className="flex items-center px-3 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem', paddingTop: '0.75rem' }}>
           <Tooltip content="Expandir menu" side="right" disabled={!collapsed}>
             <div
               className={cn('flex-shrink-0 relative', collapsed ? 'group cursor-pointer' : '')}
