@@ -170,17 +170,17 @@ function TimeFilterDropdown({ days, onChange }: { days: number; onChange: (d: nu
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 mt-1.5 w-44 bg-white rounded-xl border border-gray-100 shadow-lg z-50 py-1.5"
+        <div className="absolute top-full right-0 z-50 mt-1.5 min-w-[11rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
           style={{ animation: 'slideUp 0.12s ease' }}>
           {TIME_OPTIONS.map(o => (
             <button
               key={o.days}
               onClick={() => { onChange(o.days); setOpen(false) }}
               className={cn(
-                'flex items-center justify-between w-full px-4 py-2.5 text-sm transition-colors text-left',
+                'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors',
                 days === o.days
-                  ? 'text-ink-primary font-medium bg-gray-50'
-                  : 'text-ink-secondary hover:bg-gray-50'
+                  ? 'bg-bg-secondary font-medium text-ink-primary'
+                  : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
               )}
             >
               {o.label}

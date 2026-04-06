@@ -40,16 +40,12 @@ export function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
 
       {open && (
         <div
-          className="absolute bottom-full left-0 mb-1 w-56 rounded-xl shadow-xl z-50 py-1"
-          style={{
-            animation: 'slideUp 0.12s ease',
-            backgroundColor: 'var(--color-bg-secondary)',
-            border: '1px solid var(--color-border)'
-          }}
+          className="absolute bottom-full left-0 z-50 mb-1 w-56 rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
+          style={{ animation: 'slideUp 0.12s ease' }}
         >
-          <div className="px-3 py-2.5 border-b border-border">
-            <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName}</p>
-            <p className="text-xs text-gray-400 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+          <div className="border-b border-border px-3 py-2.5">
+            <p className="truncate text-sm font-medium text-ink-primary">{user?.fullName}</p>
+            <p className="truncate text-xs text-ink-tertiary">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
           <div className="py-1">
             <button
@@ -57,18 +53,13 @@ export function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
                 setOpen(false)
                 onOpenSettings()
               }}
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors"
-              style={{ color: 'var(--color-ink-secondary)' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
             >
               <Settings size={14} /> Configurações
             </button>
             <button
               onClick={() => signOut()}
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 transition-colors"
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.10)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#E5484D] transition-colors hover:bg-[#FFF1F2]"
             >
               <Logout size={14} /> Sair
             </button>
