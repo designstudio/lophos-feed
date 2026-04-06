@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
 import { InterestTopicsWidget } from './InterestTopicsWidget'
@@ -136,20 +136,10 @@ export function RightSidebar({
   // Widgets to render in saved order
   const widgetsToRender = order.filter(id => active.includes(id))
 
-  const handleWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
-    if (!stickyEnabled) return
-
-    const scrollContainer = document.getElementById('feed-scroll-container')
-    if (!scrollContainer) return
-
-    event.preventDefault()
-    scrollContainer.scrollTop += event.deltaY
-  }, [stickyEnabled])
-
   return (
     <aside id="right-sidebar-sticky" className="sidebar-right hidden lg:block">
       <div className="sidebar">
-        <div className="sidebar__inner flex flex-col gap-4 pt-6 pb-6" onWheel={handleWheel}>
+        <div className="sidebar__inner flex flex-col gap-4 pt-6 pb-6">
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
             if (id === 'interest-topics') return <InterestTopicsWidget key="interest-topics" topics={topics} />
