@@ -205,7 +205,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             <button key={t.id} onClick={() => setTab(t.id)}
               className={cn('w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2.5 rounded-lg mx-1',
                 tab === t.id
-                  ? 'bg-bg-tertiary font-medium text-ink-primary'
+                  ? 'bg-bg-secondary font-medium text-ink-primary'
                   : 'text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary'
               )}>
               {t.icon}{t.label}
@@ -234,7 +234,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                           'flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all',
                           theme === t.id ? 'text-ink-primary' : 'border-border text-ink-tertiary hover:text-ink-secondary'
                         )}
-                        style={theme === t.id ? { borderColor: 'var(--color-ui-strong)', backgroundColor: 'var(--color-bg-tertiary)' } : {}}>
+                        style={theme === t.id ? { borderColor: 'var(--color-ui-strong)', backgroundColor: 'var(--color-bg-secondary)' } : {}}>
                         {t.icon}
                         {t.label}
                       </button>
@@ -244,17 +244,17 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
 
                 <section className="py-5 border-b border-border">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-900">Cor de ênfase</h3>
+                    <h3 className="text-sm font-semibold text-ink-primary">Cor de ênfase</h3>
                     <AccentPicker value={accentColor} onChange={handleAccent} />
                   </div>
                 </section>
 
                 <section className="py-5">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Tópicos de interesse</h3>
-                  <p className="text-sm text-gray-500 mb-3">Personalize o que aparece no seu feed.</p>
+                  <h3 className="text-sm font-semibold text-ink-primary mb-1">Tópicos de interesse</h3>
+                  <p className="text-sm text-ink-tertiary mb-3">Personalize o que aparece no seu feed.</p>
                   <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
                     {topics.map(t => (
-                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] bg-bg-tertiary text-ink-primary">
+                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] bg-bg-secondary text-ink-primary">
                         {t}
                         <button onClick={() => { setTopics(prev => prev.filter(x => x !== t)); setTopicsSaved(false) }}
                           className="opacity-50 hover:opacity-100 leading-none">×</button>
@@ -265,9 +265,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <input value={custom} onChange={e => setCustom(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
                       placeholder="Adicionar tópico..."
-                      className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-gray-400 bg-white text-gray-900" />
+                      className="flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink-primary outline-none transition-colors focus:border-border-strong" />
                     <button onClick={() => { if (custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
-                      className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-gray-400 transition-colors">
+                      className="rounded-lg border border-border px-4 py-2 text-sm text-ink-secondary transition-colors hover:border-border-strong hover:text-ink-primary">
                       Adicionar
                     </button>
                   </div>
@@ -297,9 +297,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                     <input value={excludedCustom} onChange={e => setExcludedCustom(e.target.value)}
                       onKeyDown={e => { if (e.key === 'Enter' && excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) { setExcludedTopics(p => [...p, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false) } }}
                       placeholder="Ex: anime, k-pop..."
-                      className="flex-1 text-sm px-3 py-2 rounded-lg border border-gray-200 outline-none focus:border-gray-400 bg-white text-gray-900" />
+                      className="flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink-primary outline-none transition-colors focus:border-border-strong" />
                     <button onClick={() => { if (excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) { setExcludedTopics(p => [...p, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false) } }}
-                      className="px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:border-gray-400 transition-colors">
+                      className="rounded-lg border border-border px-4 py-2 text-sm text-ink-secondary transition-colors hover:border-border-strong hover:text-ink-primary">
                       Adicionar
                     </button>
                   </div>
@@ -345,7 +345,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                         role="switch"
                         aria-checked={activeWidgets.includes(id)}
                         className="relative inline-flex flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none"
-                        style={{ width: '42px', height: '24px', background: activeWidgets.includes(id) ? 'var(--color-accent)' : 'var(--color-bg-tertiary)' }}
+                        style={{ width: '42px', height: '24px', background: activeWidgets.includes(id) ? 'var(--color-accent)' : 'var(--color-bg-secondary)' }}
                       >
                         <span className={cn(
                           'pointer-events-none inline-block rounded-full bg-white shadow-md transform transition-transform duration-200',
