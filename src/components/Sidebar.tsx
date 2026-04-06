@@ -39,6 +39,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [showSettings, setShowSettings] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [showExpandedHistory, setShowExpandedHistory] = useState(false)
   const [userTopics, setUserTopics] = useState<string[]>([])
   const [recentThreadsLoading, setRecentThreadsLoading] = useState(true)
   const [recentThreads, setRecentThreads] = useState<Array<{ id: string; title: string; article_id: string; updated_at: string }>>([])
@@ -76,6 +77,23 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       setShowSettings(true)
     }
   }, [path])
+
+  useEffect(() => {
+    if (collapsed === null) return
+
+    if (collapsed) {
+      setShowExpandedHistory(false)
+      return
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowExpandedHistory(true)
+    }, 120)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [collapsed])
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -422,16 +440,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             </Tooltip>
           )}
 
-          <div
-            className="min-h-0 overflow-hidden"
-            style={{
-              opacity: collapsed ? 0 : 1,
-              maxHeight: collapsed ? 0 : '22rem',
-              transform: collapsed ? 'translateY(-4px)' : 'translateY(0)',
-              transition: 'max-height 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease 90ms, transform 180ms ease 90ms',
-              pointerEvents: collapsed ? 'none' : 'auto',
-            }}
-          >
+          {showExpandedHistory && (
             <div className="min-h-0 pt-3 pb-2">
               <div className="px-2.5 pb-2">
                 <p className="text-[0.813rem] font-semibold text-ink-tertiary">
@@ -452,7 +461,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 </div>
               )}
             </div>
-          </div>
+          )}
 
           {onRefresh && (
             <Tooltip content={refreshTitle ?? refreshLabel ?? 'Atualizar feed'} side="right" disabled={!collapsed} className="w-full">
