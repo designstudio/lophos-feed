@@ -140,12 +140,7 @@ export function RightSidebar({
     const scrollContainer = document.getElementById('feed-scroll-container')
     if (!scrollContainer) return
 
-    event.preventDefault()
-    scrollContainer.scrollBy({
-      top: event.deltaY,
-      left: 0,
-      behavior: 'auto',
-    })
+    scrollContainer.scrollTop += event.deltaY
   }, [])
 
   return (
