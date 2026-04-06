@@ -48,7 +48,7 @@ function VideoPlayer({ url, title }: { url: string; title: string }) {
     : `https://www.youtube.com/embed/${youtubeId}`
 
   return (
-    <div className="rounded-[1rem] overflow-hidden mb-6 bg-bg-secondary relative shadow-md aspect-video">
+    <div className="rounded-[1rem] overflow-hidden mb-8 bg-bg-secondary relative shadow-md aspect-video">
       <iframe
         className="w-full h-full"
         src={iframeUrl}
@@ -315,7 +315,7 @@ export default function ArticlePage() {
                 ) : item.imageUrl ? (
                   <button
                     onClick={() => setShowImageModal(true)}
-                    className="w-full mb-6 relative transform-gpu group cursor-zoom-in"
+                    className="w-full mb-8 relative transform-gpu group cursor-zoom-in"
                   >
                     <div className="relative h-full overflow-hidden rounded-[1rem] shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform duration-150">
                       <img src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`} alt={item.title} className="article-image w-full h-auto"
