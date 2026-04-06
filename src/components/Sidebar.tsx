@@ -15,6 +15,7 @@ import {
   ClockFastForward as History,
   X as CloseCircle,
   Check as CheckCircle,
+  DotsVertical,
 } from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
@@ -332,11 +333,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                     )}
                     aria-label="Ações"
                   >
-                    <span className="flex items-center gap-[3px]">
-                      <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                      <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                      <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                    </span>
+                    <DotsVertical size={16} />
                   </button>
                 </Tooltip>
               )}
