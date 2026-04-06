@@ -77,6 +77,7 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
         throw new Error('Thread invalida')
       }
 
+      window.dispatchEvent(new Event('threads:updated'))
       router.push(`/threads/${resolvedThreadId}`)
     } catch (err) {
       setIsSending(false)

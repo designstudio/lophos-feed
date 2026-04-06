@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -61,6 +61,28 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const menuRef = useRef<HTMLDivElement | null>(null)
   const renameInputRef = useRef<HTMLInputElement | null>(null)
 
+  const loadRecentThreads = useCallback(async (options?: { showLoading?: boolean }) => {
+    const showLoading = options?.showLoading ?? false
+
+    if (showLoading) {
+      setRecentThreadsLoading(true)
+    }
+
+    try {
+      const response = await fetch('/api/chat/threads')
+      const data = response.ok ? await response.json() : { threads: [] }
+      setRecentThreads(data.threads || [])
+    } catch {
+      if (showLoading) {
+        setRecentThreads([])
+      }
+    } finally {
+      if (showLoading) {
+        setRecentThreadsLoading(false)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     fetch('/api/topics')
       .then((r) => r.json())
@@ -69,13 +91,8 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   }, [])
 
   useEffect(() => {
-    setRecentThreadsLoading(true)
-    fetch('/api/chat/threads')
-      .then((r) => (r.ok ? r.json() : { threads: [] }))
-      .then((data) => setRecentThreads(data.threads || []))
-      .catch(() => {})
-      .finally(() => setRecentThreadsLoading(false))
-  }, [path])
+    void loadRecentThreads({ showLoading: true })
+  }, [loadRecentThreads])
 
   useEffect(() => {
     try {
@@ -121,6 +138,17 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       window.removeEventListener('scroll', handleViewportChange, true)
     }
   }, [])
+
+  useEffect(() => {
+    const handleThreadsUpdated = () => {
+      void loadRecentThreads()
+    }
+
+    window.addEventListener('threads:updated', handleThreadsUpdated)
+    return () => {
+      window.removeEventListener('threads:updated', handleThreadsUpdated)
+    }
+  }, [loadRecentThreads])
 
   useEffect(() => {
     if (editingThreadId && renameInputRef.current) {
@@ -194,6 +222,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             : thread
         )
       )
+      window.dispatchEvent(new Event('threads:updated'))
       cancelInlineRename()
     } catch {
       window.alert('Não foi possível renomear a thread.')
@@ -217,6 +246,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       }
 
       setRecentThreads((prev) => prev.filter((thread) => thread.id !== threadId))
+      window.dispatchEvent(new Event('threads:updated'))
 
       if (path === `/threads/${threadId}`) {
         router.push('/feed')

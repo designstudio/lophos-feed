@@ -240,6 +240,7 @@ export function ChatThread({
         }
         return updated
       })
+      window.dispatchEvent(new Event('threads:updated'))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao processar resposta'
       setError(errorMessage)
@@ -293,6 +294,7 @@ export function ChatThread({
         }
 
         setCurrentThreadId(newThreadId)
+        window.dispatchEvent(new Event('threads:updated'))
         router.push(`/threads/${newThreadId}`)
         return
       } catch (err) {
