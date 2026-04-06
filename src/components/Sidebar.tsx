@@ -435,8 +435,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           </Tooltip>
 
           <span
-            className="font-display text-lg text-ink-primary flex-1 whitespace-nowrap overflow-hidden ml-2.5"
+            className="font-display text-ink-primary flex-1 whitespace-nowrap overflow-hidden ml-2.5"
             style={{
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              letterSpacing: '-0.07em',
               opacity: collapsed ? 0 : 1,
               maxWidth: collapsed ? 0 : '10rem',
               transform: collapsed ? 'translateX(-8px)' : 'translateX(0)',
@@ -444,7 +447,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               pointerEvents: 'none',
             }}
           >
-            Lophos
+            lophos
           </span>
 
           <Tooltip content="Recolher menu" side="right" disabled={isCollapsed}>
