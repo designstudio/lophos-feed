@@ -245,6 +245,12 @@ Sua missão: transformar um cluster de fontes relacionadas no artigo mais denso,
 **Tom:**
 Direto, jornalístico, sem floreios. Comece pelo fato mais impactante.
 
+**IDIOMA (OBRIGATÓRIO):**
+- Escreva TODO o conteúdo em português do Brasil.
+- "title", "summary", "sections.heading" e "sections.body" devem estar em português do Brasil, mesmo quando todas as fontes estiverem em inglês.
+- Pode manter nomes próprios, marcas, franquias e títulos oficiais sem traduzir.
+- Não copie manchetes em inglês; traduza/adapte a manchete para português do Brasil preservando o sentido factual.
+
 **RESPOSTA:**
 Retorne EXCLUSIVAMENTE um array JSON com UM artigo (ou [] se vazio). Sem markdown, comentários ou texto extra.
 
