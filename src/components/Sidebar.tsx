@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -32,6 +32,8 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [showSearch, setShowSearch] = useState(false)
   const [userTopics, setUserTopics] = useState<string[]>([])
   const [recentThreads, setRecentThreads] = useState<Array<{ id: string; title: string; article_id: string; updated_at: string }>>([])
+  const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     fetch('/api/topics')
@@ -63,6 +65,19 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     }
   }, [path])
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenThreadMenuId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+    }
+  }, [])
+
   const toggle = () => {
     setCollapsed(v => {
       const next = !v
@@ -78,6 +93,65 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   let resolvedWidth = 'var(--sidebar-width, 3.5rem)'
   if (collapsed !== null) {
     resolvedWidth = isCollapsed ? '3.5rem' : '16.1rem'
+  }
+
+  const handleRenameThread = async (threadId: string, currentTitle: string) => {
+    const nextTitle = window.prompt('Renomear thread', currentTitle)?.trim()
+    setOpenThreadMenuId(null)
+
+    if (!nextTitle || nextTitle === currentTitle) return
+
+    try {
+      const response = await fetch('/api/chat/threads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId,
+          title: nextTitle,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao renomear thread')
+      }
+
+      setRecentThreads((prev) =>
+        prev.map((thread) =>
+          thread.id === threadId
+            ? { ...thread, title: nextTitle }
+            : thread
+        )
+      )
+    } catch {
+      window.alert('Nao foi possivel renomear a thread.')
+    }
+  }
+
+  const handleDeleteThread = async (threadId: string) => {
+    const confirmed = window.confirm('Excluir esta thread?')
+    setOpenThreadMenuId(null)
+
+    if (!confirmed) return
+
+    try {
+      const response = await fetch('/api/chat/threads', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir thread')
+      }
+
+      setRecentThreads((prev) => prev.filter((thread) => thread.id !== threadId))
+
+      if (path === `/threads/${threadId}`) {
+        router.push('/feed')
+      }
+    } catch {
+      window.alert('Nao foi possivel excluir a thread.')
+    }
   }
 
   return (
@@ -264,16 +338,66 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 const isActive = path === `/threads/${thread.id}`
 
                 return (
-                  <Link
+                  <div
                     key={thread.id}
-                    href={`/threads/${thread.id}`}
                     className={cn(
-                      'block rounded-xl px-2.5 py-2 transition-colors',
+                      'group relative rounded-xl transition-colors',
                       isActive ? 'bg-bg-secondary text-ink-primary' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
                     )}
                   >
-                    <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
-                  </Link>
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={`/threads/${thread.id}`}
+                        className="min-w-0 flex-1 px-2.5 py-2"
+                      >
+                        <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault()
+                          event.stopPropagation()
+                          setOpenThreadMenuId((prev) => prev === thread.id ? null : thread.id)
+                        }}
+                        className={cn(
+                          'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
+                          openThreadMenuId === thread.id
+                            ? 'bg-bg-secondary text-ink-primary'
+                            : 'opacity-0 group-hover:opacity-100 hover:bg-bg-primary hover:text-ink-primary'
+                        )}
+                        aria-label="Opcoes da thread"
+                      >
+                        <span className="flex items-center gap-[3px]">
+                          <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                          <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                          <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                        </span>
+                      </button>
+                    </div>
+
+                    {openThreadMenuId === thread.id && (
+                      <div
+                        ref={menuRef}
+                        className="absolute right-1 top-10 z-20 min-w-[11rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => void handleRenameThread(thread.id, thread.title)}
+                          className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                        >
+                          Renomear thread
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteThread(thread.id)}
+                          className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                        >
+                          Excluir thread
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )
               })}
             </div>

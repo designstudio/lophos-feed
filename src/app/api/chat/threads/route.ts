@@ -10,6 +10,15 @@ interface CreateThreadRequest {
   saveMessage?: boolean
 }
 
+interface UpdateThreadRequest {
+  threadId: string
+  title?: string
+}
+
+interface DeleteThreadRequest {
+  threadId: string
+}
+
 /**
  * POST /api/chat/threads
  * Create or return a chat thread for the current user/article
@@ -209,6 +218,99 @@ export async function GET(request: Request) {
     })
   } catch (err) {
     console.error('[chat/threads GET] Error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * PATCH /api/chat/threads
+ * Rename a thread for the current user
+ */
+export async function PATCH(request: Request) {
+  const { userId } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { threadId, title } = (await request.json()) as UpdateThreadRequest
+    const normalizedTitle = title?.trim()
+
+    if (!threadId || !normalizedTitle) {
+      return NextResponse.json({ error: 'Missing threadId or title' }, { status: 400 })
+    }
+
+    const db = getSupabaseAdmin()
+
+    const { data: thread, error } = await db
+      .from('chat_threads')
+      .update({
+        title: normalizedTitle,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', threadId)
+      .eq('user_id', userId)
+      .select('id, title, article_id, updated_at')
+      .single()
+
+    if (error || !thread) {
+      console.error('[chat/threads PATCH] Error renaming thread:', error)
+      return NextResponse.json({ error: 'Failed to rename thread' }, { status: 500 })
+    }
+
+    return NextResponse.json({ thread })
+  } catch (err) {
+    console.error('[chat/threads PATCH] Error:', err)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+/**
+ * DELETE /api/chat/threads
+ * Delete a thread and its messages for the current user
+ */
+export async function DELETE(request: Request) {
+  const { userId } = await auth()
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { threadId } = (await request.json()) as DeleteThreadRequest
+
+    if (!threadId) {
+      return NextResponse.json({ error: 'Missing threadId' }, { status: 400 })
+    }
+
+    const db = getSupabaseAdmin()
+
+    const { error: messagesError } = await db
+      .from('chat_messages')
+      .delete()
+      .eq('thread_id', threadId)
+      .eq('user_id', userId)
+
+    if (messagesError) {
+      console.error('[chat/threads DELETE] Error deleting messages:', messagesError)
+      return NextResponse.json({ error: 'Failed to delete thread messages' }, { status: 500 })
+    }
+
+    const { error: threadError } = await db
+      .from('chat_threads')
+      .delete()
+      .eq('id', threadId)
+      .eq('user_id', userId)
+
+    if (threadError) {
+      console.error('[chat/threads DELETE] Error deleting thread:', threadError)
+      return NextResponse.json({ error: 'Failed to delete thread' }, { status: 500 })
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[chat/threads DELETE] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
