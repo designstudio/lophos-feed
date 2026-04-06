@@ -102,6 +102,10 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const isCollapsed = collapsed ?? true
   const isReady = collapsed !== null
   const sidebarTransition = 'width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease'
+  const navItemBaseClass = 'flex items-center rounded-lg text-sm transition-colors'
+  const navItemLayoutClass = isCollapsed
+    ? 'w-10 h-10 justify-center px-0 py-0 mx-auto'
+    : 'w-full gap-2.5 px-2.5 py-2'
   let resolvedWidth = 'var(--sidebar-width, 3.5rem)'
   if (collapsed !== null) {
     resolvedWidth = isCollapsed ? '3.5rem' : '16.1rem'
@@ -336,7 +340,8 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             <Link
               href="/feed"
               className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                navItemBaseClass,
+                navItemLayoutClass,
                 path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}
             >
@@ -359,7 +364,8 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             <Link
               href="/favorites"
               className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                navItemBaseClass,
+                navItemLayoutClass,
                 path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}
             >
@@ -381,7 +387,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           <Tooltip content="Buscar" side="right" disabled={!collapsed} className="w-full">
             <button
               onClick={() => setShowSearch(true)}
-              className="flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary transition-colors hover:text-ink-primary hover:bg-bg-secondary"
+              className={cn(
+                navItemBaseClass,
+                navItemLayoutClass,
+                'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+              )}
             >
               <Magnifer size={18} className="flex-shrink-0" />
               <span
@@ -403,7 +413,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               <button
                 type="button"
                 onClick={() => setShowHistoryModal(true)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                className={cn(
+                  navItemBaseClass,
+                  navItemLayoutClass,
+                  'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
+                )}
                 aria-label="Abrir histórico"
               >
                 <History size={18} className="flex-shrink-0" />
@@ -450,7 +464,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               <button
                 onClick={onRefresh}
                 disabled={refreshing}
-                className="flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-sm text-ink-secondary transition-colors hover:text-ink-primary hover:bg-bg-secondary disabled:opacity-50"
+                className={cn(
+                  navItemBaseClass,
+                  navItemLayoutClass,
+                  'text-left text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary disabled:opacity-50'
+                )}
               >
                 <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
                 <span
