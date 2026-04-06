@@ -53,7 +53,7 @@ export function InterestTopicsWidget({ topics }: { topics: string[] }) {
         {visibleTopics.map((topic) => (
           <span
             key={topic}
-            className="inline-flex rounded-full border border-border bg-[#f6f4ef] px-3 py-1.5 text-[12px] font-medium text-ink-secondary transition-colors hover:border-border-strong hover:text-ink-primary"
+            className="inline-flex rounded-full border border-border bg-bg-secondary px-3 py-1.5 text-[12px] font-medium text-ink-secondary transition-colors hover:border-border-strong hover:text-ink-primary"
           >
             {formatTopicLabel(topic)}
           </span>
