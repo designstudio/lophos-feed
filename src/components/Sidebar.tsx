@@ -4,8 +4,16 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Feed, Refresh, AltArrowLeft, AltArrowRight,
-  HeartAngle, Magnifer, Pen, TrashBinTrash
+  Feed,
+  Refresh,
+  AltArrowLeft,
+  AltArrowRight,
+  HeartAngle,
+  Magnifer,
+  Pen,
+  TrashBinTrash,
+  History,
+  CloseCircle,
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
@@ -30,6 +38,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [mounted, setMounted] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [userTopics, setUserTopics] = useState<string[]>([])
   const [recentThreads, setRecentThreads] = useState<Array<{ id: string; title: string; article_id: string; updated_at: string }>>([])
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
@@ -37,15 +46,15 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
 
   useEffect(() => {
     fetch('/api/topics')
-      .then(r => r.json())
-      .then(data => setUserTopics((data.topics || []).map((x: { topic: string }) => x.topic)))
+      .then((r) => r.json())
+      .then((data) => setUserTopics((data.topics || []).map((x: { topic: string }) => x.topic)))
       .catch(() => {})
   }, [])
 
   useEffect(() => {
     fetch('/api/chat/threads')
-      .then(r => r.ok ? r.json() : { threads: [] })
-      .then(data => setRecentThreads(data.threads || []))
+      .then((r) => (r.ok ? r.json() : { threads: [] }))
+      .then((data) => setRecentThreads(data.threads || []))
       .catch(() => {})
   }, [path])
 
@@ -79,7 +88,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   }, [])
 
   const toggle = () => {
-    setCollapsed(v => {
+    setCollapsed((v) => {
       const next = !v
       localStorage.setItem('sidebar_collapsed', String(next))
       window.dispatchEvent(new CustomEvent('sidebar:toggle', { detail: { collapsed: next } }))
@@ -123,7 +132,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         )
       )
     } catch {
-      window.alert('Nao foi possivel renomear a thread.')
+      window.alert('Não foi possível renomear a thread.')
     }
   }
 
@@ -150,9 +159,85 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         router.push('/feed')
       }
     } catch {
-      window.alert('Nao foi possivel excluir a thread.')
+      window.alert('Não foi possível excluir a thread.')
     }
   }
+
+  const renderThreadList = (options?: { onNavigate?: () => void }) => (
+    <div className="space-y-1">
+      {recentThreads.map((thread) => {
+        const isActive = path === `/threads/${thread.id}`
+
+        return (
+          <div
+            key={thread.id}
+            className={cn(
+              'group relative rounded-xl transition-colors',
+              isActive ? 'bg-bg-secondary text-ink-primary' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
+            )}
+          >
+            <div className="flex items-center gap-1">
+              <Link
+                href={`/threads/${thread.id}`}
+                onClick={options?.onNavigate}
+                className="min-w-0 flex-1 px-2.5 py-2"
+              >
+                <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
+              </Link>
+
+              <Tooltip content="Ações" side="right">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setOpenThreadMenuId((prev) => (prev === thread.id ? null : thread.id))
+                  }}
+                  className={cn(
+                    'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
+                    openThreadMenuId === thread.id
+                      ? 'bg-bg-secondary text-ink-primary'
+                      : 'opacity-0 group-hover:opacity-100'
+                  )}
+                  aria-label="Ações"
+                >
+                  <span className="flex items-center gap-[3px]">
+                    <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                    <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                    <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                  </span>
+                </button>
+              </Tooltip>
+            </div>
+
+            {openThreadMenuId === thread.id && (
+              <div
+                ref={menuRef}
+                className="absolute right-1 top-10 z-20 min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
+              >
+                <button
+                  type="button"
+                  onClick={() => void handleRenameThread(thread.id, thread.title)}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                >
+                  <Pen size={16} className="flex-shrink-0" />
+                  <span>Renomear</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteThread(thread.id)}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                >
+                  <TrashBinTrash size={16} className="flex-shrink-0" />
+                  <span>Excluir</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
 
   return (
     <div>
@@ -177,6 +262,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           </div>
         </aside>
       )}
+
       <aside
         className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
         style={{
@@ -186,7 +272,6 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           transition: sidebarTransition,
         }}
       >
-        {/* Header */}
         <div className="flex items-center px-3 pt-5 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem' }}>
           <Tooltip content="Expandir menu" side="right" disabled={!collapsed}>
             <div
@@ -233,15 +318,15 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           </Tooltip>
         </div>
 
-        {/* Nav */}
-        <nav className="flex flex-col gap-0.5 flex-1 px-2">
+        <nav className="flex flex-col gap-0.5 flex-1 min-h-0 px-2">
           <Tooltip content="Meu feed" side="right" disabled={!collapsed} className="w-full">
-            <Link href="/feed"
+            <Link
+              href="/feed"
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'w-full' : 'w-full',
                 path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
-              )}>
+              )}
+            >
               <Feed size={18} className="flex-shrink-0" />
               <span
                 className="whitespace-nowrap overflow-hidden"
@@ -258,12 +343,13 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           </Tooltip>
 
           <Tooltip content="Minhas curtidas" side="right" disabled={!collapsed} className="w-full">
-            <Link href="/favorites"
+            <Link
+              href="/favorites"
               className={cn(
                 'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'w-full' : 'w-full',
                 path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
-              )}>
+              )}
+            >
               <HeartAngle size={18} className="flex-shrink-0" />
               <span
                 className="whitespace-nowrap overflow-hidden"
@@ -282,11 +368,8 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           <Tooltip content="Buscar" side="right" disabled={!collapsed} className="w-full">
             <button
               onClick={() => setShowSearch(true)}
-              className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
-                collapsed ? 'w-full' : 'w-full',
-                'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
-              )}>
+              className="flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary transition-colors hover:text-ink-primary hover:bg-bg-secondary"
+            >
               <Magnifer size={18} className="flex-shrink-0" />
               <span
                 className="whitespace-nowrap overflow-hidden"
@@ -302,13 +385,45 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             </button>
           </Tooltip>
 
+          {collapsed && (
+            <Tooltip content="Histórico" side="right" disabled={!collapsed} className="w-full">
+              <button
+                type="button"
+                onClick={() => setShowHistoryModal(true)}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                aria-label="Abrir histórico"
+              >
+                <History size={18} className="flex-shrink-0" />
+              </button>
+            </Tooltip>
+          )}
+
+          {!collapsed && (
+            <div className="min-h-0 pt-3 pb-2">
+              <div className="px-2.5 pb-2">
+                <p className="text-[0.813rem] font-semibold text-ink-tertiary">
+                  Histórico
+                </p>
+              </div>
+              {recentThreads.length > 0 ? (
+                <div className="max-h-[18rem] overflow-y-auto pr-1">
+                  {renderThreadList()}
+                </div>
+              ) : (
+                <div className="px-2.5 py-2 text-[0.813rem] text-ink-tertiary">
+                  Nenhuma conversa ainda
+                </div>
+              )}
+            </div>
+          )}
+
           {onRefresh && (
             <Tooltip content={refreshTitle ?? refreshLabel ?? 'Atualizar feed'} side="right" disabled={!collapsed} className="w-full">
-              <button onClick={onRefresh} disabled={refreshing}
-                className={cn(
-                  'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary transition-colors disabled:opacity-50 text-left',
-                  'w-full'
-                )}>
+              <button
+                onClick={onRefresh}
+                disabled={refreshing}
+                className="flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-left text-sm text-ink-secondary transition-colors hover:text-ink-primary hover:bg-bg-secondary disabled:opacity-50"
+              >
                 <Refresh size={18} className={cn('flex-shrink-0', refreshing ? 'animate-spin' : '')} />
                 <span
                   className="whitespace-nowrap overflow-hidden"
@@ -319,96 +434,13 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                     transition: 'max-width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 220ms ease',
                   }}
                 >
-                  {refreshing ? 'Atualizando...' : (refreshLabel ?? 'Atualizar feed')}
+                  {refreshing ? 'Atualizando...' : refreshLabel ?? 'Atualizar feed'}
                 </span>
               </button>
             </Tooltip>
           )}
         </nav>
 
-        {!collapsed && recentThreads.length > 0 && (
-          <div className="px-2 pb-4">
-            <div className="px-2.5 pt-4 pb-2">
-              <p className="text-[0.813rem] font-semibold text-ink-tertiary">
-                Histórico
-              </p>
-            </div>
-            <div className="space-y-1">
-              {recentThreads.map((thread) => {
-                const isActive = path === `/threads/${thread.id}`
-
-                return (
-                  <div
-                    key={thread.id}
-                    className={cn(
-                      'group relative rounded-xl transition-colors',
-                      isActive ? 'bg-bg-secondary text-ink-primary' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
-                    )}
-                  >
-                    <div className="flex items-center gap-1">
-                      <Link
-                        href={`/threads/${thread.id}`}
-                        className="min-w-0 flex-1 px-2.5 py-2"
-                      >
-                        <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
-                      </Link>
-
-                      <Tooltip content="Ações" side="right">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.preventDefault()
-                            event.stopPropagation()
-                            setOpenThreadMenuId((prev) => prev === thread.id ? null : thread.id)
-                          }}
-                          className={cn(
-                            'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
-                            openThreadMenuId === thread.id
-                              ? 'bg-bg-secondary text-ink-primary'
-                              : 'opacity-0 group-hover:opacity-100'
-                          )}
-                          aria-label="Ações"
-                        >
-                          <span className="flex items-center gap-[3px]">
-                            <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                            <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                            <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                          </span>
-                        </button>
-                      </Tooltip>
-                    </div>
-
-                    {openThreadMenuId === thread.id && (
-                      <div
-                        ref={menuRef}
-                        className="absolute right-1 top-10 z-20 min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => void handleRenameThread(thread.id, thread.title)}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
-                        >
-                          <Pen size={16} className="flex-shrink-0" />
-                          <span>Renomear</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteThread(thread.id)}
-                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
-                        >
-                          <TrashBinTrash size={16} className="flex-shrink-0" />
-                          <span>Excluir</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Bottom user */}
         <div className="border-t border-border pt-3 px-2 pb-5 flex-shrink-0">
           {collapsed
             ? <CollapsedUserMenu onOpenSettings={() => setShowSettings(true)} />
@@ -418,10 +450,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       </aside>
 
       {showSettings && mounted && createPortal(
-        <SettingsModal onClose={() => {
-          setShowSettings(false)
-          if (path === '/settings') router.push('/feed')
-        }} />,
+        <SettingsModal
+          onClose={() => {
+            setShowSettings(false)
+            if (path === '/settings') router.push('/feed')
+          }}
+        />,
         document.body
       )}
 
@@ -429,11 +463,57 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} userTopics={userTopics} />,
         document.body
       )}
+
+      {showHistoryModal && mounted && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-0"
+          style={{ backgroundColor: '#05050533', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
+          onClick={() => {
+            setShowHistoryModal(false)
+            setOpenThreadMenuId(null)
+          }}
+        >
+          <div
+            className="relative w-full max-w-xl max-h-[80vh] bg-white rounded-[1rem] shadow-2xl flex flex-col overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
+              <h3 className="text-sm font-semibold text-ink-primary">Histórico</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowHistoryModal(false)
+                  setOpenThreadMenuId(null)
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-tertiary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                aria-label="Fechar histórico"
+              >
+                <CloseCircle size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {recentThreads.length > 0 ? (
+                renderThreadList({
+                  onNavigate: () => {
+                    setShowHistoryModal(false)
+                    setOpenThreadMenuId(null)
+                  },
+                })
+              ) : (
+                <div className="py-10 text-center text-sm text-ink-tertiary">
+                  Nenhuma conversa ainda
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
 
-// Context-aware wrapper for use in shared layout
 export function SidebarWithRefresh() {
   const { refreshing, updatesReady, triggerApplyUpdates } = useFeedContext()
   return (
