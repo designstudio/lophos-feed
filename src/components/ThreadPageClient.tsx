@@ -86,7 +86,7 @@ export function ThreadPageClient({
         </div>
 
         {/* Article Reference Card */}
-        <div ref={titleRef} className="px-4 md:px-8 py-6">
+        <div ref={titleRef} className="px-4 md:px-8 pt-10 pb-6">
           <Link
             href={`/article/${article.id}`}
             className="mx-auto flex max-w-[45rem] gap-3 rounded-[1rem] border border-border p-5 transition-all group cursor-pointer hover:border-border-strong hover:bg-bg-secondary"
