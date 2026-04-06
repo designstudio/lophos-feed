@@ -44,6 +44,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [recentThreadsLoading, setRecentThreadsLoading] = useState(true)
   const [recentThreads, setRecentThreads] = useState<Array<{ id: string; title: string; article_id: string; updated_at: string }>>([])
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
+  const [threadMenuPosition, setThreadMenuPosition] = useState<{ top: number; left: number } | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -99,12 +100,28 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     const handlePointerDown = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setOpenThreadMenuId(null)
+        setThreadMenuPosition(null)
       }
     }
 
     document.addEventListener('mousedown', handlePointerDown)
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleViewportChange = () => {
+      setOpenThreadMenuId(null)
+      setThreadMenuPosition(null)
+    }
+
+    window.addEventListener('resize', handleViewportChange)
+    window.addEventListener('scroll', handleViewportChange, true)
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange)
+      window.removeEventListener('scroll', handleViewportChange, true)
     }
   }, [])
 
@@ -128,6 +145,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const handleRenameThread = async (threadId: string, currentTitle: string) => {
     const nextTitle = window.prompt('Renomear thread', currentTitle)?.trim()
     setOpenThreadMenuId(null)
+    setThreadMenuPosition(null)
 
     if (!nextTitle || nextTitle === currentTitle) return
 
@@ -160,6 +178,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const handleDeleteThread = async (threadId: string) => {
     const confirmed = window.confirm('Excluir esta thread?')
     setOpenThreadMenuId(null)
+    setThreadMenuPosition(null)
 
     if (!confirmed) return
 
@@ -212,7 +231,19 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                   onClick={(event) => {
                     event.preventDefault()
                     event.stopPropagation()
-                    setOpenThreadMenuId((prev) => (prev === thread.id ? null : thread.id))
+                    const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                    const menuWidth = 144
+                    const nextLeft = Math.min(
+                      rect.right - menuWidth,
+                      window.innerWidth - menuWidth - 12
+                    )
+                    const nextTop = rect.bottom + 6
+
+                    setOpenThreadMenuId((prev) => {
+                      const nextId = prev === thread.id ? null : thread.id
+                      setThreadMenuPosition(nextId ? { top: nextTop, left: Math.max(12, nextLeft) } : null)
+                      return nextId
+                    })
                   }}
                   className={cn(
                     'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
@@ -231,29 +262,6 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               </Tooltip>
             </div>
 
-            {openThreadMenuId === thread.id && (
-              <div
-                ref={menuRef}
-                className="absolute right-1 top-10 z-20 min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
-              >
-                <button
-                  type="button"
-                  onClick={() => void handleRenameThread(thread.id, thread.title)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
-                >
-                  <Pen size={16} className="flex-shrink-0" />
-                  <span>Renomear</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDeleteThread(thread.id)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
-                >
-                  <TrashBinTrash size={16} className="flex-shrink-0" />
-                  <span>Excluir</span>
-                </button>
-              </div>
-            )}
           </div>
         )
       })}
@@ -555,6 +563,41 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               )}
             </div>
           </div>
+        </div>,
+        document.body
+      )}
+
+      {openThreadMenuId && threadMenuPosition && mounted && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[10000] min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
+          style={{
+            top: threadMenuPosition.top,
+            left: threadMenuPosition.left,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              const thread = recentThreads.find((item) => item.id === openThreadMenuId)
+              if (thread) void handleRenameThread(thread.id, thread.title)
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+          >
+            <Pen size={16} className="flex-shrink-0" />
+            <span>Renomear</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const thread = recentThreads.find((item) => item.id === openThreadMenuId)
+              if (thread) void handleDeleteThread(thread.id)
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+          >
+            <TrashBinTrash size={16} className="flex-shrink-0" />
+            <span>Excluir</span>
+          </button>
         </div>,
         document.body
       )}
