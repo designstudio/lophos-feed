@@ -6,7 +6,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
 import { ArticleAssistant } from '@/components/ArticleAssistant'
-import { LinkExternal02 as SquareTopDown, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ArrowNarrowLeft as ArrowLeft, Heart as HeartAngle, Share07 as Share, Heart as HeartFilled } from '@untitledui/icons'
+import { IconHeartFilled } from '@/components/icons'
+import { LinkExternal02 as SquareTopDown, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ArrowNarrowLeft as ArrowLeft, Heart as HeartAngle, Share07 as Share } from '@untitledui/icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -249,7 +250,7 @@ export default function ArticlePage() {
                       transition={{ duration: 0.15, ease: 'easeOut' }}
                       style={{ display: 'flex' }}
                     >
-                      {liked ? <HeartFilled size={18} /> : <HeartAngle size={18} />}
+                      {liked ? <IconHeartFilled size={18} /> : <HeartAngle size={18} />}
                     </motion.span>
                   </AnimatePresence>
                 </motion.button>

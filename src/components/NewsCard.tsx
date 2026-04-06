@@ -2,12 +2,13 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
-import { Heart as HeartAngle, ThumbsDown as Dislike, Clock as ClockCircle, Heart as HeartFilled, ThumbsDown as DislikeFilled } from '@untitledui/icons'
+import { Heart as HeartAngle, ThumbsDown as Dislike, Clock as ClockCircle, ThumbsDown as DislikeFilled } from '@untitledui/icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { Tooltip } from '@/components/Tooltip'
+import { IconHeartFilled } from '@/components/icons'
 
 const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
 
@@ -102,7 +103,7 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
                 transition={{ duration: 0.15, ease: 'easeOut' }}
                 style={{ display: 'flex' }}
               >
-                {reaction === 'like' ? <HeartFilled size={16} /> : <HeartAngle size={16} />}
+                {reaction === 'like' ? <IconHeartFilled size={16} /> : <HeartAngle size={16} />}
               </motion.span>
             </AnimatePresence>
           </motion.button>
