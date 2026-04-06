@@ -365,7 +365,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                             'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
                             openThreadMenuId === thread.id
                               ? 'bg-bg-secondary text-ink-primary'
-                              : 'opacity-0 group-hover:opacity-100 hover:bg-bg-primary hover:text-ink-primary'
+                              : 'opacity-0 group-hover:opacity-100'
                           )}
                           aria-label="Ações"
                         >
@@ -381,7 +381,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                     {openThreadMenuId === thread.id && (
                       <div
                         ref={menuRef}
-                        className="absolute right-1 top-10 z-20 min-w-[11rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
+                        className="absolute right-1 top-10 z-20 min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
                       >
                         <button
                           type="button"
