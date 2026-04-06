@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Feed, Refresh, AltArrowLeft, AltArrowRight,
-  HeartAngle, Magnifer
+  HeartAngle, Magnifer, Pen, TrashBinTrash
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
@@ -353,27 +353,29 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                         <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
                       </Link>
 
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.preventDefault()
-                          event.stopPropagation()
-                          setOpenThreadMenuId((prev) => prev === thread.id ? null : thread.id)
-                        }}
-                        className={cn(
-                          'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
-                          openThreadMenuId === thread.id
-                            ? 'bg-bg-secondary text-ink-primary'
-                            : 'opacity-0 group-hover:opacity-100 hover:bg-bg-primary hover:text-ink-primary'
-                        )}
-                        aria-label="Opcoes da thread"
-                      >
-                        <span className="flex items-center gap-[3px]">
-                          <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                          <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                          <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                        </span>
-                      </button>
+                      <Tooltip content="Ações" side="right">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            setOpenThreadMenuId((prev) => prev === thread.id ? null : thread.id)
+                          }}
+                          className={cn(
+                            'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
+                            openThreadMenuId === thread.id
+                              ? 'bg-bg-secondary text-ink-primary'
+                              : 'opacity-0 group-hover:opacity-100 hover:bg-bg-primary hover:text-ink-primary'
+                          )}
+                          aria-label="Ações"
+                        >
+                          <span className="flex items-center gap-[3px]">
+                            <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                            <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                            <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                          </span>
+                        </button>
+                      </Tooltip>
                     </div>
 
                     {openThreadMenuId === thread.id && (
@@ -384,16 +386,18 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                         <button
                           type="button"
                           onClick={() => void handleRenameThread(thread.id, thread.title)}
-                          className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
                         >
-                          Renomear thread
+                          <Pen size={16} className="flex-shrink-0" />
+                          <span>Renomear</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => void handleDeleteThread(thread.id)}
-                          className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
                         >
-                          Excluir thread
+                          <TrashBinTrash size={16} className="flex-shrink-0" />
+                          <span>Excluir</span>
                         </button>
                       </div>
                     )}
