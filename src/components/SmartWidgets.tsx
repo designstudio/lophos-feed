@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Tv } from '@solar-icons/react-perf/Linear'
+import { Monitor02 as Tv } from '@untitledui/icons'
 import { format, isToday, isTomorrow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 

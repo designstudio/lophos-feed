@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
-import { ClockCircle, CloseCircle } from '@solar-icons/react-perf/Linear'
+import { Clock as ClockCircle, X as CloseCircle } from '@untitledui/icons'
 import { NewsCard } from './NewsCard'
 
 interface SearchModalProps {

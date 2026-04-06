@@ -4,18 +4,18 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Feed,
-  Refresh,
-  AltArrowLeft,
-  AltArrowRight,
-  HeartAngle,
-  Magnifer,
-  Pen,
-  TrashBinTrash,
-  History,
-  CloseCircle,
-  CheckCircle,
-} from '@solar-icons/react-perf/Linear'
+  ImageIndentRight as Feed,
+  RefreshCw05 as Refresh,
+  ChevronLeft as AltArrowLeft,
+  ChevronRight as AltArrowRight,
+  Heart as HeartAngle,
+  SearchMd as Magnifer,
+  Edit02 as Pen,
+  Trash03 as TrashBinTrash,
+  ClockFastForward as History,
+  X as CloseCircle,
+  Check as CheckCircle,
+} from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 import { LophosLogo } from '@/components/LophosLogo'

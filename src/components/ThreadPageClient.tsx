@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft } from '@solar-icons/react-perf/Linear'
+import { ArrowNarrowLeft as ArrowLeft } from '@untitledui/icons'
 import { ChatThread } from '@/components/ChatThread'
 
 interface ChatMessage {

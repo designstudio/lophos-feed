@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Feed, Settings } from '@solar-icons/react-perf/Linear'
+import { ImageIndentRight as Feed, Settings01 as Settings } from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 
 export function MobileNav() {

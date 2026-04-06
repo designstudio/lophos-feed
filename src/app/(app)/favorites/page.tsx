@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { HeartAngle } from '@solar-icons/react-perf/Linear'
+import { Heart as HeartAngle } from '@untitledui/icons'
 import { NewsCard } from '@/components/NewsCard'
 import { SkeletonBlock } from '@/components/SkeletonCard'
 import { NewsItem } from '@/lib/types'

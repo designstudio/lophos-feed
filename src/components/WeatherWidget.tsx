@@ -1,6 +1,6 @@
 ﻿'use client'
 import { useState, useEffect, useRef } from 'react'
-import { Sun2, SunFog, Fog, Waterdrops, Snowflake, CloudBoltMinimalistic } from '@solar-icons/react-perf/Linear'
+import { Sun as Sun2, SunSetting02 as SunFog, CloudRaining06 as Fog, Droplets03 as Waterdrops, Snowflake01 as Snowflake, CloudLightning as CloudBoltMinimalistic } from '@untitledui/icons'
 
 interface WeatherData {
   city: string
@@ -223,5 +223,4 @@ export function WeatherWidget() {
     </div>
   )
 }
-
 

@@ -10,8 +10,8 @@
   "dependencies": {
     "@clerk/nextjs": "^6",
     "@google/generative-ai": "^0.24.1",
-    "@solar-icons/react-perf": "^1",
     "@supabase/supabase-js": "^2",
+    "@untitledui/icons": "^0.0.22",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",

@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { Settings, CloseCircle, UserRounded } from '@solar-icons/react-perf/Linear'
+import { Settings01 as Settings, X as CloseCircle, User03 as UserRounded } from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 import { AccentPicker } from './AccentPicker'

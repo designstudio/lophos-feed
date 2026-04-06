@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowUp } from '@solar-icons/react-perf/Linear'
+import { ArrowNarrowUp as ArrowUp } from '@untitledui/icons'
 
 interface ArticleAssistantProps {
   articleId: string

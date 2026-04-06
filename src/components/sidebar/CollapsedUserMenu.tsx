@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { Settings, Logout } from '@solar-icons/react-perf/Linear'
+import { Settings01 as Settings, LogOut01 as Logout } from '@untitledui/icons'
 import { Tooltip } from '@/components/Tooltip'
 import { FixedDropdown } from './FixedDropdown'
 

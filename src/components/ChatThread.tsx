@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowUp, Forward2 } from '@solar-icons/react-perf/Linear'
+import { ArrowNarrowUp as ArrowUp, CornerDownRight as Forward2 } from '@untitledui/icons'
 import ReactMarkdown from 'react-markdown'
 
 interface ChatMessage {
