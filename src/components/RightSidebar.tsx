@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { WeatherWidget } from './WeatherWidget'
 import { SmartWidgets } from './SmartWidgets'
 import { InterestTopicsWidget } from './InterestTopicsWidget'
@@ -136,8 +136,20 @@ export function RightSidebar({
   // Widgets to render in saved order
   const widgetsToRender = order.filter(id => active.includes(id))
 
+  const handleWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
+    const scrollContainer = document.getElementById('feed-scroll-container')
+    if (!scrollContainer) return
+
+    event.preventDefault()
+    scrollContainer.scrollBy({
+      top: event.deltaY,
+      left: 0,
+      behavior: 'auto',
+    })
+  }, [])
+
   return (
-    <aside id="right-sidebar-sticky" className="sidebar-right hidden lg:block">
+    <aside id="right-sidebar-sticky" className="sidebar-right hidden lg:block" onWheel={handleWheel}>
       <div className="sidebar">
         <div className="sidebar__inner flex flex-col gap-4 pt-6 pb-6">
           {widgetsToRender.map(id => {
