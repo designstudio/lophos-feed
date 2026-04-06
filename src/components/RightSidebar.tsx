@@ -137,16 +137,19 @@ export function RightSidebar({
   const widgetsToRender = order.filter(id => active.includes(id))
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLElement>) => {
+    if (!stickyEnabled) return
+
     const scrollContainer = document.getElementById('feed-scroll-container')
     if (!scrollContainer) return
 
+    event.preventDefault()
     scrollContainer.scrollTop += event.deltaY
-  }, [])
+  }, [stickyEnabled])
 
   return (
-    <aside id="right-sidebar-sticky" className="sidebar-right hidden lg:block" onWheel={handleWheel}>
+    <aside id="right-sidebar-sticky" className="sidebar-right hidden lg:block">
       <div className="sidebar">
-        <div className="sidebar__inner flex flex-col gap-4 pt-6 pb-6">
+        <div className="sidebar__inner flex flex-col gap-4 pt-6 pb-6" onWheel={handleWheel}>
           {widgetsToRender.map(id => {
             if (id === 'weather') return <WeatherWidget key="weather" />
             if (id === 'interest-topics') return <InterestTopicsWidget key="interest-topics" topics={topics} />
