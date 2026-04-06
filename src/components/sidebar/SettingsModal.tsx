@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { Settings01 as Settings, X as CloseCircle, User03 as UserRounded } from '@untitledui/icons'
+import { Settings01 as Settings, X as CloseCircle, User03 as UserRounded, Sun, MoonStar, Monitor02 } from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 import { AccentPicker } from './AccentPicker'
@@ -225,9 +225,9 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm text-ink-tertiary mb-4">Escolha como o Lophos aparece para você.</p>
                   <div className="grid grid-cols-3 gap-3">
                     {([
-                      { id: 'light',  label: 'Claro', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
-                      { id: 'dark',   label: 'Escuro', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><circle cx="19" cy="3" r="1" fill="currentColor"/><circle cx="22" cy="6" r="0.8" fill="currentColor"/><circle cx="17" cy="5.5" r="0.8" fill="currentColor"/></svg> },
-                      { id: 'system', label: 'Sistema', icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 21h8M12 17v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg> },
+                      { id: 'light',  label: 'Claro', icon: <Sun size={22} /> },
+                      { id: 'dark',   label: 'Escuro', icon: <MoonStar size={22} /> },
+                      { id: 'system', label: 'Sistema', icon: <Monitor02 size={22} /> },
                     ] as { id: string; label: string; icon: React.ReactNode }[]).map(t => (
                       <button key={t.id} onClick={() => handleTheme(t.id)}
                         className={cn(
