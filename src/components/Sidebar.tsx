@@ -40,6 +40,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [showSearch, setShowSearch] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [userTopics, setUserTopics] = useState<string[]>([])
+  const [recentThreadsLoading, setRecentThreadsLoading] = useState(true)
   const [recentThreads, setRecentThreads] = useState<Array<{ id: string; title: string; article_id: string; updated_at: string }>>([])
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -52,10 +53,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   }, [])
 
   useEffect(() => {
+    setRecentThreadsLoading(true)
     fetch('/api/chat/threads')
       .then((r) => (r.ok ? r.json() : { threads: [] }))
       .then((data) => setRecentThreads(data.threads || []))
       .catch(() => {})
+      .finally(() => setRecentThreadsLoading(false))
   }, [path])
 
   useEffect(() => {
@@ -239,6 +242,16 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     </div>
   )
 
+  const renderThreadSkeleton = () => (
+    <div className="space-y-2">
+      {[1, 2, 3].map((item) => (
+        <div key={item} className="rounded-xl px-2.5 py-2">
+          <div className="h-4 w-full rounded bg-bg-secondary animate-pulse" />
+        </div>
+      ))}
+    </div>
+  )
+
   return (
     <div>
       {!isReady && (
@@ -394,6 +407,17 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 aria-label="Abrir histórico"
               >
                 <History size={18} className="flex-shrink-0" />
+                <span
+                  className="whitespace-nowrap overflow-hidden"
+                  style={{
+                    opacity: 0,
+                    maxWidth: 0,
+                    transform: 'translateX(-6px)',
+                    transition: 'max-width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease, transform 220ms ease',
+                  }}
+                >
+                  Histórico
+                </span>
               </button>
             </Tooltip>
           )}
@@ -405,7 +429,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                   Histórico
                 </p>
               </div>
-              {recentThreads.length > 0 ? (
+              {recentThreadsLoading ? (
+                <div className="pr-1">
+                  {renderThreadSkeleton()}
+                </div>
+              ) : recentThreads.length > 0 ? (
                 <div className="max-h-[18rem] overflow-y-auto pr-1">
                   {renderThreadList()}
                 </div>
@@ -493,7 +521,9 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              {recentThreads.length > 0 ? (
+              {recentThreadsLoading ? (
+                renderThreadSkeleton()
+              ) : recentThreads.length > 0 ? (
                 renderThreadList({
                   onNavigate: () => {
                     setShowHistoryModal(false)
