@@ -55,6 +55,8 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
   const [editingThreadTitle, setEditingThreadTitle] = useState('')
   const [renamingThread, setRenamingThread] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<ThreadItem | null>(null)
+  const [deletingThread, setDeletingThread] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const renameInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -199,10 +201,8 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   }
 
   const handleDeleteThread = async (threadId: string) => {
-    const confirmed = window.confirm('Excluir esta thread?')
     resetThreadMenu()
-
-    if (!confirmed) return
+    setDeletingThread(true)
 
     try {
       const response = await fetch('/api/chat/threads', {
@@ -220,8 +220,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       if (path === `/threads/${threadId}`) {
         router.push('/feed')
       }
+      setDeleteTarget(null)
     } catch {
       window.alert('Não foi possível excluir a thread.')
+    } finally {
+      setDeletingThread(false)
     }
   }
 
@@ -667,13 +670,67 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             type="button"
             onClick={() => {
               const thread = recentThreads.find((item) => item.id === openThreadMenuId)
-              if (thread) void handleDeleteThread(thread.id)
+              if (thread) {
+                resetThreadMenu()
+                setDeleteTarget(thread)
+              }
             }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
           >
             <TrashBinTrash size={16} className="flex-shrink-0" />
             <span>Excluir</span>
           </button>
+        </div>,
+        document.body
+      )}
+
+      {deleteTarget && mounted && createPortal(
+        <div
+          className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+          style={{ backgroundColor: '#05050533', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
+          onClick={() => {
+            if (deletingThread) return
+            setDeleteTarget(null)
+          }}
+        >
+          <div
+            className="relative w-full max-w-md rounded-[1rem] border border-border bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="px-4 pt-4 pb-2">
+              <h3 className="text-[1.05rem] font-semibold text-ink-primary">
+                Excluir thread?
+              </h3>
+            </div>
+
+            <div className="px-4 pb-5">
+              <p className="text-sm leading-6 text-ink-secondary">
+                Isso excluirá <span className="font-semibold text-ink-primary">{deleteTarget.title}</span>.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-ink-tertiary">
+                Essa ação não pode ser desfeita.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deletingThread}
+                className="rounded-full border border-border px-4 py-2 text-sm font-medium text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteThread(deleteTarget.id)}
+                disabled={deletingThread}
+                className="rounded-full bg-[#E5484D] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {deletingThread ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
         </div>,
         document.body
       )}
