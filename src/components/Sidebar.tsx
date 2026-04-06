@@ -14,6 +14,7 @@ import {
   TrashBinTrash,
   History,
   CloseCircle,
+  CheckCircle,
 } from '@solar-icons/react-perf/Linear'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
@@ -31,6 +32,13 @@ interface Props {
   refreshTitle?: string
 }
 
+type ThreadItem = {
+  id: string
+  title: string
+  article_id: string
+  updated_at: string
+}
+
 export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: Props) {
   const path = usePathname()
   const router = useRouter()
@@ -41,10 +49,14 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [userTopics, setUserTopics] = useState<string[]>([])
   const [recentThreadsLoading, setRecentThreadsLoading] = useState(true)
-  const [recentThreads, setRecentThreads] = useState<Array<{ id: string; title: string; article_id: string; updated_at: string }>>([])
+  const [recentThreads, setRecentThreads] = useState<ThreadItem[]>([])
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
   const [threadMenuPosition, setThreadMenuPosition] = useState<{ top: number; left: number } | null>(null)
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
+  const [editingThreadTitle, setEditingThreadTitle] = useState('')
+  const [renamingThread, setRenamingThread] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
+  const renameInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     fetch('/api/topics')
@@ -107,6 +119,13 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     }
   }, [])
 
+  useEffect(() => {
+    if (editingThreadId && renameInputRef.current) {
+      renameInputRef.current.focus()
+      renameInputRef.current.select()
+    }
+  }, [editingThreadId])
+
   const toggle = () => {
     setCollapsed((v) => {
       const next = !v
@@ -124,12 +143,32 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     resolvedWidth = isCollapsed ? '3.5rem' : '16.1rem'
   }
 
-  const handleRenameThread = async (threadId: string, currentTitle: string) => {
-    const nextTitle = window.prompt('Renomear thread', currentTitle)?.trim()
+  const resetThreadMenu = () => {
     setOpenThreadMenuId(null)
     setThreadMenuPosition(null)
+  }
 
-    if (!nextTitle || nextTitle === currentTitle) return
+  const startInlineRename = (threadId: string, currentTitle: string) => {
+    resetThreadMenu()
+    setEditingThreadId(threadId)
+    setEditingThreadTitle(currentTitle)
+  }
+
+  const cancelInlineRename = () => {
+    setEditingThreadId(null)
+    setEditingThreadTitle('')
+    setRenamingThread(false)
+  }
+
+  const handleRenameThread = async (threadId: string, currentTitle: string) => {
+    const nextTitle = editingThreadTitle.trim()
+
+    if (!nextTitle || nextTitle === currentTitle) {
+      cancelInlineRename()
+      return
+    }
+
+    setRenamingThread(true)
 
     try {
       const response = await fetch('/api/chat/threads', {
@@ -152,15 +191,16 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             : thread
         )
       )
+      cancelInlineRename()
     } catch {
       window.alert('Não foi possível renomear a thread.')
+      setRenamingThread(false)
     }
   }
 
   const handleDeleteThread = async (threadId: string) => {
     const confirmed = window.confirm('Excluir esta thread?')
-    setOpenThreadMenuId(null)
-    setThreadMenuPosition(null)
+    resetThreadMenu()
 
     if (!confirmed) return
 
@@ -189,6 +229,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     <div className="space-y-1">
       {recentThreads.map((thread) => {
         const isActive = path === `/threads/${thread.id}`
+        const isEditing = editingThreadId === thread.id
 
         return (
           <div
@@ -199,51 +240,104 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             )}
           >
             <div className="flex items-center gap-1">
-              <Link
-                href={`/threads/${thread.id}`}
-                onClick={options?.onNavigate}
-                className="min-w-0 flex-1 px-2.5 py-2"
-              >
-                <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
-              </Link>
-
-              <Tooltip content="Ações" side="right">
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
-                    const menuWidth = 144
-                    const nextLeft = Math.min(
-                      rect.right - menuWidth,
-                      window.innerWidth - menuWidth - 12
-                    )
-                    const nextTop = rect.bottom + 6
-
-                    setOpenThreadMenuId((prev) => {
-                      const nextId = prev === thread.id ? null : thread.id
-                      setThreadMenuPosition(nextId ? { top: nextTop, left: Math.max(12, nextLeft) } : null)
-                      return nextId
-                    })
-                  }}
-                  className={cn(
-                    'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
-                    openThreadMenuId === thread.id
-                      ? 'bg-bg-secondary text-ink-primary'
-                      : 'opacity-0 group-hover:opacity-100'
-                  )}
-                  aria-label="Ações"
+              {isEditing ? (
+                <div className="flex min-w-0 flex-1 items-center gap-1 px-2.5 py-2">
+                  <input
+                    ref={renameInputRef}
+                    type="text"
+                    value={editingThreadTitle}
+                    onChange={(event) => setEditingThreadTitle(event.target.value)}
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault()
+                        void handleRenameThread(thread.id, thread.title)
+                      }
+                      if (event.key === 'Escape') {
+                        event.preventDefault()
+                        cancelInlineRename()
+                      }
+                    }}
+                    className="min-w-0 flex-1 bg-transparent text-[0.875rem] font-medium leading-5 text-ink-primary outline-none"
+                    disabled={renamingThread}
+                  />
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      cancelInlineRename()
+                    }}
+                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                    aria-label="Cancelar renomeação"
+                  >
+                    <CloseCircle size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      void handleRenameThread(thread.id, thread.title)
+                    }}
+                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors hover:bg-bg-secondary hover:text-ink-primary disabled:opacity-50"
+                    aria-label="Confirmar renomeação"
+                    disabled={renamingThread || editingThreadTitle.trim().length === 0}
+                  >
+                    <CheckCircle size={16} />
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href={`/threads/${thread.id}`}
+                  onClick={options?.onNavigate}
+                  className="min-w-0 flex-1 px-2.5 py-2"
                 >
-                  <span className="flex items-center gap-[3px]">
-                    <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                    <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                    <span className="h-[3px] w-[3px] rounded-full bg-current" />
-                  </span>
-                </button>
-              </Tooltip>
-            </div>
+                  <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
+                </Link>
+              )}
 
+              {!isEditing && (
+                <Tooltip content="Ações" side="right">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      const rect = (event.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                      const menuWidth = 144
+                      const nextLeft = Math.min(
+                        rect.right - menuWidth,
+                        window.innerWidth - menuWidth - 12
+                      )
+                      const nextTop = rect.bottom + 6
+
+                      setOpenThreadMenuId((prev) => {
+                        const nextId = prev === thread.id ? null : thread.id
+                        setThreadMenuPosition(nextId ? { top: nextTop, left: Math.max(12, nextLeft) } : null)
+                        return nextId
+                      })
+                    }}
+                    className={cn(
+                      'mr-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-ink-tertiary transition-colors',
+                      openThreadMenuId === thread.id
+                        ? 'bg-bg-secondary text-ink-primary'
+                        : 'opacity-0 group-hover:opacity-100'
+                    )}
+                    aria-label="Ações"
+                  >
+                    <span className="flex items-center gap-[3px]">
+                      <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                      <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                      <span className="h-[3px] w-[3px] rounded-full bg-current" />
+                    </span>
+                  </button>
+                </Tooltip>
+              )}
+            </div>
           </div>
         )
       })}
@@ -506,7 +600,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           style={{ backgroundColor: '#05050533', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
           onClick={() => {
             setShowHistoryModal(false)
-            setOpenThreadMenuId(null)
+            resetThreadMenu()
           }}
         >
           <div
@@ -519,7 +613,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 type="button"
                 onClick={() => {
                   setShowHistoryModal(false)
-                  setOpenThreadMenuId(null)
+                  resetThreadMenu()
                 }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-tertiary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
                 aria-label="Fechar histórico"
@@ -535,7 +629,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 renderThreadList({
                   onNavigate: () => {
                     setShowHistoryModal(false)
-                    setOpenThreadMenuId(null)
+                    resetThreadMenu()
                   },
                 })
               ) : (
@@ -562,7 +656,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             type="button"
             onClick={() => {
               const thread = recentThreads.find((item) => item.id === openThreadMenuId)
-              if (thread) void handleRenameThread(thread.id, thread.title)
+              if (thread) startInlineRename(thread.id, thread.title)
             }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
           >
