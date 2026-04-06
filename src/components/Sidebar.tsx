@@ -336,7 +336,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             <Link
               href="/feed"
               className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                'flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
                 path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}
             >
@@ -359,7 +359,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             <Link
               href="/favorites"
               className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                'flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
                 path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}
             >
