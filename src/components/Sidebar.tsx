@@ -442,7 +442,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                 path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
               )}
             >
-              <Feed size={18} className="flex-shrink-0" />
+              <IconFeed size={18} className="flex-shrink-0" />
               <span
                 className="whitespace-nowrap overflow-hidden"
                 style={{
