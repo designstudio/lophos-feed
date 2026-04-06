@@ -435,11 +435,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           </Tooltip>
 
           <span
-            className="font-display text-ink-primary flex-1 whitespace-nowrap overflow-hidden ml-2.5"
+            className="font-display text-ink-primary flex-1 whitespace-nowrap overflow-hidden"
             style={{
+              marginRight: '0.25rem',
               fontSize: '1.5rem',
               fontWeight: 600,
-              letterSpacing: '-0.07em',
+              letterSpacing: '-0.03em',
               opacity: collapsed ? 0 : 1,
               maxWidth: collapsed ? 0 : '10rem',
               transform: collapsed ? 'translateX(-8px)' : 'translateX(0)',
