@@ -26,13 +26,13 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
       <Tooltip content={user?.firstName ?? 'Conta'} side="right">
         <button
           onClick={() => setOpen(v => !v)}
-          className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-bg-secondary transition-colors"
+          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-bg-secondary"
         >
           {user?.imageUrl ? (
             <img src={user.imageUrl} alt="" width={26} height={26} className="rounded-full" />
           ) : (
             <div
-              className="w-[26px] h-[26px] rounded-full flex items-center justify-center text-white text-xs font-semibold"
+              className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-xs font-semibold text-white"
               style={{ background: 'var(--color-accent)' }}
             >
               {user?.firstName?.[0] ?? '?'}
@@ -40,11 +40,12 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
           )}
         </button>
       </Tooltip>
+
       {open && (
         <FixedDropdown anchorRef={ref} onClose={() => setOpen(false)}>
-          <div className="px-3 py-2.5 border-b border-border">
-            <p className="text-sm font-medium text-gray-900 truncate">{user?.fullName}</p>
-            <p className="text-xs text-gray-400 truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+          <div className="border-b border-border px-3 py-2.5">
+            <p className="truncate text-sm font-medium text-ink-primary">{user?.fullName}</p>
+            <p className="truncate text-xs text-ink-tertiary">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
           <div className="py-1">
             <button
@@ -52,18 +53,13 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
                 setOpen(false)
                 onOpenSettings()
               }}
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm transition-colors"
-              style={{ color: 'var(--color-ink-secondary)' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
             >
               <Settings size={14} /> Configurações
             </button>
             <button
               onClick={() => signOut()}
-              className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-red-500 transition-colors"
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.10)')}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#E5484D] transition-colors hover:bg-[#FFF1F2]"
             >
               <Logout size={14} /> Sair
             </button>
