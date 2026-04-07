@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LophosLogo } from '@/components/LophosLogo'
@@ -17,6 +18,7 @@ export function LegalPage({
   children: React.ReactNode
 }) {
   const router = useRouter()
+  const scrollRef = useRef<HTMLDivElement>(null)
   const links = [
     { href: '/politica-de-privacidade' as const, label: 'Política de Privacidade' },
     { href: '/termos-de-uso' as const, label: 'Termos de Uso' },
@@ -25,23 +27,25 @@ export function LegalPage({
   const navigateTo = (href: '/termos-de-uso' | '/politica-de-privacidade') => {
     if (href === currentPath) return
 
-    const docWithTransition = document as Document & {
-      startViewTransition?: (callback: () => void) => void
-    }
+    const scroller = scrollRef.current
 
-    if (typeof docWithTransition.startViewTransition === 'function') {
-      docWithTransition.startViewTransition(() => {
-        router.push(href)
-      })
+    if (!scroller) {
+      router.push(href)
       return
     }
 
-    router.push(href)
+    if (scroller.scrollTop <= 16) {
+      router.push(href)
+      return
+    }
+
+    scroller.scrollTo({ top: 0, behavior: 'smooth' })
+    window.setTimeout(() => router.push(href), 220)
   }
 
   return (
     <main className="flex h-[100dvh] min-h-[100dvh] flex-1 min-w-0 overflow-hidden bg-bg-primary text-ink-primary">
-      <div className="flex-1 min-h-0 overflow-y-auto min-w-0">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto min-w-0">
         <div className="sticky top-0 z-20 border-b border-border header-blur">
           <div className="flex items-center h-12 px-4 md:hidden gap-2">
             <LophosLogo size={26} />
@@ -100,7 +104,7 @@ export function LegalPage({
           </div>
         </div>
 
-        <div className="article-layout mx-auto px-6 py-6 pb-12 md:px-6 md:py-8" style={{ viewTransitionName: 'legal-page' }}>
+        <div className="article-layout mx-auto px-6 py-6 pb-12 md:px-6 md:py-8">
           <article className="px-0 py-8 md:py-10">
             <header className="mb-8 border-b border-border pb-6">
               <h1 className="font-display text-3xl leading-tight md:text-4xl">{title}</h1>
