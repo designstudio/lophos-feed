@@ -88,6 +88,10 @@ export function LegalPage({
               {children}
             </div>
           </article>
+
+          <footer className="border-t border-border pt-6 pb-2">
+            <p className="text-sm text-ink-tertiary">Lophos © 2026</p>
+          </footer>
         </div>
       </div>
     </main>
