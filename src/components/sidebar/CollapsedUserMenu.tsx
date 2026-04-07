@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { Settings01 as Settings, LogOut01 as Logout } from '@untitledui/icons'
+import { Settings01 as Settings, LogOut01 as Logout, File06, ArrowNarrowUpRight } from '@untitledui/icons'
 import { Tooltip } from '@/components/Tooltip'
 import { FixedDropdown } from './FixedDropdown'
 
@@ -48,6 +48,17 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
             <p className="truncate text-xs text-ink-tertiary">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
           <div className="py-1">
+            <a
+              href="/politica-de-privacidade"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+              className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+            >
+              <File06 size={14} />
+              <span>Termos e políticas</span>
+              <ArrowNarrowUpRight size={14} className="ml-auto opacity-0 transition-opacity group-hover:opacity-100" />
+            </a>
             <button
               onClick={() => {
                 setOpen(false)
