@@ -91,7 +91,7 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
       <button
         onClick={() => setOpen(v => !v)}
         className={cn(
-          'flex items-center gap-1.5 text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
+          'flex items-center gap-1.5 text-[0.875rem] px-4 h-[60px] border-b-2 transition-all font-medium',
           activeFilter
             ? 'border-ink-primary text-ink-primary'
             : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
@@ -489,17 +489,17 @@ export default function FeedPage() {
     <div id="feed-scroll-container" ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header ── */}
-        <div className="sticky top-0 z-20 border-b border-border header-blur">
+        <div className="app-header-shell header-blur">
 
           {/* Mobile: title (always visible) */}
-          <div className="flex items-center h-12 px-4 md:hidden gap-2">
-            <LophosLogo size={26} />
+          <div className="app-header-pill flex items-center px-4 md:hidden gap-2">
+            <LophosLogo size={28} />
             <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
           </div>
 
           {/* Mobile: horizontal scrollable tabs (only if has data) */}
           {hasData && topicsInFeed.length > 0 && (
-            <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pb-3"
+            <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-1 pt-3"
               style={{ WebkitOverflowScrolling: 'touch' }}>
               {(['Últimas notícias', ...topicsInFeed] as (string | null)[]).map((t, i) => {
                 const val = i === 0 ? null : t as string
@@ -524,13 +524,13 @@ export default function FeedPage() {
 
           {/* Desktop: title + dropdown tabs (only if has data) */}
           {hasData && topicsInFeed.length > 0 && (
-            <div className="hidden md:flex items-center h-14 px-8">
+            <div className="app-header-pill hidden md:flex items-center px-5">
               <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
               <div className="flex flex-1 justify-center">
                 <button
                   onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                   className={cn(
-                    'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium',
+                    'text-[0.875rem] px-4 h-[60px] border-b-2 transition-all font-medium',
                     activeFilter === null
                       ? 'border-ink-primary text-ink-primary'
                       : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
@@ -552,7 +552,7 @@ export default function FeedPage() {
 
           {/* Desktop: skeleton while loading, title only when no data */}
           {(!hasData || topicsInFeed.length === 0) && (
-            <div className="hidden md:flex items-center h-14 px-8">
+            <div className="app-header-pill hidden md:flex items-center px-5">
               <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
               {streaming && (
                 <>

@@ -39,10 +39,10 @@
   --article-max-width:   768px;
   --sidebar-right-width: 336px;
   --article-image-height: 23rem;
-  /* Altura do header interno sticky no desktop (h-14 = 56px) */
-  --header-height: 56px;
-  /* Offset para position:sticky da sidebar = header global (0) + header interno (56px) */
-  --sticky-offset: var(--header-height, 56px);
+  /* Altura visual do header interno sticky com pill e respiro superior */
+  --header-height: 76px;
+  /* Offset para elementos sticky internos do app */
+  --sticky-offset: var(--header-height, 76px);
 }
 
 /* ─── Base ───────────────────────────────────────────────── */
@@ -283,6 +283,28 @@ html, body {
   -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
   backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
   background-color: color-mix(in srgb, var(--color-bg-primary) 20%, transparent);
+}
+
+.app-header-shell {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 1rem 1rem 0.75rem;
+}
+
+.app-header-pill {
+  min-height: 60px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+  background-color: color-mix(in srgb, var(--color-bg-primary) 68%, transparent);
+  box-shadow: 0 12px 40px rgba(17, 17, 17, 0.05);
+}
+
+@media (min-width: 768px) {
+  .app-header-shell {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
 }
 
 .skeleton {
