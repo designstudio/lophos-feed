@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Política de Privacidade" updatedAt="7 de abril de 2026">
+    <LegalPage title="Política de Privacidade" updatedAt="7 de abril de 2026" currentPath="/politica-de-privacidade">
       <section>
         <p>
           Esta Política de Privacidade descreve como o Lophos trata dados pessoais relacionados ao uso da plataforma.

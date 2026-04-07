@@ -1,32 +1,86 @@
 import Link from 'next/link'
+import { LophosLogo } from '@/components/LophosLogo'
+import { cn } from '@/lib/utils'
 
 export function LegalPage({
   title,
   updatedAt,
+  currentPath,
   children,
 }: {
   title: string
   updatedAt: string
+  currentPath: '/termos-de-uso' | '/politica-de-privacidade'
   children: React.ReactNode
 }) {
+  const links = [
+    { href: '/politica-de-privacidade' as const, label: 'Política de Privacidade' },
+    { href: '/termos-de-uso' as const, label: 'Termos de Uso' },
+  ]
+
   return (
     <main className="min-h-screen bg-bg-primary text-ink-primary">
-      <div className="mx-auto max-w-4xl px-6 py-8 md:px-8 md:py-12">
-        <div className="mb-10 flex items-center justify-between gap-4">
-          <Link
-            href="/login"
-            className="inline-flex items-center rounded-full border border-border px-4 py-2 text-sm font-medium text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
-          >
-            Voltar
-          </Link>
-          <p className="text-sm text-ink-tertiary">Atualizado em {updatedAt}</p>
+      <div className="sticky top-0 z-20 border-b border-border header-blur">
+        <div className="flex items-center h-12 px-4 md:hidden gap-2">
+          <LophosLogo size={26} />
+          <h1 className="text-[15px] font-semibold text-ink-primary">Lophos</h1>
         </div>
 
+        <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pb-3" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {links.map((link) => {
+            const active = currentPath === link.href
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
+                  active
+                    ? 'bg-ink-primary text-bg-primary border-ink-primary'
+                    : 'border-border text-ink-tertiary hover:text-ink-secondary'
+                )}
+              >
+                {link.label}
+              </Link>
+            )
+          })}
+        </div>
+
+        <div className="hidden md:flex items-center h-14 px-8">
+          <div className="flex items-center gap-2 flex-shrink-0" style={{ width: '12rem' }}>
+            <LophosLogo size={26} />
+            <span className="text-[15px] font-semibold text-ink-primary">Lophos</span>
+          </div>
+
+          <div className="flex flex-1 justify-center">
+            {links.map((link) => {
+              const active = currentPath === link.href
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium flex items-center',
+                    active
+                      ? 'border-ink-primary text-ink-primary'
+                      : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
+                  )}
+                >
+                  {link.label}
+                </Link>
+              )
+            })}
+          </div>
+
+          <div style={{ width: '12rem' }} className="flex justify-end">
+            <p className="text-sm text-ink-tertiary">Atualizado em {updatedAt}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-4xl px-6 py-8 md:px-8 md:py-12">
         <article className="rounded-[1.5rem] border border-border bg-white px-6 py-8 shadow-sm md:px-10 md:py-10">
           <header className="mb-8 border-b border-border pb-6">
-            <p className="mb-2 text-[0.75rem] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">
-              Lophos
-            </p>
             <h1 className="font-display text-3xl leading-tight md:text-4xl">{title}</h1>
           </header>
 

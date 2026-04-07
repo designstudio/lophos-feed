@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Termos de Uso" updatedAt="7 de abril de 2026">
+    <LegalPage title="Termos de Uso" updatedAt="7 de abril de 2026" currentPath="/termos-de-uso">
       <section>
         <p>
           Estes Termos de Uso regulam o acesso e o uso do Lophos, plataforma de feed personalizado de notícias,
