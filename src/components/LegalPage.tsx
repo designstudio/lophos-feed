@@ -78,7 +78,7 @@ export function LegalPage({
         </div>
 
         <div className="article-layout mx-auto px-6 py-6 pb-12 md:px-6 md:py-8">
-          <article className="rounded-[1.5rem] border border-border bg-white px-6 py-8 shadow-sm md:px-10 md:py-10">
+          <article className="px-0 py-8 md:py-10">
             <header className="mb-8 border-b border-border pb-6">
               <h1 className="font-display text-3xl leading-tight md:text-4xl">{title}</h1>
               <p className="mt-3 text-sm text-ink-tertiary">Atualizado em {updatedAt}</p>
