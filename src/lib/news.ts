@@ -20,6 +20,10 @@ const LOW_QUALITY_DOMAINS = [
 ]
 
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif', 'favicon', '/favicon', 'apple-touch-icon', 'logo-icon']
+const TOKEN_EQUIVALENTS = [
+  { canonical: 'redesign', variants: ['redesign', 'redesenho', 'visual', 'design', 'look', 'aparencia', 'appearance'] },
+  { canonical: 'feedback', variants: ['critica', 'criticas', 'feedback', 'pedido', 'pedidos'] },
+]
 
 const GENERIC_PATTERNS = [
   /\/(tag|tags|category|categories|topic|topics|section|search|archive|label)\//i,
@@ -149,13 +153,21 @@ function buildQuery(topic: string): string {
 }
 
 function normalizeText(s: string): string {
-  return s
+  let normalized = s
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+
+  for (const { canonical, variants } of TOKEN_EQUIVALENTS) {
+    for (const variant of variants) {
+      normalized = normalized.replace(new RegExp(`\\b${variant}\\b`, 'g'), canonical)
+    }
+  }
+
+  return normalized
 }
 
 function textOverlapScore(a: string, b: string): number {

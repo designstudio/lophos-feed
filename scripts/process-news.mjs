@@ -213,14 +213,27 @@ const STOPWORDS = new Set([
   'peacock','globo','globoplay','youtube','twitch','spotify',
 ])
 
+const TOKEN_EQUIVALENTS = [
+  { canonical: 'redesign', variants: ['redesign', 'redesenho', 'visual', 'design', 'look', 'aparencia', 'appearance'] },
+  { canonical: 'feedback', variants: ['critica', 'criticas', 'feedback', 'pedido', 'pedidos'] },
+]
+
 function normalizeText(s) {
-  return s
+  let normalized = s
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+
+  for (const { canonical, variants } of TOKEN_EQUIVALENTS) {
+    for (const variant of variants) {
+      normalized = normalized.replace(new RegExp(`\\b${variant}\\b`, 'g'), canonical)
+    }
+  }
+
+  return normalized
 }
 
 function tokenize(s) {
