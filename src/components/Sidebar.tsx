@@ -347,11 +347,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                   }}
                   className="min-w-0 flex-1 px-2.5 py-2"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="relative min-w-0">
                     <span
                       className={cn(
-                        'flex h-4 w-4 flex-shrink-0 items-center justify-center transition-opacity',
-                        isNavigating ? 'opacity-100' : 'opacity-0'
+                        'absolute left-0 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center transition-opacity',
+                        isNavigating ? 'opacity-100' : 'opacity-0 pointer-events-none'
                       )}
                       aria-hidden="true"
                     >
