@@ -30,30 +30,6 @@ function stripSuggestionArtifacts(content: string) {
     .trim()
 }
 
-function extractSuggestionsFromContent(content: string) {
-  const suggestions: string[] = []
-  const normalized = content
-    .replace(/---\s*LOPHOS_SUGGESTIONS\s*---/i, '\nLOPHOS_SUGGESTIONS\n')
-    .split('\n')
-
-  for (const line of normalized) {
-    const trimmed = line.trim()
-    const questionMatch = trimmed.match(/^\d+\.\s*(.+?)(?:\?)?$/)
-    if (!questionMatch || suggestions.length >= 3) continue
-
-    let question = questionMatch[1].trim()
-    if (!question.endsWith('?')) {
-      question += '?'
-    }
-
-    if (question.length > 10) {
-      suggestions.push(question)
-    }
-  }
-
-  return suggestions
-}
-
 async function* parseNDJSON(response: Response) {
   const reader = response.body?.getReader()
   if (!reader) return
@@ -333,9 +309,8 @@ export function ChatThread({
         <AnimatePresence initial={false}>
           {displayMessages.map((msg) => (
             (() => {
-              const parsedSuggestions = msg.role === 'assistant' ? extractSuggestionsFromContent(msg.content) : []
               const displayContent = msg.role === 'assistant' ? stripSuggestionArtifacts(msg.content) : msg.content
-              const effectiveSuggestions = parsedSuggestions.length > 0 ? parsedSuggestions : (msg.followUpSuggestions || [])
+              const effectiveSuggestions = msg.role === 'assistant' ? (msg.followUpSuggestions || []) : []
 
               return (
             <motion.div
@@ -361,7 +336,15 @@ export function ChatThread({
                   <p className="text-[1rem] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
                   <div className={`ai-response-content max-w-none text-body ${isEmbedded ? 'text-sm' : ''}`}>
-                    <ReactMarkdown>{displayContent}</ReactMarkdown>
+                    <ReactMarkdown
+                      components={{
+                        ul: ({ node, ...props }) => <ul className="my-3 list-disc space-y-1 pl-6" {...props} />,
+                        ol: ({ node, ...props }) => <ol className="my-3 list-decimal space-y-1 pl-6" {...props} />,
+                        li: ({ node, ...props }) => <li className="pl-1 marker:text-ink-secondary" {...props} />,
+                      }}
+                    >
+                      {displayContent}
+                    </ReactMarkdown>
                   </div>
                 )}
 

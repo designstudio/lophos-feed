@@ -70,6 +70,25 @@ function extractArticleTitle(fullContext: string) {
   return titleMatch?.[1]?.trim() || 'este assunto'
 }
 
+function normalizeSuggestion(text: string) {
+  return text
+    .replace(/^["'“”‘’]+|["'“”‘’]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function isQuestionLike(text: string) {
+  const normalized = normalizeSuggestion(text).toLowerCase()
+  if (!normalized) return false
+
+  const questionStarters = [
+    'o que', 'como', 'por que', 'porque', 'qual', 'quais', 'quem',
+    'quando', 'onde', 'vale a pena', 'faz sentido', 'isso muda', 'isso afeta',
+  ]
+
+  return questionStarters.some((starter) => normalized.startsWith(starter))
+}
+
 function extractQuestions(text: string) {
   const suggestions: string[] = []
   const lines = text.split('\n')
@@ -78,18 +97,15 @@ function extractQuestions(text: string) {
     const trimmed = line.trim()
     if (!trimmed) continue
 
-    const numberedMatch = trimmed.match(/^(?:[-*•]\s*|\d+[.)]\s*)(.+?)(?:\?)?$/)
-    const directQuestion = trimmed.endsWith('?') ? trimmed.replace(/^(?:[-*•]\s*)/, '') : null
-    const candidate = numberedMatch?.[1]?.trim() || directQuestion
+    const withoutBullet = trimmed.replace(/^(?:[-*]\s*|\d+[.)]\s*)/, '')
+    const candidate = normalizeSuggestion(withoutBullet)
 
     if (!candidate) continue
+    if (!trimmed.endsWith('?') && !isQuestionLike(candidate)) continue
 
-    let question = candidate
-    if (!question.endsWith('?')) {
-      question += '?'
-    }
+    const question = candidate.endsWith('?') ? candidate : `${candidate}?`
 
-    if (question.length > 12 && !suggestions.includes(question)) {
+    if (question.length > 12 && isQuestionLike(question) && !suggestions.includes(question)) {
       suggestions.push(question)
     }
 
@@ -266,6 +282,7 @@ Prioridades:
 Formato:
 - Use paragrafos curtos e claros.
 - Pode usar subtitulos curtos em markdown quando ajudar.
+- Pode usar listas com markdown quando fizer sentido.
 - Nao coloque sugestoes dentro do corpo principal.
 
 Contexto do artigo:
