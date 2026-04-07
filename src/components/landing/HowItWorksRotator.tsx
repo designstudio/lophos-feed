@@ -169,7 +169,7 @@ export function HowItWorksRotator() {
             </div>
           </article>
 
-          <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
+          <div className="mx-auto mt-7 max-w-[26rem] px-10 text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
               Monitoramos dezenas de portais em tempo real e registramos cada nova publicação.
             </p>
@@ -242,7 +242,7 @@ export function HowItWorksRotator() {
             </div>
           </article>
 
-          <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
+          <div className="mx-auto mt-7 max-w-[26rem] px-10 text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
               Quando várias matérias falam do mesmo assunto, a gente agrupa tudo em uma entrada só.
             </p>
@@ -252,7 +252,7 @@ export function HowItWorksRotator() {
         <div>
           <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-center justify-center">
-              <div className="relative h-[18.75rem] w-full max-w-[20.75rem] overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
+              <div className="relative aspect-[292/326] w-full max-w-[18.25rem] overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
                 <Image
                   src="/lophos-focus-feed.png"
                   alt="Exemplo do feed do Lophos"
@@ -260,12 +260,14 @@ export function HowItWorksRotator() {
                   className="object-cover"
                   style={{ objectPosition: '20% 10%' }}
                   sizes="332px"
+                  quality={100}
+                  unoptimized
                 />
               </div>
             </div>
           </article>
 
-          <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
+          <div className="mx-auto mt-7 max-w-[26rem] px-10 text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
               Você vê o que importa, organizado pelos tópicos que escolheu, sem repetição.
             </p>

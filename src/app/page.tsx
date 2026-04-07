@@ -109,6 +109,9 @@ function ProductShowcase() {
               fill
               className="object-cover"
               sizes="(min-width: 768px) 1400px, 100vw"
+              quality={100}
+              priority
+              unoptimized
             />
           </div>
         </div>
