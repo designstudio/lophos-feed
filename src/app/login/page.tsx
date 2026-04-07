@@ -1,5 +1,6 @@
 'use client'
 import { SignIn } from '@clerk/nextjs'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,15 @@ export default function LoginPage() {
           },
         }}
       />
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-ink-tertiary">
+        <Link href="/termos-de-uso" className="transition-colors hover:text-ink-primary">
+          Termos de Uso
+        </Link>
+        <span className="text-border-strong">•</span>
+        <Link href="/politica-de-privacidade" className="transition-colors hover:text-ink-primary">
+          Política de Privacidade
+        </Link>
+      </div>
     </div>
   )
 }
