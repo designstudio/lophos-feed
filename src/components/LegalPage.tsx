@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LophosLogo } from '@/components/LophosLogo'
@@ -24,6 +24,30 @@ export function LegalPage({
     { href: '/termos-de-uso' as const, label: 'Termos de Uso' },
   ]
 
+  useEffect(() => {
+    const scroller = scrollRef.current
+    if (!scroller) return
+
+    const shouldAnimate = sessionStorage.getItem('legal-page-animate') === '1'
+    const storedScrollTop = Number(sessionStorage.getItem('legal-page-scroll-top') || '0')
+
+    if (!shouldAnimate || !Number.isFinite(storedScrollTop) || storedScrollTop <= 16) {
+      sessionStorage.removeItem('legal-page-animate')
+      sessionStorage.removeItem('legal-page-scroll-top')
+      return
+    }
+
+    scroller.scrollTop = storedScrollTop
+
+    const frame = window.requestAnimationFrame(() => {
+      scroller.scrollTo({ top: 0, behavior: 'smooth' })
+      sessionStorage.removeItem('legal-page-animate')
+      sessionStorage.removeItem('legal-page-scroll-top')
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [currentPath])
+
   const navigateTo = (href: '/termos-de-uso' | '/politica-de-privacidade') => {
     if (href === currentPath) return
 
@@ -34,13 +58,9 @@ export function LegalPage({
       return
     }
 
-    if (scroller.scrollTop <= 16) {
-      router.push(href)
-      return
-    }
-
-    scroller.scrollTo({ top: 0, behavior: 'smooth' })
-    window.setTimeout(() => router.push(href), 220)
+    sessionStorage.setItem('legal-page-scroll-top', String(scroller.scrollTop))
+    sessionStorage.setItem('legal-page-animate', '1')
+    router.push(href)
   }
 
   return (
