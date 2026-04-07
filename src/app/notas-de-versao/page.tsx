@@ -18,7 +18,7 @@ const RELEASES = [
         items: [
           'Corrigimos títulos dinâmicos das páginas de artigos e threads para melhorar contexto no navegador e compartilhamento.',
           'Ajustamos o contraste do logo do Lophos no tema escuro.',
-          'Adicionamos loading/skeleton nas threads e refinamos a navegação para evitar glitches visuais.',
+          'Adicionamos loading e skeleton nas threads e refinamos a navegação para evitar glitches visuais.',
           'Melhoramos a renderização de listas nas respostas das threads e endurecemos a validação de perguntas sugeridas.',
           'Reforçamos o merge de notícias equivalentes com novos sinônimos editoriais.',
           'Padronizamos os badges de times nos widgets de Valorant e League of Legends para tamanho fixo e aparência circular.',
@@ -123,7 +123,7 @@ const RELEASES = [
         items: [
           'Reforçamos integridade transacional no processamento de notícias para evitar perda de dados.',
           'Melhoramos os prompts editoriais para reduzir respostas genéricas e misturas indevidas de assuntos.',
-          'Tratamos limites de taxa, validação de `sourceIndexes`, batches maiores e fluxos de recuperação para pipelines com muito volume.',
+          'Tratamos limites de taxa, validação de sourceIndexes, batches maiores e fluxos de recuperação para pipelines com muito volume.',
         ],
       },
     ],
@@ -136,7 +136,7 @@ const RELEASES = [
         items: [
           'Nasceu o feed personalizado do Lophos com autenticação, onboarding, tópicos de interesse e curadoria de notícias.',
           'Entraram no produto os widgets da sidebar direita, incluindo clima, séries e partidas de e-sports.',
-          'O app ganhou tema claro/escuro, cor de destaque personalizável, favoritos, likes e experiência SPA entre feed e artigos.',
+          'O app ganhou tema claro e escuro, cor de destaque personalizável, favoritos, likes e experiência SPA entre feed e artigos.',
           'Também estruturamos ingestão de notícias, deduplicação, cache, resumo editorial e melhorias progressivas de performance.',
         ],
       },

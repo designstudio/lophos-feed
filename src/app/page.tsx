@@ -9,9 +9,11 @@ import {
   ChevronDown,
   ThumbsDown,
 } from '@untitledui/icons'
-import { LophosLogo } from '@/components/LophosLogo'
 import { IconFeed } from '@/components/icons'
 import { HowItWorksRotator } from '@/components/landing/HowItWorksRotator'
+import { MarketingHeader } from '@/components/landing/MarketingHeader'
+import { MarketingFooter } from '@/components/landing/MarketingFooter'
+import { LophosLogo } from '@/components/LophosLogo'
 
 const PORTAL_DOMAINS = [
   'g1.globo.com',
@@ -64,31 +66,6 @@ function pickRandomDomains(count: number) {
     ;[pool[i], pool[j]] = [pool[j], pool[i]]
   }
   return pool.slice(0, count)
-}
-
-function LandingHeader() {
-  return (
-    <div className="pointer-events-none fixed inset-x-0 top-5 z-40 flex justify-center px-4">
-      <div className="pointer-events-auto header-blur flex h-[60px] w-full max-w-[44rem] items-center justify-between rounded-full border border-border px-5 shadow-[0_12px_40px_rgba(17,17,17,0.05)]">
-        <Link href="/" className="flex items-center gap-3 text-ink-primary">
-          <LophosLogo size={30} />
-          <span className="text-[1.05rem] font-semibold tracking-[-0.04em]">Lophos</span>
-        </Link>
-
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="text-[0.98rem] font-medium text-ink-primary transition-opacity hover:opacity-65">
-            Entrar
-          </Link>
-          <Link
-            href="/login"
-            className="inline-flex items-center rounded-full bg-ink-primary px-4 py-2 text-[0.95rem] font-medium text-white transition-opacity hover:opacity-85"
-          >
-            Criar conta grátis
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
 }
 
 function HeroBlock() {
@@ -353,7 +330,7 @@ function LibraryBlock() {
 function CtaBlock() {
   return (
     <section className="px-5 pb-24 pt-8 md:px-8 md:pb-28 md:pt-12">
-      <div className="mx-auto flex max-w-[760px] flex-col items-center rounded-[30px] border border-border bg-bg-secondary px-6 py-12 text-center md:px-10 md:py-16">
+      <div className="mx-auto flex max-w-[760px] flex-col items-center px-6 py-12 text-center md:px-10 md:py-16">
         <h2 className="text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary">
           <span className="block">Pronto para</span>
           <span className="block">Customizar seu feed?</span>
@@ -375,25 +352,10 @@ function CtaBlock() {
   )
 }
 
-function Footer() {
-  return (
-    <footer className="rounded-t-[34px] bg-[#151515] px-6 py-14 text-white md:px-8 md:py-20">
-      <div className="mx-auto max-w-[1280px]">
-        <div className="flex flex-col gap-4 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
-          <p>© Lophos 2026. Todos os direitos reservados.</p>
-          <Link href="/politica-de-privacidade" className="text-white/55 transition-opacity hover:opacity-65">
-            Termos e políticas
-          </Link>
-        </div>
-      </div>
-    </footer>
-  )
-}
-
 export default function Home() {
   return (
     <main className="min-h-screen bg-bg-primary text-ink-primary">
-      <LandingHeader />
+      <MarketingHeader />
       <HeroBlock />
       <ProductShowcase />
 
@@ -405,7 +367,7 @@ export default function Home() {
 
       <LibraryBlock />
       <CtaBlock />
-      <Footer />
+      <MarketingFooter />
     </main>
   )
 }

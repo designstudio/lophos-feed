@@ -70,9 +70,7 @@ export default function TermsPage() {
           Essas respostas têm caráter informativo e não substituem consulta profissional, jurídica, médica, financeira
           ou técnica especializada.
         </p>
-        <p>
-          O usuário é responsável por avaliar criticamente qualquer resposta antes de tomar decisões com base nela.
-        </p>
+        <p>O usuário é responsável por avaliar criticamente qualquer resposta antes de tomar decisões com base nela.</p>
       </section>
 
       <section>
@@ -82,9 +80,7 @@ export default function TermsPage() {
           recursos de IA e fluxos de autenticação a qualquer momento, com ou sem aviso prévio, para evolução do produto,
           segurança, conformidade ou manutenção operacional.
         </p>
-        <p>
-          Não garantimos disponibilidade ininterrupta, ausência de erros ou manutenção de funcionalidades específicas.
-        </p>
+        <p>Não garantimos disponibilidade ininterrupta, ausência de erros ou manutenção de funcionalidades específicas.</p>
       </section>
 
       <section>
