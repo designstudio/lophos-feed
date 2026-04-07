@@ -122,7 +122,7 @@ export function HowItWorksRotator() {
 
       <div className="mt-12 grid gap-10 xl:grid-cols-3 xl:gap-8">
         <div>
-          <article className={`overflow-hidden rounded-[30px] bg-bg-secondary px-5 pt-5 md:px-6 md:pt-6 ${CARD_HEIGHT}`}>
+          <article className={`cursor-default overflow-hidden rounded-[30px] bg-bg-secondary px-5 pt-5 md:px-6 md:pt-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-end justify-center">
               <div className="flex h-[20.375rem] w-full max-w-[18.2rem] flex-col overflow-hidden rounded-t-[26px] rounded-b-none bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
                 <div className="relative overflow-hidden border-b border-border px-4 pb-3 pt-4">
@@ -177,9 +177,9 @@ export function HowItWorksRotator() {
         </div>
 
         <div>
-          <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
+          <article className={`cursor-default rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-center justify-center">
-              <div className="relative flex h-[13.75rem] w-full max-w-[23rem] flex-col items-center overflow-hidden rounded-[26px] bg-[#151515] px-6 py-6 text-white shadow-[0_20px_50px_rgba(17,17,17,0.08)]">
+              <div className="relative flex h-[13.75rem] w-full max-w-[23rem] flex-col items-center justify-center overflow-hidden rounded-[26px] bg-[#151515] px-6 py-6 text-white shadow-[0_20px_50px_rgba(17,17,17,0.08)]">
                 <AnimatePresence mode="wait">
                   {showGeneratedCard ? (
                     <motion.article
@@ -209,32 +209,34 @@ export function HowItWorksRotator() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="flex h-full w-full flex-col items-center justify-center"
+                      className="flex h-full w-full flex-col items-center justify-center text-center"
                     >
-                      <div className="h-[74px] w-[74px]">
+                      <div className="flex flex-1 flex-col items-center justify-center">
+                        <div className="h-[74px] w-[74px]">
                         <Lottie animationData={chatbotAnimation} loop={isActive} autoplay={isActive} />
-                      </div>
+                        </div>
 
-                      <div className="mt-6 min-h-[2.4rem]">
-                        <AnimatePresence mode="wait">
-                          <motion.p
-                            key={currentFlowLabel}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.4, ease: 'easeOut' }}
-                            className="text-center text-[0.92rem] font-medium text-white/72"
-                          >
-                            {currentFlowLabel}
-                          </motion.p>
-                        </AnimatePresence>
-                      </div>
+                        <div className="mt-6 min-h-[2.4rem]">
+                          <AnimatePresence mode="wait">
+                            <motion.p
+                              key={currentFlowLabel}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              transition={{ duration: 0.4, ease: 'easeOut' }}
+                              className="text-center text-[0.92rem] font-medium text-white/72"
+                            >
+                              {currentFlowLabel}
+                            </motion.p>
+                          </AnimatePresence>
+                        </div>
 
-                      <motion.div
-                        className="mt-4 h-px w-24 bg-white/14"
-                        animate={isActive ? { opacity: [0.2, 0.55, 0.2], width: [72, 96, 72] } : { opacity: 0.2, width: 72 }}
-                        transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
-                      />
+                        <motion.div
+                          className="mt-4 h-px w-24 bg-white/14"
+                          animate={isActive ? { opacity: [0.2, 0.55, 0.2], width: [72, 96, 72] } : { opacity: 0.2, width: 72 }}
+                          transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
+                        />
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -250,7 +252,7 @@ export function HowItWorksRotator() {
         </div>
 
         <div>
-          <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
+          <article className={`cursor-default rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-center justify-center">
               <div className="relative aspect-[292/326] w-full max-w-[18.25rem] overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
                 <Image

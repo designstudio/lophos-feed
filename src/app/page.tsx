@@ -124,7 +124,7 @@ function LibraryBlock() {
   const randomDomains = pickRandomDomains(PORTAL_ICON_POSITIONS.length)
 
   return (
-    <section className="relative min-h-[780px] overflow-hidden px-4 py-20 md:px-8 md:py-28">
+    <section className="relative min-h-[780px] overflow-hidden px-4 py-14 md:px-8 md:py-18">
       <div className="mx-auto max-w-[1400px]">
         <div className="relative flex min-h-[620px] items-center justify-center">
           {PORTAL_ICON_POSITIONS.map((icon, index) => (
@@ -164,7 +164,7 @@ function LibraryBlock() {
 
 function CtaBlock() {
   return (
-    <section className="px-5 pb-24 pt-8 md:px-8 md:pb-28 md:pt-12">
+    <section className="px-5 pb-24 pt-2 md:px-8 md:pb-28 md:pt-4">
       <div className="mx-auto flex max-w-[760px] flex-col items-center rounded-[30px] bg-bg-secondary px-6 py-12 text-center md:px-10 md:py-16">
         <h2 className="text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary">
           <span className="block">Pronto para</span>
@@ -194,7 +194,7 @@ export default function Home() {
       <HeroBlock />
       <ProductShowcase />
 
-      <section id="como-funciona" className="px-5 py-20 md:px-8 md:py-28">
+      <section id="como-funciona" className="px-5 pb-14 pt-20 md:px-8 md:pb-18 md:pt-24">
         <div className="mx-auto max-w-[1320px]">
           <HowItWorksRotator />
         </div>
