@@ -175,7 +175,7 @@ export default function ReleaseNotesPage() {
             {release.sections.map((section) => (
               <div key={section.title}>
                 <h2 className="mb-4 font-display text-2xl text-ink-primary">{section.title}</h2>
-                <ul className="space-y-3 pl-5 text-body leading-relaxed text-ink-secondary marker:text-border-strong">
+                <ul className="list-disc space-y-3 pl-5 text-body leading-relaxed text-ink-secondary marker:text-border-strong">
                   {section.items.map((item) => (
                     <li key={item}>{item}</li>
                   ))}
