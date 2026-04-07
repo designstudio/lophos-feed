@@ -347,16 +347,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                   }}
                   className="min-w-0 flex-1 px-2.5 py-2"
                 >
-                  <div className="relative min-w-0">
-                    <span
-                      className={cn(
-                        'absolute left-0 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center transition-opacity',
-                        isNavigating ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                      )}
-                      aria-hidden="true"
-                    >
-                      <span className="h-3.5 w-3.5 rounded-full border-2 border-border border-t-[var(--color-ui-strong)] animate-spin" />
-                    </span>
+                  <div className="min-w-0">
                     <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
                   </div>
                 </Link>
