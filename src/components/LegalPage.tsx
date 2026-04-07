@@ -19,8 +19,8 @@ export function LegalPage({
   ]
 
   return (
-    <main className="flex min-h-screen flex-1 min-w-0 overflow-hidden bg-bg-primary text-ink-primary">
-      <div className="flex-1 overflow-y-auto min-w-0">
+    <main className="flex h-[100dvh] min-h-[100dvh] flex-1 min-w-0 overflow-hidden bg-bg-primary text-ink-primary">
+      <div className="flex-1 min-h-0 overflow-y-auto min-w-0">
         <div className="sticky top-0 z-20 border-b border-border header-blur">
           <div className="flex items-center h-12 px-4 md:hidden gap-2">
             <LophosLogo size={26} />
