@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { LophosLogo } from '@/components/LophosLogo'
 import { cn } from '@/lib/utils'
 
@@ -13,10 +16,28 @@ export function LegalPage({
   currentPath: '/termos-de-uso' | '/politica-de-privacidade'
   children: React.ReactNode
 }) {
+  const router = useRouter()
   const links = [
     { href: '/politica-de-privacidade' as const, label: 'Política de Privacidade' },
     { href: '/termos-de-uso' as const, label: 'Termos de Uso' },
   ]
+
+  const navigateTo = (href: '/termos-de-uso' | '/politica-de-privacidade') => {
+    if (href === currentPath) return
+
+    const docWithTransition = document as Document & {
+      startViewTransition?: (callback: () => void) => void
+    }
+
+    if (typeof docWithTransition.startViewTransition === 'function') {
+      docWithTransition.startViewTransition(() => {
+        router.push(href)
+      })
+      return
+    }
+
+    router.push(href)
+  }
 
   return (
     <main className="flex h-[100dvh] min-h-[100dvh] flex-1 min-w-0 overflow-hidden bg-bg-primary text-ink-primary">
@@ -31,9 +52,10 @@ export function LegalPage({
             {links.map((link) => {
               const active = currentPath === link.href
               return (
-                <Link
+                <button
                   key={link.href}
-                  href={link.href}
+                  type="button"
+                  onClick={() => navigateTo(link.href)}
                   className={cn(
                     'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
                     active
@@ -42,7 +64,7 @@ export function LegalPage({
                   )}
                 >
                   {link.label}
-                </Link>
+                </button>
               )
             })}
           </div>
@@ -57,9 +79,10 @@ export function LegalPage({
               {links.map((link) => {
                 const active = currentPath === link.href
                 return (
-                  <Link
+                  <button
                     key={link.href}
-                    href={link.href}
+                    type="button"
+                    onClick={() => navigateTo(link.href)}
                     className={cn(
                       'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium flex items-center',
                       active
@@ -68,7 +91,7 @@ export function LegalPage({
                     )}
                   >
                     {link.label}
-                  </Link>
+                  </button>
                 )
               })}
             </div>
@@ -77,7 +100,7 @@ export function LegalPage({
           </div>
         </div>
 
-        <div className="article-layout mx-auto px-6 py-6 pb-12 md:px-6 md:py-8">
+        <div className="article-layout mx-auto px-6 py-6 pb-12 md:px-6 md:py-8" style={{ viewTransitionName: 'legal-page' }}>
           <article className="px-0 py-8 md:py-10">
             <header className="mb-8 border-b border-border pb-6">
               <h1 className="font-display text-3xl leading-tight md:text-4xl">{title}</h1>
