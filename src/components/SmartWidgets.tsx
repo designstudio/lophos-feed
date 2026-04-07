@@ -48,8 +48,20 @@ function formatAirDate(dateStr: string | null): string {
 }
 
 function TeamLogo({ logo, name }: { logo: string | null; name: string }) {
-  if (!logo) return <span className="w-5 h-5 rounded-full bg-bg-tertiary flex-shrink-0 inline-block" />
-  return <img src={logo} alt={name} width={20} height={20} className="rounded-full flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+  return (
+    <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-bg-tertiary">
+      {logo ? (
+        <img
+          src={logo}
+          alt={name}
+          width={20}
+          height={20}
+          className="h-5 w-5 object-contain"
+          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+        />
+      ) : null}
+    </span>
+  )
 }
 
 interface Props { topics: string[]; activeWidgets: string[] }
