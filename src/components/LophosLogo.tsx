@@ -1,6 +1,7 @@
 import { useId } from 'react'
+import { cn } from '@/lib/utils'
 
-export function LophosLogo({ size = 34 }: { size?: number }) {
+export function LophosLogo({ size = 34, className }: { size?: number; className?: string }) {
   const maskId = useId()
 
   return (
@@ -11,7 +12,7 @@ export function LophosLogo({ size = 34 }: { size?: number }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       style={{ flexShrink: 0 }}
-      className="text-ink-primary"
+      className={cn('text-ink-primary', className)}
       aria-hidden="true"
     >
       <mask id={maskId} style={{ maskType: 'alpha' }} maskUnits="userSpaceOnUse" x="0" y="0" width="668" height="668">

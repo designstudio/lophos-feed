@@ -1,36 +1,18 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, MessageChatCircle, SearchLg, Stars02 } from '@untitledui/icons'
+import { ArrowRight, MessageChatCircle, SearchLg } from '@untitledui/icons'
 import { LophosLogo } from '@/components/LophosLogo'
 
-const FLOATING_BADGES = [
-  { label: 'RSS', top: '6%', left: '8%', bg: '#ffffff' },
-  { label: 'IA', top: '12%', left: '64%', bg: '#fff3eb' },
-  { label: 'TV', top: '28%', left: '18%', bg: '#f5f5f3' },
-  { label: 'LOL', top: '25%', right: '12%', bg: '#fff7d9' },
-  { label: 'NEWS', top: '54%', left: '10%', bg: '#eef5ff' },
-  { label: 'CHAT', top: '58%', right: '18%', bg: '#f4efff' },
-  { label: 'TEC', bottom: '12%', left: '24%', bg: '#eef7f2' },
-  { label: 'FILM', bottom: '6%', right: '10%', bg: '#fff0f2' },
+const PORTAL_ICONS = [
+  { domain: 'g1.globo.com', top: '9%', left: '9%', size: 76, animation: 'landingFloat 5.8s ease-in-out infinite alternate' },
+  { domain: 'tecmundo.com.br', top: '18%', left: '28%', size: 72, animation: 'landingDrift 9s ease-in-out infinite' },
+  { domain: 'engadget.com', top: '9%', right: '24%', size: 74, animation: 'landingFloat 6.2s ease-in-out infinite alternate-reverse' },
+  { domain: 'gamespot.com', top: '23%', right: '11%', size: 78, animation: 'landingDrift 8.5s ease-in-out infinite' },
+  { domain: 'kotaku.com', top: '48%', left: '13%', size: 78, animation: 'landingFloat 6.5s ease-in-out infinite alternate' },
+  { domain: 'billboard.com', top: '54%', right: '20%', size: 74, animation: 'landingFloat 5.4s ease-in-out infinite alternate-reverse' },
+  { domain: 'techcrunch.com', bottom: '12%', left: '25%', size: 74, animation: 'landingDrift 8.2s ease-in-out infinite' },
+  { domain: 'crunchyroll.com', bottom: '10%', right: '14%', size: 76, animation: 'landingFloat 6.8s ease-in-out infinite alternate' },
 ] as const
-
-const FOOTER_GROUPS = [
-  {
-    title: 'Produto',
-    links: [
-      { href: '/login', label: 'Cadastre-se agora' },
-      { href: '/login', label: 'Log in' },
-      { href: '/notas-de-versao', label: 'Notas de versão' },
-    ],
-  },
-  {
-    title: 'Institucional',
-    links: [
-      { href: '/politica-de-privacidade', label: 'Política de Privacidade' },
-      { href: '/termos-de-uso', label: 'Termos de Uso' },
-    ],
-  },
-]
 
 export const metadata: Metadata = {
   title: 'Lophos - Descubra o que importa sem nadar em ruído',
@@ -40,24 +22,16 @@ export const metadata: Metadata = {
 
 function LandingHeader() {
   return (
-    <div className="mx-auto flex max-w-[1040px] justify-center px-5 pt-5 md:px-8 md:pt-8">
-      <div className="flex w-full max-w-[972px] items-center justify-between rounded-full border border-[#ece9e4] bg-[#f7f5f1] px-6 py-4 shadow-[0_1px_0_rgba(17,17,17,0.02)]">
+    <div className="pointer-events-none fixed inset-x-0 top-5 z-40 flex justify-center px-4">
+      <div className="pointer-events-auto header-blur flex w-full max-w-[36.5rem] items-center justify-between rounded-full border border-border px-5 py-3 shadow-[0_12px_40px_rgba(17,17,17,0.05)]">
         <Link href="/" className="flex items-center gap-3 text-ink-primary">
-          <LophosLogo size={28} />
+          <LophosLogo size={26} />
           <span className="text-[1.05rem] font-semibold tracking-[-0.04em]">Lophos</span>
         </Link>
 
-        <nav className="hidden items-center gap-10 text-[1.02rem] font-medium text-ink-primary md:flex">
-          <Link href="/notas-de-versao" className="transition-opacity hover:opacity-65">
-            Notas
-          </Link>
-          <Link href="/politica-de-privacidade" className="transition-opacity hover:opacity-65">
-            Políticas
-          </Link>
-          <Link href="/login" className="transition-opacity hover:opacity-65">
-            Log in
-          </Link>
-        </nav>
+        <Link href="/login" className="text-[0.98rem] font-medium text-ink-primary transition-opacity hover:opacity-65">
+          Login
+        </Link>
       </div>
     </div>
   )
@@ -66,7 +40,7 @@ function LandingHeader() {
 function ProductShowcase() {
   return (
     <div className="mx-auto mt-8 max-w-[1400px] px-4 md:mt-12 md:px-8">
-      <div className="rounded-[34px] bg-[#f4f1ec] px-4 py-5 md:px-8 md:py-8">
+      <div className="rounded-[34px] bg-bg-secondary px-4 py-5 md:px-8 md:py-8">
         <div className="mx-auto max-w-[1080px] rounded-[28px] border border-border bg-white p-4 shadow-[0_18px_60px_rgba(17,17,17,0.05)] md:p-6">
           <div className="flex flex-wrap items-center gap-3 border-b border-border pb-4">
             <div className="flex items-center gap-2 rounded-full bg-bg-secondary px-3 py-2 text-sm font-medium text-ink-primary">
@@ -83,7 +57,7 @@ function ProductShowcase() {
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)_260px]">
-            <aside className="rounded-[24px] bg-[#faf8f5] p-4">
+            <aside className="rounded-[24px] bg-bg-primary p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-tertiary">Tópicos</p>
               <div className="mt-4 space-y-2">
                 {['Games', 'Tecnologia', 'Filmes', 'Séries', 'Anime', 'Economia'].map((topic) => (
@@ -126,7 +100,7 @@ function ProductShowcase() {
                   </p>
                 </div>
 
-                <div className="rounded-[24px] bg-[#faf8f5] p-5">
+                <div className="rounded-[24px] bg-bg-primary p-5">
                   <div className="inline-flex rounded-full bg-white p-2 text-ink-primary shadow-[0_6px_20px_rgba(17,17,17,0.05)]">
                     <SearchLg size={18} />
                   </div>
@@ -138,7 +112,7 @@ function ProductShowcase() {
               </div>
             </section>
 
-            <aside className="rounded-[24px] bg-[#faf8f5] p-4">
+            <aside className="rounded-[24px] bg-bg-primary p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-tertiary">Widgets</p>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl bg-white p-4">
@@ -164,36 +138,44 @@ function ProductShowcase() {
 
 function LibraryBlock() {
   return (
-    <section className="relative overflow-hidden px-5 py-20 md:px-8 md:py-28">
-      <div className="mx-auto max-w-[1200px]">
-        <div className="relative flex min-h-[540px] items-center justify-center rounded-[40px] bg-white">
-          {FLOATING_BADGES.map((badge) => (
+    <section className="relative min-h-[780px] overflow-hidden px-4 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="relative flex min-h-[620px] items-center justify-center">
+          {PORTAL_ICONS.map((icon) => (
             <div
-              key={badge.label}
-              className="absolute hidden h-20 w-20 items-center justify-center rounded-[26px] border border-[#efebe5] text-sm font-semibold tracking-[0.04em] text-ink-primary shadow-[0_18px_50px_rgba(17,17,17,0.06)] md:flex"
-              style={badge}
+              key={icon.domain}
+              className="absolute hidden items-center justify-center md:flex"
+              style={{
+                ...icon,
+                width: icon.size,
+                height: icon.size,
+                animation: icon.animation,
+              }}
             >
-              <div
-                className="flex h-full w-full items-center justify-center rounded-[26px]"
-                style={{ backgroundColor: badge.bg }}
-              >
-                {badge.label}
+              <div className="flex h-full w-full items-center justify-center rounded-[26px] border border-border bg-white shadow-[0_18px_50px_rgba(17,17,17,0.06)]">
+                <img
+                  src={`https://www.google.com/s2/favicons?domain=${icon.domain}&sz=128`}
+                  alt={icon.domain}
+                  width={icon.size - 26}
+                  height={icon.size - 26}
+                  className="h-auto w-auto max-h-[46px] max-w-[46px] rounded-[14px]"
+                />
               </div>
             </div>
           ))}
 
-          <div className="max-w-[760px] px-6 text-center">
+          <div className="max-w-[900px] px-6 text-center">
             <p className="text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">
               Uma biblioteca construída com
             </p>
-            <div className="mt-4 space-y-1 text-[3.4rem] font-semibold leading-[0.95] tracking-[-0.08em] text-ink-primary md:text-[6rem]">
+            <div className="mt-4 space-y-1 text-[3.2rem] font-semibold leading-[0.94] tracking-[-0.09em] text-ink-primary md:text-[6.4rem]">
               <div>67 feeds de notícias</div>
               <div>curadoria por IA</div>
               <div>threads por artigo</div>
             </div>
-            <p className="mx-auto mt-6 max-w-[560px] text-base leading-8 text-ink-secondary md:text-lg">
-              O Lophos coleta fontes em RSS, identifica eventos equivalentes, organiza o contexto e transforma cada leitura
-              em uma experiência mais navegável, mais limpa e muito menos repetitiva.
+            <p className="mx-auto mt-6 max-w-[620px] text-base leading-8 text-ink-secondary md:text-lg">
+              De G1 a TechCrunch, de GameSpot a Billboard: o Lophos acompanha portais em tempo real, identifica cobertura duplicada
+              e transforma tudo em uma experiência editorial mais navegável, mais limpa e muito menos repetitiva.
             </p>
           </div>
         </div>
@@ -205,40 +187,27 @@ function LibraryBlock() {
 function Footer() {
   return (
     <footer className="rounded-t-[34px] bg-[#151515] px-6 py-14 text-white md:px-8 md:py-20">
-      <div className="mx-auto grid max-w-[1280px] gap-12 md:grid-cols-[1.4fr_0.8fr_0.8fr]">
-        <div>
-          <div className="flex items-center gap-3">
-            <LophosLogo size={28} />
-            <span className="text-xl font-semibold tracking-[-0.04em]">Lophos</span>
+      <div className="mx-auto max-w-[1280px]">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <LophosLogo size={28} className="text-white" />
+              <span className="text-xl font-semibold tracking-[-0.04em] text-white">Lophos</span>
+            </div>
+            <p className="mt-5 max-w-sm text-[1.02rem] leading-8 text-white/66">
+              Descubra notícias com mais contexto, menos ruído e uma thread pronta para continuar a leitura.
+            </p>
           </div>
-          <p className="mt-5 max-w-sm text-[1.02rem] leading-8 text-white/66">
-            Descubra notícias com mais contexto, menos ruído e uma thread pronta para continuar a leitura.
-          </p>
+
+          <div className="flex gap-6 text-[1.02rem] text-white">
+            <Link href="/politica-de-privacidade" className="transition-opacity hover:opacity-65">
+              Termos e políticas
+            </Link>
+          </div>
         </div>
 
-        {FOOTER_GROUPS.map((group) => (
-          <div key={group.title}>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-white/38">{group.title}</p>
-            <div className="mt-5 space-y-3">
-              {group.links.map((link) => (
-                <Link key={link.label} href={link.href} className="block text-[1.02rem] text-white transition-opacity hover:opacity-65">
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="mx-auto mt-16 flex max-w-[1280px] flex-col gap-4 border-t border-white/10 pt-8 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
-        <p>© Lophos 2026. Todos os direitos reservados.</p>
-        <div className="flex gap-6">
-          <Link href="/politica-de-privacidade" className="transition-opacity hover:opacity-65">
-            Privacy policy
-          </Link>
-          <Link href="/termos-de-uso" className="transition-opacity hover:opacity-65">
-            Terms
-          </Link>
+        <div className="mt-16 flex flex-col gap-4 border-t border-white/10 pt-8 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
+          <p>© Lophos 2026. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
@@ -247,12 +216,12 @@ function Footer() {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#fcfbf8] text-ink-primary">
+    <main className="min-h-screen bg-bg-primary text-ink-primary">
       <LandingHeader />
 
-      <section className="px-5 pb-16 pt-20 md:px-8 md:pb-24 md:pt-24">
+      <section className="px-5 pb-16 pt-28 md:px-8 md:pb-24 md:pt-32">
         <div className="mx-auto max-w-[920px] text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[28px] border border-[#ece9e4] bg-white shadow-[0_18px_40px_rgba(17,17,17,0.05)]">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[28px] border border-border bg-white shadow-[0_18px_40px_rgba(17,17,17,0.05)]">
             <LophosLogo size={42} />
           </div>
 
@@ -268,7 +237,7 @@ export default function Home() {
           <div className="mt-10 flex justify-center">
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-full bg-[#111111] px-6 py-3.5 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
             >
               Cadastre-se agora
               <ArrowRight size={16} />

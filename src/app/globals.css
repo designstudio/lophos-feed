@@ -303,6 +303,17 @@ html, body {
   to   { transform: translateX(0); }
 }
 
+@keyframes landingFloat {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(0, -12px, 0) scale(1.03); }
+}
+
+@keyframes landingDrift {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(8px, -10px, 0); }
+  100% { transform: translate3d(-6px, 8px, 0); }
+}
+
 .stagger > *:nth-child(1) { animation-delay:   0ms; opacity: 0; }
 .stagger > *:nth-child(2) { animation-delay:  80ms; opacity: 0; }
 .stagger > *:nth-child(3) { animation-delay: 160ms; opacity: 0; }
