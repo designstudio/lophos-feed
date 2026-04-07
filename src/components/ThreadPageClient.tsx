@@ -1,8 +1,17 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { ArrowNarrowLeft as ArrowLeft } from '@untitledui/icons'
+import { useRouter } from 'next/navigation'
+import {
+  ArrowNarrowLeft as ArrowLeft,
+  DotsHorizontal,
+  Edit02 as Pen,
+  Trash03 as TrashBinTrash,
+  X as CloseCircle,
+  Check as CheckCircle,
+} from '@untitledui/icons'
 import { ChatThread } from '@/components/ChatThread'
 
 interface ChatMessage {
@@ -36,10 +45,19 @@ export function ThreadPageClient({
   article,
   initialMessages,
 }: ThreadPageClientProps) {
+  const router = useRouter()
   const [showTitle, setShowTitle] = useState(false)
+  const [currentTitle, setCurrentTitle] = useState(thread.title)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [draftTitle, setDraftTitle] = useState(thread.title)
+  const [renamingThread, setRenamingThread] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deletingThread, setDeletingThread] = useState(false)
   const titleRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const renameInputRef = useRef<HTMLInputElement>(null)
 
-  // Monitor article reference card visibility
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -55,14 +73,130 @@ export function ThreadPageClient({
     return () => observer.disconnect()
   }, [])
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [])
+
+  useEffect(() => {
+    if (editingTitle && renameInputRef.current) {
+      renameInputRef.current.focus()
+      renameInputRef.current.select()
+    }
+  }, [editingTitle])
+
+  const cancelRename = () => {
+    setEditingTitle(false)
+    setDraftTitle(currentTitle)
+    setRenamingThread(false)
+  }
+
+  const handleRenameThread = async () => {
+    const nextTitle = draftTitle.trim()
+
+    if (!nextTitle || nextTitle === currentTitle) {
+      cancelRename()
+      return
+    }
+
+    setRenamingThread(true)
+
+    try {
+      const response = await fetch('/api/chat/threads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          threadId,
+          title: nextTitle,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao renomear thread')
+      }
+
+      setCurrentTitle(nextTitle)
+      setDraftTitle(nextTitle)
+      setEditingTitle(false)
+      window.dispatchEvent(new Event('threads:updated'))
+    } catch {
+      window.alert('Não foi possível renomear a thread.')
+    } finally {
+      setRenamingThread(false)
+    }
+  }
+
+  const handleDeleteThread = async () => {
+    setDeletingThread(true)
+
+    try {
+      const response = await fetch('/api/chat/threads', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threadId }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir thread')
+      }
+
+      window.dispatchEvent(new Event('threads:updated'))
+      router.push('/feed')
+    } catch {
+      window.alert('Não foi possível excluir a thread.')
+      setDeletingThread(false)
+    }
+  }
+
   return (
     <div className="flex flex-1 min-w-0 overflow-hidden">
-      {/* Main scrollable content area */}
       <div className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
-
-        {/* ── Sticky header ── */}
         <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
           <div className="flex items-center h-12 md:h-14 gap-3">
+            <div ref={menuRef} className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="flex h-8 w-8 items-center justify-center rounded-[0.9rem] border border-border text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                aria-label="Ações da thread"
+              >
+                <DotsHorizontal size={18} />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute left-0 top-10 z-30 min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setEditingTitle(true)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                  >
+                    <Pen size={16} className="flex-shrink-0" />
+                    <span>Renomear</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setDeleteConfirmOpen(true)
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                  >
+                    <TrashBinTrash size={16} className="flex-shrink-0" />
+                    <span>Excluir</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <Link
               href={`/article/${article.id}`}
               className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
@@ -71,21 +205,19 @@ export function ThreadPageClient({
               <span className="hidden sm:inline">Voltar para artigo</span>
             </Link>
 
-            {/* Thread title — appears when scrolled past article card */}
             <div className="flex-1 flex justify-center overflow-hidden px-2">
               <span
                 className="text-[0.875rem] font-medium text-ink-primary truncate max-w-lg transition-all duration-200"
                 style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? 'translateY(0)' : 'translateY(4px)' }}
               >
-                {thread.title}
+                {currentTitle}
               </span>
             </div>
 
-            <div className="w-20 flex-shrink-0" /> {/* Spacer for symmetry */}
+            <div className="w-20 flex-shrink-0" />
           </div>
         </div>
 
-        {/* Article Reference Card */}
         <div ref={titleRef} className="px-4 md:px-8 pt-10 pb-6">
           <Link
             href={`/article/${article.id}`}
@@ -114,7 +246,6 @@ export function ThreadPageClient({
           </Link>
         </div>
 
-        {/* Chat Content Area */}
         <main className="page-scroll">
           <div className="article-layout mx-auto px-0 py-6 pb-10">
             <ChatThread
@@ -127,6 +258,128 @@ export function ThreadPageClient({
           </div>
         </main>
       </div>
+
+      {editingTitle && createPortal(
+        <div
+          className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+          style={{ backgroundColor: '#05050533', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
+          onClick={cancelRename}
+        >
+          <div
+            className="relative w-full max-w-md rounded-[1rem] border border-border bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="px-4 pt-4 pb-2">
+              <h3 className="text-[1.05rem] font-semibold text-ink-primary">
+                Renomear thread
+              </h3>
+            </div>
+
+            <div className="px-4 pb-5">
+              <input
+                ref={renameInputRef}
+                type="text"
+                value={draftTitle}
+                onChange={(event) => setDraftTitle(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    void handleRenameThread()
+                  }
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    cancelRename()
+                  }
+                }}
+                className="w-full rounded-xl border border-border bg-white px-4 py-3 text-sm text-ink-primary outline-none transition-colors focus:border-accent"
+                disabled={renamingThread}
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+              <button
+                type="button"
+                onClick={cancelRename}
+                disabled={renamingThread}
+                className="rounded-full border border-border px-4 py-2 text-sm font-medium text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleRenameThread()}
+                disabled={renamingThread || draftTitle.trim().length === 0}
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--color-ui-strong)] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                <CheckCircle size={16} />
+                <span>{renamingThread ? 'Salvando...' : 'Salvar'}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {deleteConfirmOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[10001] flex items-center justify-center p-4"
+          style={{ backgroundColor: '#05050533', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
+          onClick={() => {
+            if (deletingThread) return
+            setDeleteConfirmOpen(false)
+          }}
+        >
+          <div
+            className="relative w-full max-w-md rounded-[1rem] border border-border bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="px-4 pt-4 pb-2">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-[1.05rem] font-semibold text-ink-primary">
+                  Excluir thread?
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-tertiary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                  aria-label="Fechar"
+                >
+                  <CloseCircle size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="px-4 pb-5">
+              <p className="text-sm leading-6 text-ink-secondary">
+                Isso excluirá <span className="font-semibold text-ink-primary">{currentTitle}</span>.
+              </p>
+              <p className="mt-2 text-sm leading-6 text-ink-tertiary">
+                Essa ação não pode ser desfeita.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={deletingThread}
+                className="rounded-full border border-border px-4 py-2 text-sm font-medium text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteThread()}
+                disabled={deletingThread}
+                className="rounded-full bg-[#E5484D] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {deletingThread ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
