@@ -407,7 +407,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     <div>
       {!isReady && (
         <aside
-          className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border bg-bg-primary shadow-[0_12px_40px_rgba(17,17,17,0.05)]"
+          className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border bg-[color:color-mix(in_srgb,var(--color-bg-primary)_88%,white_12%)] shadow-[0_8px_28px_rgba(17,17,17,0.035)]"
           style={{
             width: resolvedWidth,
             height: 'calc(100dvh - 2rem)',
@@ -429,7 +429,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       )}
 
       <aside
-        className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border bg-bg-primary shadow-[0_12px_40px_rgba(17,17,17,0.05)]"
+        className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border bg-[color:color-mix(in_srgb,var(--color-bg-primary)_88%,white_12%)] shadow-[0_8px_28px_rgba(17,17,17,0.035)]"
         style={{
           width: resolvedWidth,
           height: 'calc(100dvh - 2rem)',

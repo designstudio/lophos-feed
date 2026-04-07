@@ -296,8 +296,8 @@ html, body {
   min-height: 60px;
   border-radius: 9999px;
   border: 1px solid var(--color-border);
-  background-color: color-mix(in srgb, var(--color-bg-primary) 68%, transparent);
-  box-shadow: 0 12px 40px rgba(17, 17, 17, 0.05);
+  background-color: color-mix(in srgb, var(--color-bg-primary) 84%, transparent);
+  box-shadow: 0 8px 28px rgba(17, 17, 17, 0.035);
 }
 
 @media (min-width: 768px) {
