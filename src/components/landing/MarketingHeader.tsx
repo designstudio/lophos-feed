@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { LophosLogo } from '@/components/LophosLogo'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,7 @@ const legalLinks: Array<{ href: LegalPath; label: string }> = [
 ]
 
 export function MarketingHeader({ currentPath }: { currentPath?: LegalPath }) {
+  const { userId } = useAuth()
   const router = useRouter()
   const [showSignup, setShowSignup] = useState(false)
 
@@ -54,7 +56,7 @@ export function MarketingHeader({ currentPath }: { currentPath?: LegalPath }) {
             <div
               className={cn(
                 'hidden items-center gap-5 text-[0.92rem] font-medium text-ink-secondary transition-transform duration-300 md:flex',
-                showSignup ? '-translate-x-2' : 'translate-x-0'
+                !userId && showSignup ? '-translate-x-2' : 'translate-x-0'
               )}
             >
               {legalLinks.map((link) => {
@@ -76,33 +78,35 @@ export function MarketingHeader({ currentPath }: { currentPath?: LegalPath }) {
             </div>
           ) : null}
 
-          <div
-            className={cn(
-              'flex items-center gap-3 transition-transform duration-300',
-              showSignup ? '-translate-x-2' : 'translate-x-0'
-            )}
-          >
-            <Link
-              href="/login"
-              className="whitespace-nowrap text-[0.92rem] font-medium text-ink-secondary transition-opacity hover:opacity-65"
-            >
-              Entrar
-            </Link>
-
-            <Link
-              href="/signup"
+          {!userId ? (
+            <div
               className={cn(
-                'inline-flex items-center justify-center overflow-hidden whitespace-nowrap rounded-full bg-ink-primary text-[0.95rem] font-medium text-white transition-all duration-300 hover:opacity-85',
-                showSignup
-                  ? 'max-w-[220px] translate-y-0 px-4 py-2 opacity-100'
-                  : 'pointer-events-none max-w-0 translate-y-3 px-0 py-0 opacity-0'
+                'flex items-center gap-3 transition-transform duration-300',
+                showSignup ? '-translate-x-2' : 'translate-x-0'
               )}
-              aria-hidden={!showSignup}
-              tabIndex={showSignup ? 0 : -1}
             >
-              Criar conta grátis
-            </Link>
-          </div>
+              <Link
+                href="/login"
+                className="whitespace-nowrap text-[0.92rem] font-medium text-ink-secondary transition-opacity hover:opacity-65"
+              >
+                Entrar
+              </Link>
+
+              <Link
+                href="/signup"
+                className={cn(
+                  'inline-flex items-center justify-center overflow-hidden whitespace-nowrap rounded-full bg-ink-primary text-[0.95rem] font-medium text-white transition-all duration-300 hover:opacity-85',
+                  showSignup
+                    ? 'max-w-[220px] translate-y-0 px-4 py-2 opacity-100'
+                    : 'pointer-events-none max-w-0 translate-y-3 px-0 py-0 opacity-0'
+                )}
+                aria-hidden={!showSignup}
+                tabIndex={showSignup ? 0 : -1}
+              >
+                Criar conta grátis
+              </Link>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
