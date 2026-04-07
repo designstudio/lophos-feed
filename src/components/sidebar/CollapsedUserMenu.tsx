@@ -16,6 +16,7 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
   const { signOut } = useClerk()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -31,6 +32,7 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
     <div ref={ref} className="relative mt-auto">
       <Tooltip content={user?.firstName ?? 'Conta'} side="right">
         <button
+          ref={triggerRef}
           onClick={() => setOpen(v => !v)}
           className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-bg-secondary"
         >
@@ -48,7 +50,7 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
       </Tooltip>
 
       {open && (
-        <FixedDropdown anchorRef={ref} onClose={() => setOpen(false)}>
+        <FixedDropdown anchorRef={triggerRef} onClose={() => setOpen(false)}>
           <div className="border-b border-border px-3 py-2.5">
             <p className="truncate text-sm font-medium text-ink-primary">{user?.fullName}</p>
             <p className="truncate text-xs text-ink-tertiary">{user?.primaryEmailAddress?.emailAddress}</p>

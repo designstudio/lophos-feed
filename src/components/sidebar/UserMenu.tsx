@@ -8,12 +8,14 @@ import {
   ArrowNarrowUpRight,
   Announcement02,
 } from '@untitledui/icons'
+import { FixedDropdown } from './FixedDropdown'
 
 export function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { user } = useUser()
   const { signOut } = useClerk()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -28,6 +30,7 @@ export function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         onClick={() => setOpen(v => !v)}
         className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-colors hover:bg-bg-secondary"
       >
@@ -45,10 +48,7 @@ export function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
       </button>
 
       {open && (
-        <div
-          className="absolute bottom-full left-0 z-50 mb-1 w-56 rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
-          style={{ animation: 'slideUp 0.12s ease' }}
-        >
+        <FixedDropdown anchorRef={triggerRef} onClose={() => setOpen(false)}>
           <div className="border-b border-border px-3 py-2.5">
             <p className="truncate text-sm font-medium text-ink-primary">{user?.fullName}</p>
             <p className="truncate text-xs text-ink-tertiary">{user?.primaryEmailAddress?.emailAddress}</p>
@@ -97,7 +97,7 @@ export function UserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
               <span>Sair</span>
             </button>
           </div>
-        </div>
+        </FixedDropdown>
       )}
     </div>
   )
