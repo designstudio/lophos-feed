@@ -348,11 +348,15 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                   className="min-w-0 flex-1 px-2.5 py-2"
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    {isNavigating && (
-                      <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center" aria-hidden="true">
-                        <span className="h-3.5 w-3.5 rounded-full border-2 border-border border-t-[var(--color-ui-strong)] animate-spin" />
-                      </span>
-                    )}
+                    <span
+                      className={cn(
+                        'flex h-4 w-4 flex-shrink-0 items-center justify-center transition-opacity',
+                        isNavigating ? 'opacity-100' : 'opacity-0'
+                      )}
+                      aria-hidden="true"
+                    >
+                      <span className="h-3.5 w-3.5 rounded-full border-2 border-border border-t-[var(--color-ui-strong)] animate-spin" />
+                    </span>
                     <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
                   </div>
                 </Link>
