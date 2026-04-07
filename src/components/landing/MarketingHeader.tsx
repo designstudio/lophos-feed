@@ -82,7 +82,10 @@ export function MarketingHeader({ currentPath }: { currentPath?: LegalPath }) {
               showSignup ? '-translate-x-2' : 'translate-x-0'
             )}
           >
-            <Link href="/login" className="text-[0.98rem] font-medium text-ink-primary transition-opacity hover:opacity-65">
+            <Link
+              href="/login"
+              className="whitespace-nowrap text-[0.92rem] font-medium text-ink-secondary transition-opacity hover:opacity-65"
+            >
               Entrar
             </Link>
 
