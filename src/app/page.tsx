@@ -79,7 +79,7 @@ function HeroBlock() {
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
-            href="/login"
+            href="/signup"
             className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-85"
           >
             Quero experimentar
@@ -175,7 +175,7 @@ function CtaBlock() {
         </p>
         <div className="mt-8 flex justify-center">
           <Link
-            href="/login"
+            href="/signup"
             className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-85"
           >
             Criar minha conta grátis

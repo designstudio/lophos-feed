@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 const isPublicRoute = createRouteMatcher([
   '/',
   '/login(.*)',
+  '/signup(.*)',
   '/api/(.*)',
   '/article/(.*)',
   '/politica-de-privacidade(.*)',
@@ -21,7 +22,7 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // Logged in but accessing login page — send to feed
-  if (userId && req.nextUrl.pathname === '/login') {
+  if (userId && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/signup')) {
     return NextResponse.redirect(new URL('/feed', req.url))
   }
 

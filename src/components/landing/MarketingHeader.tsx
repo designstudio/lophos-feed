@@ -90,7 +90,7 @@ export function MarketingHeader({ currentPath }: { currentPath?: LegalPath }) {
             </Link>
 
             <Link
-              href="/login"
+              href="/signup"
               className={cn(
                 'inline-flex items-center justify-center overflow-hidden whitespace-nowrap rounded-full bg-ink-primary text-[0.95rem] font-medium text-white transition-all duration-300 hover:opacity-85',
                 showSignup
