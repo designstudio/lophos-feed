@@ -138,6 +138,18 @@ export default function ArticlePage() {
       .catch(() => {})
   }, [id])
 
+  useEffect(() => {
+    const previousTitle = document.title
+
+    if (item?.title) {
+      document.title = `${item.title} - Lophos`
+    }
+
+    return () => {
+      document.title = previousTitle
+    }
+  }, [item?.title])
+
   // Carrega estado de like via reactions API (mesma fonte de verdade do feed)
   useEffect(() => {
     if (!isSignedIn) return

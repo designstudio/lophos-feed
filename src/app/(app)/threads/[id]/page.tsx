@@ -1,7 +1,33 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { ThreadPageClient } from '@/components/ThreadPageClient'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}): Promise<Metadata> {
+  const { id: threadId } = await params
+  const { userId } = await auth()
+
+  if (!userId) {
+    return { title: 'Lophos' }
+  }
+
+  const db = getSupabaseAdmin()
+  const { data: thread } = await db
+    .from('chat_threads')
+    .select('title')
+    .eq('id', threadId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  return {
+    title: thread?.title ? `${thread.title} - Lophos` : 'Lophos',
+  }
+}
 
 export default async function ThreadPage({
   params,
