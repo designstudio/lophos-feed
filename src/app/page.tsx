@@ -13,10 +13,57 @@ import {
 import { LophosLogo } from '@/components/LophosLogo'
 import { HowItWorksRotator } from '@/components/landing/HowItWorksRotator'
 
+const PORTAL_DOMAINS = [
+  'g1.globo.com',
+  'tecmundo.com.br',
+  'engadget.com',
+  'gamespot.com',
+  'kotaku.com',
+  'billboard.com',
+  'techcrunch.com',
+  'crunchyroll.com',
+  'theverge.com',
+  'androidauthority.com',
+  'canaltech.com.br',
+  'ign.com',
+  'olhardigital.com.br',
+  'moviemaker.com',
+  'dreadcentral.com',
+  'bookriot.com',
+  'lithub.com',
+  'nme.com',
+  'businessinsider.com',
+  'ycombinator.com',
+  'rockpapershotgun.com',
+  'criticalhits.com.br',
+] as const
+
+const PORTAL_ICON_POSITIONS = [
+  { top: '8%', left: '4%', animation: 'landingFloat 8.5s ease-in-out infinite' },
+  { top: '16%', left: '18%', animation: 'landingDrift 12.4s ease-in-out infinite' },
+  { top: '9%', right: '20%', animation: 'landingFloat 9.2s ease-in-out infinite' },
+  { top: '20%', right: '4%', animation: 'landingDrift 11.5s ease-in-out infinite' },
+  { top: '50%', left: '7%', animation: 'landingFloat 10.4s ease-in-out infinite' },
+  { top: '48%', right: '10%', animation: 'landingFloat 8.9s ease-in-out infinite' },
+  { bottom: '12%', left: '17%', animation: 'landingDrift 12.8s ease-in-out infinite' },
+  { bottom: '10%', right: '5%', animation: 'landingFloat 9.9s ease-in-out infinite' },
+] as const
+
 export const metadata: Metadata = {
   title: 'Lophos - Voce nao precisa abrir mais dez abas',
   description:
     'O Lophos acompanha mais de 60 portais, junta coberturas repetidas, traduz o contexto e cria um espaco para voce explorar.',
+}
+
+export const dynamic = 'force-dynamic'
+
+function pickRandomDomains(count: number) {
+  const pool = [...PORTAL_DOMAINS]
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+  }
+  return pool.slice(0, count)
 }
 
 function LandingHeader() {
@@ -247,21 +294,6 @@ function ProductShowcase() {
                       ))}
                     </div>
                   </div>
-
-                  <div className="rounded-[22px] border border-border p-5">
-                    <p className="text-[1.05rem] font-semibold text-ink-primary">Valorant</p>
-                    <div className="mt-4 space-y-4">
-                      {['UCAM Es... vs DNSTY', 'eSports C... vs Dortmun...', 'ALTERNA... vs Eintracht ...'].map((match, index) => (
-                        <div key={match} className="border-t border-border pt-4 first:border-t-0 first:pt-0">
-                          <div className="flex items-center justify-between text-[0.92rem] text-ink-primary">
-                            <span>{match}</span>
-                            <span className="text-accent">Hoje {15 + index}:00</span>
-                          </div>
-                          <p className="mt-1 text-sm text-ink-tertiary">VCL</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </aside>
               </div>
             </section>
@@ -273,14 +305,41 @@ function ProductShowcase() {
 }
 
 function LibraryBlock() {
+  const randomDomains = pickRandomDomains(PORTAL_ICON_POSITIONS.length)
+
   return (
-    <section className="px-5 py-20 md:px-8 md:py-28">
-      <div className="mx-auto max-w-[980px] text-center">
-        <p className="text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Uma biblioteca construida com</p>
-        <div className="mt-4 space-y-1 text-[3.2rem] font-semibold leading-[0.94] tracking-[-0.09em] text-ink-primary md:text-[5.4rem]">
-          <div>+60 feeds de noticias</div>
-          <div>em um unico lugar.</div>
-          <div>Sem repeticao, com contexto.</div>
+    <section className="relative min-h-[780px] overflow-hidden px-4 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-[1400px]">
+        <div className="relative flex min-h-[620px] items-center justify-center">
+          {PORTAL_ICON_POSITIONS.map((icon, index) => (
+            <div
+              key={`${randomDomains[index]}-${index}`}
+              className="absolute hidden items-center justify-center md:flex"
+              style={{
+                ...icon,
+                width: 60,
+                height: 60,
+                animation: icon.animation,
+              }}
+            >
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${randomDomains[index]}&sz=128`}
+                alt={randomDomains[index]}
+                width={60}
+                height={60}
+                className="h-[60px] w-[60px] rounded-[18px] object-contain shadow-[0_18px_40px_rgba(17,17,17,0.08)]"
+              />
+            </div>
+          ))}
+
+          <div className="relative z-10 max-w-[860px] px-6 text-center">
+            <p className="text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Uma biblioteca construida com</p>
+            <div className="mt-4 space-y-1 text-[3.2rem] font-semibold leading-[0.94] tracking-[-0.09em] text-ink-primary md:text-[5.4rem]">
+              <div>+60 feeds de noticias</div>
+              <div>em um unico lugar.</div>
+              <div>Sem repeticao, com contexto.</div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -289,12 +348,12 @@ function LibraryBlock() {
 
 function CtaBlock() {
   return (
-    <section className="px-5 pb-24 pt-4 md:px-8 md:pb-28">
-      <div className="mx-auto max-w-[980px] rounded-[34px] border border-border bg-bg-secondary px-8 py-14 text-center md:px-12 md:py-16">
-        <h2 className="text-[2.5rem] font-semibold leading-[1.02] tracking-[-0.05em] text-ink-primary md:text-[4.2rem]">
+    <section className="px-5 pb-24 pt-8 md:px-8 md:pb-28 md:pt-12">
+      <div className="mx-auto flex max-w-[760px] flex-col items-center text-center">
+        <h2 className="text-[2.8rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary md:text-[5.1rem]">
           Pronto para customizar seu feed?
         </h2>
-        <p className="mx-auto mt-4 max-w-[680px] text-lg leading-8 text-ink-secondary md:text-[1.3rem]">
+        <p className="mx-auto mt-5 max-w-[620px] text-lg leading-8 text-ink-secondary md:text-[1.3rem]">
           Gratuito pra comecar. Sem cartao de credito.
         </p>
         <div className="mt-8 flex justify-center">
