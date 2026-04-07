@@ -1,19 +1,10 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
-import {
-  ArrowRight,
-  LayersThree01,
-  Heart,
-  SearchLg,
-  Clock,
-  ChevronDown,
-  ThumbsDown,
-} from '@untitledui/icons'
-import { IconFeed } from '@/components/icons'
+import { ArrowRight, LayersThree01 } from '@untitledui/icons'
 import { HowItWorksRotator } from '@/components/landing/HowItWorksRotator'
 import { MarketingHeader } from '@/components/landing/MarketingHeader'
 import { MarketingFooter } from '@/components/landing/MarketingFooter'
-import { LophosLogo } from '@/components/LophosLogo'
 
 const PORTAL_DOMAINS = [
   'g1.globo.com',
@@ -111,173 +102,14 @@ function ProductShowcase() {
     <section className="mx-auto max-w-[1500px] cursor-default px-4 md:px-8">
       <div className="overflow-hidden rounded-[34px] bg-bg-secondary p-3 md:p-6">
         <div className="overflow-hidden rounded-[28px] border border-border bg-white shadow-[0_18px_60px_rgba(17,17,17,0.05)]">
-          <div className="grid min-h-[710px] lg:grid-cols-[224px_minmax(0,1fr)]">
-            <aside className="flex flex-col border-r border-border bg-white">
-              <div className="flex h-[60px] items-center justify-between border-b border-border px-4">
-                <div className="flex items-center gap-3">
-                  <LophosLogo size={30} />
-                  <span className="text-[1.95rem] font-semibold leading-none tracking-[-0.06em]">lophos</span>
-                </div>
-                <span className="text-sm text-ink-tertiary">‹</span>
-              </div>
-
-              <div className="space-y-1 px-3 py-4">
-                {[
-                  { label: 'Meu Feed', icon: IconFeed, active: true },
-                  { label: 'Minhas curtidas', icon: Heart, active: false },
-                  { label: 'Buscar', icon: SearchLg, active: false },
-                ].map((item) => {
-                  const Icon = item.icon
-                  return (
-                    <div
-                      key={item.label}
-                      className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-[0.95rem] font-medium ${
-                        item.active ? 'bg-bg-secondary text-ink-primary' : 'text-ink-secondary'
-                      }`}
-                    >
-                      <Icon size={18} />
-                      {item.label}
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="px-4 pt-2">
-                <p className="text-sm font-medium text-ink-tertiary">Histórico</p>
-              </div>
-              <div className="space-y-1 px-3 pt-3 text-[0.92rem] text-ink-secondary">
-                {[
-                  'Sobre o que vai falar a 13ª...',
-                  'Onde eu posso jogar Over...',
-                  'Sobre o que fala o filme?',
-                  'Sobre o que é o filme Afli...',
-                ].map((item) => (
-                  <div key={item} className="truncate rounded-xl px-2 py-2">
-                    {item}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-auto border-t border-border px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-[linear-gradient(135deg,#6d4c41,#d7a37a)]" />
-                  <span className="text-[0.95rem] text-ink-secondary">Usuário</span>
-                </div>
-              </div>
-            </aside>
-
-            <section className="min-w-0 bg-white">
-              <div className="flex h-[60px] items-center justify-between border-b border-border px-7">
-                <div className="text-[1rem] font-semibold text-ink-primary">Meu Feed</div>
-                <div className="hidden items-center gap-10 md:flex">
-                  <div className="border-b-2 border-ink-primary pb-4 pt-4 text-[0.95rem] font-medium text-ink-primary">
-                    Últimas notícias
-                  </div>
-                  <div className="flex items-center gap-2 text-[0.95rem] font-medium text-ink-tertiary">
-                    Tópicos
-                    <ChevronDown size={14} />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-[0.92rem] text-ink-secondary">
-                  <Clock size={16} />
-                  Últimas 48h
-                </div>
-              </div>
-
-              <div className="grid gap-8 px-7 py-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-                <div className="space-y-7">
-                  <div className="grid gap-7 md:grid-cols-[1fr_286px]">
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">Horror</p>
-                      <h3 className="mt-3 max-w-[470px] text-[2.25rem] font-semibold leading-[1.05] tracking-[-0.05em] text-ink-primary">
-                        Filme de Terror &apos;Primal Darkness&apos; estreia gratuitamente em...
-                      </h3>
-                      <div className="mt-4 flex items-center gap-2 text-[0.92rem] text-ink-tertiary">
-                        <Clock size={15} />
-                        Publicado há cerca de 6 horas
-                      </div>
-                      <p className="mt-4 max-w-[500px] text-[0.98rem] leading-8 text-ink-secondary">
-                        O filme de terror found footage &apos;Primal Darkness&apos;, com temática de criatura, está
-                        disponível para assistir gratuitamente...
-                      </p>
-                      <div className="mt-5 flex items-center gap-5 text-[0.92rem] text-ink-tertiary">
-                        <span>1 fonte</span>
-                        <Heart size={16} />
-                        <ThumbsDown size={16} />
-                      </div>
-                    </div>
-
-                    <div className="h-[204px] rounded-[20px] bg-[linear-gradient(145deg,#0f1013,#1b1d24_40%,#56463d_100%)]" />
-                  </div>
-
-                  <div className="border-t border-border pt-6">
-                    <div className="grid gap-5 md:grid-cols-3">
-                      {[
-                        { title: "Filme 'Sender' aborda o horror existencial...", tone: '#4a2740' },
-                        { title: 'Kanye West impedido de viajar para o Reino Unido...', tone: '#5f4d39' },
-                        { title: 'Daredevil: Born Again confirma reunião da equipe...', tone: '#2f323a' },
-                      ].map((item) => (
-                        <article key={item.title}>
-                          <div className="h-[132px] rounded-[18px]" style={{ background: `linear-gradient(145deg, ${item.tone}, #d3d0cb)` }} />
-                          <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">Movies</p>
-                          <h4 className="mt-2 text-[1.1rem] font-semibold leading-[1.25] tracking-[-0.03em] text-ink-primary">
-                            {item.title}
-                          </h4>
-                          <div className="mt-3 flex items-center gap-4 text-[0.88rem] text-ink-tertiary">
-                            <span>1 fonte</span>
-                            <Heart size={15} />
-                            <ThumbsDown size={15} />
-                          </div>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <aside className="space-y-4">
-                  <div className="rounded-[22px] border border-border p-5">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-[1.05rem] font-semibold text-ink-primary">29° F/C</p>
-                        <p className="mt-1 text-sm text-ink-secondary">Parada Inglesa, São Paulo</p>
-                      </div>
-                      <div className="text-right text-sm text-ink-secondary">
-                        <p>Parcialmente nublado</p>
-                        <p className="mt-1">H: 29° L: 21°</p>
-                      </div>
-                    </div>
-                    <div className="mt-5 grid grid-cols-5 gap-2 text-center text-[0.82rem] text-ink-secondary">
-                      {['Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((day, index) => (
-                        <div key={day}>
-                          <div className="mx-auto mb-2 h-5 w-5 rounded-full bg-bg-secondary" />
-                          <p>{28 - index}°</p>
-                          <p className="mt-1">{day}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[22px] border border-border p-5">
-                    <p className="text-[1.05rem] font-semibold text-ink-primary">Minhas séries</p>
-                    <div className="mt-4 space-y-4">
-                      {[
-                        { title: 'Monarch - Legado de Monstros', meta: 'T2E7 - Teoria das cordas', date: '09 de abr' },
-                        { title: 'Harry Potter', meta: 'T1E1 - Episódio 1', date: '25 de dez' },
-                      ].map((show) => (
-                        <div key={show.title} className="flex gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0">
-                          <div className="h-14 w-10 rounded-[10px] bg-[linear-gradient(145deg,#4a6170,#9eb3bc)]" />
-                          <div>
-                            <p className="text-[0.95rem] font-medium text-ink-primary">{show.title}</p>
-                            <p className="mt-1 text-sm text-ink-secondary">{show.meta}</p>
-                            <p className="mt-1 text-sm text-accent">{show.date}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </aside>
-              </div>
-            </section>
+          <div className="relative aspect-[1386/721] w-full">
+            <Image
+              src="/lophos-preview-feed.png"
+              alt="Prévia do feed do Lophos"
+              fill
+              className="object-cover"
+              sizes="(min-width: 768px) 1400px, 100vw"
+            />
           </div>
         </div>
       </div>

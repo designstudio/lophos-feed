@@ -96,7 +96,7 @@ export function HowItWorksRotator() {
   useEffect(() => {
     if (!isActive) return
 
-    const stageDurations = [2800, 2800, 2800, 5400]
+    const stageDurations = [3200, 3200, 3200, 6200]
     const timeout = window.setTimeout(() => {
       setFlowStage((current) => (current + 1) % 4)
     }, stageDurations[flowStage])
@@ -171,7 +171,7 @@ export function HowItWorksRotator() {
 
           <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
-              A partir dos registros, detectamos quando várias matérias estão falando do mesmo tema e retornamos em uma única notícia.
+              Monitoramos dezenas de portais em tempo real e registramos cada nova publicação.
             </p>
           </div>
         </div>
@@ -179,7 +179,7 @@ export function HowItWorksRotator() {
         <div>
           <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-center justify-center">
-              <div className="relative flex h-[18.75rem] w-full max-w-[20.75rem] flex-col items-center overflow-hidden rounded-[26px] bg-[#151515] px-6 py-6 text-white shadow-[0_20px_50px_rgba(17,17,17,0.08)]">
+              <div className="relative flex h-[13.75rem] w-full max-w-[23rem] flex-col items-center overflow-hidden rounded-[26px] bg-[#151515] px-6 py-6 text-white shadow-[0_20px_50px_rgba(17,17,17,0.08)]">
                 <AnimatePresence mode="wait">
                   {showGeneratedCard ? (
                     <motion.article
@@ -244,7 +244,7 @@ export function HowItWorksRotator() {
 
           <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
-              Nossa IA detecta quando várias matérias estão falando do mesmo tema e retorna em uma única notícia.
+              Quando várias matérias falam do mesmo assunto, a gente agrupa tudo em uma entrada só.
             </p>
           </div>
         </div>
@@ -254,11 +254,11 @@ export function HowItWorksRotator() {
             <div className="flex h-full items-center justify-center">
               <div className="relative h-[18.75rem] w-full max-w-[20.75rem] overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
                 <Image
-                  src="/landing-feed-reference.png"
+                  src="/lophos-focus-feed.png"
                   alt="Exemplo do feed do Lophos"
                   fill
                   className="object-cover"
-                  style={{ objectPosition: '20% 11%' }}
+                  style={{ objectPosition: '20% 10%' }}
                   sizes="332px"
                 />
               </div>
@@ -267,7 +267,7 @@ export function HowItWorksRotator() {
 
           <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
-              Depois disso, populamos o seu feed a partir dos seus tópicos cadastrados. Suas notícias, num único lugar.
+              Você vê o que importa, organizado pelos tópicos que escolheu, sem repetição.
             </p>
           </div>
         </div>
