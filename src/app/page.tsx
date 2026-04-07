@@ -2,15 +2,14 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   ArrowRight,
-  Home01,
   Heart,
   SearchLg,
   Clock,
   ChevronDown,
-  FilterLines,
-  MessageChatCircle,
+  ThumbsDown,
 } from '@untitledui/icons'
 import { LophosLogo } from '@/components/LophosLogo'
+import { IconFeed } from '@/components/icons'
 import { HowItWorksRotator } from '@/components/landing/HowItWorksRotator'
 
 const PORTAL_DOMAINS = [
@@ -50,9 +49,9 @@ const PORTAL_ICON_POSITIONS = [
 ] as const
 
 export const metadata: Metadata = {
-  title: 'Lophos - Voce nao precisa abrir mais dez abas',
+  title: 'Lophos - Você não precisa abrir mais dez abas',
   description:
-    'O Lophos acompanha mais de 60 portais, junta coberturas repetidas, traduz o contexto e cria um espaco para voce explorar.',
+    'O Lophos acompanha mais de 60 portais, junta coberturas repetidas, traduz o contexto e cria um espaço para você explorar.',
 }
 
 export const dynamic = 'force-dynamic'
@@ -83,7 +82,7 @@ function LandingHeader() {
             href="/login"
             className="inline-flex items-center rounded-full bg-ink-primary px-4 py-2 text-[0.95rem] font-medium text-white transition-transform hover:-translate-y-0.5"
           >
-            Criar conta gratis
+            Criar conta grátis
           </Link>
         </div>
       </div>
@@ -96,16 +95,16 @@ function HeroBlock() {
     <section className="px-5 pb-16 pt-28 md:px-8 md:pb-24 md:pt-32">
       <div className="mx-auto max-w-[960px] text-center">
         <div className="inline-flex rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink-secondary shadow-[0_8px_30px_rgba(17,17,17,0.04)]">
-          +60 fontes. Uma experiencia
+          +60 fontes. Uma experiência
         </div>
 
         <h1 className="mt-8 text-[3.5rem] font-semibold leading-[0.94] tracking-[-0.09em] md:text-[6.1rem]">
-          Voce nao precisa abrir mais dez abas.
+          Você não precisa abrir mais dez abas.
         </h1>
 
         <p className="mx-auto mt-6 max-w-[860px] text-lg leading-8 text-ink-secondary md:text-[1.6rem] md:leading-[1.45]">
-          A gente acompanha G1, TechCrunch, GameSpot e mais de 60 portais por voce — junta as coberturas repetidas,
-          traduz o contexto e cria um espaco pra voce explorar.
+          A gente acompanha G1, TechCrunch, GameSpot e mais de 60 portais por você — junta as coberturas repetidas,
+          traduz o contexto e cria um espaço pra você explorar.
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -145,7 +144,7 @@ function ProductShowcase() {
 
               <div className="space-y-1 px-3 py-4">
                 {[
-                  { label: 'Meu Feed', icon: Home01, active: true },
+                  { label: 'Meu Feed', icon: IconFeed, active: true },
                   { label: 'Minhas curtidas', icon: Heart, active: false },
                   { label: 'Buscar', icon: SearchLg, active: false },
                 ].map((item) => {
@@ -165,14 +164,14 @@ function ProductShowcase() {
               </div>
 
               <div className="px-4 pt-2">
-                <p className="text-sm font-medium text-ink-tertiary">Historico</p>
+                <p className="text-sm font-medium text-ink-tertiary">Histórico</p>
               </div>
               <div className="space-y-1 px-3 pt-3 text-[0.92rem] text-ink-secondary">
                 {[
                   'Sobre o que vai falar a 13ª...',
                   'Onde eu posso jogar Over...',
                   'Sobre o que fala o filme?',
-                  'Sobre o que e o filme Afli...',
+                  'Sobre o que é o filme Afli...',
                 ].map((item) => (
                   <div key={item} className="truncate rounded-xl px-2 py-2">
                     {item}
@@ -183,7 +182,7 @@ function ProductShowcase() {
               <div className="mt-auto border-t border-border px-4 py-4">
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-full bg-[linear-gradient(135deg,#6d4c41,#d7a37a)]" />
-                  <span className="text-[0.95rem] text-ink-secondary">Usuario</span>
+                  <span className="text-[0.95rem] text-ink-secondary">Usuário</span>
                 </div>
               </div>
             </aside>
@@ -192,15 +191,17 @@ function ProductShowcase() {
               <div className="flex h-[60px] items-center justify-between border-b border-border px-7">
                 <div className="text-[1rem] font-semibold text-ink-primary">Meu Feed</div>
                 <div className="hidden items-center gap-10 md:flex">
-                  <div className="border-b-2 border-ink-primary pb-4 pt-4 text-[0.95rem] font-medium text-ink-primary">Ultimas noticias</div>
+                  <div className="border-b-2 border-ink-primary pb-4 pt-4 text-[0.95rem] font-medium text-ink-primary">
+                    Últimas notícias
+                  </div>
                   <div className="flex items-center gap-2 text-[0.95rem] font-medium text-ink-tertiary">
-                    Topicos
+                    Tópicos
                     <ChevronDown size={14} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-[0.92rem] text-ink-secondary">
                   <Clock size={16} />
-                  Ultimas 48h
+                  Últimas 48h
                 </div>
               </div>
 
@@ -210,19 +211,20 @@ function ProductShowcase() {
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">Horror</p>
                       <h3 className="mt-3 max-w-[470px] text-[2.25rem] font-semibold leading-[1.05] tracking-[-0.05em] text-ink-primary">
-                        Filme de Terror 'Primal Darkness' estreia gratuitamente em...
+                        Filme de Terror &apos;Primal Darkness&apos; estreia gratuitamente em...
                       </h3>
                       <div className="mt-4 flex items-center gap-2 text-[0.92rem] text-ink-tertiary">
                         <Clock size={15} />
-                        Publicado ha cerca de 6 horas
+                        Publicado há cerca de 6 horas
                       </div>
                       <p className="mt-4 max-w-[500px] text-[0.98rem] leading-8 text-ink-secondary">
-                        O filme de terror found footage 'Primal Darkness', com tematica de criatura, esta disponivel para assistir gratuitamente...
+                        O filme de terror found footage &apos;Primal Darkness&apos;, com temática de criatura, está
+                        disponível para assistir gratuitamente...
                       </p>
                       <div className="mt-5 flex items-center gap-5 text-[0.92rem] text-ink-tertiary">
                         <span>1 fonte</span>
                         <Heart size={16} />
-                        <span>👎</span>
+                        <ThumbsDown size={16} />
                       </div>
                     </div>
 
@@ -234,7 +236,7 @@ function ProductShowcase() {
                       {[
                         { title: "Filme 'Sender' aborda o horror existencial...", tone: '#4a2740' },
                         { title: 'Kanye West impedido de viajar para o Reino Unido...', tone: '#5f4d39' },
-                        { title: 'Daredevil: Born Again confirma reuniao da equipe...', tone: '#2f323a' },
+                        { title: 'Daredevil: Born Again confirma reunião da equipe...', tone: '#2f323a' },
                       ].map((item) => (
                         <article key={item.title}>
                           <div className="h-[132px] rounded-[18px]" style={{ background: `linear-gradient(145deg, ${item.tone}, #d3d0cb)` }} />
@@ -245,7 +247,7 @@ function ProductShowcase() {
                           <div className="mt-3 flex items-center gap-4 text-[0.88rem] text-ink-tertiary">
                             <span>1 fonte</span>
                             <Heart size={15} />
-                            <span>👎</span>
+                            <ThumbsDown size={15} />
                           </div>
                         </article>
                       ))}
@@ -258,7 +260,7 @@ function ProductShowcase() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-[1.05rem] font-semibold text-ink-primary">29° F/C</p>
-                        <p className="mt-1 text-sm text-ink-secondary">Parada Inglesa, Sao Paulo</p>
+                        <p className="mt-1 text-sm text-ink-secondary">Parada Inglesa, São Paulo</p>
                       </div>
                       <div className="text-right text-sm text-ink-secondary">
                         <p>Parcialmente nublado</p>
@@ -277,11 +279,11 @@ function ProductShowcase() {
                   </div>
 
                   <div className="rounded-[22px] border border-border p-5">
-                    <p className="text-[1.05rem] font-semibold text-ink-primary">Minhas series</p>
+                    <p className="text-[1.05rem] font-semibold text-ink-primary">Minhas séries</p>
                     <div className="mt-4 space-y-4">
                       {[
                         { title: 'Monarch - Legado de Monstros', meta: 'T2E7 - Teoria das cordas', date: '09 de abr' },
-                        { title: 'Harry Potter', meta: 'T1E1 - Episodio 1', date: '25 de dez' },
+                        { title: 'Harry Potter', meta: 'T1E1 - Episódio 1', date: '25 de dez' },
                       ].map((show) => (
                         <div key={show.title} className="flex gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0">
                           <div className="h-14 w-10 rounded-[10px] bg-[linear-gradient(145deg,#4a6170,#9eb3bc)]" />
@@ -333,11 +335,11 @@ function LibraryBlock() {
           ))}
 
           <div className="relative z-10 max-w-[860px] px-6 text-center">
-            <p className="text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Uma biblioteca construida com</p>
+            <p className="text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Uma biblioteca construída com</p>
             <div className="mt-4 space-y-1 text-[3.2rem] font-semibold leading-[0.94] tracking-[-0.09em] text-ink-primary md:text-[5.4rem]">
-              <div>+60 feeds de noticias</div>
-              <div>em um unico lugar.</div>
-              <div>Sem repeticao, com contexto.</div>
+              <div>+60 feeds de notícias</div>
+              <div>em um único lugar.</div>
+              <div>Sem repetição, com contexto.</div>
             </div>
           </div>
         </div>
@@ -354,14 +356,14 @@ function CtaBlock() {
           Pronto para customizar seu feed?
         </h2>
         <p className="mx-auto mt-5 max-w-[620px] text-lg leading-8 text-ink-secondary md:text-[1.3rem]">
-          Gratuito pra comecar. Sem cartao de credito.
+          Gratuito pra começar. Sem cartão de crédito.
         </p>
         <div className="mt-8 flex justify-center">
           <Link
             href="/login"
             className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
           >
-            Criar minha conta gratis
+            Criar minha conta grátis
             <ArrowRight size={16} />
           </Link>
         </div>
@@ -377,7 +379,7 @@ function Footer() {
         <div className="flex flex-col gap-4 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
           <p>© Lophos 2026. Todos os direitos reservados.</p>
           <Link href="/politica-de-privacidade" className="text-white/55 transition-opacity hover:opacity-65">
-            Termos e politicas
+            Termos e políticas
           </Link>
         </div>
       </div>
