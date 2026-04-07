@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   ArrowRight,
+  LayersThree01,
   Heart,
   SearchLg,
   Clock,
@@ -80,7 +81,7 @@ function LandingHeader() {
           </Link>
           <Link
             href="/login"
-            className="inline-flex items-center rounded-full bg-ink-primary px-4 py-2 text-[0.95rem] font-medium text-white transition-transform hover:-translate-y-0.5"
+            className="inline-flex items-center rounded-full bg-ink-primary px-4 py-2 text-[0.95rem] font-medium text-white transition-opacity hover:opacity-85"
           >
             Criar conta grátis
           </Link>
@@ -94,7 +95,8 @@ function HeroBlock() {
   return (
     <section className="px-5 pb-16 pt-28 md:px-8 md:pb-24 md:pt-32">
       <div className="mx-auto max-w-[960px] text-center">
-        <div className="inline-flex rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink-secondary shadow-[0_8px_30px_rgba(17,17,17,0.04)]">
+        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink-secondary shadow-[0_8px_30px_rgba(17,17,17,0.04)]">
+          <LayersThree01 size={16} />
           +60 fontes. Uma experiência
         </div>
 
@@ -102,7 +104,7 @@ function HeroBlock() {
           Você não precisa abrir mais dez abas.
         </h1>
 
-        <p className="mx-auto mt-6 max-w-[860px] text-lg leading-8 text-ink-secondary md:text-[1.6rem] md:leading-[1.45]">
+        <p className="mx-auto mt-6 max-w-[860px] text-lg leading-8 text-ink-secondary md:text-[1.5rem] md:leading-[1.45]">
           A gente acompanha G1, TechCrunch, GameSpot e mais de 60 portais por você — junta as coberturas repetidas,
           traduz o contexto e cria um espaço pra você explorar.
         </p>
@@ -110,14 +112,14 @@ function HeroBlock() {
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-85"
           >
             Quero experimentar
             <ArrowRight size={16} />
           </Link>
           <Link
             href="#como-funciona"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-6 py-3.5 text-base font-medium text-ink-primary transition-colors hover:bg-bg-secondary"
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-6 py-3.5 text-base font-medium text-ink-primary transition-opacity hover:opacity-70"
           >
             Ver como funciona
           </Link>
@@ -129,7 +131,7 @@ function HeroBlock() {
 
 function ProductShowcase() {
   return (
-    <section className="mx-auto max-w-[1500px] px-4 md:px-8">
+    <section className="mx-auto max-w-[1500px] cursor-default px-4 md:px-8">
       <div className="overflow-hidden rounded-[34px] bg-bg-secondary p-3 md:p-6">
         <div className="overflow-hidden rounded-[28px] border border-border bg-white shadow-[0_18px_60px_rgba(17,17,17,0.05)]">
           <div className="grid min-h-[710px] lg:grid-cols-[224px_minmax(0,1fr)]">
@@ -339,8 +341,8 @@ function LibraryBlock() {
             <div className="mt-4 space-y-1 text-[3.2rem] font-semibold leading-[0.94] tracking-[-0.09em] text-ink-primary md:text-[5.4rem]">
               <div>+60 feeds de notícias</div>
               <div>em um único lugar.</div>
-              <div>Sem repetição, com contexto.</div>
             </div>
+            <p className="mt-4 text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Sem repetição, com contexto.</p>
           </div>
         </div>
       </div>
@@ -351,17 +353,18 @@ function LibraryBlock() {
 function CtaBlock() {
   return (
     <section className="px-5 pb-24 pt-8 md:px-8 md:pb-28 md:pt-12">
-      <div className="mx-auto flex max-w-[760px] flex-col items-center text-center">
-        <h2 className="text-[2.8rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary md:text-[5.1rem]">
-          Pronto para customizar seu feed?
+      <div className="mx-auto flex max-w-[760px] flex-col items-center rounded-[30px] border border-border bg-bg-secondary px-6 py-12 text-center md:px-10 md:py-16">
+        <h2 className="text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary">
+          <span className="block">Pronto para</span>
+          <span className="block">Customizar seu feed?</span>
         </h2>
-        <p className="mx-auto mt-5 max-w-[620px] text-lg leading-8 text-ink-secondary md:text-[1.3rem]">
+        <p className="mx-auto mt-5 max-w-[620px] text-lg leading-8 text-ink-secondary md:text-[1.25rem]">
           Gratuito pra começar. Sem cartão de crédito.
         </p>
         <div className="mt-8 flex justify-center">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-85"
           >
             Criar minha conta grátis
             <ArrowRight size={16} />
