@@ -61,7 +61,7 @@ export function HowItWorksRotator() {
   const sectionRef = useRef<HTMLDivElement>(null)
   const [isActive, setIsActive] = useState(false)
   const [index, setIndex] = useState(0)
-  const [newsStage, setNewsStage] = useState(2)
+  const [newsStart, setNewsStart] = useState(0)
   const [flowStage, setFlowStage] = useState(0)
 
   useEffect(() => {
@@ -87,16 +87,16 @@ export function HowItWorksRotator() {
     if (!isActive) return
 
     const timeout = window.setTimeout(() => {
-      setNewsStage((current) => (current >= 5 ? 2 : current + 1))
+      setNewsStart((current) => (current + 1) % CASES[index].sources.length)
     }, 1550)
 
     return () => window.clearTimeout(timeout)
-  }, [isActive, newsStage])
+  }, [isActive, newsStart, index])
 
   useEffect(() => {
     if (!isActive) return
 
-    const stageDurations = [2400, 2400, 2400, 4800]
+    const stageDurations = [2800, 2800, 2800, 5400]
     const timeout = window.setTimeout(() => {
       setFlowStage((current) => (current + 1) % 4)
     }, stageDurations[flowStage])
@@ -105,7 +105,9 @@ export function HowItWorksRotator() {
   }, [isActive, flowStage])
 
   const current = CASES[index]
-  const visibleNews = useMemo(() => current.sources.slice(0, newsStage), [current.sources, newsStage])
+  const orderedTopics = [current.topic, ...STATIC_TOPICS.filter((topic) => topic !== current.topic)]
+  const loopedSources = [...current.sources, ...current.sources]
+  const visibleNews = useMemo(() => loopedSources.slice(newsStart, newsStart + 3), [loopedSources, newsStart])
   const currentFlowLabel = FLOW_LABELS[Math.min(flowStage, 2)]
   const showGeneratedCard = flowStage === 3
 
@@ -120,16 +122,16 @@ export function HowItWorksRotator() {
 
       <div className="mt-12 grid gap-10 xl:grid-cols-3 xl:gap-8">
         <div>
-          <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
+          <article className={`overflow-hidden rounded-[30px] bg-bg-secondary px-5 pt-5 md:px-6 md:pt-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-end justify-center">
-              <div className="flex h-[20.375rem] w-full max-w-[18.2rem] flex-col overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
+              <div className="flex h-[20.375rem] w-full max-w-[18.2rem] flex-col overflow-hidden rounded-t-[26px] rounded-b-none bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
                 <div className="relative overflow-hidden border-b border-border px-4 pb-3 pt-4">
                   <div className="flex flex-nowrap gap-2 overflow-hidden">
-                    {STATIC_TOPICS.map((topic) => (
+                    {orderedTopics.map((topic, itemIndex) => (
                       <div
                         key={topic}
                         className={`shrink-0 rounded-full px-3 py-1.5 text-[0.78rem] font-medium ${
-                          topic === current.topic ? 'bg-ink-primary text-white' : 'bg-bg-secondary text-ink-secondary'
+                          itemIndex === 0 ? 'bg-ink-primary text-white' : 'bg-bg-secondary text-ink-secondary'
                         }`}
                       >
                         {topic}
@@ -144,12 +146,12 @@ export function HowItWorksRotator() {
                     <AnimatePresence initial={false}>
                       {visibleNews.map((source) => (
                         <motion.div
-                          key={`${current.topic}-${source.name}`}
+                          key={`${source.name}-${source.headline}`}
                           layout
-                          initial={{ opacity: 0, y: 24, scale: 0.98 }}
+                          initial={{ opacity: 0, y: 28, scale: 0.985 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -20, scale: 0.98 }}
-                          transition={{ duration: 0.32, ease: 'easeOut' }}
+                          exit={{ opacity: 0, y: -22, scale: 0.985 }}
+                          transition={{ duration: 0.34, ease: 'easeOut' }}
                           className="rounded-[18px] bg-bg-secondary px-4 py-3"
                         >
                           <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">
@@ -167,7 +169,7 @@ export function HowItWorksRotator() {
             </div>
           </article>
 
-          <div className="mx-auto mt-7 max-w-[26rem] text-center">
+          <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
               A partir dos registros, detectamos quando várias matérias estão falando do mesmo tema e retornamos em uma única notícia.
             </p>
@@ -177,7 +179,7 @@ export function HowItWorksRotator() {
         <div>
           <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-center justify-center">
-              <div className="relative flex h-full w-full max-w-[18.2rem] flex-col items-center overflow-hidden rounded-[26px] bg-[#151515] px-5 py-6 text-white shadow-[0_20px_50px_rgba(17,17,17,0.08)]">
+              <div className="relative flex h-[18.75rem] w-full max-w-[20.75rem] flex-col items-center overflow-hidden rounded-[26px] bg-[#151515] px-6 py-6 text-white shadow-[0_20px_50px_rgba(17,17,17,0.08)]">
                 <AnimatePresence mode="wait">
                   {showGeneratedCard ? (
                     <motion.article
@@ -185,20 +187,20 @@ export function HowItWorksRotator() {
                       initial={{ opacity: 0, y: 16, scale: 0.97 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                      transition={{ duration: 0.5, ease: 'easeOut' }}
+                      transition={{ duration: 0.55, ease: 'easeOut' }}
                       className="flex h-full w-full items-center"
                     >
-                      <div className="grid w-full grid-cols-[1fr_90px] gap-3">
+                      <div className="grid w-full grid-cols-[1fr_92px] gap-3">
                         <div className="min-w-0">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">{current.topic}</p>
-                          <h4 className="mt-2 line-clamp-3 text-[1.06rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white">
+                          <h4 className="mt-2 line-clamp-3 text-[1.02rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white">
                             {current.resultTitle}
                           </h4>
                           <div className="mt-3 text-[0.74rem] text-white/58">Publicado há cerca de 2 horas</div>
                           <p className="mt-3 text-[0.76rem] text-white/55">{current.sources.length} fontes</p>
                         </div>
 
-                        <div className="h-[126px] rounded-[18px] bg-[linear-gradient(145deg,#0f1013,#1b1d24_40%,#56463d_100%)]" />
+                        <div className="h-[122px] rounded-[18px] bg-[linear-gradient(145deg,#0f1013,#1b1d24_40%,#56463d_100%)]" />
                       </div>
                     </motion.article>
                   ) : (
@@ -220,7 +222,7 @@ export function HowItWorksRotator() {
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.38, ease: 'easeOut' }}
+                            transition={{ duration: 0.4, ease: 'easeOut' }}
                             className="text-center text-[0.92rem] font-medium text-white/72"
                           >
                             {currentFlowLabel}
@@ -231,7 +233,7 @@ export function HowItWorksRotator() {
                       <motion.div
                         className="mt-4 h-px w-24 bg-white/14"
                         animate={isActive ? { opacity: [0.2, 0.55, 0.2], width: [72, 96, 72] } : { opacity: 0.2, width: 72 }}
-                        transition={{ duration: 2.2, repeat: Infinity, repeatDelay: 1.1, ease: 'easeInOut' }}
+                        transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: 'easeInOut' }}
                       />
                     </motion.div>
                   )}
@@ -240,7 +242,7 @@ export function HowItWorksRotator() {
             </div>
           </article>
 
-          <div className="mx-auto mt-7 max-w-[26rem] text-center">
+          <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
               Nossa IA detecta quando várias matérias estão falando do mesmo tema e retorna em uma única notícia.
             </p>
@@ -250,20 +252,20 @@ export function HowItWorksRotator() {
         <div>
           <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-center justify-center">
-              <div className="relative h-[20.375rem] w-full max-w-[18.2rem] overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
+              <div className="relative h-[18.75rem] w-full max-w-[20.75rem] overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
                 <Image
                   src="/landing-feed-reference.png"
                   alt="Exemplo do feed do Lophos"
                   fill
                   className="object-cover"
-                  style={{ objectPosition: '37% 16%' }}
-                  sizes="291px"
+                  style={{ objectPosition: '20% 11%' }}
+                  sizes="332px"
                 />
               </div>
             </div>
           </article>
 
-          <div className="mx-auto mt-7 max-w-[26rem] text-center">
+          <div className="mx-auto mt-7 max-w-[26rem] px-[3.75rem] text-center">
             <p className="text-[1.05rem] leading-7 text-ink-secondary">
               Depois disso, populamos o seu feed a partir dos seus tópicos cadastrados. Suas notícias, num único lugar.
             </p>
