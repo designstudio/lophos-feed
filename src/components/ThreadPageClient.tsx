@@ -159,18 +159,35 @@ export function ThreadPageClient({
       <div className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
         <div className="sticky top-0 z-20 border-b border-border px-4 md:px-8 header-blur">
           <div className="flex items-center h-12 md:h-14 gap-3">
+            <Link
+              href={`/article/${article.id}`}
+              className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
+            >
+              <ArrowLeft size={15} className="flex-shrink-0" />
+              <span className="hidden sm:inline">Voltar para artigo</span>
+            </Link>
+
+            <div className="flex-1 flex justify-center overflow-hidden px-2">
+              <span
+                className="text-[0.875rem] font-medium text-ink-primary truncate max-w-lg transition-all duration-200"
+                style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? 'translateY(0)' : 'translateY(4px)' }}
+              >
+                {currentTitle}
+              </span>
+            </div>
+
             <div ref={menuRef} className="relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex h-8 w-8 items-center justify-center rounded-[0.9rem] border border-border text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+                className="flex h-8 w-8 items-center justify-center rounded-[0.9rem] text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
                 aria-label="Ações da thread"
               >
                 <DotsHorizontal size={18} />
               </button>
 
               {menuOpen && (
-                <div className="absolute left-0 top-10 z-30 min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]">
+                <div className="absolute right-0 top-10 z-30 min-w-[9rem] rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]">
                   <button
                     type="button"
                     onClick={() => {
@@ -196,25 +213,6 @@ export function ThreadPageClient({
                 </div>
               )}
             </div>
-
-            <Link
-              href={`/article/${article.id}`}
-              className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
-            >
-              <ArrowLeft size={15} className="flex-shrink-0" />
-              <span className="hidden sm:inline">Voltar para artigo</span>
-            </Link>
-
-            <div className="flex-1 flex justify-center overflow-hidden px-2">
-              <span
-                className="text-[0.875rem] font-medium text-ink-primary truncate max-w-lg transition-all duration-200"
-                style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? 'translateY(0)' : 'translateY(4px)' }}
-              >
-                {currentTitle}
-              </span>
-            </div>
-
-            <div className="w-20 flex-shrink-0" />
           </div>
         </div>
 
