@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { ClerkProvider, SignIn, SignUp } from '@clerk/nextjs'
+import { SignUp } from '@clerk/nextjs'
 import { LophosLogo } from '@/components/LophosLogo'
+import { LoginForm } from '@/components/auth/LoginForm'
 
 type AuthMode = 'login' | 'signup'
 
@@ -35,14 +36,6 @@ const clerkAppearance = {
   },
 } as const
 
-const loginLocalization = {
-  locale: 'pt-BR',
-  dividerText: 'ou',
-  formFieldLabel__emailAddress: ' ',
-  formFieldInputPlaceholder__emailAddress: 'Enter your e-mail address',
-  formButtonPrimary: 'Continue',
-} as const
-
 export function AuthPageShell({ mode }: { mode: AuthMode }) {
   const isLogin = mode === 'login'
 
@@ -62,52 +55,7 @@ export function AuthPageShell({ mode }: { mode: AuthMode }) {
             </div>
 
             <div className="mx-auto mt-12 w-full max-w-[430px]">
-              <ClerkProvider localization={loginLocalization}>
-                <SignIn
-                  routing="path"
-                  path="/login"
-                  signUpUrl="/signup"
-                  forceRedirectUrl="/feed"
-                  appearance={{
-                    elements: {
-                      ...clerkAppearance.elements,
-                      rootBox: 'w-full',
-                      socialButtonsBlockButton:
-                        'h-12 rounded-full border border-border bg-white px-4 text-[0.98rem] font-medium text-ink-primary shadow-none transition-opacity hover:opacity-85',
-                      socialButtonsBlockButtonText: 'font-medium text-ink-primary',
-                      socialButtonsProviderIcon: 'h-5 w-5',
-                      alternativeMethods: 'hidden',
-                      alternativeMethodsBlockButton: 'hidden',
-                      alternativeMethodsBlockButtonText: 'hidden',
-                      dividerRow: 'my-5',
-                      dividerText: 'px-4 text-[0.95rem] text-ink-tertiary',
-                      dividerLine: 'bg-border',
-                      formFieldRow: 'mt-0',
-                      formFieldLabelRow: 'hidden',
-                      formFieldLabel: 'hidden',
-                      formFieldInput:
-                        'h-12 rounded-2xl border border-border bg-white px-4 text-[0.98rem] text-ink-primary shadow-none placeholder:text-ink-tertiary focus:border-ink-primary focus:ring-0',
-                      formButtonPrimary:
-                        'mt-4 h-12 rounded-full bg-ink-primary text-[0.98rem] font-medium text-white shadow-none transition-opacity hover:opacity-85',
-                    },
-                  }}
-                />
-              </ClerkProvider>
-            </div>
-
-            <p className="mx-auto mt-5 max-w-[420px] text-center text-[0.75rem] leading-5 text-ink-tertiary">
-              Ao continuar, você concorda com os{' '}
-              <Link href="/politica-de-privacidade" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
-                Termos e Políticas
-              </Link>{' '}
-              da Lophos.
-            </p>
-
-            <div className="mt-7 text-center text-[0.95rem] text-ink-secondary">
-              Ainda não tem conta?{' '}
-              <Link href="/signup" className="font-medium text-ink-primary transition-opacity hover:opacity-70">
-                Criar conta grátis
-              </Link>
+              <LoginForm />
             </div>
           </section>
         </div>
@@ -126,40 +74,28 @@ export function AuthPageShell({ mode }: { mode: AuthMode }) {
             </Link>
 
             <h1 className="mt-8 text-[2.5rem] font-semibold leading-[1.02] tracking-[-0.06em] text-ink-primary">
-              {isLogin ? 'Bem-vindo de volta' : 'Crie sua conta grátis'}
+              Crie sua conta grátis
             </h1>
 
             <p className="mt-3 max-w-[420px] text-[1.02rem] leading-7 text-ink-secondary">
-              {isLogin
-                ? 'Entre para continuar acompanhando o que importa, com contexto e sem repetição.'
-                : 'Comece a organizar seu feed com notícias consolidadas, contexto e threads prontas para explorar.'}
+              Comece a organizar seu feed com notícias consolidadas, contexto e threads prontas para explorar.
             </p>
           </div>
 
           <div className="mx-auto mt-10 w-full max-w-[380px]">
-            {isLogin ? (
-              <SignIn
-                routing="path"
-                path="/login"
-                signUpUrl="/signup"
-                forceRedirectUrl="/feed"
-                appearance={clerkAppearance}
-              />
-            ) : (
-              <SignUp
-                routing="path"
-                path="/signup"
-                signInUrl="/login"
-                forceRedirectUrl="/onboarding"
-                appearance={clerkAppearance}
-              />
-            )}
+            <SignUp
+              routing="path"
+              path="/signup"
+              signInUrl="/login"
+              forceRedirectUrl="/onboarding"
+              appearance={clerkAppearance}
+            />
           </div>
 
           <div className="mt-8 text-center text-[0.95rem] text-ink-secondary">
-            {isLogin ? 'Ainda não tem conta?' : 'Já tem uma conta?'}{' '}
-            <Link href={isLogin ? '/signup' : '/login'} className="font-medium text-ink-primary transition-opacity hover:opacity-70">
-              {isLogin ? 'Criar conta grátis' : 'Entrar'}
+            Já tem uma conta?{' '}
+            <Link href="/login" className="font-medium text-ink-primary transition-opacity hover:opacity-70">
+              Entrar
             </Link>
           </div>
 
