@@ -51,6 +51,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [userTopics, setUserTopics] = useState<string[]>([])
   const [recentThreadsLoading, setRecentThreadsLoading] = useState(true)
   const [recentThreads, setRecentThreads] = useState<ThreadItem[]>([])
+  const [navigatingThreadId, setNavigatingThreadId] = useState<string | null>(null)
   const [openThreadMenuId, setOpenThreadMenuId] = useState<string | null>(null)
   const [threadMenuPosition, setThreadMenuPosition] = useState<{ top: number; left: number } | null>(null)
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
@@ -138,6 +139,14 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       window.removeEventListener('scroll', handleViewportChange, true)
     }
   }, [])
+
+  useEffect(() => {
+    if (!path.startsWith('/threads/')) {
+      setNavigatingThreadId(null)
+    } else {
+      setNavigatingThreadId(path.replace('/threads/', ''))
+    }
+  }, [path])
 
   useEffect(() => {
     const handleThreadsUpdated = () => {
@@ -264,13 +273,18 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       {recentThreads.map((thread) => {
         const isActive = path === `/threads/${thread.id}`
         const isEditing = editingThreadId === thread.id
+        const isNavigating = navigatingThreadId === thread.id && !isActive
 
         return (
           <div
             key={thread.id}
             className={cn(
               'group relative rounded-xl transition-colors',
-              isActive ? 'bg-bg-secondary text-ink-primary' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
+              isActive
+                ? 'bg-bg-secondary text-ink-primary'
+                : isNavigating
+                  ? 'bg-bg-secondary/70 text-ink-primary'
+                  : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary'
             )}
           >
             <div className="flex items-center gap-1">
@@ -327,10 +341,20 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               ) : (
                 <Link
                   href={`/threads/${thread.id}`}
-                  onClick={options?.onNavigate}
+                  onClick={() => {
+                    setNavigatingThreadId(thread.id)
+                    options?.onNavigate?.()
+                  }}
                   className="min-w-0 flex-1 px-2.5 py-2"
                 >
-                  <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isNavigating && (
+                      <span className="flex h-4 w-4 flex-shrink-0 items-center justify-center" aria-hidden="true">
+                        <span className="h-3.5 w-3.5 rounded-full border-2 border-border border-t-[var(--color-ui-strong)] animate-spin" />
+                      </span>
+                    )}
+                    <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
+                  </div>
                 </Link>
               )}
 
