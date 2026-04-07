@@ -407,9 +407,10 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     <div>
       {!isReady && (
         <aside
-          className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary overflow-hidden"
+          className="my-2 ml-2 mr-3 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border bg-bg-primary shadow-[0_12px_40px_rgba(17,17,17,0.05)]"
           style={{
             width: resolvedWidth,
+            height: 'calc(100dvh - 1rem)',
             transition: 'none',
           }}
         >
@@ -428,9 +429,10 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       )}
 
       <aside
-        className="flex-shrink-0 flex flex-col h-full border-r border-border bg-bg-primary"
+        className="my-2 ml-2 mr-3 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border bg-bg-primary shadow-[0_12px_40px_rgba(17,17,17,0.05)]"
         style={{
           width: resolvedWidth,
+          height: 'calc(100dvh - 1rem)',
           opacity: isReady ? 1 : 0,
           pointerEvents: isReady ? 'auto' : 'none',
           transition: sidebarTransition,
