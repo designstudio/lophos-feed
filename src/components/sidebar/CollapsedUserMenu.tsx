@@ -1,7 +1,13 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { Settings01 as Settings, LogOut01 as Logout, File06, ArrowNarrowUpRight } from '@untitledui/icons'
+import {
+  Settings01 as Settings,
+  LogOut01 as Logout,
+  File06,
+  ArrowNarrowUpRight,
+  Announcement02,
+} from '@untitledui/icons'
 import { Tooltip } from '@/components/Tooltip'
 import { FixedDropdown } from './FixedDropdown'
 
@@ -48,6 +54,29 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
             <p className="truncate text-xs text-ink-tertiary">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
           <div className="py-1">
+            <button
+              onClick={() => {
+                setOpen(false)
+                onOpenSettings()
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+            >
+              <Settings size={14} />
+              <span>Configurações</span>
+            </button>
+
+            <a
+              href="/notas-de-versao"
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => setOpen(false)}
+              className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
+            >
+              <Announcement02 size={14} />
+              <span>Notas de versão</span>
+              <ArrowNarrowUpRight size={14} className="ml-auto opacity-0 transition-opacity group-hover:opacity-100" />
+            </a>
+
             <a
               href="/politica-de-privacidade"
               target="_blank"
@@ -59,20 +88,13 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
               <span>Termos e políticas</span>
               <ArrowNarrowUpRight size={14} className="ml-auto opacity-0 transition-opacity group-hover:opacity-100" />
             </a>
-            <button
-              onClick={() => {
-                setOpen(false)
-                onOpenSettings()
-              }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-secondary transition-colors hover:bg-bg-secondary hover:text-ink-primary"
-            >
-              <Settings size={14} /> Configurações
-            </button>
+
             <button
               onClick={() => signOut()}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#E5484D] transition-colors hover:bg-[#FFF1F2]"
             >
-              <Logout size={14} /> Sair
+              <Logout size={14} />
+              <span>Sair</span>
             </button>
           </div>
         </FixedDropdown>
