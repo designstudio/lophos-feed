@@ -76,97 +76,196 @@ function LandingHeader() {
 function ProductShowcase() {
   return (
     <div className="mx-auto mt-8 max-w-[1400px] px-4 md:mt-12 md:px-8">
-      <div className="rounded-[34px] bg-bg-secondary px-4 py-5 md:px-8 md:py-8">
-        <div className="mx-auto max-w-[1080px] rounded-[28px] border border-border bg-white p-4 shadow-[0_18px_60px_rgba(17,17,17,0.05)] md:p-6">
-          <div className="flex flex-wrap items-center gap-3 border-b border-border pb-4">
-            <div className="flex items-center gap-2 rounded-full bg-bg-secondary px-3 py-2 text-sm font-medium text-ink-primary">
-              <LophosLogo size={18} />
-              Meu Feed
-            </div>
-            <div className="hidden h-10 flex-1 items-center rounded-full bg-bg-secondary px-4 text-sm text-ink-tertiary md:flex">
-              Buscar por topico, assunto ou palavra-chave...
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <div className="rounded-full border border-border px-3 py-2 text-sm text-ink-secondary">Login</div>
-              <div className="rounded-full border border-border px-3 py-2 text-sm text-ink-secondary">Ultimas 48h</div>
-              <div className="rounded-full bg-ink-primary px-3 py-2 text-sm font-medium text-white">Atualizar</div>
-            </div>
-          </div>
+      <div className="rounded-[34px] bg-bg-secondary px-3 py-3 md:px-6 md:py-6">
+        <div className="overflow-hidden rounded-[28px] border border-border bg-white shadow-[0_18px_60px_rgba(17,17,17,0.05)]">
+          <div className="grid min-h-[760px] lg:grid-cols-[224px_minmax(0,1fr)]">
+            <aside className="flex flex-col border-r border-border bg-white">
+              <div className="flex h-[58px] items-center justify-between border-b border-border px-4">
+                <div className="flex items-center gap-3">
+                  <LophosLogo size={30} />
+                  <span className="text-[1.95rem] font-semibold tracking-[-0.06em] leading-none">lophos</span>
+                </div>
+                <span className="text-sm text-ink-tertiary">‹</span>
+              </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)_220px]">
-            <aside className="rounded-[24px] bg-bg-primary p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-tertiary">Topicos</p>
-              <div className="mt-4 space-y-2">
-                {['Games', 'Tecnologia', 'Filmes', 'Series', 'Anime', 'Economia'].map((topic) => (
-                  <div key={topic} className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-ink-primary shadow-[0_1px_0_rgba(17,17,17,0.02)]">
-                    {topic}
+              <div className="space-y-1 px-3 py-4">
+                {['Meu Feed', 'Minhas curtidas', 'Buscar'].map((item, index) => (
+                  <div
+                    key={item}
+                    className={`rounded-2xl px-3 py-3 text-[0.95rem] font-medium ${
+                      index === 0 ? 'bg-bg-secondary text-ink-primary' : 'text-ink-secondary'
+                    }`}
+                  >
+                    {item}
                   </div>
                 ))}
               </div>
+
+              <div className="px-4 pt-2">
+                <p className="text-sm font-medium text-ink-tertiary">Histórico</p>
+              </div>
+              <div className="space-y-1 px-3 pt-3 text-[0.92rem] text-ink-secondary">
+                {[
+                  'Sobre o que vai falar a 13ª temporada?',
+                  'Onde eu posso jogar Overwatch?',
+                  'Sobre o que fala o filme? ',
+                  'Sobre o que é o filme Afli...',
+                ].map((item) => (
+                  <div key={item} className="truncate rounded-xl px-2 py-2">
+                    {item}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-auto border-t border-border px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-[linear-gradient(135deg,#6d4c41,#d7a37a)]" />
+                  <span className="text-[0.95rem] text-ink-secondary">Você</span>
+                </div>
+              </div>
             </aside>
 
-            <section className="space-y-4">
-              <div className="rounded-[24px] border border-border p-4 md:p-5">
-                <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">Overwatch</p>
-                    <h3 className="mt-2 max-w-[360px] text-[1.75rem] font-semibold leading-tight tracking-[-0.04em] text-ink-primary">
-                      Anran recebe redesign apos pedidos da comunidade
-                    </h3>
-                    <p className="mt-3 max-w-[360px] text-[15px] leading-7 text-ink-secondary">
-                      O Lophos cruza fontes, resume o contexto e conecta a conversa ao artigo para voce continuar a exploracao sem sair do fluxo.
-                    </p>
-                    <div className="mt-5 flex flex-wrap gap-2 text-sm text-ink-secondary">
-                      <span className="rounded-full bg-bg-secondary px-3 py-1.5">5 fontes</span>
-                      <span className="rounded-full bg-bg-secondary px-3 py-1.5">Publicado ha 2h</span>
+            <section className="min-w-0 bg-white">
+              <div className="flex h-[58px] items-center justify-between border-b border-border px-7">
+                <div className="text-[1rem] font-semibold text-ink-primary">Meu Feed</div>
+                <div className="hidden items-center gap-10 md:flex">
+                  <div className="border-b-2 border-ink-primary pb-3 pt-3 text-[0.95rem] font-medium text-ink-primary">Últimas notícias</div>
+                  <div className="text-[0.95rem] font-medium text-ink-tertiary">Tópicos</div>
+                </div>
+                <div className="rounded-full border border-border px-4 py-2 text-[0.92rem] text-ink-secondary">Últimas 48h</div>
+              </div>
+
+              <div className="grid gap-8 px-7 py-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+                <div className="space-y-7">
+                  <div className="grid gap-7 md:grid-cols-[1fr_286px]">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">Horror</p>
+                      <h3 className="mt-3 max-w-[470px] text-[2.25rem] font-semibold leading-[1.05] tracking-[-0.05em] text-ink-primary">
+                        Filme de Terror 'Primal Darkness' estreia gratuitamente em...
+                      </h3>
+                      <p className="mt-4 text-[0.98rem] leading-8 text-ink-secondary">
+                        O filme de terror found footage 'Primal Darkness', com temática de criatura, está disponível para assistir gratuitamente...
+                      </p>
+                      <div className="mt-5 flex items-center gap-5 text-[0.92rem] text-ink-tertiary">
+                        <span>1 fonte</span>
+                        <span>♡</span>
+                        <span>👎</span>
+                      </div>
+                    </div>
+
+                    <div className="h-[204px] rounded-[20px] bg-[linear-gradient(145deg,#0f1013,#1b1d24_40%,#56463d_100%)]" />
+                  </div>
+
+                  <div className="border-t border-border pt-6">
+                    <div className="grid gap-5 md:grid-cols-3">
+                      {[
+                        { title: "Filme 'Sender' aborda o horror existencial...", tone: '#4a2740' },
+                        { title: 'Kanye West impedido de viajar para o Reino Unido...', tone: '#5f4d39' },
+                        { title: 'Daredevil: Born Again confirma reuniao da equipe...', tone: '#2f323a' },
+                      ].map((item) => (
+                        <article key={item.title}>
+                          <div className="h-[132px] rounded-[18px]" style={{ background: `linear-gradient(145deg, ${item.tone}, #d3d0cb)` }} />
+                          <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">Movies</p>
+                          <h4 className="mt-2 text-[1.1rem] font-semibold leading-[1.25] tracking-[-0.03em] text-ink-primary">
+                            {item.title}
+                          </h4>
+                          <div className="mt-3 flex items-center gap-4 text-[0.88rem] text-ink-tertiary">
+                            <span>1 fonte</span>
+                            <span>♡</span>
+                            <span>👎</span>
+                          </div>
+                        </article>
+                      ))}
                     </div>
                   </div>
 
-                  <div className="rounded-[24px] bg-[linear-gradient(145deg,#311c4d,#181c2c_56%,#c97b4e)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]" />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-[0.95fr_1.05fr]">
-                <div className="rounded-[24px] bg-[#161616] p-5 text-white">
-                  <div className="inline-flex rounded-full bg-white/10 p-2">
-                    <MessageChatCircle size={18} />
+                  <div className="border-t border-border pt-6">
+                    <div className="grid gap-5 md:grid-cols-[286px_minmax(0,1fr)]">
+                      <div className="h-[198px] rounded-[20px] bg-[linear-gradient(145deg,#40616f,#8fa8af)]" />
+                      <div>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">Movies</p>
+                        <h4 className="mt-2 max-w-[420px] text-[2rem] font-semibold leading-[1.08] tracking-[-0.05em] text-ink-primary">
+                          Filmes que impactaram profundamente e...
+                        </h4>
+                      </div>
+                    </div>
                   </div>
-                  <h4 className="mt-4 text-xl font-semibold tracking-[-0.03em]">Thread contextual</h4>
-                  <p className="mt-3 text-sm leading-7 text-white/72">
-                    "Onde eu posso jogar Overwatch?"<br />
-                    "Quais plataformas e lojas tem o jogo hoje?"
-                  </p>
                 </div>
 
-                <div className="rounded-[24px] bg-bg-primary p-5">
-                  <div className="inline-flex rounded-full bg-white p-2 text-ink-primary shadow-[0_6px_20px_rgba(17,17,17,0.05)]">
-                    <SearchLg size={18} />
+                <aside className="space-y-4">
+                  <div className="rounded-[22px] border border-border p-5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-[1.05rem] font-semibold text-ink-primary">29° F/C</p>
+                        <p className="mt-1 text-sm text-ink-secondary">Parada Inglesa, São Paulo</p>
+                      </div>
+                      <div className="text-right text-sm text-ink-secondary">
+                        <p>Parcialmente nublado</p>
+                        <p className="mt-1">H: 29° L: 21°</p>
+                      </div>
+                    </div>
+                    <div className="mt-5 grid grid-cols-5 gap-2 text-center text-[0.82rem] text-ink-secondary">
+                      {['Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((day, index) => (
+                        <div key={day}>
+                          <div className="mb-2 h-5 w-5 rounded-full bg-bg-secondary mx-auto" />
+                          <p>{28 - index}°</p>
+                          <p className="mt-1">{day}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <h4 className="mt-4 text-xl font-semibold tracking-[-0.03em] text-ink-primary">Camadas de descoberta</h4>
-                  <p className="mt-3 text-sm leading-7 text-ink-secondary">
-                    Busca, merge de noticias equivalentes, widgets e historico de threads em uma interface so.
-                  </p>
-                </div>
+
+                  <div className="rounded-[22px] border border-border p-5">
+                    <p className="text-[1.05rem] font-semibold text-ink-primary">Minhas séries</p>
+                    <div className="mt-4 space-y-4">
+                      {[
+                        { title: 'Monarch - Legado de Monstros', meta: 'T2E7 - Teoria das cordas', date: '09 de abr' },
+                        { title: 'Harry Potter', meta: 'T1E1 - Episódio 1', date: '25 de dez' },
+                      ].map((show) => (
+                        <div key={show.title} className="flex gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0">
+                          <div className="h-14 w-10 rounded-[10px] bg-[linear-gradient(145deg,#4a6170,#9eb3bc)]" />
+                          <div>
+                            <p className="text-[0.95rem] font-medium text-ink-primary">{show.title}</p>
+                            <p className="mt-1 text-sm text-ink-secondary">{show.meta}</p>
+                            <p className="mt-1 text-sm text-accent">{show.date}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[22px] border border-border p-5">
+                    <p className="text-[1.05rem] font-semibold text-ink-primary">Valorant</p>
+                    <div className="mt-4 space-y-4">
+                      {['UCAM Es... vs DNSTY', 'eSports C... vs Dortmun...', 'ALTERNA... vs Eintracht ...'].map((match, index) => (
+                        <div key={match} className="border-t border-border pt-4 first:border-t-0 first:pt-0">
+                          <div className="flex items-center justify-between text-[0.92rem] text-ink-primary">
+                            <span>{match}</span>
+                            <span className="text-accent">Hoje {15 + index}:00</span>
+                          </div>
+                          <p className="mt-1 text-sm text-ink-tertiary">VCL</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[22px] border border-border p-5">
+                    <p className="text-[1.05rem] font-semibold text-ink-primary">League of Legends</p>
+                    <div className="mt-4 space-y-4">
+                      {['Once Up... vs Frites Esp...', 'Misa Esp... vs BIG'].map((match) => (
+                        <div key={match} className="border-t border-border pt-4 first:border-t-0 first:pt-0">
+                          <div className="flex items-center justify-between text-[0.92rem] text-ink-primary">
+                            <span>{match}</span>
+                            <span className="text-accent">Hoje 15:00</span>
+                          </div>
+                          <p className="mt-1 text-sm text-ink-tertiary">Road Of Legends</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </aside>
               </div>
             </section>
-
-            <aside className="rounded-[24px] bg-bg-primary p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-tertiary">Widgets</p>
-              <div className="mt-4 space-y-3">
-                <div className="rounded-2xl bg-white p-4 shadow-[0_1px_0_rgba(17,17,17,0.02)]">
-                  <p className="text-sm font-medium text-ink-primary">Valorant</p>
-                  <p className="mt-1 text-sm text-ink-secondary">Partidas do dia e horarios em um relance.</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4 shadow-[0_1px_0_rgba(17,17,17,0.02)]">
-                  <p className="text-sm font-medium text-ink-primary">League of Legends</p>
-                  <p className="mt-1 text-sm text-ink-secondary">Acompanhe campeonatos sem sair do feed.</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4 shadow-[0_1px_0_rgba(17,17,17,0.02)]">
-                  <p className="text-sm font-medium text-ink-primary">Clima</p>
-                  <p className="mt-1 text-sm text-ink-secondary">Contexto rapido para o seu dia.</p>
-                </div>
-              </div>
-            </aside>
           </div>
         </div>
       </div>
