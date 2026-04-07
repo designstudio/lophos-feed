@@ -1,27 +1,37 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { LophosLogo } from '@/components/LophosLogo'
 import { cn } from '@/lib/utils'
 
+type LegalPath = '/termos-de-uso' | '/politica-de-privacidade' | '/notas-de-versao'
+
 export function LegalPage({
   title,
   updatedAt,
+  subtitle,
+  intro,
   currentPath,
+  contentClassName,
+  unstyledContent = false,
   children,
 }: {
   title: string
-  updatedAt: string
-  currentPath: '/termos-de-uso' | '/politica-de-privacidade'
+  updatedAt?: string
+  subtitle?: string
+  intro?: React.ReactNode
+  currentPath: LegalPath
+  contentClassName?: string
+  unstyledContent?: boolean
   children: React.ReactNode
 }) {
   const router = useRouter()
   const scrollRef = useRef<HTMLDivElement>(null)
-  const links = [
-    { href: '/politica-de-privacidade' as const, label: 'Política de Privacidade' },
-    { href: '/termos-de-uso' as const, label: 'Termos de Uso' },
+  const links: Array<{ href: LegalPath; label: string }> = [
+    { href: '/politica-de-privacidade', label: 'Política de Privacidade' },
+    { href: '/termos-de-uso', label: 'Termos de Uso' },
+    { href: '/notas-de-versao', label: 'Notas de versão' },
   ]
 
   useEffect(() => {
@@ -48,7 +58,7 @@ export function LegalPage({
     return () => window.cancelAnimationFrame(frame)
   }, [currentPath])
 
-  const navigateTo = (href: '/termos-de-uso' | '/politica-de-privacidade') => {
+  const navigateTo = (href: LegalPath) => {
     if (href === currentPath) return
 
     const scroller = scrollRef.current
@@ -64,15 +74,18 @@ export function LegalPage({
   }
 
   return (
-    <main className="flex h-[100dvh] min-h-[100dvh] flex-1 min-w-0 overflow-hidden bg-bg-primary text-ink-primary">
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto min-w-0">
-        <div className="sticky top-0 z-20 border-b border-border header-blur">
-          <div className="flex items-center h-12 px-4 md:hidden gap-2">
+    <main className="flex h-[100dvh] min-h-[100dvh] min-w-0 flex-1 overflow-hidden bg-bg-primary text-ink-primary">
+      <div ref={scrollRef} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <div className="header-blur sticky top-0 z-20 border-b border-border">
+          <div className="flex h-12 items-center gap-2 px-4 md:hidden">
             <LophosLogo size={26} />
             <h1 className="text-[15px] font-semibold text-ink-primary">Lophos</h1>
           </div>
 
-          <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pb-3" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div
+            className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-3 md:hidden"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {links.map((link) => {
               const active = currentPath === link.href
               return (
@@ -81,9 +94,9 @@ export function LegalPage({
                   type="button"
                   onClick={() => navigateTo(link.href)}
                   className={cn(
-                    'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
+                    'flex-shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition-all',
                     active
-                      ? 'bg-ink-primary text-bg-primary border-ink-primary'
+                      ? 'border-ink-primary bg-ink-primary text-bg-primary'
                       : 'border-border text-ink-tertiary hover:text-ink-secondary'
                   )}
                 >
@@ -93,8 +106,8 @@ export function LegalPage({
             })}
           </div>
 
-          <div className="hidden md:flex items-center h-14 px-8">
-            <div className="flex items-center gap-2 flex-shrink-0" style={{ width: '12rem' }}>
+          <div className="hidden h-14 items-center px-8 md:flex">
+            <div className="flex flex-shrink-0 items-center gap-2" style={{ width: '12rem' }}>
               <LophosLogo size={26} />
               <span className="text-[15px] font-semibold text-ink-primary">Lophos</span>
             </div>
@@ -108,7 +121,7 @@ export function LegalPage({
                     type="button"
                     onClick={() => navigateTo(link.href)}
                     className={cn(
-                      'text-[0.875rem] px-4 h-14 border-b-2 transition-all font-medium flex items-center',
+                      'flex h-14 items-center border-b-2 px-4 text-[0.875rem] font-medium transition-all',
                       active
                         ? 'border-ink-primary text-ink-primary'
                         : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
@@ -128,12 +141,23 @@ export function LegalPage({
           <article className="px-0 py-8 md:py-10">
             <header className="mb-8 border-b border-border pb-6">
               <h1 className="font-display text-3xl leading-tight md:text-4xl">{title}</h1>
-              <p className="mt-3 text-sm text-ink-tertiary">Atualizado em {updatedAt}</p>
+              {subtitle ? <p className="mt-3 text-base text-ink-tertiary">{subtitle}</p> : null}
+              {intro ? <div className="mt-8 max-w-3xl text-body leading-relaxed text-ink-secondary">{intro}</div> : null}
+              {updatedAt ? <p className="mt-3 text-sm text-ink-tertiary">Atualizado em {updatedAt}</p> : null}
             </header>
 
-            <div className="space-y-8 text-body text-ink-secondary [&_h2]:font-display [&_h2]:text-2xl [&_h2]:text-ink-primary [&_h2]:mb-3 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-ink-primary [&_h3]:mb-2 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-2">
-              {children}
-            </div>
+            {unstyledContent ? (
+              <div className={contentClassName}>{children}</div>
+            ) : (
+              <div
+                className={cn(
+                  'space-y-8 text-body text-ink-secondary [&_h2]:mb-3 [&_h2]:font-display [&_h2]:text-2xl [&_h2]:text-ink-primary [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-ink-primary [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-6 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-6',
+                  contentClassName
+                )}
+              >
+                {children}
+              </div>
+            )}
           </article>
         </div>
 
