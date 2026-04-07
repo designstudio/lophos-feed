@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { MessageChatCircle } from '@untitledui/icons'
+import Lottie from 'lottie-react'
 import { LophosLogo } from '@/components/LophosLogo'
+import chatbotAnimation from '@/lib/animations/chatbot.json'
 
 const CASES = [
   {
@@ -16,7 +17,7 @@ const CASES = [
       { name: 'Estadão', headline: 'Mercado reage ao novo movimento do Copom' },
     ],
     resultTitle: 'Selic sobe 0,25 ponto',
-    resultSummary: 'O Banco Central elevou a Selic e o Lophos reuniu 5 fontes com contexto + thread.',
+    resultSummary: 'Banco Central eleva juros e o Lophos reúne 5 fontes com contexto e thread.',
   },
   {
     topic: 'Games',
@@ -28,7 +29,7 @@ const CASES = [
       { name: 'The Verge', headline: 'Feedback da comunidade influencia redesign de heroína' },
     ],
     resultTitle: 'Anran recebe redesign',
-    resultSummary: 'O Lophos agrupou a cobertura do redesign em uma única notícia com contexto e continuidade.',
+    resultSummary: 'Cobertura agrupada em uma única notícia, com contexto e continuidade.',
   },
   {
     topic: 'Filmes',
@@ -57,27 +58,36 @@ const CASES = [
 ] as const
 
 const CARD_HEIGHT = 'h-[23.375rem]'
-const FLOW_LABELS = ['Fonts RSS', 'Agrupamento Lophos', 'Notícia'] as const
+const FLOW_LABELS = ['Fontes RSS', 'Agrupamento Lophos', 'Notícia'] as const
 const STATIC_TOPICS = ['Economia', 'Games', 'Filmes', 'Tecnologia', 'Séries'] as const
 
-function ChatGlyph() {
-  return (
-    <motion.div
-      className="flex h-[74px] w-[74px] items-center justify-center rounded-[24px] border border-white/12 bg-white/8"
-      animate={{ y: [0, -4, 0] }}
-      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-    >
-      <MessageChatCircle size={30} className="text-white" />
-    </motion.div>
-  )
-}
-
 export function HowItWorksRotator() {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const [isActive, setIsActive] = useState(false)
   const [index, setIndex] = useState(0)
   const [newsStage, setNewsStage] = useState(2)
   const [flowStage, setFlowStage] = useState(0)
 
   useEffect(() => {
+    const node = sectionRef.current
+    if (!node) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsActive(true)
+        }
+      },
+      { rootMargin: '0px 0px -12% 0px', threshold: 0.2 }
+    )
+
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!isActive) return
+
     const interval = window.setInterval(() => {
       setNewsStage((current) => {
         const next = current + 1
@@ -87,18 +97,20 @@ export function HowItWorksRotator() {
         }
         return next
       })
-    }, 1050)
+    }, 1400)
 
     return () => window.clearInterval(interval)
-  }, [])
+  }, [isActive])
 
   useEffect(() => {
+    if (!isActive) return
+
     const interval = window.setInterval(() => {
       setFlowStage((current) => (current + 1) % 4)
-    }, 1200)
+    }, 1700)
 
     return () => window.clearInterval(interval)
-  }, [])
+  }, [isActive])
 
   const current = CASES[index]
   const visibleNews = useMemo(() => current.sources.slice(0, newsStage), [current.sources, newsStage])
@@ -106,7 +118,7 @@ export function HowItWorksRotator() {
   const showGeneratedCard = flowStage === 3
 
   return (
-    <div>
+    <div ref={sectionRef}>
       <div className="mx-auto max-w-[820px] text-center">
         <h3 className="text-[2.7rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary md:text-[4.6rem]">
           <span className="block">Várias fontes</span>
@@ -117,7 +129,7 @@ export function HowItWorksRotator() {
       <div className="mt-12 grid gap-6 xl:grid-cols-3">
         <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
           <div className="flex h-full items-center justify-center">
-            <div className="w-full max-w-[18.2rem] rounded-[26px] bg-white p-6 shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
+            <div className="w-full max-w-[21.25rem] rounded-[26px] bg-white p-6 shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bg-secondary">
                   <LophosLogo size={22} />
@@ -132,9 +144,9 @@ export function HowItWorksRotator() {
         </article>
 
         <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
-          <div className="flex h-full items-center justify-center">
-            <div className="flex h-full w-full max-w-[18.2rem] flex-col overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
-              <div className="overflow-hidden border-b border-border px-4 pb-3 pt-4">
+          <div className="flex h-full items-end justify-center">
+            <div className="flex h-[20.375rem] w-full max-w-[18.2rem] flex-col overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
+              <div className="relative overflow-hidden border-b border-border px-4 pb-3 pt-4">
                 <div className="flex flex-nowrap gap-2 overflow-hidden">
                   {STATIC_TOPICS.map((topic) => (
                     <div
@@ -145,6 +157,7 @@ export function HowItWorksRotator() {
                     </div>
                   ))}
                 </div>
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-r from-white/0 via-white/60 to-white" />
               </div>
 
               <div className="flex-1 overflow-hidden px-4 py-4">
@@ -157,7 +170,7 @@ export function HowItWorksRotator() {
                         initial={{ opacity: 0, y: 24, scale: 0.98 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, scale: 0.98 }}
-                        transition={{ duration: 0.28, ease: 'easeOut' }}
+                        transition={{ duration: 0.32, ease: 'easeOut' }}
                         className="rounded-[18px] bg-bg-secondary px-4 py-3"
                       >
                         <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">
@@ -178,79 +191,80 @@ export function HowItWorksRotator() {
         <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
           <div className="flex h-full items-center justify-center">
             <div className="relative flex h-full w-full max-w-[18.2rem] flex-col items-center overflow-hidden rounded-[26px] bg-[#151515] px-5 py-6 text-white shadow-[0_20px_50px_rgba(17,17,17,0.08)]">
-              <ChatGlyph />
-
-              <div className="mt-5 min-h-[2.4rem]">
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={currentFlowLabel}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.25, ease: 'easeOut' }}
-                    className="text-center text-[0.92rem] font-medium text-white/72"
+              <AnimatePresence mode="wait">
+                {showGeneratedCard ? (
+                  <motion.article
+                    key={`${current.topic}-generated`}
+                    initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                    transition={{ duration: 0.42, ease: 'easeOut' }}
+                    className="mt-7 w-full"
                   >
-                    {currentFlowLabel}
-                  </motion.p>
-                </AnimatePresence>
-              </div>
-
-              <motion.div
-                className="mt-3 h-px w-24 bg-white/14"
-                animate={{ opacity: [0.2, 0.65, 0.2], width: [72, 96, 72] }}
-                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-              />
-
-              <div className="mt-6 flex min-h-[12.7rem] w-full items-center">
-                <AnimatePresence mode="wait">
-                  {showGeneratedCard ? (
-                    <motion.article
-                      key={`${current.topic}-generated`}
-                      initial={{ opacity: 0, y: 14, scale: 0.97 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                      transition={{ duration: 0.35, ease: 'easeOut' }}
-                      className="w-full"
-                    >
-                      <div className="grid grid-cols-[1fr_92px] gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">Horror</p>
-                          <h4 className="mt-2 line-clamp-3 text-[1.15rem] font-semibold leading-[1.03] tracking-[-0.04em] text-white">
-                            {current.resultTitle}
-                          </h4>
-                          <div className="mt-3 text-[0.78rem] text-white/58">Publicado há cerca de 2 horas</div>
-                          <p className="mt-3 line-clamp-3 text-[0.88rem] leading-6 text-white/70">{current.resultSummary}</p>
-                          <p className="mt-3 text-[0.8rem] text-white/55">{current.sources.length} fontes</p>
-                        </div>
-
-                        <div className="h-[132px] rounded-[18px] bg-[linear-gradient(145deg,#0f1013,#1b1d24_40%,#56463d_100%)]" />
+                    <div className="grid grid-cols-[1fr_90px] gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">Horror</p>
+                        <h4 className="mt-2 line-clamp-3 text-[1.06rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white">
+                          {current.resultTitle}
+                        </h4>
+                        <div className="mt-3 text-[0.74rem] text-white/58">Publicado há cerca de 2 horas</div>
+                        <p className="mt-3 line-clamp-3 text-[0.82rem] leading-5 text-white/70">{current.resultSummary}</p>
+                        <p className="mt-3 text-[0.76rem] text-white/55">{current.sources.length} fontes</p>
                       </div>
-                    </motion.article>
-                  ) : (
+
+                      <div className="h-[126px] rounded-[18px] bg-[linear-gradient(145deg,#0f1013,#1b1d24_40%,#56463d_100%)]" />
+                    </div>
+                  </motion.article>
+                ) : (
+                  <motion.div
+                    key={`${current.topic}-processing`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex h-full w-full flex-col items-center justify-center"
+                  >
+                    <div className="h-[74px] w-[74px]">
+                      <Lottie animationData={chatbotAnimation} loop={isActive} autoplay={isActive} />
+                    </div>
+
+                    <div className="mt-5 min-h-[2.4rem]">
+                      <AnimatePresence mode="wait">
+                        <motion.p
+                          key={currentFlowLabel}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.32, ease: 'easeOut' }}
+                          className="text-center text-[0.92rem] font-medium text-white/72"
+                        >
+                          {currentFlowLabel}
+                        </motion.p>
+                      </AnimatePresence>
+                    </div>
+
                     <motion.div
-                      key={`${current.topic}-processing`}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="flex h-full w-full items-center justify-center"
-                    >
+                      className="mt-3 h-px w-24 bg-white/14"
+                      animate={isActive ? { opacity: [0.2, 0.65, 0.2], width: [72, 96, 72] } : { opacity: 0.2, width: 72 }}
+                      transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 0.7, ease: 'easeInOut' }}
+                    />
+
+                    <div className="mt-6 flex min-h-[4rem] w-full items-center justify-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="flex gap-2">
                           {[0, 1, 2].map((dot) => (
                             <motion.span
                               key={dot}
                               className="h-2.5 w-2.5 rounded-full bg-white/70"
-                              animate={{ y: [0, -5, 0], opacity: [0.45, 1, 0.45] }}
-                              transition={{ duration: 0.9, repeat: Infinity, delay: dot * 0.12, ease: 'easeInOut' }}
+                              animate={isActive ? { y: [0, -5, 0], opacity: [0.45, 1, 0.45] } : { y: 0, opacity: 0.45 }}
+                              transition={{ duration: 1.15, repeat: Infinity, repeatDelay: 0.5, delay: dot * 0.14, ease: 'easeInOut' }}
                             />
                           ))}
                         </div>
-                        <p className="text-center text-[0.82rem] text-white/55">Gerando a notícia consolidada...</p>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </article>
