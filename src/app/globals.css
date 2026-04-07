@@ -305,13 +305,15 @@ html, body {
 
 @keyframes landingFloat {
   0% { transform: translate3d(0, 0, 0) scale(1); }
-  100% { transform: translate3d(0, -12px, 0) scale(1.03); }
+  50% { transform: translate3d(4px, -10px, 0) scale(1.025); }
+  100% { transform: translate3d(-3px, 6px, 0) scale(1.015); }
 }
 
 @keyframes landingDrift {
   0% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(8px, -10px, 0); }
-  100% { transform: translate3d(-6px, 8px, 0); }
+  33% { transform: translate3d(8px, -10px, 0); }
+  66% { transform: translate3d(-6px, -4px, 0); }
+  100% { transform: translate3d(4px, 8px, 0); }
 }
 
 .stagger > *:nth-child(1) { animation-delay:   0ms; opacity: 0; }

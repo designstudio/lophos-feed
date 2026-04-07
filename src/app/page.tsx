@@ -4,14 +4,14 @@ import { ArrowRight, MessageChatCircle, SearchLg } from '@untitledui/icons'
 import { LophosLogo } from '@/components/LophosLogo'
 
 const PORTAL_ICONS = [
-  { domain: 'g1.globo.com', top: '9%', left: '9%', size: 76, animation: 'landingFloat 5.8s ease-in-out infinite alternate' },
-  { domain: 'tecmundo.com.br', top: '18%', left: '28%', size: 72, animation: 'landingDrift 9s ease-in-out infinite' },
-  { domain: 'engadget.com', top: '9%', right: '24%', size: 74, animation: 'landingFloat 6.2s ease-in-out infinite alternate-reverse' },
-  { domain: 'gamespot.com', top: '23%', right: '11%', size: 78, animation: 'landingDrift 8.5s ease-in-out infinite' },
-  { domain: 'kotaku.com', top: '48%', left: '13%', size: 78, animation: 'landingFloat 6.5s ease-in-out infinite alternate' },
-  { domain: 'billboard.com', top: '54%', right: '20%', size: 74, animation: 'landingFloat 5.4s ease-in-out infinite alternate-reverse' },
-  { domain: 'techcrunch.com', bottom: '12%', left: '25%', size: 74, animation: 'landingDrift 8.2s ease-in-out infinite' },
-  { domain: 'crunchyroll.com', bottom: '10%', right: '14%', size: 76, animation: 'landingFloat 6.8s ease-in-out infinite alternate' },
+  { domain: 'g1.globo.com', top: '8%', left: '5%', size: 76, animation: 'landingFloat 8.2s ease-in-out infinite' },
+  { domain: 'tecmundo.com.br', top: '15%', left: '22%', size: 72, animation: 'landingDrift 11s ease-in-out infinite' },
+  { domain: 'engadget.com', top: '7%', right: '22%', size: 74, animation: 'landingFloat 8.8s ease-in-out infinite' },
+  { domain: 'gamespot.com', top: '19%', right: '6%', size: 78, animation: 'landingDrift 12s ease-in-out infinite' },
+  { domain: 'kotaku.com', top: '50%', left: '4%', size: 78, animation: 'landingFloat 9.4s ease-in-out infinite' },
+  { domain: 'billboard.com', top: '49%', right: '12%', size: 74, animation: 'landingFloat 8.6s ease-in-out infinite' },
+  { domain: 'techcrunch.com', bottom: '11%', left: '18%', size: 74, animation: 'landingDrift 10.8s ease-in-out infinite' },
+  { domain: 'crunchyroll.com', bottom: '9%', right: '6%', size: 76, animation: 'landingFloat 9.8s ease-in-out infinite' },
 ] as const
 
 export const metadata: Metadata = {
@@ -23,9 +23,9 @@ export const metadata: Metadata = {
 function LandingHeader() {
   return (
     <div className="pointer-events-none fixed inset-x-0 top-5 z-40 flex justify-center px-4">
-      <div className="pointer-events-auto header-blur flex w-full max-w-[36.5rem] items-center justify-between rounded-full border border-border px-5 py-3 shadow-[0_12px_40px_rgba(17,17,17,0.05)]">
+      <div className="pointer-events-auto header-blur flex h-[60px] w-full max-w-[36.5rem] items-center justify-between rounded-full border border-border px-5 shadow-[0_12px_40px_rgba(17,17,17,0.05)]">
         <Link href="/" className="flex items-center gap-3 text-ink-primary">
-          <LophosLogo size={26} />
+          <LophosLogo size={30} />
           <span className="text-[1.05rem] font-semibold tracking-[-0.04em]">Lophos</span>
         </Link>
 
@@ -164,7 +164,7 @@ function LibraryBlock() {
             </div>
           ))}
 
-          <div className="max-w-[900px] px-6 text-center">
+          <div className="relative z-10 max-w-[760px] px-6 text-center">
             <p className="text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">
               Uma biblioteca construída com
             </p>
@@ -188,26 +188,11 @@ function Footer() {
   return (
     <footer className="rounded-t-[34px] bg-[#151515] px-6 py-14 text-white md:px-8 md:py-20">
       <div className="mx-auto max-w-[1280px]">
-        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <LophosLogo size={28} className="text-white" />
-              <span className="text-xl font-semibold tracking-[-0.04em] text-white">Lophos</span>
-            </div>
-            <p className="mt-5 max-w-sm text-[1.02rem] leading-8 text-white/66">
-              Descubra notícias com mais contexto, menos ruído e uma thread pronta para continuar a leitura.
-            </p>
-          </div>
-
-          <div className="flex gap-6 text-[1.02rem] text-white">
-            <Link href="/politica-de-privacidade" className="transition-opacity hover:opacity-65">
-              Termos e políticas
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-16 flex flex-col gap-4 border-t border-white/10 pt-8 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-4 border-t border-white/10 pt-2 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
           <p>© Lophos 2026. Todos os direitos reservados.</p>
+          <Link href="/politica-de-privacidade" className="text-white transition-opacity hover:opacity-65">
+            Termos e políticas
+          </Link>
         </div>
       </div>
     </footer>
@@ -221,10 +206,6 @@ export default function Home() {
 
       <section className="px-5 pb-16 pt-28 md:px-8 md:pb-24 md:pt-32">
         <div className="mx-auto max-w-[920px] text-center">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[28px] border border-border bg-white shadow-[0_18px_40px_rgba(17,17,17,0.05)]">
-            <LophosLogo size={42} />
-          </div>
-
           <h1 className="mt-10 text-[3.5rem] font-semibold leading-[0.94] tracking-[-0.09em] md:text-[6.2rem]">
             Descubra o que importa sem nadar em ruído.
           </h1>
