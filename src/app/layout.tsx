@@ -1,11 +1,17 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://lophos.space'),
   title: 'Lophos Feed',
-  description: 'Seu feed de notícias personalizado por IA.',
-  viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
+  description: 'Seu feed de noticias personalizado por IA.',
   manifest: '/site.webmanifest',
   appleWebApp: {
     capable: true,
@@ -29,7 +35,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="pt-BR">
         <head>
-          {/* Blocking script — applies theme+accent before first paint, eliminates flash */}
           <script dangerouslySetInnerHTML={{ __html: `
             (function() {
               try {
