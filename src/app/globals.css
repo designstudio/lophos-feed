@@ -53,6 +53,8 @@ html, body {
   color: var(--color-ink-primary);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 ::-webkit-scrollbar { width: 5px; }
@@ -214,6 +216,7 @@ html, body {
   display: flex;
   height: 100dvh;
   overflow: hidden;
+  overflow-x: hidden;
   background: var(--color-bg-primary);
 }
 
