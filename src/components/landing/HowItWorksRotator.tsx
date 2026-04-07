@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Lottie from 'lottie-react'
@@ -64,6 +65,10 @@ export function HowItWorksRotator() {
   const [flowStage, setFlowStage] = useState(0)
 
   useEffect(() => {
+    setIndex(Math.floor(Math.random() * CASES.length))
+  }, [])
+
+  useEffect(() => {
     const node = sectionRef.current
     if (!node) return
 
@@ -82,15 +87,8 @@ export function HowItWorksRotator() {
     if (!isActive) return
 
     const timeout = window.setTimeout(() => {
-      setNewsStage((current) => {
-        const next = current + 1
-        if (next > 5) {
-          setIndex((caseIndex) => (caseIndex + 1) % CASES.length)
-          return 2
-        }
-        return next
-      })
-    }, 1500)
+      setNewsStage((current) => (current >= 5 ? 2 : current + 1))
+    }, 1550)
 
     return () => window.clearTimeout(timeout)
   }, [isActive, newsStage])
@@ -98,7 +96,7 @@ export function HowItWorksRotator() {
   useEffect(() => {
     if (!isActive) return
 
-    const stageDurations = [2100, 2100, 2100, 4200]
+    const stageDurations = [2400, 2400, 2400, 4800]
     const timeout = window.setTimeout(() => {
       setFlowStage((current) => (current + 1) % 4)
     }, stageDurations[flowStage])
@@ -120,7 +118,7 @@ export function HowItWorksRotator() {
         </h3>
       </div>
 
-      <div className="mt-12 grid gap-10 xl:grid-cols-2 xl:gap-8">
+      <div className="mt-12 grid gap-10 xl:grid-cols-3 xl:gap-8">
         <div>
           <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
             <div className="flex h-full items-end justify-center">
@@ -130,7 +128,9 @@ export function HowItWorksRotator() {
                     {STATIC_TOPICS.map((topic) => (
                       <div
                         key={topic}
-                        className="shrink-0 rounded-full bg-bg-secondary px-3 py-1.5 text-[0.78rem] font-medium text-ink-secondary"
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-[0.78rem] font-medium ${
+                          topic === current.topic ? 'bg-ink-primary text-white' : 'bg-bg-secondary text-ink-secondary'
+                        }`}
                       >
                         {topic}
                       </div>
@@ -168,9 +168,8 @@ export function HowItWorksRotator() {
           </article>
 
           <div className="mx-auto mt-7 max-w-[26rem] text-center">
-            <p className="text-[1.85rem] font-semibold tracking-[-0.04em] text-ink-primary">Fontes por toda a internet</p>
-            <p className="mt-3 text-[1.05rem] leading-8 text-ink-secondary">
-              O Lophos acompanha fontes diferentes por toda a internet, registrando todas as notícias publicadas.
+            <p className="text-[1.05rem] leading-7 text-ink-secondary">
+              A partir dos registros, detectamos quando várias matérias estão falando do mesmo tema e retornamos em uma única notícia.
             </p>
           </div>
         </div>
@@ -191,7 +190,7 @@ export function HowItWorksRotator() {
                     >
                       <div className="grid w-full grid-cols-[1fr_90px] gap-3">
                         <div className="min-w-0">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">Horror</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/45">{current.topic}</p>
                           <h4 className="mt-2 line-clamp-3 text-[1.06rem] font-semibold leading-[1.02] tracking-[-0.04em] text-white">
                             {current.resultTitle}
                           </h4>
@@ -242,9 +241,31 @@ export function HowItWorksRotator() {
           </article>
 
           <div className="mx-auto mt-7 max-w-[26rem] text-center">
-            <p className="text-[1.85rem] font-semibold tracking-[-0.04em] text-ink-primary">Uma notícia só</p>
-            <p className="mt-3 text-[1.05rem] leading-8 text-ink-secondary">
+            <p className="text-[1.05rem] leading-7 text-ink-secondary">
               Nossa IA detecta quando várias matérias estão falando do mesmo tema e retorna em uma única notícia.
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <article className={`rounded-[30px] bg-bg-secondary p-5 md:p-6 ${CARD_HEIGHT}`}>
+            <div className="flex h-full items-center justify-center">
+              <div className="relative h-[20.375rem] w-full max-w-[18.2rem] overflow-hidden rounded-[26px] bg-white shadow-[0_20px_50px_rgba(17,17,17,0.06)]">
+                <Image
+                  src="/landing-feed-reference.png"
+                  alt="Exemplo do feed do Lophos"
+                  fill
+                  className="object-cover"
+                  style={{ objectPosition: '37% 16%' }}
+                  sizes="291px"
+                />
+              </div>
+            </div>
+          </article>
+
+          <div className="mx-auto mt-7 max-w-[26rem] text-center">
+            <p className="text-[1.05rem] leading-7 text-ink-secondary">
+              Depois disso, populamos o seu feed a partir dos seus tópicos cadastrados. Suas notícias, num único lugar.
             </p>
           </div>
         </div>
