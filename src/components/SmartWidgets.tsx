@@ -49,7 +49,7 @@ function formatAirDate(dateStr: string | null): string {
 
 function TeamLogo({ logo, name }: { logo: string | null; name: string }) {
   return (
-    <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-border/70 dark:bg-bg-secondary">
+    <span className="inline-flex h-5 w-5 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-white dark:bg-bg-secondary">
       {logo ? (
         <img
           src={logo}
