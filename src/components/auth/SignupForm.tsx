@@ -3,24 +3,14 @@
 import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useSignIn } from '@clerk/nextjs'
-
-export function GoogleIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6">
-      <path fill="#4285f4" d="M23.5151 12.2611c0 -0.9661 -0.0784 -1.6711 -0.24805 -2.4022H12.2351v4.3605h6.4755c-0.1305 1.08365 -0.8355 2.7156 -2.4022 3.8122l-0.02195 0.146 3.4881 2.702175 0.24165 0.024125c2.2194 -2.04975 3.4989 -5.0656 3.4989 -8.6428Z" strokeWidth="0.25" />
-      <path fill="#34a853" d="M12.234975 23.75c3.17245 0 5.83575 -1.0445 7.7811 -2.8461L16.308275 18.031625c-0.9922 0.69195 -2.3239 1.175 -4.0733 1.175 -3.1072 0 -5.7444 -2.049675 -6.6845 -4.882725l-0.137775 0.0117L1.7857125 17.14255l-0.0474325 0.13185C3.670475 21.112725 7.639375 23.75 12.234975 23.75Z" strokeWidth="0.25" />
-      <path fill="#fbbc05" d="M5.550625 14.3239c-0.248075 -0.7311 -0.391625 -1.5145 -0.391625 -2.3239 0 -0.8095 0.143575 -1.5928 0.378575 -2.3239l-0.006575 -0.1557L1.858565 6.66835l-0.120155 0.05715C0.9420575 8.3183 0.4851075 10.10695 0.4851075 12c0 1.89305 0.45695 3.6816 1.2533025 5.2744l3.812215 -2.9505Z" strokeWidth="0.25" />
-      <path fill="#eb4335" d="M12.234975 4.7933c2.20635 0 3.69465 0.95305 4.5433 1.7495L20.094375 3.305C18.057775 1.41195 15.407425 0.25 12.234975 0.25 7.639375 0.25 3.670475 2.8872 1.73828 6.7255L5.537425 9.6761c0.95315 -2.83305 3.59035 -4.8828 6.69755 -4.8828Z" strokeWidth="0.25" />
-    </svg>
-  )
-}
+import { useSignUp } from '@clerk/nextjs'
+import { GoogleIcon } from '@/components/auth/LoginForm'
 
 type Step = 'email' | 'code'
 
-export function LoginForm() {
+export function SignupForm() {
   const router = useRouter()
-  const { isLoaded, signIn, setActive } = useSignIn()
+  const { isLoaded, signUp, setActive } = useSignUp()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<Step>('email')
@@ -30,60 +20,44 @@ export function LoginForm() {
   const buttonLabel = useMemo(() => (step === 'email' ? 'Continuar' : 'Verificar código'), [step])
 
   const handleGoogle = async () => {
-    if (!isLoaded || !signIn) return
+    if (!isLoaded || !signUp) return
 
     setError(null)
     setIsSubmitting(true)
 
     try {
-      await signIn.authenticateWithRedirect({
+      await signUp.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/login/sso-callback',
-        redirectUrlComplete: '/feed',
+        redirectUrlComplete: '/onboarding',
       })
     } catch (err: any) {
-      setError(err?.errors?.[0]?.longMessage || 'Não foi possível iniciar o login com Google.')
+      setError(err?.errors?.[0]?.longMessage || 'Não foi possível iniciar o cadastro com Google.')
       setIsSubmitting(false)
     }
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!isLoaded || !signIn || !setActive) return
+    if (!isLoaded || !signUp || !setActive) return
 
     setError(null)
     setIsSubmitting(true)
 
     try {
       if (step === 'email') {
-        const created = await signIn.create({ identifier: email })
-        const factor = created.supportedFirstFactors?.find(
-          (item): item is { strategy: 'email_code'; emailAddressId: string; safeIdentifier: string; primary?: boolean } =>
-            item.strategy === 'email_code' && 'emailAddressId' in item
-        )
-
-        if (!factor) {
-          throw new Error('O login por e-mail não está disponível no momento.')
-        }
-
-        await signIn.prepareFirstFactor({
-          strategy: 'email_code',
-          emailAddressId: factor.emailAddressId,
-        })
-
+        await signUp.create({ emailAddress: email })
+        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
         setStep('code')
       } else {
-        const result = await signIn.attemptFirstFactor({
-          strategy: 'email_code',
-          code,
-        })
+        const result = await signUp.attemptEmailAddressVerification({ code })
 
         if (result.status !== 'complete' || !result.createdSessionId) {
-          throw new Error('Não foi possível concluir o login.')
+          throw new Error('Não foi possível concluir o cadastro.')
         }
 
         await setActive({ session: result.createdSessionId })
-        router.push('/feed')
+        router.push('/onboarding')
       }
     } catch (err: any) {
       setError(err?.errors?.[0]?.longMessage || err?.message || 'Algo deu errado. Tente novamente.')
@@ -160,10 +134,11 @@ export function LoginForm() {
       </div>
 
       <div className="mt-7 text-center text-[0.95rem] text-ink-secondary">
-        Ainda não tem conta?{' '}
-        <Link href="/signup" className="font-medium text-ink-primary transition-opacity hover:opacity-70">
-          Criar conta grátis
+        Já tem uma conta?{' '}
+        <Link href="/login" className="font-medium text-ink-primary transition-opacity hover:opacity-70">
+          Iniciar sessão
         </Link>
+        .
       </div>
     </div>
   )
