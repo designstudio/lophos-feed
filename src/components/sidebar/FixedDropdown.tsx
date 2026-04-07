@@ -15,7 +15,14 @@ export function FixedDropdown({
   useEffect(() => {
     if (anchorRef.current) {
       const r = anchorRef.current.getBoundingClientRect()
-      setPos({ left: r.right + 4, bottom: window.innerHeight - r.top + 4 })
+      const dropdownWidth = 224
+      const viewportPadding = 12
+      const left = Math.min(
+        Math.max(r.left, viewportPadding),
+        window.innerWidth - dropdownWidth - viewportPadding
+      )
+
+      setPos({ left, bottom: window.innerHeight - r.top + 4 })
     }
   }, [anchorRef])
 

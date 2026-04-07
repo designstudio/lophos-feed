@@ -1,358 +1,285 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, PlayCircle, SearchLg, LayersThree01, MessageChatCircle, Stars02 } from '@untitledui/icons'
+import { ArrowRight, MessageChatCircle, SearchLg, Stars02 } from '@untitledui/icons'
 import { LophosLogo } from '@/components/LophosLogo'
 
-const TRUSTED_BY = ['ChatGPT', 'Airbnb', 'Nike', 'Dropbox', 'Shopify', 'Spotify', 'Uber', 'Wise']
-const LIBRARY_STATS = [
-  { value: '48h', label: 'janela editorial sempre fresca' },
-  { value: 'IA + curadoria', label: 'resumos que conectam fontes e contexto' },
-  { value: 'Threads', label: 'conversas salvas por artigo' },
-]
-const PATTERNS = [
-  'Games',
-  'Filmes e séries',
-  'Tecnologia',
-  'Anime',
-  'Economia',
-  'Cultura pop',
-  'Overwatch',
-  'Marvel',
-  'Lançamentos',
-  'Streaming',
-]
-const FEATURES = [
+const FLOATING_BADGES = [
+  { label: 'RSS', top: '6%', left: '8%', bg: '#ffffff' },
+  { label: 'IA', top: '12%', left: '64%', bg: '#fff3eb' },
+  { label: 'TV', top: '28%', left: '18%', bg: '#f5f5f3' },
+  { label: 'LOL', top: '25%', right: '12%', bg: '#fff7d9' },
+  { label: 'NEWS', top: '54%', left: '10%', bg: '#eef5ff' },
+  { label: 'CHAT', top: '58%', right: '18%', bg: '#f4efff' },
+  { label: 'TEC', bottom: '12%', left: '24%', bg: '#eef7f2' },
+  { label: 'FILM', bottom: '6%', right: '10%', bg: '#fff0f2' },
+] as const
+
+const FOOTER_GROUPS = [
   {
-    icon: SearchLg,
-    title: 'Encontre sinais em segundos',
-    body: 'Tópicos, fontes, resumos e notícias relacionadas trabalham juntos para você chegar rápido no que importa.',
+    title: 'Produto',
+    links: [
+      { href: '/login', label: 'Cadastre-se agora' },
+      { href: '/login', label: 'Log in' },
+      { href: '/notas-de-versao', label: 'Notas de versão' },
+    ],
   },
   {
-    icon: LayersThree01,
-    title: 'Veja o panorama inteiro',
-    body: 'O Lophos agrupa diferentes coberturas do mesmo evento para reduzir ruído e deixar a leitura mais coesa.',
-  },
-  {
-    icon: MessageChatCircle,
-    title: 'Continue a conversa',
-    body: 'Cada artigo pode virar uma thread persistente, com contexto, histórico e sugestões de continuidade.',
-  },
-]
-const TESTIMONIALS = [
-  {
-    quote: 'O Lophos transforma um monte de links soltos em um feed que realmente parece pensado para mim.',
-    author: 'Henrique',
-    role: 'Usuário early access',
-  },
-  {
-    quote: 'A mistura de feed editorial com chat contextual deixa a descoberta muito mais útil do que um leitor de notícias comum.',
-    author: 'Equipe Lophos',
-    role: 'Product notes',
+    title: 'Institucional',
+    links: [
+      { href: '/politica-de-privacidade', label: 'Política de Privacidade' },
+      { href: '/termos-de-uso', label: 'Termos de Uso' },
+    ],
   },
 ]
 
 export const metadata: Metadata = {
-  title: 'Lophos - Seu feed de notícias personalizado por IA',
-  description: 'Descubra notícias, conecte fontes relacionadas e converse com cada artigo em um feed personalizado por IA.',
+  title: 'Lophos - Descubra o que importa sem nadar em ruído',
+  description:
+    'O Lophos cruza notícias relacionadas, organiza o contexto e abre uma thread para cada artigo, para você explorar o assunto em vez de só acumular links.',
 }
 
-function MockArticleCard({
-  topic,
-  title,
-  summary,
-  accent,
-}: {
-  topic: string
-  title: string
-  summary: string
-  accent: string
-}) {
+function LandingHeader() {
   return (
-    <div className="rounded-[28px] border border-border bg-white/90 p-5 shadow-[0_30px_80px_rgba(17,17,17,0.08)] backdrop-blur-sm">
-      <div className="mb-5 flex items-start gap-4">
-        <div
-          className="h-24 w-24 flex-shrink-0 rounded-[24px]"
-          style={{
-            background: `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 35%, white))`,
-          }}
-        />
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">{topic}</p>
-          <h3 className="mt-2 text-xl font-semibold leading-tight text-ink-primary">{title}</h3>
-          <p className="mt-2 line-clamp-3 text-sm leading-6 text-ink-secondary">{summary}</p>
-        </div>
-      </div>
+    <div className="mx-auto flex max-w-[1040px] justify-center px-5 pt-5 md:px-8 md:pt-8">
+      <div className="flex w-full max-w-[972px] items-center justify-between rounded-full border border-[#ece9e4] bg-[#f7f5f1] px-6 py-4 shadow-[0_1px_0_rgba(17,17,17,0.02)]">
+        <Link href="/" className="flex items-center gap-3 text-ink-primary">
+          <LophosLogo size={28} />
+          <span className="text-[1.05rem] font-semibold tracking-[-0.04em]">Lophos</span>
+        </Link>
 
-      <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-        <div className="rounded-2xl bg-bg-secondary px-4 py-3 text-sm text-ink-secondary">
-          5 fontes conectadas • publicado há 2h
-        </div>
-        <div className="rounded-2xl border border-border bg-bg-primary px-4 py-3 text-sm font-medium text-ink-primary">
-          Abrir thread
+        <nav className="hidden items-center gap-10 text-[1.02rem] font-medium text-ink-primary md:flex">
+          <Link href="/notas-de-versao" className="transition-opacity hover:opacity-65">
+            Notas
+          </Link>
+          <Link href="/politica-de-privacidade" className="transition-opacity hover:opacity-65">
+            Políticas
+          </Link>
+          <Link href="/login" className="transition-opacity hover:opacity-65">
+            Log in
+          </Link>
+        </nav>
+      </div>
+    </div>
+  )
+}
+
+function ProductShowcase() {
+  return (
+    <div className="mx-auto mt-8 max-w-[1400px] px-4 md:mt-12 md:px-8">
+      <div className="rounded-[34px] bg-[#f4f1ec] px-4 py-5 md:px-8 md:py-8">
+        <div className="mx-auto max-w-[1080px] rounded-[28px] border border-border bg-white p-4 shadow-[0_18px_60px_rgba(17,17,17,0.05)] md:p-6">
+          <div className="flex flex-wrap items-center gap-3 border-b border-border pb-4">
+            <div className="flex items-center gap-2 rounded-full bg-bg-secondary px-3 py-2 text-sm font-medium text-ink-primary">
+              <LophosLogo size={18} />
+              Meu Feed
+            </div>
+            <div className="hidden h-10 flex-1 items-center rounded-full bg-bg-secondary px-4 text-sm text-ink-tertiary md:flex">
+              Buscar por tópico, assunto ou palavra-chave...
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <div className="rounded-full border border-border px-3 py-2 text-sm text-ink-secondary">Últimas 48h</div>
+              <div className="rounded-full bg-ink-primary px-3 py-2 text-sm font-medium text-white">Atualizar</div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)_260px]">
+            <aside className="rounded-[24px] bg-[#faf8f5] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-tertiary">Tópicos</p>
+              <div className="mt-4 space-y-2">
+                {['Games', 'Tecnologia', 'Filmes', 'Séries', 'Anime', 'Economia'].map((topic) => (
+                  <div key={topic} className="rounded-2xl bg-white px-4 py-3 text-sm font-medium text-ink-primary">
+                    {topic}
+                  </div>
+                ))}
+              </div>
+            </aside>
+
+            <section className="space-y-4">
+              <div className="rounded-[24px] border border-border p-4 md:p-5">
+                <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr]">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">Overwatch</p>
+                    <h3 className="mt-2 text-[1.75rem] font-semibold leading-tight tracking-[-0.04em] text-ink-primary">
+                      Anran recebe redesign após pedidos da comunidade
+                    </h3>
+                    <p className="mt-3 text-[15px] leading-7 text-ink-secondary">
+                      O Lophos cruza fontes, resume o contexto e conecta a conversa ao artigo para você continuar a exploração sem sair do fluxo.
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-2 text-sm text-ink-secondary">
+                      <span className="rounded-full bg-bg-secondary px-3 py-1.5">5 fontes</span>
+                      <span className="rounded-full bg-bg-secondary px-3 py-1.5">Publicado há 2h</span>
+                    </div>
+                  </div>
+                  <div className="rounded-[24px] bg-[linear-gradient(135deg,#3b1d55,#111827_58%,#ca774b)]" />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-[24px] bg-[#161616] p-5 text-white">
+                  <div className="inline-flex rounded-full bg-white/10 p-2">
+                    <MessageChatCircle size={18} />
+                  </div>
+                  <h4 className="mt-4 text-xl font-semibold tracking-[-0.03em]">Thread contextual</h4>
+                  <p className="mt-3 text-sm leading-7 text-white/72">
+                    “Onde eu posso jogar Overwatch?”<br />
+                    “Quais plataformas e lojas têm o jogo hoje?”
+                  </p>
+                </div>
+
+                <div className="rounded-[24px] bg-[#faf8f5] p-5">
+                  <div className="inline-flex rounded-full bg-white p-2 text-ink-primary shadow-[0_6px_20px_rgba(17,17,17,0.05)]">
+                    <SearchLg size={18} />
+                  </div>
+                  <h4 className="mt-4 text-xl font-semibold tracking-[-0.03em] text-ink-primary">Camadas de descoberta</h4>
+                  <p className="mt-3 text-sm leading-7 text-ink-secondary">
+                    Busca, merge de notícias equivalentes, widgets e histórico de threads em uma interface só.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <aside className="rounded-[24px] bg-[#faf8f5] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-tertiary">Widgets</p>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-sm font-medium text-ink-primary">Valorant</p>
+                  <p className="mt-1 text-sm text-ink-secondary">Partidas do dia e horários em um relance.</p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-sm font-medium text-ink-primary">League of Legends</p>
+                  <p className="mt-1 text-sm text-ink-secondary">Acompanhe campeonatos sem sair do feed.</p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-sm font-medium text-ink-primary">Clima</p>
+                  <p className="mt-1 text-sm text-ink-secondary">Contexto rápido para o seu dia.</p>
+                </div>
+              </div>
+            </aside>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-export default function Home() {
+function LibraryBlock() {
   return (
-    <main className="min-h-screen bg-bg-primary text-ink-primary">
-      <div className="absolute inset-x-0 top-0 -z-10 h-[38rem] bg-[radial-gradient(circle_at_top,_rgba(202,119,75,0.16),_transparent_48%)]" />
-
-      <header className="header-blur sticky top-0 z-30 border-b border-border">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:px-8">
-          <Link href="/" className="flex items-center gap-3">
-            <LophosLogo size={30} />
-            <span className="text-lg font-semibold tracking-[-0.03em]">Lophos</span>
-          </Link>
-
-          <nav className="hidden items-center gap-8 text-sm text-ink-secondary md:flex">
-            <Link href="/notas-de-versao" className="transition-colors hover:text-ink-primary">
-              Notas de versão
-            </Link>
-            <Link href="/politica-de-privacidade" className="transition-colors hover:text-ink-primary">
-              Política de Privacidade
-            </Link>
-            <Link href="/termos-de-uso" className="transition-colors hover:text-ink-primary">
-              Termos de Uso
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <Link href="/login" className="hidden text-sm font-medium text-ink-secondary transition-colors hover:text-ink-primary sm:inline-flex">
-              Entrar
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-5 py-2.5 text-sm font-medium text-bg-primary transition-transform hover:-translate-y-0.5"
+    <section className="relative overflow-hidden px-5 py-20 md:px-8 md:py-28">
+      <div className="mx-auto max-w-[1200px]">
+        <div className="relative flex min-h-[540px] items-center justify-center rounded-[40px] bg-white">
+          {FLOATING_BADGES.map((badge) => (
+            <div
+              key={badge.label}
+              className="absolute hidden h-20 w-20 items-center justify-center rounded-[26px] border border-[#efebe5] text-sm font-semibold tracking-[0.04em] text-ink-primary shadow-[0_18px_50px_rgba(17,17,17,0.06)] md:flex"
+              style={badge}
             >
-              Entrar no Lophos
-              <ArrowRight size={16} />
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <section className="mx-auto max-w-7xl px-6 pb-16 pt-14 md:px-8 md:pb-24 md:pt-20">
-        <div className="grid items-center gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)]">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white/70 px-3 py-1 text-xs font-medium text-ink-secondary backdrop-blur-sm">
-              <Stars02 size={14} />
-              Feed editorial com IA, contexto e conversa
-            </div>
-
-            <h1 className="mt-6 max-w-3xl text-5xl font-semibold leading-[1.02] tracking-[-0.05em] md:text-7xl">
-              Descubra o que importa sem nadar em ruído.
-            </h1>
-
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-ink-secondary md:text-xl">
-              O Lophos cruza notícias relacionadas, organiza o contexto e abre uma thread para cada artigo, para você
-              explorar o assunto em vez de só acumular links.
-            </p>
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-ink-primary px-6 py-3 text-sm font-medium text-bg-primary transition-transform hover:-translate-y-0.5"
+              <div
+                className="flex h-full w-full items-center justify-center rounded-[26px]"
+                style={{ backgroundColor: badge.bg }}
               >
-                Entrar no Lophos
-                <ArrowRight size={16} />
-              </Link>
-              <Link
-                href="/notas-de-versao"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-border bg-white px-6 py-3 text-sm font-medium text-ink-primary transition-colors hover:bg-bg-secondary"
-              >
-                Ver notas de versão
-                <PlayCircle size={16} />
-              </Link>
-            </div>
-
-            <div className="mt-12">
-              <p className="text-sm text-ink-tertiary">Inspirado nas melhores interfaces de descoberta e leitura modernas.</p>
-              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-ink-secondary">
-                {TRUSTED_BY.map((item) => (
-                  <span key={item}>{item}</span>
-                ))}
+                {badge.label}
               </div>
-            </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 translate-x-4 translate-y-6 rounded-[36px] bg-[linear-gradient(135deg,rgba(202,119,75,0.14),rgba(17,17,17,0.04))] blur-3xl" />
-            <div className="relative space-y-5">
-              <MockArticleCard
-                topic="Overwatch"
-                title="Anran recebe redesign após pedidos da comunidade"
-                summary="O Lophos conecta diferentes coberturas do mesmo evento, resume o contexto e deixa a conversa pronta para continuar em thread."
-                accent="#ca774b"
-              />
-              <div className="grid gap-5 md:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-[28px] border border-border bg-[#161616] p-5 text-white shadow-[0_30px_80px_rgba(17,17,17,0.18)]">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/60">Thread contextual</p>
-                  <p className="mt-4 text-lg font-medium leading-8">
-                    “Onde eu posso jogar Overwatch?”<br />
-                    “Quais plataformas e lojas têm o jogo hoje?”
-                  </p>
-                  <div className="mt-6 rounded-2xl bg-white/8 p-4 text-sm leading-6 text-white/75">
-                    Respostas com contexto do artigo, conhecimento geral e sugestões de próximas perguntas.
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-border bg-white/90 p-5 shadow-[0_30px_80px_rgba(17,17,17,0.08)] backdrop-blur-sm">
-                  <p className="text-xs uppercase tracking-[0.18em] text-ink-tertiary">Widgets inteligentes</p>
-                  <div className="mt-5 space-y-3">
-                    <div className="rounded-2xl bg-bg-secondary p-4">
-                      <p className="text-sm font-medium">Valorant</p>
-                      <p className="mt-1 text-sm text-ink-secondary">Partidas do dia e horário em um relance.</p>
-                    </div>
-                    <div className="rounded-2xl bg-bg-secondary p-4">
-                      <p className="text-sm font-medium">Clima</p>
-                      <p className="mt-1 text-sm text-ink-secondary">Contexto rápido sem sair do feed.</p>
-                    </div>
-                    <div className="rounded-2xl bg-bg-secondary p-4">
-                      <p className="text-sm font-medium">Tópicos de interesse</p>
-                      <p className="mt-1 text-sm text-ink-secondary">Seu feed aprende com o que você acompanha.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-border bg-white/70">
-        <div className="mx-auto grid max-w-7xl gap-8 px-6 py-10 md:grid-cols-3 md:px-8">
-          {LIBRARY_STATS.map((stat) => (
-            <div key={stat.value}>
-              <p className="text-3xl font-semibold tracking-[-0.04em]">{stat.value}</p>
-              <p className="mt-2 text-sm text-ink-secondary">{stat.label}</p>
             </div>
           ))}
-        </div>
-      </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-18 md:px-8 md:py-24">
-        <div className="grid gap-14 lg:grid-cols-[0.85fr_1.15fr]">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-ink-tertiary">Descoberta guiada</p>
-            <h2 className="mt-4 max-w-xl text-4xl font-semibold tracking-[-0.04em] md:text-5xl">
-              Encontre padrões de leitura em segundos.
-            </h2>
-            <p className="mt-5 max-w-lg text-lg leading-8 text-ink-secondary">
-              Inspirado na clareza de navegação do Mobbin, mas pensado para leitura editorial: tópicos, merge de eventos,
-              cards fortes e profundidade quando você quiser ir além.
+          <div className="max-w-[760px] px-6 text-center">
+            <p className="text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">
+              Uma biblioteca construída com
+            </p>
+            <div className="mt-4 space-y-1 text-[3.4rem] font-semibold leading-[0.95] tracking-[-0.08em] text-ink-primary md:text-[6rem]">
+              <div>67 feeds de notícias</div>
+              <div>curadoria por IA</div>
+              <div>threads por artigo</div>
+            </div>
+            <p className="mx-auto mt-6 max-w-[560px] text-base leading-8 text-ink-secondary md:text-lg">
+              O Lophos coleta fontes em RSS, identifica eventos equivalentes, organiza o contexto e transforma cada leitura
+              em uma experiência mais navegável, mais limpa e muito menos repetitiva.
             </p>
           </div>
+        </div>
+      </div>
+    </section>
+  )
+}
 
-          <div className="rounded-[32px] border border-border bg-white p-6 shadow-[0_24px_70px_rgba(17,17,17,0.06)]">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {PATTERNS.map((pattern, index) => (
-                <div
-                  key={pattern}
-                  className="rounded-2xl border border-border bg-bg-primary px-4 py-4 text-sm font-medium text-ink-primary transition-transform hover:-translate-y-0.5"
-                  style={{ animationDelay: `${index * 40}ms` }}
-                >
-                  {pattern}
-                </div>
+function Footer() {
+  return (
+    <footer className="rounded-t-[34px] bg-[#151515] px-6 py-14 text-white md:px-8 md:py-20">
+      <div className="mx-auto grid max-w-[1280px] gap-12 md:grid-cols-[1.4fr_0.8fr_0.8fr]">
+        <div>
+          <div className="flex items-center gap-3">
+            <LophosLogo size={28} />
+            <span className="text-xl font-semibold tracking-[-0.04em]">Lophos</span>
+          </div>
+          <p className="mt-5 max-w-sm text-[1.02rem] leading-8 text-white/66">
+            Descubra notícias com mais contexto, menos ruído e uma thread pronta para continuar a leitura.
+          </p>
+        </div>
+
+        {FOOTER_GROUPS.map((group) => (
+          <div key={group.title}>
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-white/38">{group.title}</p>
+            <div className="mt-5 space-y-3">
+              {group.links.map((link) => (
+                <Link key={link.label} href={link.href} className="block text-[1.02rem] text-white transition-opacity hover:opacity-65">
+                  {link.label}
+                </Link>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        ))}
+      </div>
 
-      <section className="mx-auto max-w-7xl px-6 pb-18 md:px-8 md:pb-24">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {FEATURES.map((feature) => {
-            const Icon = feature.icon
-            return (
-              <div
-                key={feature.title}
-                className="rounded-[28px] border border-border bg-white p-6 shadow-[0_24px_70px_rgba(17,17,17,0.05)]"
-              >
-                <div className="inline-flex rounded-2xl bg-bg-secondary p-3 text-ink-primary">
-                  <Icon size={20} />
-                </div>
-                <h3 className="mt-5 text-2xl font-semibold tracking-[-0.03em]">{feature.title}</h3>
-                <p className="mt-3 text-base leading-8 text-ink-secondary">{feature.body}</p>
-              </div>
-            )
-          })}
+      <div className="mx-auto mt-16 flex max-w-[1280px] flex-col gap-4 border-t border-white/10 pt-8 text-sm text-white/55 md:flex-row md:items-center md:justify-between">
+        <p>© Lophos 2026. Todos os direitos reservados.</p>
+        <div className="flex gap-6">
+          <Link href="/politica-de-privacidade" className="transition-opacity hover:opacity-65">
+            Privacy policy
+          </Link>
+          <Link href="/termos-de-uso" className="transition-opacity hover:opacity-65">
+            Terms
+          </Link>
         </div>
-      </section>
+      </div>
+    </footer>
+  )
+}
 
-      <section className="border-t border-border bg-white/60">
-        <div className="mx-auto max-w-7xl px-6 py-18 md:px-8 md:py-24">
-          <div className="max-w-2xl">
-            <p className="text-sm font-medium uppercase tracking-[0.18em] text-ink-tertiary">O que muda na prática</p>
-            <h2 className="mt-4 text-4xl font-semibold tracking-[-0.04em] md:text-5xl">
-              Menos páginas abertas. Mais contexto por assunto.
-            </h2>
+export default function Home() {
+  return (
+    <main className="min-h-screen bg-[#fcfbf8] text-ink-primary">
+      <LandingHeader />
+
+      <section className="px-5 pb-16 pt-20 md:px-8 md:pb-24 md:pt-24">
+        <div className="mx-auto max-w-[920px] text-center">
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[28px] border border-[#ece9e4] bg-white shadow-[0_18px_40px_rgba(17,17,17,0.05)]">
+            <LophosLogo size={42} />
           </div>
 
-          <div className="mt-10 grid gap-6 lg:grid-cols-2">
-            {TESTIMONIALS.map((item) => (
-              <div key={item.quote} className="rounded-[28px] border border-border bg-bg-primary p-6">
-                <p className="text-xl leading-9 text-ink-primary">“{item.quote}”</p>
-                <div className="mt-6">
-                  <p className="font-medium">{item.author}</p>
-                  <p className="text-sm text-ink-tertiary">{item.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+          <h1 className="mt-10 text-[3.5rem] font-semibold leading-[0.94] tracking-[-0.09em] md:text-[6.2rem]">
+            Descubra o que importa sem nadar em ruído.
+          </h1>
 
-      <section className="mx-auto max-w-5xl px-6 py-18 text-center md:px-8 md:py-24">
-        <div className="rounded-[40px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,247,242,0.96))] px-8 py-12 shadow-[0_32px_90px_rgba(17,17,17,0.08)] md:px-14 md:py-16">
-          <h2 className="text-4xl font-semibold tracking-[-0.05em] md:text-6xl">
-            Descubra notícias como quem explora um produto bem desenhado.
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-ink-secondary">
-            Entre no Lophos para acompanhar seus temas, salvar threads e usar uma experiência de leitura mais organizada
-            desde a primeira visita.
+          <p className="mx-auto mt-6 max-w-[820px] text-lg leading-8 text-ink-secondary md:text-[1.75rem] md:leading-[1.45]">
+            O Lophos cruza notícias relacionadas, organiza o contexto e abre uma thread para cada artigo, para você
+            explorar o assunto em vez de só acumular links.
           </p>
 
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <div className="mt-10 flex justify-center">
             <Link
               href="/login"
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-ink-primary px-6 py-3 text-sm font-medium text-bg-primary transition-transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-full bg-[#111111] px-6 py-3.5 text-base font-medium text-white transition-transform hover:-translate-y-0.5"
             >
-              Entrar no Lophos
+              Cadastre-se agora
               <ArrowRight size={16} />
-            </Link>
-            <Link
-              href="/notas-de-versao"
-              className="inline-flex items-center justify-center rounded-full border border-border bg-white px-6 py-3 text-sm font-medium text-ink-primary transition-colors hover:bg-bg-secondary"
-            >
-              Explorar atualizações
             </Link>
           </div>
         </div>
       </section>
 
-      <footer className="border-t border-border px-6 py-8 md:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <LophosLogo size={24} />
-            <span className="text-sm font-medium text-ink-secondary">Lophos © 2026</span>
-          </div>
-
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-tertiary">
-            <Link href="/notas-de-versao" className="transition-colors hover:text-ink-primary">
-              Notas de versão
-            </Link>
-            <Link href="/politica-de-privacidade" className="transition-colors hover:text-ink-primary">
-              Política de Privacidade
-            </Link>
-            <Link href="/termos-de-uso" className="transition-colors hover:text-ink-primary">
-              Termos de Uso
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <ProductShowcase />
+      <LibraryBlock />
+      <Footer />
     </main>
   )
 }
