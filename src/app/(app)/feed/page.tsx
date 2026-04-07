@@ -489,10 +489,10 @@ export default function FeedPage() {
     <div id="feed-scroll-container" ref={scrollRef} className="flex-1 overflow-y-auto min-w-0">
 
         {/* ── Sticky header ── */}
-        <div className="app-header-shell header-blur">
+        <div className="app-header-shell">
 
           {/* Mobile: title (always visible) */}
-          <div className="app-header-pill flex items-center px-4 md:hidden gap-2">
+          <div className="app-header-pill header-blur flex items-center px-4 md:hidden gap-2">
             <LophosLogo size={28} />
             <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
           </div>
@@ -524,7 +524,7 @@ export default function FeedPage() {
 
           {/* Desktop: title + dropdown tabs (only if has data) */}
           {hasData && topicsInFeed.length > 0 && (
-            <div className="app-header-pill hidden md:flex items-center px-5">
+            <div className="app-header-pill header-blur hidden md:flex items-center px-5">
               <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
               <div className="flex flex-1 justify-center">
                 <button
@@ -552,7 +552,7 @@ export default function FeedPage() {
 
           {/* Desktop: skeleton while loading, title only when no data */}
           {(!hasData || topicsInFeed.length === 0) && (
-            <div className="app-header-pill hidden md:flex items-center px-5">
+            <div className="app-header-pill header-blur hidden md:flex items-center px-5">
               <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
               {streaming && (
                 <>

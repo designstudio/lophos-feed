@@ -157,8 +157,8 @@ export function ThreadPageClient({
   return (
     <div className="flex flex-1 min-w-0 overflow-hidden">
       <div className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
-        <div className="app-header-shell header-blur">
-          <div className="app-header-pill flex items-center gap-3 px-4 md:px-5">
+        <div className="app-header-shell">
+          <div className="app-header-pill header-blur flex items-center gap-3 px-4 md:px-5">
             <Link
               href={`/article/${article.id}`}
               className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"

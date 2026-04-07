@@ -2,8 +2,8 @@ export default function ThreadLoading() {
   return (
     <div className="flex flex-1 min-w-0 overflow-hidden">
       <div className="flex-1 overflow-y-auto min-w-0">
-        <div className="app-header-shell header-blur">
-          <div className="app-header-pill flex items-center gap-3 px-4 md:px-5">
+        <div className="app-header-shell">
+          <div className="app-header-pill header-blur flex items-center gap-3 px-4 md:px-5">
             <div className="h-8 w-36 rounded-[1rem] bg-bg-secondary animate-pulse" />
             <div className="flex-1 flex justify-center px-2">
               <div className="h-4 w-48 rounded bg-bg-secondary animate-pulse" />
