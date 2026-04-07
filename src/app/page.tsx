@@ -330,7 +330,7 @@ function LibraryBlock() {
 function CtaBlock() {
   return (
     <section className="px-5 pb-24 pt-8 md:px-8 md:pb-28 md:pt-12">
-      <div className="mx-auto flex max-w-[760px] flex-col items-center px-6 py-12 text-center md:px-10 md:py-16">
+      <div className="mx-auto flex max-w-[760px] flex-col items-center rounded-[30px] bg-bg-secondary px-6 py-12 text-center md:px-10 md:py-16">
         <h2 className="text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary">
           <span className="block">Pronto para</span>
           <span className="block">Customizar seu feed?</span>
