@@ -133,17 +133,17 @@ function LibraryBlock() {
               className="absolute hidden items-center justify-center md:flex"
               style={{
                 ...icon,
-                width: 60,
-                height: 60,
+                width: 80,
+                height: 80,
                 animation: icon.animation,
               }}
             >
               <img
                 src={`https://www.google.com/s2/favicons?domain=${randomDomains[index]}&sz=128`}
                 alt={randomDomains[index]}
-                width={60}
-                height={60}
-                className="h-[60px] w-[60px] rounded-[18px] object-contain shadow-[0_18px_40px_rgba(17,17,17,0.08)]"
+                width={80}
+                height={80}
+                className="h-[80px] w-[80px] rounded-[22px] object-contain shadow-[0_18px_40px_rgba(17,17,17,0.08)]"
               />
             </div>
           ))}
