@@ -490,6 +490,7 @@ export default function FeedPage() {
 
         {/* ── Sticky header ── */}
         <div className="app-header-shell">
+          <div className="app-header-inner">
 
           {/* Mobile: title (always visible) */}
           <div className="app-header-pill header-blur flex items-center px-4 md:hidden gap-2">
@@ -567,6 +568,7 @@ export default function FeedPage() {
               )}
             </div>
           )}
+          </div>
         </div>
 
         {/* ── Feed + Right sidebar ── */}

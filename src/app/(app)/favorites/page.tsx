@@ -108,11 +108,13 @@ export default function FavoritesPage() {
 
       {/* ── Sticky header ── */}
       <div className="app-header-shell">
-        <div className="app-header-pill header-blur flex items-center px-4 md:hidden gap-2">
-          <h1 className="text-[15px] font-semibold text-ink-primary">Minhas curtidas</h1>
-        </div>
-        <div className="app-header-pill header-blur hidden md:flex items-center px-5">
-          <h1 className="text-[15px] font-semibold text-ink-primary">Minhas curtidas</h1>
+        <div className="app-header-inner">
+          <div className="app-header-pill header-blur flex items-center px-4 md:hidden gap-2">
+            <h1 className="text-[15px] font-semibold text-ink-primary">Minhas curtidas</h1>
+          </div>
+          <div className="app-header-pill header-blur hidden md:flex items-center px-5">
+            <h1 className="text-[15px] font-semibold text-ink-primary">Minhas curtidas</h1>
+          </div>
         </div>
       </div>
 

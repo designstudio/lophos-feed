@@ -292,6 +292,12 @@ html, body {
   padding: 1rem 1rem 0.75rem;
 }
 
+.app-header-inner {
+  width: 100%;
+  max-width: 1336px;
+  margin: 0 auto;
+}
+
 .app-header-pill {
   min-height: 60px;
   border-radius: 9999px;
