@@ -138,14 +138,12 @@ export default function ArticlePageClient() {
   }, [id])
 
   useEffect(() => {
-    const previousTitle = document.title
-
     if (item?.title) {
       document.title = `${item.title} - Lophos`
     }
 
     return () => {
-      document.title = previousTitle
+      document.title = 'Lophos'
     }
   }, [item?.title])
 
