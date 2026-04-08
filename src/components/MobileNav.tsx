@@ -36,8 +36,8 @@ export function MobileNav() {
                 active ? 'text-ink-primary' : 'text-ink-tertiary'
               )}
               style={{
-                paddingLeft: '0.2rem',
-                paddingRight: '0.2rem',
+                paddingLeft: '0.5rem',
+                paddingRight: '0.5rem',
                 ...(active && { backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 20%, transparent)' }),
               }}
             >
