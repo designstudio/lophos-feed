@@ -384,3 +384,11 @@ html, body {
 .pwa-ios #feed-scroll-container {
   padding-top: 60px;
 }
+
+.pwa-ios * {
+  scrollbar-width: none;
+}
+
+.pwa-ios *::-webkit-scrollbar {
+  display: none;
+}
