@@ -24,7 +24,7 @@ export function MobileNav() {
         boxShadow: '0 8px 28px rgba(17, 17, 17, .035)',
       }}
     >
-      <div className="flex items-center h-14">
+      <div className="flex items-center gap-1 px-2 h-14">
         {links.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || (href === '/feed' && pathname === '/')
           return (
@@ -32,8 +32,8 @@ export function MobileNav() {
               key={href}
               href={href}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-8 py-2 text-[10px] font-semibold uppercase tracking-widest transition-colors',
-                active ? 'text-ink-primary' : 'text-ink-tertiary'
+                'flex flex-col items-center gap-0.5 px-6 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors rounded-full',
+                active ? 'text-ink-primary bg-bg-secondary' : 'text-ink-tertiary'
               )}
             >
               <Icon size={20} />
