@@ -409,11 +409,12 @@ export default function ArticlePageClient() {
                         </h2>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {related.slice(0, 4).map((rel) => (
+                        {related.slice(0, 4).map((rel, i) => (
                           <Link
                             key={rel.id}
                             href={`/article/${rel.id}`}
-                            className="spring-press flex flex-col gap-0 text-left group rounded-[1rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all"
+                            className={cn('spring-press flex flex-col gap-0 text-left group rounded-[1rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all', i >= 2 ? 'hidden md:flex' : '')}
+
                           >
                             {rel.imageUrl && (
                               <div className="bg-bg-secondary aspect-video w-full overflow-hidden">

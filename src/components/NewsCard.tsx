@@ -80,7 +80,7 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
           ))}
         </div>
         {shown.length > 0 && (
-          <span className="text-[11px] text-ink-tertiary font-medium">
+          <span className="text-[12px] text-ink-tertiary font-medium">
             {sources!.length} {sources!.length === 1 ? 'fonte' : 'fontes'}
           </span>
         )}
@@ -104,7 +104,7 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
                 transition={{ duration: 0.15, ease: 'easeOut' }}
                 style={{ display: 'flex' }}
               >
-                {reaction === 'like' ? <IconHeartFilled size={16} /> : <HeartAngle size={16} />}
+                {reaction === 'like' ? <IconHeartFilled size={20} /> : <HeartAngle size={20} />}
               </motion.span>
             </AnimatePresence>
           </motion.button>
@@ -128,7 +128,7 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
                 transition={{ type: 'spring', stiffness: 400, damping: 17 }}
                 style={{ display: 'flex' }}
               >
-                {reaction === 'dislike' ? <DislikeFilled size={16} /> : <Dislike size={16} />}
+                {reaction === 'dislike' ? <DislikeFilled size={20} /> : <Dislike size={20} />}
               </motion.span>
             </AnimatePresence>
           </motion.button>
@@ -171,8 +171,8 @@ function PublishedMeta({ publishedAt }: { publishedAt?: string }) {
   if (!label) return null
 
   return (
-    <div className="flex items-center gap-1.5 mt-2 text-[12px] text-ink-tertiary">
-      <ClockCircle size={14} className="flex-shrink-0" />
+    <div className="flex items-center gap-1.5 mt-2 text-ink-tertiary" style={{ fontSize: '0.813rem' }}>
+      <ClockCircle size={15} className="flex-shrink-0" />
       <span>{label}</span>
     </div>
   )
@@ -215,9 +215,10 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
         <CardImage proxiedImage={showImage ? proxiedImage : undefined} title={item.title} sources={item.sources} onError={() => setImgFailed(true)} tall={solo} />
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.displayTopic ?? item.topic}</span>
         <h2
-          className="text-card-title text-ink-primary group-hover:text-accent transition-colors line-clamp-3"
+          className="text-card-title text-ink-primary group-hover:text-accent transition-colors line-clamp-3 md-h2-fixed"
           style={{ height: 'calc(3 * 1.625rem)' }}
         >{item.title}</h2>
+        <PublishedMeta publishedAt={item.publishedAt} />
         <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
       </Link>
     )

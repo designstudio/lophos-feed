@@ -380,6 +380,14 @@ html, body {
   }
 }
 
+/* ─── Mobile news card overrides ─────────────────── */
+@media (max-width: 767px) {
+  .news-card h2 {
+    font-size: 1.25rem !important;
+    height: auto !important;
+  }
+}
+
 /* ─── PWA iOS ─────────────────────────────────────── */
 .pwa-ios #feed-scroll-container {
   padding-top: 60px;
