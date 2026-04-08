@@ -382,6 +382,6 @@ html, body {
 
 /* ─── PWA iOS ─────────────────────────────────────── */
 .pwa-ios .page-shell {
-  margin-top: 78px;
-  margin-bottom: 46px;
+  padding-top: 78px;
+  padding-bottom: 46px;
 }
