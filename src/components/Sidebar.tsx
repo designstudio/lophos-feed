@@ -407,11 +407,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     <div>
       {!isReady && (
         <aside
-          className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border header-blur shadow-[0_8px_28px_rgba(17,17,17,0.035)]"
+          className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border shadow-[0_8px_28px_rgba(17,17,17,0.035)]"
           style={{
             width: resolvedWidth,
             height: 'calc(100dvh - 2rem)',
             transition: 'none',
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
           }}
         >
           <div className="h-14 flex items-center justify-center border-b border-border">
@@ -429,13 +430,14 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       )}
 
       <aside
-        className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border header-blur shadow-[0_8px_28px_rgba(17,17,17,0.035)]"
+        className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border shadow-[0_8px_28px_rgba(17,17,17,0.035)]"
         style={{
           width: resolvedWidth,
           height: 'calc(100dvh - 2rem)',
           opacity: isReady ? 1 : 0,
           pointerEvents: isReady ? 'auto' : 'none',
           transition: sidebarTransition,
+          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
         }}
       >
         <div className="flex items-center px-3 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem', paddingTop: '0.75rem' }}>
