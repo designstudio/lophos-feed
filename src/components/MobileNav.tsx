@@ -17,8 +17,7 @@ export function MobileNav() {
     <nav
       className="md:hidden fixed z-40 left-1/2 -translate-x-1/2 header-blur"
       style={{
-        bottom: '34px',
-        margin: '1rem 1rem 0',
+        bottom: '12px',
         borderRadius: '9999px',
         border: '1px solid var(--color-border)',
         backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
