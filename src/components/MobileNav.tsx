@@ -9,8 +9,8 @@ export function MobileNav() {
   const pathname = usePathname()
 
   const links = [
-    { href: '/feed',     icon: Feed,     label: 'Feed'   },
-    { href: '/settings', icon: Settings, label: 'Config' },
+    { href: '/feed',     icon: Feed,     label: 'Meu feed'      },
+    { href: '/settings', icon: Settings, label: 'Configurações' },
   ]
 
   return (
@@ -32,7 +32,7 @@ export function MobileNav() {
               key={href}
               href={href}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-6 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors rounded-full',
+                'flex flex-col items-center gap-0.5 px-6 py-1.5 text-[10px] font-semibold transition-colors rounded-full',
                 active ? 'text-ink-primary' : 'text-ink-tertiary'
               )}
               style={active ? { backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 20%, transparent)' } : undefined}
