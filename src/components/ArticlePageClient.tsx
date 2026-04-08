@@ -9,6 +9,7 @@ import { ArticleAssistant } from '@/components/ArticleAssistant'
 import { IconHeartFilled } from '@/components/icons'
 import { LinkExternal02 as SquareTopDown, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ArrowNarrowLeft as ArrowLeft, Heart as HeartAngle, Share07 as Share } from '@untitledui/icons'
 import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
