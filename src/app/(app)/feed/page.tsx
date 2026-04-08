@@ -270,7 +270,26 @@ export default function FeedPage() {
     setColdStartLoading(v)
   }
 
+  const FEED_CACHE_KEY = 'lophos_feed_cache'
+  const FEED_CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+
   const fetchFeed = useCallback(async (force = false) => {
+    // Serve do cache se não forçado e o cache ainda é válido
+    if (!force) {
+      try {
+        const cached = sessionStorage.getItem(FEED_CACHE_KEY)
+        if (cached) {
+          const { items: cachedItems, timestamp, days } = JSON.parse(cached)
+          if (Date.now() - timestamp < FEED_CACHE_TTL && days === timeDaysRef.current && cachedItems?.length > 0) {
+            setItems(cachedItems)
+            setHasData(true)
+            setInitialized(true)
+            return
+          }
+        }
+      } catch {}
+    }
+
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -281,6 +300,8 @@ export default function FeedPage() {
     setColdStart(false)
     initialCacheAppliedRef.current = false
     if (force) { setItems([]); setHasData(false) }
+
+    const allStreamedItems: NewsItem[] = []
 
     try {
       const res = await fetch('/api/feed', {
@@ -333,6 +354,7 @@ export default function FeedPage() {
               continue
             }
             if (chunk.items?.length) {
+              for (const item of chunk.items as NewsItem[]) allStreamedItems.push(item)
               if (!initialCacheAppliedRef.current && !coldStartLoading) {
                 setItems(prev => {
                   const byId = new Map(prev.map(x => [x.id, x]))
@@ -376,6 +398,15 @@ export default function FeedPage() {
     } catch (e: any) {
       if (e?.name !== 'AbortError') console.error(e)
     } finally {
+      if (allStreamedItems.length > 0) {
+        try {
+          sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
+            items: allStreamedItems,
+            timestamp: Date.now(),
+            days: timeDaysRef.current,
+          }))
+        } catch {}
+      }
       setStreaming(false)
       setInitialized(true)
     }

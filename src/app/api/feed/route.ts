@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 import { NewsItem } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+export const maxDuration = 30
 
 
 export async function POST(req: NextRequest) {
