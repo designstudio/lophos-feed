@@ -379,3 +379,9 @@ html, body {
     font-weight: 600;
   }
 }
+
+/* ─── PWA iOS ─────────────────────────────────────── */
+.pwa-ios .page-shell {
+  margin-top: 78px;
+  margin-bottom: 46px;
+}

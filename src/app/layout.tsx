@@ -46,6 +46,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 var sc = localStorage.getItem('sidebar_collapsed');
                 var isCollapsed = sc === 'true';
                 document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '3.5rem' : '16.1rem');
+                if (navigator.standalone === true) {
+                  document.documentElement.classList.add('pwa-ios');
+                }
               } catch(e) {}
             })();
           ` }} />
