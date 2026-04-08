@@ -212,7 +212,7 @@ export default function ArticlePageClient() {
   return (
     <>
       <div className="flex flex-1 min-w-0 overflow-hidden">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
+        <div ref={scrollRef} id="article-scroll-container" className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
           <div className="app-header-shell">
             <div className="app-header-inner">
               <div className="app-header-pill header-blur flex items-center gap-3 px-4 md:px-5">

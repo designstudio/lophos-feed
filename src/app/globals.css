@@ -389,7 +389,8 @@ html, body {
 }
 
 /* ─── PWA iOS ─────────────────────────────────────── */
-.pwa-ios #feed-scroll-container {
+.pwa-ios #feed-scroll-container,
+.pwa-ios #article-scroll-container {
   padding-top: 60px;
 }
 
