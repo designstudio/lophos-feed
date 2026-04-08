@@ -498,31 +498,6 @@ export default function FeedPage() {
             <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
           </div>
 
-          {/* Mobile: horizontal scrollable tabs (only if has data) */}
-          {hasData && topicsInFeed.length > 0 && (
-            <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-1 pt-3"
-              style={{ WebkitOverflowScrolling: 'touch' }}>
-              {(['Últimas notícias', ...topicsInFeed] as (string | null)[]).map((t, i) => {
-                const val = i === 0 ? null : t as string
-                const active = activeFilter === val
-                return (
-                  <button
-                    key={t ?? 'top'}
-                    onClick={() => { setActiveFilter(val); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                    className={cn(
-                      'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
-                      active
-                        ? 'bg-ink-primary text-bg-primary border-ink-primary'
-                        : 'border-border text-ink-tertiary hover:text-ink-secondary'
-                    )}
-                  >
-                    {t}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
           {/* Desktop: title + dropdown tabs (only if has data) */}
           {hasData && topicsInFeed.length > 0 && (
             <div className="app-header-pill header-blur hidden md:flex items-center px-5">
@@ -570,6 +545,31 @@ export default function FeedPage() {
           )}
           </div>
         </div>
+
+        {/* Mobile: horizontal scrollable tabs — fora do sticky */}
+        {hasData && topicsInFeed.length > 0 && (
+          <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pt-3"
+            style={{ WebkitOverflowScrolling: 'touch' }}>
+            {(['Últimas notícias', ...topicsInFeed] as (string | null)[]).map((t, i) => {
+              const val = i === 0 ? null : t as string
+              const active = activeFilter === val
+              return (
+                <button
+                  key={t ?? 'top'}
+                  onClick={() => { setActiveFilter(val); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  className={cn(
+                    'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
+                    active
+                      ? 'bg-ink-primary text-bg-primary border-ink-primary'
+                      : 'border-border text-ink-tertiary hover:text-ink-secondary'
+                  )}
+                >
+                  {t}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* ── Feed + Right sidebar ── */}
         <div className="feed-layout mx-auto px-4 md:px-8">
