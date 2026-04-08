@@ -29,12 +29,12 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
   }, [])
 
   return (
-    <div ref={ref} className="relative mt-auto">
+    <div ref={ref} className="relative">
       <Tooltip content={user?.firstName ?? 'Conta'} side="right">
         <button
           ref={triggerRef}
           onClick={() => setOpen(v => !v)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-bg-secondary"
+          className="flex w-full items-center justify-center rounded-lg px-3 py-2 transition-colors hover:bg-bg-secondary"
         >
           {user?.imageUrl ? (
             <img src={user.imageUrl} alt="" width={26} height={26} className="rounded-full" />
