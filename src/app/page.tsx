@@ -15,7 +15,6 @@ const PORTAL_DOMAINS = [
   'billboard.com',
   'techcrunch.com',
   'crunchyroll.com',
-  'theverge.com',
   'androidauthority.com',
   'canaltech.com.br',
   'ign.com',
@@ -144,7 +143,6 @@ function LibraryBlock() {
                 width={80}
                 height={80}
                 className="h-[80px] w-[80px] rounded-[22px] object-contain shadow-[0_18px_40px_rgba(17,17,17,0.08)]"
-                onError={(e) => { (e.target as HTMLImageElement).src = `https://www.google.com/s2/favicons?domain=${randomDomains[index]}&sz=128` }}
               />
             </div>
           ))}
