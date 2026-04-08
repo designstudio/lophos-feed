@@ -445,7 +445,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
               onClick={collapsed ? toggle : undefined}
             >
               <div className={collapsed ? 'group-hover:opacity-0 transition-opacity' : ''}>
-                <LophosLogo size={34} />
+                <LophosLogo size={28} />
               </div>
               {collapsed && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -459,7 +459,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             className="font-display text-ink-primary flex-1 whitespace-nowrap overflow-hidden"
             style={{
               marginLeft: '0.25rem',
-              fontSize: '1.5rem',
+              fontSize: '1.25rem',
               fontWeight: 600,
               letterSpacing: '-0.03em',
               opacity: collapsed ? 0 : 1,
