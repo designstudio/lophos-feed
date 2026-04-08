@@ -32,9 +32,14 @@ export function MobileNav() {
               key={href}
               href={href}
               className={cn(
-                'flex flex-col items-center gap-0.5 px-6 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors rounded-full',
-                active ? 'text-ink-primary bg-bg-secondary' : 'text-ink-tertiary'
+                'flex flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors rounded-full',
+                active ? 'text-ink-primary' : 'text-ink-tertiary'
               )}
+              style={{
+                paddingLeft: '0.2rem',
+                paddingRight: '0.2rem',
+                ...(active && { backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 20%, transparent)' }),
+              }}
             >
               <Icon size={20} />
               {label}
