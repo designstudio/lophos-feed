@@ -48,7 +48,7 @@ function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
   }
   return (
     <div className="md:py-6 md:border-b md:border-border">
-      <div className={cn('grid gap-0 md:gap-8', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
+      <div className={cn('grid gap-0', items.length === 2 ? 'grid-cols-1 md:grid-cols-2 md:gap-8' : 'grid-cols-1 md:grid-cols-3 md:gap-4')}>
         {items.map(item => <NewsCard key={item.id} item={item} variant="card" initialReaction={reactions[item.id] ?? null} onReactionChange={onReactionChange} />)}
       </div>
     </div>
