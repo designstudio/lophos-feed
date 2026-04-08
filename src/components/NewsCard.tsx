@@ -148,7 +148,7 @@ function CardImage({ proxiedImage, title, sources, onError, tall }: {
 }) {
   const showImage = !!proxiedImage
   return (
-    <div className={cn('news-card-image w-full rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative', tall ? 'h-48' : 'h-36')}>
+    <div className={cn('news-card-image w-full rounded-2xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative', tall ? 'h-48' : 'h-36')}>
       {showImage ? (
         <img src={proxiedImage} alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -227,7 +227,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
     return (
       <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
         {/* Mobile: imagem no topo. Desktop: imagem à direita (order-last) */}
-        <div className="news-card-image order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-[12.5rem] rounded-xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
+        <div className="news-card-image order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-[12.5rem] rounded-2xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
           {showImage ? (
             <img src={proxiedImage} alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -262,7 +262,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
   return (
     <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
       {/* Mobile: imagem no topo. Desktop: imagem à esquerda */}
-      <div className="news-card-image w-full md:w-80 md:flex-shrink-0 md:h-[12.5rem] rounded-xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
+      <div className="news-card-image w-full md:w-80 md:flex-shrink-0 md:h-[12.5rem] rounded-2xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
         {showImage ? (
           <img src={proxiedImage} alt={item.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
