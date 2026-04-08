@@ -42,13 +42,13 @@ function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
   if (items.length === 1) {
     return (
       <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant="full-left" initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
+        <NewsCard item={items[0]} variant="card" solo initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
       </div>
     )
   }
   return (
     <div className="md:py-6 md:border-b md:border-border">
-      <div className={cn('grid gap-0 md:gap-6', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
+      <div className={cn('grid gap-0 md:gap-8', items.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3')}>
         {items.map(item => <NewsCard key={item.id} item={item} variant="card" initialReaction={reactions[item.id] ?? null} onReactionChange={onReactionChange} />)}
       </div>
     </div>

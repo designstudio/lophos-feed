@@ -48,6 +48,7 @@ interface Props {
   className?: string
   initialReaction?: 'like' | 'dislike' | null
   fadingOut?: boolean
+  solo?: boolean
   onReactionChange?: (articleId: string, reaction: 'like' | 'dislike' | null) => void
 }
 
@@ -138,15 +139,16 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
 }
 
 // Imagem do card — mesma altura em todos os variants no mobile (via CSS global)
-function CardImage({ proxiedImage, title, sources, onError }: {
+function CardImage({ proxiedImage, title, sources, onError, tall }: {
   proxiedImage: string | undefined
   title: string
   sources: NewsItem['sources']
   onError: () => void
+  tall?: boolean
 }) {
   const showImage = !!proxiedImage
   return (
-    <div className="news-card-image h-36 w-full rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative">
+    <div className={cn('news-card-image w-full rounded-xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative', tall ? 'h-48' : 'h-36')}>
       {showImage ? (
         <img src={proxiedImage} alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -176,7 +178,7 @@ function PublishedMeta({ publishedAt }: { publishedAt?: string }) {
   )
 }
 
-export function NewsCard({ item, variant = 'card', className, initialReaction = null, fadingOut = false, onReactionChange }: Props) {
+export function NewsCard({ item, variant = 'card', className, initialReaction = null, fadingOut = false, solo = false, onReactionChange }: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
   const [reacting, setReacting] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
@@ -210,7 +212,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
   if (variant === 'card') {
     return (
       <Link href={href} className={cn('news-card group flex flex-col pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
-        <CardImage proxiedImage={showImage ? proxiedImage : undefined} title={item.title} sources={item.sources} onError={() => setImgFailed(true)} />
+        <CardImage proxiedImage={showImage ? proxiedImage : undefined} title={item.title} sources={item.sources} onError={() => setImgFailed(true)} tall={solo} />
         <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.displayTopic ?? item.topic}</span>
         <h2
           className="text-card-title text-ink-primary group-hover:text-accent transition-colors line-clamp-3"
