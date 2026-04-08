@@ -14,38 +14,34 @@ export function MobileNav() {
   ]
 
   return (
-    <div
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 flex justify-center"
-      style={{ backgroundColor: 'var(--color-bg-primary)', paddingBottom: '18px' }}
+    <nav
+      className="md:hidden fixed left-1/2 -translate-x-1/2 z-40 header-blur"
+      style={{
+        bottom: '18px',
+        borderRadius: '9999px',
+        border: '1px solid var(--color-border)',
+        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
+        boxShadow: '0 8px 28px rgba(17, 17, 17, .035)',
+      }}
     >
-      <nav
-        className="header-blur"
-        style={{
-          borderRadius: '9999px',
-          border: '1px solid var(--color-border)',
-          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
-          boxShadow: '0 8px 28px rgba(17, 17, 17, .035)',
-        }}
-      >
-        <div className="flex items-center h-14">
-          {links.map(({ href, icon: Icon, label }) => {
-            const active = pathname === href || (href === '/feed' && pathname === '/')
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  'flex flex-col items-center gap-0.5 px-8 py-2 text-[10px] font-semibold uppercase tracking-widest transition-colors',
-                  active ? 'text-ink-primary' : 'text-ink-tertiary'
-                )}
-              >
-                <Icon size={20} />
-                {label}
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
-    </div>
+      <div className="flex items-center h-14">
+        {links.map(({ href, icon: Icon, label }) => {
+          const active = pathname === href || (href === '/feed' && pathname === '/')
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                'flex flex-col items-center gap-0.5 px-8 py-2 text-[10px] font-semibold uppercase tracking-widest transition-colors',
+                active ? 'text-ink-primary' : 'text-ink-tertiary'
+              )}
+            >
+              <Icon size={20} />
+              {label}
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
   )
 }
