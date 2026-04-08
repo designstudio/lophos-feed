@@ -225,7 +225,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
 
   if (variant === 'full-left') {
     return (
-      <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-6 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
+      <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
         {/* Mobile: imagem no topo. Desktop: imagem à direita (order-last) */}
         <div className="news-card-image order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
           {showImage ? (
@@ -260,7 +260,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
 
   // full-right
   return (
-    <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-6 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
+    <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
       {/* Mobile: imagem no topo. Desktop: imagem à esquerda */}
       <div className="news-card-image w-full md:w-80 md:flex-shrink-0 md:h-56 rounded-xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
         {showImage ? (
