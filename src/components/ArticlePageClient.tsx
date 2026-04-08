@@ -405,7 +405,7 @@ export default function ArticlePageClient() {
                       <div className="flex items-center gap-2 mb-6">
                         <Documents size={24} className="text-ink-primary flex-shrink-0" />
                         <h2 className="font-semibold text-ink-primary" style={{ fontSize: '1.125rem' }}>
-                          NotÃ­cias relacionadas
+                          Notícias relacionadas
                         </h2>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
