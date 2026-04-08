@@ -381,7 +381,6 @@ html, body {
 }
 
 /* ─── PWA iOS ─────────────────────────────────────── */
-.pwa-ios .page-shell {
-  padding-top: 68px;
-  padding-bottom: 46px;
+.pwa-ios #feed-scroll-container {
+  padding-top: 60px;
 }
