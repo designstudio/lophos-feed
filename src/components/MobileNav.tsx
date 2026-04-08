@@ -15,9 +15,17 @@ export function MobileNav() {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border header-blur"
+      className="md:hidden fixed z-40 left-1/2 -translate-x-1/2 header-blur"
+      style={{
+        bottom: '34px',
+        margin: '1rem 1rem 0',
+        borderRadius: '9999px',
+        border: '1px solid var(--color-border)',
+        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
+        boxShadow: '0 8px 28px rgba(17, 17, 17, .035)',
+      }}
     >
-      <div className="flex items-center justify-around h-14">
+      <div className="flex items-center h-14">
         {links.map(({ href, icon: Icon, label }) => {
           const active = pathname === href || (href === '/feed' && pathname === '/')
           return (
