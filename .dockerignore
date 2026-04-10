@@ -1,0 +1,13 @@
+.git
+.github
+.next
+node_modules
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+README.md
+.dockerignore
+Dockerfile
+.vercel
+.claude
