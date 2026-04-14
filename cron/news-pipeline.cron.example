@@ -1,0 +1,1 @@
+0 */6 * * * cd /path/to/lophos_feed && npm run news:cron >> /path/to/lophos_feed/logs/news-cron.log 2>&1

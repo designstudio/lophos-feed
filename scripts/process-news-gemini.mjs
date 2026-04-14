@@ -7,7 +7,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { buildNewsSourceFromItem, canonicalizeUrl, shouldRejectPreflightItem, strongIntersection, textOverlapScore } from './news-pipeline-core.mjs'
-import { processTopicWithGemini } from './process-news.mjs'
+import { processTopicWithGemini } from './news-gemini-core.mjs'
 
 const SIMILARITY_THRESHOLD = 0.30
 const MIN_STRONG_TOKENS = 3
@@ -141,7 +141,7 @@ async function main() {
     .select('id, title, summary, sources, source_ids, keywords, matched_topics, image_url, video_url')
     .gte('published_at', since72h)
     .order('published_at', { ascending: false })
-    .limit(300)
+    .limit(1000)
 
   const allProcessedArticles = (globalExisting || []).map((r) => ({
     id: r.id,

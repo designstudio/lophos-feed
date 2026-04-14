@@ -4,6 +4,6 @@
 
 export async function register() {
   // Intentionally no-op.
-  // RSS ingest scheduling is owned by GitHub Actions via scripts/rss-ingest.mjs.
+  // RSS ingest scheduling is owned by external cron/VPS jobs.
   // Manual refreshes can still call explicit API routes on demand.
 }

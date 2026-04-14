@@ -664,7 +664,7 @@ async function main() {
     .select('id, title, summary, sources, keywords, matched_topics, image_url, video_url')
     .gte('published_at', since72h)
     .order('published_at', { ascending: false })
-    .limit(300)
+    .limit(1000)
 
   const allProcessedArticles = (globalExisting || []).map(r => ({
     id: r.id,

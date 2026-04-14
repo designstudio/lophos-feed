@@ -45,7 +45,7 @@ async function resetBurnedIds() {
   })
 
   console.log(`\n✅ Esses items podem ser reprocessados na próxima execução.`)
-  console.log(`   Execute: node scripts/process-news.mjs\n`)
+  console.log(`   Execute: npm run news:process\n`)
 }
 
 resetBurnedIds().catch(console.error).finally(() => process.exit(0))

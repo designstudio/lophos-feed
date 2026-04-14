@@ -1,6 +1,6 @@
 /**
  * Standalone RSS ingest script — runs directly with Node.js (no Next.js needed).
- * Used by GitHub Actions every 6 hours.
+ * Intended to be scheduled by an external cron/VPS job every 6 hours.
  *
  * Required env vars:
  *   NEXT_PUBLIC_SUPABASE_URL

@@ -4,6 +4,20 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
+const includeErrorDetails = process.env.NODE_ENV !== 'production'
+
+function jsonError(status: number, message: string, err?: unknown) {
+  return NextResponse.json(
+    {
+      error: message,
+      ...(includeErrorDetails && err instanceof Error
+        ? { detail: { message: err.message, stack: err.stack } }
+        : {}),
+    },
+    { status },
+  )
+}
+
 interface CreateThreadRequest {
   articleId: string
   message: string
@@ -24,14 +38,14 @@ interface DeleteThreadRequest {
  * Create or return a chat thread for the current user/article
  */
 export async function POST(request: Request) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    console.error('[chat/threads POST] No userId from auth()')
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      console.error('[chat/threads POST] No userId from auth()')
+      return jsonError(401, 'Unauthorized')
+    }
+
     const { articleId, message, saveMessage = true } = (await request.json()) as CreateThreadRequest
 
     if (!articleId || !message) {
@@ -39,10 +53,7 @@ export async function POST(request: Request) {
         articleId,
         message: message ? 'provided' : 'missing',
       })
-      return NextResponse.json(
-        { error: 'Missing articleId or message' },
-        { status: 400 }
-      )
+      return jsonError(400, 'Missing articleId or message')
     }
 
     const db = getSupabaseAdmin()
@@ -57,7 +68,7 @@ export async function POST(request: Request) {
 
     if (fetchError) {
       console.error('[chat/threads POST] Error fetching existing thread:', fetchError)
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+      return jsonError(500, 'Database error', fetchError)
     }
 
     // If thread exists, return it
@@ -78,7 +89,7 @@ export async function POST(request: Request) {
 
         if (existingMessageError) {
           console.error('[chat/threads POST] Error saving message to existing thread:', existingMessageError)
-          return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
+          return jsonError(500, 'Failed to save message', existingMessageError)
         }
       }
 
@@ -110,7 +121,7 @@ export async function POST(request: Request) {
 
     if (createError || !newThread) {
       console.error('[chat/threads POST] Error creating thread:', createError)
-      return NextResponse.json({ error: 'Failed to create thread' }, { status: 500 })
+      return jsonError(500, 'Failed to create thread', createError)
     }
 
     if (saveMessage) {
@@ -123,7 +134,7 @@ export async function POST(request: Request) {
 
       if (messageError) {
         console.error('[chat/threads POST] Error saving first message:', messageError)
-        return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
+        return jsonError(500, 'Failed to save message', messageError)
       }
     }
 
@@ -140,7 +151,7 @@ export async function POST(request: Request) {
     })
   } catch (err) {
     console.error('[chat/threads POST] Error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return jsonError(500, 'Internal server error', err)
   }
 }
 
@@ -149,13 +160,13 @@ export async function POST(request: Request) {
  * Return an existing thread/messages for an article or the recent history list
  */
 export async function GET(request: Request) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return jsonError(401, 'Unauthorized')
+    }
+
     const { searchParams } = new URL(request.url)
     const articleId = searchParams.get('articleId')
 
@@ -171,7 +182,7 @@ export async function GET(request: Request) {
 
       if (threadsError) {
         console.error('[chat/threads GET] Error fetching history:', threadsError)
-        return NextResponse.json({ error: 'Database error' }, { status: 500 })
+        return jsonError(500, 'Database error', threadsError)
       }
 
       return NextResponse.json({
@@ -188,7 +199,7 @@ export async function GET(request: Request) {
 
     if (threadError) {
       console.error('[chat/threads GET] Error fetching thread:', threadError)
-      return NextResponse.json({ error: 'Database error' }, { status: 500 })
+      return jsonError(500, 'Database error', threadError)
     }
 
     if (!thread) {
@@ -203,7 +214,7 @@ export async function GET(request: Request) {
 
     if (messagesError) {
       console.error('[chat/threads GET] Error fetching messages:', messagesError)
-      return NextResponse.json({ error: 'Failed to load messages' }, { status: 500 })
+      return jsonError(500, 'Failed to load messages', messagesError)
     }
 
     return NextResponse.json({
@@ -218,7 +229,7 @@ export async function GET(request: Request) {
     })
   } catch (err) {
     console.error('[chat/threads GET] Error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return jsonError(500, 'Internal server error', err)
   }
 }
 
@@ -227,18 +238,18 @@ export async function GET(request: Request) {
  * Rename a thread for the current user
  */
 export async function PATCH(request: Request) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return jsonError(401, 'Unauthorized')
+    }
+
     const { threadId, title } = (await request.json()) as UpdateThreadRequest
     const normalizedTitle = title?.trim()
 
     if (!threadId || !normalizedTitle) {
-      return NextResponse.json({ error: 'Missing threadId or title' }, { status: 400 })
+      return jsonError(400, 'Missing threadId or title')
     }
 
     const db = getSupabaseAdmin()
@@ -256,13 +267,13 @@ export async function PATCH(request: Request) {
 
     if (error || !thread) {
       console.error('[chat/threads PATCH] Error renaming thread:', error)
-      return NextResponse.json({ error: 'Failed to rename thread' }, { status: 500 })
+      return jsonError(500, 'Failed to rename thread', error)
     }
 
     return NextResponse.json({ thread })
   } catch (err) {
     console.error('[chat/threads PATCH] Error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return jsonError(500, 'Internal server error', err)
   }
 }
 
@@ -271,17 +282,17 @@ export async function PATCH(request: Request) {
  * Delete a thread and its messages for the current user
  */
 export async function DELETE(request: Request) {
-  const { userId } = await auth()
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return jsonError(401, 'Unauthorized')
+    }
+
     const { threadId } = (await request.json()) as DeleteThreadRequest
 
     if (!threadId) {
-      return NextResponse.json({ error: 'Missing threadId' }, { status: 400 })
+      return jsonError(400, 'Missing threadId')
     }
 
     const db = getSupabaseAdmin()
@@ -294,7 +305,7 @@ export async function DELETE(request: Request) {
 
     if (messagesError) {
       console.error('[chat/threads DELETE] Error deleting messages:', messagesError)
-      return NextResponse.json({ error: 'Failed to delete thread messages' }, { status: 500 })
+      return jsonError(500, 'Failed to delete thread messages', messagesError)
     }
 
     const { error: threadError } = await db
@@ -305,12 +316,12 @@ export async function DELETE(request: Request) {
 
     if (threadError) {
       console.error('[chat/threads DELETE] Error deleting thread:', threadError)
-      return NextResponse.json({ error: 'Failed to delete thread' }, { status: 500 })
+      return jsonError(500, 'Failed to delete thread', threadError)
     }
 
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[chat/threads DELETE] Error:', err)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return jsonError(500, 'Internal server error', err)
   }
 }

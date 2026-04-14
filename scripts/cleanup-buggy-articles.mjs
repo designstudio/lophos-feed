@@ -87,7 +87,7 @@ async function cleanupBuggyArticles() {
   }
 
   console.log(`✅ ${buggyArticleIds.length} artigos deletados!\n`)
-  console.log('Próximo passo: node scripts/process-news.mjs (com fix de escopo)')
+  console.log('Próximo passo: npm run news:process')
 }
 
 // Suportar IDs via CLI

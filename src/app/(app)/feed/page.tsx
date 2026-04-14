@@ -341,6 +341,7 @@ export default function FeedPage() {
               continue
             }
             if (chunk.refreshComplete) {
+              setStreaming(false)
               if (coldStartRef.current) {
                 if (pendingRef.current.length > 0) {
                   setItems(pendingRef.current)
@@ -419,6 +420,15 @@ export default function FeedPage() {
   }, [fetchFeed])
 
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return
+
+    fetch('/api/topics')
+      .then((r) => r.json())
+      .then((data) => setTopics((data.topics || []).map((x: { topic: string }) => x.topic)))
+      .catch(() => {})
+  }, [isLoaded, isSignedIn])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
@@ -508,6 +518,7 @@ export default function FeedPage() {
   const shownBlocks   = allBlocks.slice(0, visibleBlocks)
   const hasMore       = visibleBlocks < allBlocks.length
   const showSkeleton  = !hasData && streaming
+  const showStreaming = streaming && !hasData && !coldStartLoading
   const showEmpty     = initialized && !hasData && !streaming && !coldStartLoading
   const emptyMessage  = error
     ? (error.toLowerCase().includes('no topics')
@@ -626,7 +637,7 @@ export default function FeedPage() {
                 <><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></>
               )}
 
-              {hasData && streaming && (
+              {showStreaming && (
                 <div className="flex items-center gap-2 text-xs text-ink-tertiary mb-4 px-1">
                   <svg className="animate-spin w-3 h-3" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="32" strokeDashoffset="12"/>

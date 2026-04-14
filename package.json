@@ -6,9 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "news:ingest": "node scripts/news-ingest.mjs",
     "news:preflight": "node scripts/news-preflight.mjs",
     "news:cluster": "node scripts/news-cluster.mjs",
-    "news:process": "node scripts/process-news-gemini.mjs"
+    "news:process": "node scripts/news-process.mjs",
+    "news:process-gemini": "node scripts/process-news-gemini.mjs",
+    "news:cron": "node scripts/news-cron.mjs",
+    "news:dedupe": "node scripts/cleanup-duplicate-articles.mjs",
+    "news:dedupe-signals": "node scripts/cleanup-duplicate-articles-signals.mjs",
+    "news:dedupe-insidious-godzilla": "node scripts/cleanup-duplicate-articles-insidious-godzilla.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^6",

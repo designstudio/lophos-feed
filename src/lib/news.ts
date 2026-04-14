@@ -1,11 +1,5 @@
-import { randomUUID } from 'crypto'
-import { NewsItem, NewsSource, ArticleSection } from './types'
+import { NewsItem, NewsSource } from './types'
 import { getSupabaseAdmin } from './supabase'
-import Groq from 'groq-sdk'
-
-function getGroqClient() {
-  return new Groq({ apiKey: process.env.GROQ_API_KEY })
-}
 
 export const CACHE_TTL_MINUTES = 120
 const IMAGE_CACHE_TTL_MS = 6 * 60 * 60 * 1000
@@ -234,8 +228,8 @@ type DiagCallback = (stats: {
   geminiRaw?: string; droppedItems?: { title: string; score: number }[]
 }) => void
 
-// Processes filtered Tavily results through Gemini and returns NewsItems.
-// Called by fetchNewsForTopic (on-demand) and processRawFeeds (cron batch).
+// Legacy helper kept for compatibility, but the active news pipeline no longer
+// uses Groq from this module.
 export async function processRawBatch(
   topic: string,
   results: { url: string; title: string; content: string; image?: string; video?: string }[],
@@ -243,196 +237,9 @@ export async function processRawBatch(
   onDiag?: DiagCallback,
   tavilyImages: string[] = []
 ): Promise<NewsItem[]> {
-  if (results.length === 0) return []
-
-  const today = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-  })
-  const context = results
-    .map((r, i) =>
-      `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} — "${r.title}"\n${(r.content || '').slice(0, 600)}`
-    )
-    .join('\n\n')
-
-  const sourceHint = getSourceHint(topic)
-
-  const existingContext = existingTitles.length > 0
-    ? `\nNOTÍCIAS JÁ PUBLICADAS (NÃO repita estes eventos):\n${existingTitles.map(t => `- ${t}`).join('\n')}\n`
-    : ''
-
-  const prompt = `Você é um Editor Sênior de um feed de notícias em tempo real no estilo exato do Perplexity Discover: textos curtos, impactantes, bem estruturados, com tom jornalístico empolgado mas factual.
-
-**CONTEXTO ATUAL:**
-- Data atual: ${today}
-- Tópico principal: "${topic}"
-- Conteúdo já publicado: ${existingContext}
-- Fontes disponíveis: ${context}
-
-**REGRAS RÍGIDAS:**
-- Unicidade de Evento: Cada notícia deve cobrir **apenas UM evento principal** claro e independente. É permitido (e desejado) ter várias seções dentro da mesma notícia falando de aspectos diferentes do MESMO evento (ex: elenco + data de estreia + repercussão). O que é PROIBIDO é misturar eventos completamente diferentes (ex: não colocar notícia de Homem-Aranha junto com American Horror Story ou política no mesmo objeto JSON).
-- Foque em anúncios oficiais, lançamentos, patches, revelações de elenco, trailers, resultados importantes, etc. Descarte guias, fóruns, wikis, apostas, quizzes, **promoções, descontos, black friday**, cupons e conteúdo irrelevante.
-- Use nomes, números e termos técnicos **exatamente** como aparecem nas fontes (não parafraseie).
-- Cruze informações de múltiplas fontes quando possível. Só inclua no sourceIndexes as fontes que realmente tratam do evento.
-- **Prevenção de Duplicidade:** Se o evento já consta em \`${existingContext}\`, ignore-o. Se não houver fatos novos ou noticiáveis, retorne apenas \`[]\`.
-
-**Tom e estilo:**
-- Empolgado, mas neutro e profissional (estilo Discover).
-- Use linguagem fluida.
-- Inclua contagem de fontes de forma natural.
-- Seja fiel ao conteúdo real das fontes, especialmente ao campo "body" completo quando disponível.
-
-**PROCESSO DE EXECUÇÃO:**
-1. **Triagem:** Analise as fontes e identifique eventos independentes.
-2. **Verificação de Escopo:** Remova eventos que não sejam notícias reais ou que já foram cobertos.
-3. **Redação:** Adote o tom editorial de \`${sourceHint}\` (neutro e jornalístico).
-4. **Estruturação JSON:** Formate cada notícia individualmente.
-
-**ESTRUTURA OBRIGATÓRIA (JSON):**
-- \`title\`: Título direto em pt-BR com termos literais da fonte.
-- \`summary\`: Parágrafo de 4-5 frases incorporando frases diretas das fontes.
-- \`sections\`: 2 a 4 objetos com \`heading\` e \`body\`. **IMPORTANTE: Cada seção deve ter conteúdo substancial (3-5 linhas mínimo), não apenas um parágrafo curto.**
-- \`sourceIndexes\`: Array de inteiros referenciando apenas fontes pertinentes ao evento.
-- \`keywords\`: Array de 5 a 15 termos em **letras minúsculas** para descoberta e matching. Inclua obrigatoriamente: o tópico geral (ex: "games"), entidades específicas do artigo (nomes de jogos, filmes, pessoas, eventos, times), termos relacionados que um usuário poderia cadastrar, e variações em pt-BR e inglês quando relevante.
-
-**INSTRUÇÕES DE PROFUNDIDADE:**
-- Extraia informações COMPLETAS de cada fonte.
-- Não resuma em uma frase; desenvolva a seção com detalhes, contexto e impacto.
-- Use citações diretas das fontes quando apropriado.
-- Cada seção deve antecipar perguntas que um leitor faria.
-
-**RESPOSTA:**
-Retorne EXCLUSIVAMENTE um array JSON. Se não houver conteúdo válido, retorne \`[]\`.
-
-[{"title":"...","summary":"...","sections":[{"heading":"...","body":"Conteúdo substancial com múltiplas linhas de detalhes..."}],"sourceIndexes":[1,2],"keywords":["games","valorant","vct 2026","masters bangkok","esports","riot games"]}]
-
-FONTES:
-${context}`
-
-  console.log(`[news] Calling Groq for topic: ${topic}, with ${results.length} sources`)
-  const groq = getGroqClient()
-  const groqRes = await groq.chat.completions.create({
-    model: 'mixtral-8x7b-32768',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.1,
-  })
-
-  console.log(`[news] Groq response for ${topic}: success`)
-  const raw = groqRes.choices?.[0]?.message?.content ?? ''
-  const rawPreview = raw ? raw.slice(0, 800) : ''
-  const match = raw.replace(/```json|```/g, '').match(/\[[\s\S]*\]/)
-  if (!match) {
-    onDiag?.({ gemini: 0, kept: 0, dropped: 0, geminiRaw: rawPreview })
-    console.error(`[news] No JSON match in Groq response for ${topic}`)
-    return []
-  }
-
-  let parsed: any[] = []
-  try {
-    parsed = JSON.parse(match[0])
-  } catch (e) {
-    onDiag?.({ gemini: 0, kept: 0, dropped: 0, geminiRaw: rawPreview })
-    console.error(`[news] Failed to parse Groq JSON for ${topic}:`, e)
-    return []
-  }
-  const now = new Date().toISOString()
-
-  let dropped = 0
-  const items: NewsItem[] = []
-  const droppedItems: { title: string; score: number }[] = []
-  for (let i = 0; i < parsed.length; i++) {
-    const item = parsed[i]
-    // Se o Gemini não retornou sourceIndexes, descarta o artigo para evitar fontes erradas
-    if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) {
-      dropped++
-      droppedItems.push({ title: item.title || '(sem título)', score: 0 })
-      continue
-    }
-    const idxs: number[] = item.sourceIndexes.map((n: number) => n - 1)
-    const sources: NewsSource[] = idxs
-      .filter((idx) => idx >= 0 && idx < results.length)
-      .map((idx) => {
-        const r = results[idx]
-        return {
-          name: new URL(r.url).hostname.replace('www.', ''),
-          url: r.url,
-          favicon: `https://www.google.com/s2/favicons?domain=${r.url}&sz=32`,
-        }
-      })
-
-    const title = item?.title || ''
-    const summary = item?.summary || ''
-    const genText = `${title} ${summary}`
-    const sourceText = sources
-      .map((s) => {
-        const r = results.find((rr) => rr?.url === s.url)
-        return r ? `${r.title || ''} ${r.content || ''}` : ''
-      })
-      .join(' ')
-    const relevanceScore = genText.trim() ? textOverlapScore(genText, sourceText) : 0
-
-    if (!isGeneratedItemRelevant(item, sources, results)) {
-      dropped++
-      droppedItems.push({ title: item.title || '(sem título)', score: relevanceScore })
-      continue
-    }
-
-    // Percorre todas as fontes do artigo e usa a primeira imagem válida
-    let imageUrl: string | undefined
-    for (const idx of idxs) {
-      const candidate = results[idx]?.image
-      if (candidate && !isLazyLoadImage(candidate)) {
-        imageUrl = candidate
-        break
-      }
-    }
-
-    // Se não encontrou imagem nas fontes, tenta buscar nos metadados das URLs
-    if (!imageUrl) {
-      const sourcesToFetch = idxs
-        .filter((idx) => idx >= 0 && idx < results.length)
-        .map((idx) => ({ url: results[idx].url }))
-      imageUrl = await fetchImageForSources(sourcesToFetch)
-    }
-
-    const tavilyRaw = idxs
-      .filter((idx) => idx >= 0 && idx < results.length)
-      .map((idx) => {
-        const r = results[idx]
-        return { url: r.url, title: r.title, content: r.content, image: r.image }
-      })
-
-    // Extrair URL de vídeo da primeira fonte que tiver
-    let videoUrl: string | undefined
-    for (const idx of idxs) {
-      const candidate = results[idx]?.video
-      if (candidate) {
-        videoUrl = candidate
-        break
-      }
-    }
-
-    const keywords: string[] = Array.isArray(item.keywords)
-      ? [...new Set([topic, ...item.keywords.map((k: any) => String(k).toLowerCase().trim())])]
-      : [topic]
-
-    items.push({
-      id: randomUUID(),
-      topic,
-      title: item.title,
-      summary: item.summary,
-      sections: (item.sections || []) as ArticleSection[],
-      sources,
-      imageUrl,
-      videoUrl,
-      publishedAt: now,
-      cachedAt: now,
-      tavilyRaw,
-      matchedTopics: keywords,
-    })
-  }
-
-  onDiag?.({ gemini: parsed.length, kept: items.length, dropped, geminiRaw: rawPreview, droppedItems })
-  return items
+  console.warn(`[news] processRawBatch is deprecated and no longer uses Groq. Returning no items for ${topic}.`)
+  onDiag?.({ gemini: 0, kept: 0, dropped: 0 })
+  return []
 }
 
 
