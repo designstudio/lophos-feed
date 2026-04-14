@@ -25,9 +25,11 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev --ignore-scripts
+
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/node_modules ./node_modules
 
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
