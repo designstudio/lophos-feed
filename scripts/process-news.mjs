@@ -23,6 +23,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { randomUUID } from 'crypto'
+import { fileURLToPath } from 'url'
 import { clusterDeterministicItems, preflightRawItems } from './news-pipeline-core.mjs'
 
 const db = createClient(
@@ -323,7 +324,7 @@ async function clusterRawItems(topic, items) {
 // ═══════════════════════════════════════════════════════════════
 // FASE 2: Processamento de Conteúdo (Geração de Artigos)
 // ═══════════════════════════════════════════════════════════════
-async function processTopicWithGemini(topic, results, existingTitles, clusters, rawItemsMap) {
+export async function processTopicWithGemini(topic, results, existingTitles, clusters, rawItemsMap) {
   if (!results.length || !clusters.length) return []
 
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -610,20 +611,8 @@ ${context}`
   return { newsItems, success: true, processedClusterSourceIds: Array.from(allProcessedClusterSourceIds) }
 }
 
-async function processTopic(topic, rawItems, existingTitles) {
-  const preflight = preflightRawItems(rawItems)
-  const rejectedRawIds = preflight.rejected.map((item) => item.id)
-  const allowedRawItems = preflight.accepted
-
-  preflight.rejected.forEach((item) => {
-    console.log(`[${topic}] ⛔ raw filtered (${item.reason}): ${item.title?.slice(0, 90)}`)
-  })
-
-  if (preflight.duplicateIds.length > 0) {
-    console.log(`[${topic}] ♻️ preflight duplicates: ${preflight.duplicateIds.map((id) => id.slice(0, 8)).join(', ')}`)
-  }
-
-  const results = allowedRawItems.map(item => ({
+async function processTopic(topic, acceptedItems, existingTitles, clusters, rawItemsMap, rejectedRawIds = []) {
+  const results = (acceptedItems || []).map((item) => ({
     url: item.url,
     title: item.title,
     content: item.content || '',
@@ -631,19 +620,10 @@ async function processTopic(topic, rawItems, existingTitles) {
     video: item.video_url,
   }))
 
-  if (!results.length) return { newsItems: [], success: true, rejectedRawIds }
+  if (!results.length || !clusters.length) {
+    return { newsItems: [], success: true, rejectedRawIds }
+  }
 
-  // Map para rastrear raw_items por ID
-  const rawItemsMap = new Map(allowedRawItems.map(item => [item.id, item]))
-
-  // ═══════════════════════════════════════════════════════════════
-  // FASE 1: Clustering Inteligente
-  // ═══════════════════════════════════════════════════════════════
-  const clusters = await clusterRawItems(topic, allowedRawItems)
-
-  // ═══════════════════════════════════════════════════════════════
-  // FASE 2: Processamento de Conteúdo (por Cluster)
-  // ═══════════════════════════════════════════════════════════════
   let parsed
   try {
     parsed = await processTopicWithGemini(topic, results, existingTitles, clusters, rawItemsMap)
@@ -654,8 +634,6 @@ async function processTopic(topic, rawItems, existingTitles) {
     return { newsItems: [], success: false, geminiError: true, rejectedRawIds }
   }
 
-  // parsed contém { newsItems, success, processedClusterSourceIds }
-  // ✅ Todos os clusters processados com sucesso são marcados para rastreamento
   return { ...parsed, rejectedRawIds }
 }
 
@@ -700,52 +678,67 @@ async function main() {
   }))
   console.log(`Artigos existentes (últimas 72h): ${allProcessedArticles.length}\n`)
 
-  const SIMILARITY_THRESHOLD = 0.30 // Jaccard sem stopwords — 0.30 cobre variações editoriais PT/EN dentro do mesmo idioma
-  // Âncora anti-falso-positivo: nº mínimo de tokens fortes (len>=5) em comum para confirmar merge
-  const MIN_STRONG_TOKENS = 3
-  // DEBUG_DEDUP=1 → loga cada NEW com melhor candidato rejeitado e âncoras
   const DEBUG_DEDUP = process.env.DEBUG_DEDUP === '1'
   let totalGenerated = 0
   let totalMerged = 0
   let totalSaved = 0
+  let hadTopicError = false
 
-  for (let ti = 0; ti < topics.length; ti++) {
-    const topic = topics[ti]
+  for (let ti = 0; ti < topicPayloads.length; ti++) {
+    const topicPayload = topicPayloads[ti]
+    const topic = topicPayload.topic
+    const acceptedItems = topicPayload.acceptedItems || []
+    const clusters = topicPayload.clusters || []
+    const rejectedRawIds = uniqueIds(topicPayload.rejectedRawIds || [])
+
+    if (!acceptedItems.length && !rejectedRawIds.length) {
+      continue
+    }
+
+    if (!acceptedItems.length || !clusters.length) {
+      if (rejectedRawIds.length > 0) {
+        const { error: rejectedMarkError } = await db
+          .from('raw_items')
+          .update({ processed: true })
+          .in('id', rejectedRawIds)
+
+        if (rejectedMarkError) {
+          console.warn(`[${topic}] Could not mark rejected items as processed: ${rejectedMarkError.message}`)
+        } else {
+          console.log(`[${topic}] ✓ ${rejectedRawIds.length} rejected items marcados como processados`)
+        }
+      }
+      continue
+    }
+
     try {
-      // Fetch unprocessed items for this topic
-      const { data: rawItems } = await db
-        .from('raw_items')
-        .select('id, url, title, content, image_url, video_url, topic')
-        .eq('topic', topic)
-        .eq('processed', false)
-        .gte('pub_date', rawLookbackSince)
-        .order('pub_date', { ascending: false })
-        .limit(BATCH_SIZE)
+      console.log(`[${topic}] ${acceptedItems.length} items → Gemini only (${clusters.length} clusters)`)
 
-      if (!rawItems?.length) continue
-
-      console.log(`[${topic}] ${rawItems.length} items → triagem local/Gemini`)
-
-      // Bloco Try/Catch Robusto: Se Gemini falhar, não marca como processado
-      const { newsItems, success: geminiSuccess, geminiError, processedClusterSourceIds, rejectedRawIds = [] } = await processTopic(
+      const rawItemsMap = new Map(acceptedItems.map((item) => [item.id, item]))
+      const { newsItems, geminiError, processedClusterSourceIds, rejectedRawIds: localRejectedRawIds = [] } = await processTopic(
         topic,
-        rawItems,
-        allProcessedArticles.map(a => a.title)
+        acceptedItems,
+        allProcessedArticles.map((a) => a.title),
+        clusters,
+        rawItemsMap,
+        rejectedRawIds
       )
 
       const dedupedItems = []
-      // ✅ TRANSAÇÃO: Lista limpa - APENAS IDs que foram realmente salvos com sucesso
-      const successfullyProcessedRawIds = new Set()
-      rejectedRawIds.forEach(id => successfullyProcessedRawIds.add(id))
+      const successfullyProcessedRawIds = new Set([
+        ...rejectedRawIds,
+        ...localRejectedRawIds,
+        ...(processedClusterSourceIds || []),
+      ])
 
-      // Se houve erro no Gemini (503, 429), pula este tópico e tenta no próximo batch
       if (geminiError) {
+        hadTopicError = true
         if (successfullyProcessedRawIds.size > 0) {
           await db.from('raw_items')
             .update({ processed: true })
             .in('id', Array.from(successfullyProcessedRawIds))
         }
-        if (ti < topics.length - 1) {
+        if (ti < topicPayloads.length - 1) {
           console.log(`Aguardando ${DELAY_BETWEEN_TOPICS_MS / 1000}s antes do próximo tópico...\n`)
           await new Promise(r => setTimeout(r, DELAY_BETWEEN_TOPICS_MS))
         }
@@ -768,13 +761,11 @@ async function main() {
           continue
         }
 
-        // Compara title + summary para match mais robusto
         const itemText = `${item.title || ''} ${item.summary || ''}`
 
         let bestMatch = null
         let bestScore = 0
         let bestStrongCommon = []
-        // Auditoria: melhor candidato descartado (threshold baixo ou âncora insuficiente)
         let auditScore = 0
         let auditReason = ''
         let auditTitle = ''
@@ -792,8 +783,6 @@ async function main() {
             continue
           }
 
-          // Regra de âncora: tokens fortes (len>=5) em comum — bloqueia falsos positivos
-          // por palavras genéricas como datas, verbos editoriais ou nomes de plataformas
           const strongCommon = strongIntersection(itemText, existingText)
           if (strongCommon.length < MIN_STRONG_TOKENS) {
             if (score > auditScore) {
@@ -818,7 +807,6 @@ async function main() {
 
         if (match) {
           console.log(`  [DEDUP] 🔀 MERGE score=${bestScore.toFixed(3)} anchor=[${bestStrongCommon.join(',')}] id=${match.id?.slice(0, 8)} | existing="${match.title?.slice(0, 55)}" → new="${item.title?.slice(0, 55)}"`)
-          // Compara URLs canonicalizadas para evitar duplicar por UTM/fragment
           const existingUrls = new Set((match.sources || []).map(s => canonicalizeUrl(s.url)))
           const newSources = item.sources.filter(s => !existingUrls.has(canonicalizeUrl(s.url)))
           const mergedKeywords = [...new Set([...match.keywords, ...(item.keywords || [])])]
@@ -845,7 +833,6 @@ async function main() {
 
             if (mergeError) {
               console.error(`[${topic}] ⚠️  Merge error: ${mergeError.message}. Item não será marcado como processado.`)
-              // NÃO marca como processado se houver erro
             } else {
               match.sources = mergedSources
               match.keywords = mergedKeywords
@@ -853,7 +840,6 @@ async function main() {
               if (shouldBackfillImage) match.image_url = item.image_url
               if (shouldBackfillVideo) match.video_url = item.video_url
               totalMerged++
-              // Marca os raw_items relacionados como processados
               if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
                 item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
               } else {
@@ -861,7 +847,6 @@ async function main() {
               }
             }
           } else {
-            // Sem mudanças, mas merge bem-sucedido
             if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
               item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
             } else {
@@ -879,12 +864,10 @@ async function main() {
         }
       }
 
-      // ✅ INJEÇÃO OBRIGATÓRIA + FAILSAFE: Validar antes de salvar
       const validArticles = []
       const invalidArticles = []
 
       for (const item of dedupedItems) {
-        // FAILSAFE: Artigo DEVE ter fontes
         if (!Array.isArray(item.source_ids) || item.source_ids.length === 0) {
           console.error(`[${topic}] ❌ REJEIÇÃO: Artigo com ZERO fontes! "${item.title?.slice(0, 50)}"`)
           console.error(`   source_ids: ${item.source_ids}`)
@@ -900,32 +883,24 @@ async function main() {
           continue
         }
 
-        // ✅ PASSOU: Artigo tem fontes
         validArticles.push(item)
       }
 
-      // Salvar APENAS artigos válidos
       if (validArticles.length > 0) {
-        // 📋 LOG DE AUDITORIA: Mostra IDs ANTES de salvar
         console.log(`[${topic}] 📦 Gravando no BD: ${validArticles.length} artigos`)
         validArticles.forEach((item, i) => {
           const sourceIdStr = item.source_ids.map(id => id.substring(0, 8)).join(', ')
           console.log(`   ${i + 1}. "${item.title?.slice(0, 60)}" | Fontes: [${sourceIdStr}...]`)
         })
 
-        const { error: saveError } = await db.from('articles').upsert(
-          validArticles,
-          { onConflict: 'id' }
-        )
+        const { error: saveError } = await db.from('articles').upsert(validArticles, { onConflict: 'id' })
 
         if (saveError) {
           console.error(`[${topic}] ⚠️  Save error: ${saveError.message}. ${validArticles.length} items não serão marcados como processados.`)
-          // NÃO marca como processado se houver erro
         } else {
           console.log(`[${topic}] ✅ ${validArticles.length} artigos salvos com sucesso`)
           totalSaved += validArticles.length
 
-          // Marca como processado APENAS os artigos salvos com sucesso
           for (const item of validArticles) {
             allProcessedArticles.push({
               id: item.id,
@@ -935,20 +910,17 @@ async function main() {
               keywords: item.keywords || [],
               matched_topics: item.matched_topics || [],
             })
-            // ✅ Injeta obrigatoriamente os source_ids
             item.source_ids.forEach(id => successfullyProcessedRawIds.add(id))
           }
         }
       }
 
-      // ⚠️  Log dos artigos REJEITADOS
       if (invalidArticles.length > 0) {
         console.warn(`[${topic}] ⚠️  ${invalidArticles.length} artigos rejeitados (zero fontes)`)
       }
 
       totalGenerated += dedupedItems.length
 
-      // ✅ Confirmação de Escrita: Só marque como processado os IDs que foram realmente salvos
       if (successfullyProcessedRawIds.size > 0) {
         try {
           const processedIds = Array.from(successfullyProcessedRawIds)
@@ -968,22 +940,43 @@ async function main() {
         console.warn(`[${topic}] ⚠️  Nenhum item marcado como processado (verifique source_ids na resposta da IA ou clustering)`)
       }
 
-      // Delay para respeitar rate limit (15 req/min)
-      if (ti < topics.length - 1) {
+      if (ti < topicPayloads.length - 1) {
         console.log(`Aguardando ${DELAY_BETWEEN_TOPICS_MS / 1000}s antes do próximo tópico...\n`)
         await new Promise(r => setTimeout(r, DELAY_BETWEEN_TOPICS_MS))
       }
     } catch (err) {
+      hadTopicError = true
       console.error(`[${topic}] ⚠️  Erro crítico: ${err.message}. Items não serão marcados como processados.`)
     }
+  }
+
+  const finalStatus = hadTopicError ? 'failed' : 'processed'
+  const { error: statusUpdateError } = await db
+    .from('news_cluster_runs')
+    .update({
+      status: finalStatus,
+      processed_at: new Date().toISOString(),
+      error_message: hadTopicError ? 'One or more topics failed during Gemini processing' : null,
+    })
+    .eq('id', clusterRun.id)
+
+  if (statusUpdateError) {
+    console.warn(`Could not update cluster run status: ${statusUpdateError.message}`)
+  } else {
+    console.log(`Cluster run ${clusterRun.id} marked as ${finalStatus}.`)
   }
 
   const totalProcessed = totalSaved + totalMerged
   const backlogReduction = totalProcessed > 0 ? `651 → ~${Math.max(0, 651 - totalProcessed)}` : 'N/A'
   console.log(`\n✨ FAXINA CONCLUÍDA!`)
-  console.log(`Topics: ${topics.length} | Artigos gerados: ${totalGenerated} | Salvos: ${totalSaved} | Merges: ${totalMerged}`)
+  console.log(`Topics: ${topicPayloads.length} | Artigos gerados: ${totalGenerated} | Salvos: ${totalSaved} | Merges: ${totalMerged}`)
   console.log(`Backlog reduzido: ${backlogReduction} notícias`)
   console.log(`Total processado com sucesso: ${totalProcessed} notícias 🎉\n`)
 }
 
-main().catch(err => { console.error(err); process.exit(1) })
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+}

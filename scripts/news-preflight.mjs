@@ -12,6 +12,7 @@ import { createClient } from '@supabase/supabase-js'
 import { buildHistoryKey, findSemanticDuplicateMatches, summarizePreflightByTopicWithHistory } from './news-pipeline-core.mjs'
 
 const PROCESS_LOOKBACK_HOURS = 12
+const HISTORY_LOOKBACK_HOURS = 72
 const BATCH_SIZE = 100
 
 function assertEnv(name) {
@@ -70,6 +71,7 @@ async function main() {
 
   const historyKeys = new Set()
   const historyByTopic = new Map()
+  const historyLookbackSince = new Date(Date.now() - HISTORY_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString()
   const pageSize = 1000
   let offset = 0
 
@@ -77,6 +79,7 @@ async function main() {
     const { data: historyRows, error: historyError } = await db
       .from('raw_items')
       .select('id, url, title, summary, content, dedup_hash, topic, source_name')
+      .gte('pub_date', historyLookbackSince)
       .order('fetched_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 
@@ -97,7 +100,7 @@ async function main() {
     if (historyRows.length < pageSize) break
   }
 
-  console.log(`Histórico de raw_items indexado: ${historyKeys.size} chaves únicas\n`)
+  console.log(`Histórico de raw_items indexado (últimas ${HISTORY_LOOKBACK_HOURS}h): ${historyKeys.size} chaves únicas\n`)
 
   const allReports = []
   const allSemanticMatches = []
@@ -170,6 +173,9 @@ async function main() {
       duplicateCount: topicReport.duplicateCount,
       semanticDuplicateCount: semanticMatches.length,
       acceptedIds: topicReport.acceptedIds,
+      rejectedIds: topicReport.rejected.map((item) => item.id),
+      duplicateIds: topicReport.duplicateIds,
+      semanticDuplicateIds: semanticMatches.map((match) => match.currentId),
     })
 
     totalFetched += topicReport.total
@@ -189,12 +195,16 @@ async function main() {
   console.log('\nJSON do preflight:')
   const payload = {
     windowHours: PROCESS_LOOKBACK_HOURS,
+    historyHours: HISTORY_LOOKBACK_HOURS,
     batchSize: BATCH_SIZE,
     totalFetched,
     totalAccepted,
     totalRejected,
     totalDuplicates,
     totalSemanticDuplicates,
+    rejectedRawIds: allReports.flatMap((report) => report.rejectedIds || []),
+    duplicateRawIds: allReports.flatMap((report) => report.duplicateIds || []),
+    semanticDuplicateRawIds: allReports.flatMap((report) => report.semanticDuplicateIds || []),
     topics: allReports,
     semanticMatches: allSemanticMatches,
   }

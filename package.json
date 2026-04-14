@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "news:preflight": "node scripts/news-preflight.mjs",
-    "news:process": "node scripts/process-news.mjs"
+    "news:cluster": "node scripts/news-cluster.mjs",
+    "news:process": "node scripts/process-news-gemini.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^6",
