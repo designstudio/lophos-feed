@@ -5,13 +5,12 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/login(.*)',
   '/signup(.*)',
-  '/api/(.*)',
-  '/article/(.*)',
+  '/api(.*)',
+  '/article(.*)',
   '/politica-de-privacidade(.*)',
   '/termos-de-uso(.*)',
   '/notas-de-versao(.*)',
 ])
-const isOnboarding = createRouteMatcher(['/onboarding(.*)'])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
