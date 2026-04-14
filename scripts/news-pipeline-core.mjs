@@ -177,6 +177,12 @@ export function buildHistoryKey(item) {
   return `${canonicalUrl}::${titleHash}`
 }
 
+export function buildComparableText(item) {
+  return [item.title, item.summary, item.content]
+    .filter(Boolean)
+    .join(' ')
+}
+
 export function preflightRawItems(items, historyKeys = new Set()) {
   const accepted = []
   const rejected = []
@@ -215,6 +221,50 @@ export function preflightRawItems(items, historyKeys = new Set()) {
     rejected,
     duplicateIds,
   }
+}
+
+export function findSemanticDuplicateMatches(items, historyItems, options = {}) {
+  const similarityThreshold = options.similarityThreshold ?? 0.3
+  const minStrongTokens = options.minStrongTokens ?? 3
+  const matches = []
+
+  for (const item of items) {
+    const itemText = buildComparableText(item)
+    if (!itemText.trim()) continue
+
+    let bestMatch = null
+
+    for (const historyItem of historyItems) {
+      if (!historyItem || historyItem.id === item.id) continue
+
+      const historyText = buildComparableText(historyItem)
+      if (!historyText.trim()) continue
+
+      const score = textOverlapScore(itemText, historyText)
+      if (score < similarityThreshold) continue
+
+      const strong = strongIntersection(itemText, historyText)
+      if (strong.length < minStrongTokens) continue
+
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = {
+          currentId: item.id,
+          historyId: historyItem.id,
+          score,
+          strong,
+          currentTitle: item.title,
+          historyTitle: historyItem.title,
+          historySource: historyItem.source_name,
+        }
+      }
+    }
+
+    if (bestMatch) {
+      matches.push(bestMatch)
+    }
+  }
+
+  return matches
 }
 
 export function clusterDeterministicItems(items, options = {}) {

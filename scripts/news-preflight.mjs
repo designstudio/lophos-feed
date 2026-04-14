@@ -9,7 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { buildHistoryKey, summarizePreflightByTopicWithHistory } from './news-pipeline-core.mjs'
+import { buildHistoryKey, findSemanticDuplicateMatches, summarizePreflightByTopicWithHistory } from './news-pipeline-core.mjs'
 
 const PROCESS_LOOKBACK_HOURS = 12
 const BATCH_SIZE = 100
@@ -23,7 +23,8 @@ function assertEnv(name) {
 }
 
 function printTopicReport(report) {
-  console.log(`[${report.topic}] total=${report.total} accepted=${report.acceptedCount} rejected=${report.rejectedCount} duplicates=${report.duplicateCount}`)
+  const semanticCount = report.semanticDuplicateCount ?? 0
+  console.log(`[${report.topic}] total=${report.total} accepted=${report.acceptedCount} rejected=${report.rejectedCount} exact=${report.duplicateCount} semantic=${semanticCount}`)
 
   if (report.rejected.length > 0) {
     const rejectedPreview = report.rejected
@@ -35,6 +36,10 @@ function printTopicReport(report) {
 
   if (report.duplicateIds.length > 0) {
     console.log(`  duplicados: ${report.duplicateIds.map((id) => id.slice(0, 8)).join(', ')}`)
+  }
+
+  if (semanticCount > 0) {
+    console.log(`  semantic dupes: ${semanticCount}`)
   }
 }
 
@@ -64,13 +69,14 @@ async function main() {
   console.log(`Topics encontrados: ${topics.join(', ')}\n`)
 
   const historyKeys = new Set()
+  const historyByTopic = new Map()
   const pageSize = 1000
   let offset = 0
 
   while (true) {
     const { data: historyRows, error: historyError } = await db
       .from('raw_items')
-      .select('id, url, title, dedup_hash')
+      .select('id, url, title, summary, content, dedup_hash, topic, source_name')
       .order('fetched_at', { ascending: false })
       .range(offset, offset + pageSize - 1)
 
@@ -82,6 +88,9 @@ async function main() {
 
     historyRows.forEach((row) => {
       historyKeys.add(buildHistoryKey(row))
+      const bucket = historyByTopic.get(row.topic) || []
+      bucket.push(row)
+      historyByTopic.set(row.topic, bucket)
     })
 
     offset += pageSize
@@ -95,6 +104,7 @@ async function main() {
   let totalAccepted = 0
   let totalRejected = 0
   let totalDuplicates = 0
+  let totalSemanticDuplicates = 0
 
   for (const topic of topics) {
     const { data: rawItems, error } = await db
@@ -122,9 +132,26 @@ async function main() {
       acceptedCount: 0,
       rejectedCount: 0,
       duplicateCount: 0,
+      semanticDuplicateCount: 0,
       acceptedIds: [],
       rejected: [],
       duplicateIds: [],
+      semanticDuplicateIds: [],
+    }
+
+    const semanticMatches = findSemanticDuplicateMatches(
+      rawItems || [],
+      (historyByTopic.get(topic) || []).filter((historyItem) => !(rawItems || []).some((item) => item.id === historyItem.id)),
+      { similarityThreshold: 0.3, minStrongTokens: 3 },
+    )
+
+    const semanticPreview = semanticMatches.slice(0, 5).map((match) =>
+      `${match.currentTitle?.slice(0, 60) || match.currentId} ↔ ${match.historySource || 'history'}: ${match.historyTitle?.slice(0, 60) || match.historyId} (${match.score.toFixed(3)})`
+    )
+
+    if (semanticMatches.length > 0) {
+      console.log(`  semantic dupes: ${semanticMatches.length}`)
+      semanticPreview.forEach((line) => console.log(`    ${line}`))
     }
 
     printTopicReport(topicReport)
@@ -135,6 +162,7 @@ async function main() {
       acceptedCount: topicReport.acceptedCount,
       rejectedCount: topicReport.rejectedCount,
       duplicateCount: topicReport.duplicateCount,
+      semanticDuplicateCount: semanticMatches.length,
       acceptedIds: topicReport.acceptedIds,
     })
 
@@ -142,6 +170,7 @@ async function main() {
     totalAccepted += topicReport.acceptedCount
     totalRejected += topicReport.rejectedCount
     totalDuplicates += topicReport.duplicateCount
+    totalSemanticDuplicates += semanticMatches.length
   }
 
   console.log('\nResumo geral')
@@ -149,6 +178,7 @@ async function main() {
   console.log(`  prontos para Gemini: ${totalAccepted}`)
   console.log(`  rejeitados localmente: ${totalRejected}`)
   console.log(`  duplicados óbvios: ${totalDuplicates}`)
+  console.log(`  duplicados semânticos: ${totalSemanticDuplicates}`)
 
   console.log('\nJSON do preflight:')
   console.log(JSON.stringify({
@@ -158,6 +188,7 @@ async function main() {
     totalAccepted,
     totalRejected,
     totalDuplicates,
+    totalSemanticDuplicates,
     topics: allReports,
   }, null, 2))
 }
