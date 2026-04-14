@@ -95,6 +95,56 @@ export function createDedupHash(title) {
   return crypto.createHash('md5').update(normalizeText(title)).digest('hex')
 }
 
+export function tokenize(value) {
+  return normalizeText(value).split(' ').filter((word) => word.length >= 3 && !STOPWORDS.has(word))
+}
+
+export function strongTokenize(value) {
+  return normalizeText(value).split(' ').filter((word) => word.length >= 5 && !STOPWORDS.has(word))
+}
+
+export function jaccardScore(a, b) {
+  const aSet = new Set(tokenize(a))
+  const bSet = new Set(tokenize(b))
+
+  if (aSet.size === 0 && bSet.size === 0) return 1
+  if (aSet.size === 0 || bSet.size === 0) return 0
+
+  let intersection = 0
+  for (const word of aSet) {
+    if (bSet.has(word)) intersection++
+  }
+
+  const union = aSet.size + bSet.size - intersection
+  return union === 0 ? 0 : intersection / union
+}
+
+export function textOverlapScore(a, b) {
+  return jaccardScore(a, b)
+}
+
+export function strongIntersection(a, b) {
+  const aSet = new Set(strongTokenize(a))
+  const bSet = new Set(strongTokenize(b))
+  const common = []
+
+  for (const word of aSet) {
+    if (bSet.has(word)) common.push(word)
+  }
+
+  return common
+}
+
+export function shouldMergeTexts(a, b, { similarityThreshold = 0.3, minStrongTokens = 3 } = {}) {
+  const score = textOverlapScore(a, b)
+  const strong = strongIntersection(a, b)
+  return {
+    merge: score >= similarityThreshold && strong.length >= minStrongTokens,
+    score,
+    strong,
+  }
+}
+
 export function shouldRejectPreflightItem({ title, description = '', url = '', sourceName = '' }) {
   const haystack = [title, description, url, sourceName]
     .filter(Boolean)
@@ -159,6 +209,46 @@ export function preflightRawItems(items) {
     rejected,
     duplicateIds,
   }
+}
+
+export function clusterDeterministicItems(items, options = {}) {
+  const similarityThreshold = options.similarityThreshold ?? 0.3
+  const minStrongTokens = options.minStrongTokens ?? 3
+
+  const clusters = []
+
+  for (const item of items) {
+    const itemText = `${item.title || ''} ${item.content || ''}`
+    let bestCluster = null
+    let bestScore = 0
+
+    for (const cluster of clusters) {
+      const clusterText = cluster.items
+        .map((clusterItem) => `${clusterItem.title || ''} ${clusterItem.content || ''}`)
+        .join(' \n ')
+
+      const score = textOverlapScore(itemText, clusterText)
+      if (score < similarityThreshold) continue
+
+      const strong = strongIntersection(itemText, clusterText)
+      if (strong.length < minStrongTokens) continue
+
+      if (score > bestScore) {
+        bestScore = score
+        bestCluster = cluster
+      }
+    }
+
+    if (bestCluster) {
+      bestCluster.items.push(item)
+    } else {
+      clusters.push({ items: [item] })
+    }
+  }
+
+  return clusters
+    .map((cluster) => cluster.items.map((item) => item.id))
+    .filter((cluster) => cluster.length > 0)
 }
 
 export function summarizePreflightByTopic(items) {

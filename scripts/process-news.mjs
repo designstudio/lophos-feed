@@ -23,6 +23,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { randomUUID } from 'crypto'
+import { clusterDeterministicItems, preflightRawItems } from './news-pipeline-core.mjs'
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -302,118 +303,21 @@ function isGeneratedItemRelevant(item, results) {
 // ═══════════════════════════════════════════════════════════════
 async function clusterRawItems(topic, items) {
   if (items.length <= 1) {
-    // Só 1 item = 1 cluster com seu ID real
-    return [[items[0].id]]
+    return items.length === 1 ? [[items[0].id]] : []
   }
 
-  // Criar lista com índices 1-based (para o prompt) e títulos
-  const titlesContext = items.map((item, i) =>
-    `${i + 1}. ${item.title}`
-  ).join('\n')
+  const mappedClusters = clusterDeterministicItems(items, {
+    similarityThreshold: 0.3,
+    minStrongTokens: 3,
+  })
 
-  const clusterPrompt = `VOCÊ DEVE RETORNAR APENAS UM ARRAY JSON PURO. NADA MAIS. NEM MARKDOWN, NEM COMENTÁRIOS, NEM EXPLICAÇÕES.
-
-🚨 CLUSTERING CIRÚRGICO (MÁXIMA PRECISÃO):
-Agrupe APENAS notícias que tratam do EXATO mesmo FATO (verbo + objeto idêntico).
-
-🏆 REGRA DE OURO DO LOPHOS v2:
-Agrupe por FATO, não por marca/entidade. Cada fato novo é seu próprio artigo.
-
-REGRA 1: VERBO + OBJETO IDÊNTICOS (OBRIGATÓRIO)
-- "Google LANÇA Pixel 9" + "Google ANUNCIA Pixel 9" = AGRUPA (mesmo fato)
-- "Google LANÇA Pixel 9" + "Google PROÍBE Sideloading" = SEPARA (verbos/objetos diferentes!)
-- "Gmail PERMITE trocar nome" + "Canaltech DIZ que Gmail deixa trocar nome" = AGRUPA (mesmo objeto)
-- "Gmail mudança" + "Google notícia" = NUNCA (genérico demais!)
-
-REGRA 2: VETO POR ENTIDADE SECUNDÁRIA (CRÍTICO!)
-- ❌ "Google + CBF" e "Google + Sideloading" NO MESMO CLUSTER = PROIBIDO!
-- ✅ Cada entidade secundária DIFERENTE = artigo separado
-- Exemplo: 1=Google + Sideloading, 2=Google + CBF, 3=Google + Pixel → [[1], [2], [3]]
-
-REGRA 3: PROIBIÇÃO DE ROUNDUPS
-- ❌ "Resumo do dia na Google" + "Google faz X, Y, Z" = RETORNAR []
-- ✅ "Google lança Pixel 9" (fato específico) = OK
-- Sem compilações. Cada notícia DIFERENTE é seu próprio artigo.
-
-REGRA 4: LIMITE DE 3 FONTES MÁXIMO
-- Se cluster tem 4+ fontes E títulos são DIFERENTES, desmembra em clusters menores
-- Exemplo: [[1,2,3,4,5]] com 5 títulos distintos = INVÁLIDO → [[1,2], [3,4], [5]]
-
-REGRA 5: TESTE DE SOBREPOSIÇÃO & VARIAÇÕES DE MESMO ANÚNCIO
-- O **FATO PRINCIPAL** deve ser idêntico (verbo + objeto core)
-- Variações de títulos são ESPERADAS e OK: diferentes ênfases do mesmo anúncio
-- Exemplo HARRY POTTER:
-  - "Série Harry Potter estreará no Natal e não terá lançamentos anuais"
-  - "HBO confirma série Harry Potter sem lançamentos anuais"
-  - "Série HP da HBO: sem lançamentos anuais, Executivos confirmam"
-  - = AGRUPA [[1,2,3]] (mesmo anúncio HBO sobre Harry Potter, múltiplas fontes)
-- Se a PROPRIEDADE PRINCIPAL muda (fato completamente diferente), SEPARA!
-
-EXEMPLO ERRADO ❌: [[1,2,3,4,5,6,7,8,9,10,11,12]]
-(12 notícias diferentes da Google = "salada de Google")
-
-EXEMPLO CORRETO ✅: [[1,2,3], [4], [5,6], [7], [8,9,10], ...]
-(Cada fato DIFERENTE é seu próprio cluster, mas variações do mesmo fato = AGRUPA)
-
-FORMATO OBRIGATÓRIO: [[1,3,5], [2,4], [6,7,8]]
-
-TÍTULOS:
-${titlesContext}
-
-RESPONDA APENAS COM O JSON, NADA MAIS:
-`
-
-  try {
-    const result = await model.generateContent(clusterPrompt)
-    const response = result.response
-    const text = response.text().trim()
-
-    // PARSER INQUEBRÁVEL: Extrai tudo entre [ e ] mais externo
-    const firstBracket = text.indexOf('[')
-    const lastBracket = text.lastIndexOf(']')
-
-    if (firstBracket === -1 || lastBracket === -1 || firstBracket >= lastBracket) {
-      console.warn(`[${topic}] ⚠️  Clustering falhou (JSON inválido), usando fallback`)
-      return items.map(item => [item.id])
-    }
-
-    const jsonStr = text.substring(firstBracket, lastBracket + 1)
-    let clusters
-
-    try {
-      clusters = JSON.parse(jsonStr)
-    } catch (parseErr) {
-      console.warn(`[${topic}] ⚠️  Parse JSON falhou: ${parseErr.message}. Fallback ativado.`)
-      return items.map(item => [item.id])
-    }
-
-    // Validar estrutura: deve ser array of arrays
-    if (!Array.isArray(clusters)) {
-      console.warn(`[${topic}] ⚠️  Clusters não é array, fallback`)
-      return items.map(item => [item.id])
-    }
-
-    // Converter índices 1-based para IDs reais
-    const mappedClusters = clusters
-      .filter(cluster => Array.isArray(cluster) && cluster.length > 0)
-      .map(cluster =>
-        cluster
-          .filter(idx => typeof idx === 'number' && idx >= 1 && idx <= items.length)
-          .map(idx => items[idx - 1].id)
-      )
-      .filter(cluster => cluster.length > 0)
-
-    if (mappedClusters.length === 0) {
-      console.warn(`[${topic}] ⚠️  Nenhum cluster válido, fallback`)
-      return items.map(item => [item.id])
-    }
-
-    console.log(`[${topic}] ✓ Clustering: ${items.length} itens → ${mappedClusters.length} clusters`)
-    return mappedClusters
-  } catch (err) {
-    console.error(`[${topic}] ⚠️  Erro no clustering: ${err.message}. Usando fallback.`)
-    return items.map((_, i) => [i])
+  if (mappedClusters.length === 0) {
+    console.warn(`[${topic}] ⚠️  Nenhum cluster válido, fallback`)
+    return items.map((item) => [item.id])
   }
+
+  console.log(`[${topic}] ✓ Clustering local: ${items.length} itens → ${mappedClusters.length} clusters`)
+  return mappedClusters
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -460,11 +364,7 @@ Sua missão: transformar um cluster de fontes relacionadas no artigo mais denso,
 - Números, datas, nomes e especificações devem ser literais. Se a fonte diz "aumento significativo", NÃO transforme em "15%".
 - Tom seco, direto e jornalístico. Sem introduções poéticas ou floreios.
 
-🚨 **REJEIÇÃO INTERNA (CLUSTERING CORRETO):**
-- **Se o cluster contiver assuntos claramente distintos**, ignore e retorne [].
-- Exemplo ERRADO: 1 fonte sobre "Super Mario 6", 1 sobre "Cape Fear", 1 sobre "Fall 2" → RETORNAR []
-- Exemplo CORRETO: 3 fontes sobre "Nintendo Switch 2 lançamento" → 1 artigo unificado
-- **Na dúvida sobre coesão do cluster: RETORNE []**. Qualidade > volume.
+O cluster já passou por validação local antes de chegar aqui. Se ainda parecer inconsistente, retorne [].
 
 **2. CRITÉRIOS DE NOTICIABILIDADE (FILTRO DE QUALIDADE):**
 - **GERAR ARTIGO:** Lançamentos de produtos/hardware (Galaxy S26, PS5, Switch 2), trailers, anúncios de filmes/séries, atualizações de games (patch notes), mudanças de preços de mercado (gasolina, dólar, ações), contratações relevantes e colaborações (ex: Ed Sheeran x Pokémon).
@@ -477,13 +377,10 @@ Sua missão: transformar um cluster de fontes relacionadas no artigo mais denso,
 - **NA DÚVIDA:** Gere o artigo. O Lophos prefere informar ao silenciar.
 
 **INSTRUÇÕES DE PROCESSAMENTO:**
-- **Clustering Validado:** Este cluster já foi validado por IA como variações do MESMO fato.
-- **REGRA DE OURO:** Múltiplas fontes sobre o MESMO fato = **1 ARTIGO ÚNICO** com todas as fontes
-- Exemplo: "HBO anuncia Harry Potter" (3 fontes) = 1 artigo com 3 fontes, NÃO 3 artigos separados
-- Agrupamento: Una fontes que tratem exatamente do mesmo evento factual.
-- Fidelidade Brutal: Todo número, nome, valor ou mudança deve vir diretamente das fontes.
-- Citações: reproduza ou parafraseie fielmente (nunca resuma demais)
-- Proibido: "fãs estão animados", "diversos itens", "muitos usuários"
+- Regra de ouro: múltiplas fontes sobre o mesmo fato viram um único artigo com todas as fontes.
+- Fidelidade brutal: todo número, nome, valor ou mudança deve vir diretamente das fontes.
+- Citações: reproduza ou parafraseie fielmente, nunca resuma demais.
+- Proibido: "fãs estão animados", "diversos itens", "muitos usuários".
 
 **Tom:**
 Direto, jornalístico, sem floreios. Comece pelo fato mais impactante.
@@ -714,21 +611,17 @@ ${context}`
 }
 
 async function processTopic(topic, rawItems, existingTitles) {
-  const rejectedRawIds = []
-  const allowedRawItems = rawItems.filter((item) => {
-    const decision = shouldRejectContent({
-      title: item.title,
-      summary: item.content || '',
-      urls: [item.url],
-      rawTexts: [item.content || ''],
-    })
-    if (decision.reject) {
-      console.log(`[${topic}] ⛔ raw filtered (${decision.reason}): ${item.title?.slice(0, 90)}`)
-      rejectedRawIds.push(item.id)
-      return false
-    }
-    return true
+  const preflight = preflightRawItems(rawItems)
+  const rejectedRawIds = preflight.rejected.map((item) => item.id)
+  const allowedRawItems = preflight.accepted
+
+  preflight.rejected.forEach((item) => {
+    console.log(`[${topic}] ⛔ raw filtered (${item.reason}): ${item.title?.slice(0, 90)}`)
   })
+
+  if (preflight.duplicateIds.length > 0) {
+    console.log(`[${topic}] ♻️ preflight duplicates: ${preflight.duplicateIds.map((id) => id.slice(0, 8)).join(', ')}`)
+  }
 
   const results = allowedRawItems.map(item => ({
     url: item.url,
@@ -831,7 +724,7 @@ async function main() {
 
       if (!rawItems?.length) continue
 
-      console.log(`[${topic}] ${rawItems.length} items → triagem/Gemini`)
+      console.log(`[${topic}] ${rawItems.length} items → triagem local/Gemini`)
 
       // Bloco Try/Catch Robusto: Se Gemini falhar, não marca como processado
       const { newsItems, success: geminiSuccess, geminiError, processedClusterSourceIds, rejectedRawIds = [] } = await processTopic(
