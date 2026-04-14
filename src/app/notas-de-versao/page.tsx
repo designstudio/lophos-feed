@@ -3,6 +3,67 @@ import { LegalPage } from '@/components/LegalPage'
 
 const RELEASES = [
   {
+    date: '14 abr 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'Reestruturamos o pipeline de notícias para rodar na VPS com cron a cada 6 horas, separando ingestão, preflight, clustering e o passo com IA em comandos explícitos.',
+          'Passamos a persistir execuções de preflight e cluster no Supabase, com detecção semântica de duplicatas e reaproveitamento de fontes relacionadas no artigo final.',
+          'Criamos ferramentas de limpeza retroativa para duplicatas gerais e para casos específicos, como franquias de cinema e games que vinham escapando da deduplicação.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'Corrigimos o middleware do Clerk para cobrir as rotas de API e destravar o feed, os tópicos, as reações e as threads sem erros 500.',
+          'Ajustamos a hidratação do app shell e o estado de carregamento do feed para evitar travamentos visuais e banners presos na tela.',
+          'Removemos os fluxos legados do GitHub Actions e consolidamos o processamento em scripts claros para operação manual e agendamento externo.',
+        ],
+      },
+    ],
+  },
+  {
+    date: '9 abr 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'Preparamos o projeto para rodar com mais conforto em Docker e Coolify, com suporte melhor a dependências opcionais e imagem de produção mais enxuta.',
+          'Organizamos o processamento de notícias em etapas mais previsíveis para facilitar execução local e futura automação na VPS.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'Corrigimos o build em ambientes que precisavam instalar dependências opcionais do frontend, como a sidebar fixa.',
+          'Reduzimos custo e latência do feed com cache melhor ajustado e limites de duração mais seguros para rotas mais pesadas.',
+          'Removemos caminhos legados de processamento que já não faziam parte do fluxo ativo.',
+        ],
+      },
+    ],
+  },
+  {
+    date: '8 abr 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'Refinamos a experiência mobile e PWA com ajustes de navegação, padding, scroll e layout para o feed, artigos e menus laterais.',
+          'Melhoramos a apresentação dos cards de notícia, dos badges de portal e dos widgets laterais para ficar mais estável em telas menores.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'Ajustamos o comportamento do header, da sidebar e das áreas fixas para preservar alinhamento e evitar saltos visuais.',
+          'Corrigimos títulos dinâmicos, contrastes, ícones e pequenos problemas de layout que afetavam a navegação entre feed e artigos.',
+          'Adicionamos cache de CDN para o image proxy, reduzindo uso de CPU no servidor.',
+        ],
+      },
+    ],
+  },
+  {
     date: '7 abr 2026',
     sections: [
       {
