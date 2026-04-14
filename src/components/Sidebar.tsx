@@ -61,6 +61,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [deletingThread, setDeletingThread] = useState(false)
   const menuRef = useRef<HTMLDivElement | null>(null)
   const renameInputRef = useRef<HTMLInputElement | null>(null)
+  const lastCollapsedRef = useRef<boolean | null>(null)
 
   const loadRecentThreads = useCallback(async (options?: { showLoading?: boolean }) => {
     const showLoading = options?.showLoading ?? false
@@ -99,11 +100,22 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     try {
       const saved = localStorage.getItem('sidebar_collapsed') === 'true'
       setCollapsed(saved)
+      lastCollapsedRef.current = saved
     } catch {
       setCollapsed(false)
+      lastCollapsedRef.current = false
     }
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (!mounted || collapsed === null) return
+    if (lastCollapsedRef.current === collapsed) return
+
+    lastCollapsedRef.current = collapsed
+    localStorage.setItem('sidebar_collapsed', String(collapsed))
+    window.dispatchEvent(new CustomEvent('sidebar:toggle', { detail: { collapsed } }))
+  }, [collapsed, mounted])
 
   useEffect(() => {
     if (path === '/settings') {
@@ -167,12 +179,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   }, [editingThreadId])
 
   const toggle = () => {
-    setCollapsed((v) => {
-      const next = !v
-      localStorage.setItem('sidebar_collapsed', String(next))
-      window.dispatchEvent(new CustomEvent('sidebar:toggle', { detail: { collapsed: next } }))
-      return next
-    })
+    setCollapsed((v) => !v)
   }
 
   const isCollapsed = collapsed ?? true
