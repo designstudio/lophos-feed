@@ -1,24 +1,25 @@
-# Plano de execução: pré-processamento antes do Gemini
+# Plano de execucao: pre-processamento antes do Gemini
 
-## O que já foi encaminhado
+## O que ja foi encaminhado
 
-- Centralizei regras básicas de limpeza e preparo em `src/lib/news-preprocessing.ts`.
-- A ingestão RSS passou a usar os helpers compartilhados.
-- O fluxo administrativo de conversão de itens brutos para artigos também passou a usar a mesma base.
+- Centralizei regras basicas de limpeza e preparo em `src/lib/news-preprocessing.ts`.
+- A ingestao RSS passou a usar os helpers compartilhados.
+- O fluxo administrativo de conversao de itens brutos para artigos tambem passou a usar a mesma base.
+- Criei um preflight deterministico em `scripts/news-preflight.mjs` para rodar antes do Gemini.
 
 ## O que isso significa
 
-- As regras de preparação ficam mais consistentes.
-- A base fica pronta para receber uma etapa separada de pré-processamento na VPS.
-- O Gemini continua existindo, mas a ideia é ir deixando ele só para síntese final.
+- As regras de preparacao ficam mais consistentes.
+- A base fica pronta para receber uma etapa separada de pre-processamento na VPS.
+- O Gemini continua existindo, mas a ideia e deixar ele so para sintese final.
 
-## O que você precisa fazer agora
+## O que voce precisa fazer agora
 
-1. **Publicar esta versão**
-   - Se seu deploy principal for Vercel, faça o deploy normal.
-   - Se o deploy for pela Contabo/Coolify, faça um redeploy da aplicação.
+1. **Publicar esta versao**
+   - Se seu deploy principal for Vercel, faca o deploy normal.
+   - Se o deploy for pela Contabo/Coolify, faca um redeploy da aplicacao.
 
-2. **Conferir as variáveis de ambiente**
+2. **Conferir as variaveis de ambiente**
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
@@ -32,27 +33,29 @@
    - `articles`
    - `topic_fetches`
 
-4. **Rodar um teste simples**
-   - Acionar a ingestão RSS.
+4. **Rodar os testes simples**
+   - Acionar a ingestao RSS.
+   - Rodar `npm run news:preflight`.
    - Confirmar que os itens continuam entrando.
-   - Confirmar que os artigos continuam aparecendo.
+   - Confirmar que os artigos continuam aparecendo depois do Process News.
 
-5. **Depois disso, fazer a próxima etapa**
+5. **Depois disso, fazer a proxima etapa**
    - Criar um worker dedicado na VPS para limpar e agrupar os itens antes do Gemini.
-   - Só então mandar para o Gemini a versão já filtrada e agrupada.
+   - So entao mandar para o Gemini a versao ja filtrada e agrupada.
 
-## Como saber se está certo
+## Como saber se esta certo
 
 - Os feeds continuam carregando.
 - Os artigos continuam sendo publicados.
-- O número de duplicatas óbvias tende a cair.
-- Os filtros de conteúdo ruim continuam funcionando.
+- O numero de duplicatas obvias tende a cair.
+- Os filtros de conteudo ruim continuam funcionando.
+- O preflight mostra exatamente o lote pronto para o Gemini.
 
-## Próximo passo recomendado
+## Proximo passo recomendado
 
-- Eu seguiria com a criação do worker na Contabo e a separação formal em etapas:
-  - ingestão
+- Eu seguiria com a criacao do worker na Contabo e a separacao formal em etapas:
+  - ingestao
   - limpeza
-  - deduplicação
+  - deduplicacao
   - agrupamento
-  - síntese com Gemini
+  - sintese com Gemini

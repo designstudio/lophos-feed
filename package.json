@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "news:preflight": "node scripts/news-preflight.mjs",
+    "news:process": "node scripts/process-news.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^6",
