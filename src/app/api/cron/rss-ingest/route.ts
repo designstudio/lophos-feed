@@ -10,6 +10,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const result = await ingestAllFeeds({})
-  return NextResponse.json(result)
+  try {
+    const result = await ingestAllFeeds({})
+    return NextResponse.json(result)
+  } catch (err: any) {
+    console.error('[cron/rss-ingest] error:', err)
+    return NextResponse.json(
+      {
+        error: err?.message || 'Internal server error',
+      },
+      { status: 500 }
+    )
+  }
 }
