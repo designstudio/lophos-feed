@@ -82,16 +82,20 @@ async function main() {
 
   const topics = latestPreflight.payload.topics || []
   const acceptedIds = flattenTopicIds(topics, 'acceptedIds')
+  const acceptedForClusterIds = flattenTopicIds(topics, 'acceptedForClusterIds')
+  const hasAcceptedForClusterField = topics.some((topic) => Array.isArray(topic?.acceptedForClusterIds))
   const rejectedRawIds = unique([
     ...(latestPreflight.payload.rejectedRawIds || []),
     ...(latestPreflight.payload.duplicateRawIds || []),
-    ...(latestPreflight.payload.semanticDuplicateRawIds || []),
     ...flattenTopicIds(topics, 'rejectedIds'),
     ...flattenTopicIds(topics, 'duplicateIds'),
+  ])
+  const semanticDuplicateRawIds = unique([
+    ...(latestPreflight.payload.semanticDuplicateRawIds || []),
     ...flattenTopicIds(topics, 'semanticDuplicateIds'),
   ])
 
-  const acceptedItems = await fetchItemsByIds(db, acceptedIds)
+  const acceptedItems = await fetchItemsByIds(db, hasAcceptedForClusterField ? acceptedForClusterIds : acceptedIds)
   const acceptedItemsByTopic = new Map()
 
   for (const item of acceptedItems) {
@@ -119,10 +123,11 @@ async function main() {
       acceptedItemIds: topicItems.map((item) => item.id),
       acceptedItems: topicItems,
       clusters,
+      acceptedForClusterIds: unique(topicReport.acceptedForClusterIds || topicItems.map((item) => item.id)),
+      semanticDuplicateIds: unique(topicReport.semanticDuplicateIds || []),
       rejectedRawIds: unique([
         ...(topicReport.rejectedIds || []),
         ...(topicReport.duplicateIds || []),
-        ...(topicReport.semanticDuplicateIds || []),
       ]),
     })
 
@@ -135,6 +140,7 @@ async function main() {
     historyHours: latestPreflight.payload.historyHours || 72,
     batchSize: latestPreflight.batch_size,
     rejectedRawIds,
+    semanticDuplicateRawIds,
     topics: topicPayloads,
   }
 

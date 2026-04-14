@@ -25,7 +25,8 @@ function assertEnv(name) {
 
 function printTopicReport(report) {
   const semanticCount = report.semanticDuplicateCount ?? 0
-  console.log(`[${report.topic}] total=${report.total} accepted=${report.acceptedCount} rejected=${report.rejectedCount} exact=${report.duplicateCount} semantic=${semanticCount}`)
+  const readyCount = report.readyCount ?? report.acceptedCount
+  console.log(`[${report.topic}] total=${report.total} accepted=${readyCount} rejected=${report.rejectedCount} exact=${report.duplicateCount} semantic=${semanticCount}`)
 
   if (report.rejected.length > 0) {
     const rejectedPreview = report.rejected
@@ -148,6 +149,8 @@ async function main() {
       (historyByTopic.get(topic) || []).filter((historyItem) => !(rawItems || []).some((item) => item.id === historyItem.id)),
       { similarityThreshold: 0.3, minStrongTokens: 3 },
     )
+    const semanticDuplicateIds = new Set(semanticMatches.map((match) => match.currentId))
+    const acceptedForClusterIds = (topicReport.acceptedIds || []).filter((id) => !semanticDuplicateIds.has(id))
 
     const semanticPreview = semanticMatches.slice(0, 5).map((match) =>
       `${match.currentTitle?.slice(0, 60) || match.currentId} ↔ ${match.historySource || 'history'}: ${match.historyTitle?.slice(0, 60) || match.historyId} (${match.score.toFixed(3)})`
@@ -163,23 +166,30 @@ async function main() {
       ...match,
     })))
 
-    printTopicReport(topicReport)
+    printTopicReport({
+      ...topicReport,
+      acceptedCount: topicReport.acceptedCount,
+      semanticDuplicateCount: semanticMatches.length,
+      readyCount: acceptedForClusterIds.length,
+    })
 
     allReports.push({
       topic: topicReport.topic,
       total: topicReport.total,
-      acceptedCount: topicReport.acceptedCount,
+      acceptedCount: acceptedForClusterIds.length,
+      acceptedBeforeSemanticCount: topicReport.acceptedCount,
       rejectedCount: topicReport.rejectedCount,
       duplicateCount: topicReport.duplicateCount,
       semanticDuplicateCount: semanticMatches.length,
       acceptedIds: topicReport.acceptedIds,
+      acceptedForClusterIds,
       rejectedIds: topicReport.rejected.map((item) => item.id),
       duplicateIds: topicReport.duplicateIds,
-      semanticDuplicateIds: semanticMatches.map((match) => match.currentId),
+      semanticDuplicateIds: Array.from(semanticDuplicateIds),
     })
 
     totalFetched += topicReport.total
-    totalAccepted += topicReport.acceptedCount
+    totalAccepted += acceptedForClusterIds.length
     totalRejected += topicReport.rejectedCount
     totalDuplicates += topicReport.duplicateCount
     totalSemanticDuplicates += semanticMatches.length

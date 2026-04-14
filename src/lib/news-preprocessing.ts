@@ -51,6 +51,20 @@ const DEAL_SOURCE_HINTS = [
   'meliuz',
 ]
 
+const ARCHIVE_HINT_PATTERNS = [
+  /\barquivos?\b/i,
+  /\barquivo(s)?\b/i,
+  /\barchive(s)?\b/i,
+  /\broundup(s)?\b/i,
+  /\bcollection\b/i,
+]
+
+const LISTICLE_HINT_PATTERNS = [
+  /\b\d+\s+(melhores|ofertas|op[çc]oes|opções|produtos|itens|motivos)\b/i,
+  /\b(top|ranking|lista|guia|sele(c|ç)(ao|ão))\b/i,
+  /\b(confira|check out|veja|clique)\b/i,
+]
+
 export function extractText(value: unknown): string {
   if (!value) return ''
   if (typeof value === 'object') {
@@ -118,22 +132,34 @@ export function shouldRejectRawItem({
   description = '',
   url = '',
   sourceName = '',
+  sections = [],
+  rawTexts = [],
 }: {
   title?: string
   description?: string
   url?: string
   sourceName?: string
+  sections?: Array<{ heading?: string; body?: string }>
+  rawTexts?: string[]
 }) {
-  const haystack = [title, description, url, sourceName].filter(Boolean).join(' \n ').toLowerCase()
+  const sectionText = Array.isArray(sections)
+    ? sections.map((section) => `${section?.heading || ''} ${section?.body || ''}`).join(' \n ')
+    : ''
+  const haystack = [title, description, sectionText, ...rawTexts, url, sourceName].filter(Boolean).join(' \n ').toLowerCase()
+
+  if (countMatches(haystack, ARCHIVE_HINT_PATTERNS) >= 1) {
+    return { reject: true, reason: 'blocked-archive' as const }
+  }
 
   if (countMatches(haystack, HARD_BLOCK_PATTERNS) >= 1) {
     return { reject: true, reason: 'blocked-gambling' as const }
   }
 
   const dealSignals = countMatches(haystack, DEAL_HINT_PATTERNS)
+  const listicleSignals = countMatches(haystack, LISTICLE_HINT_PATTERNS)
   const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
 
-  if (dealSignals >= 2 || (dealSignals >= 1 && sourceLooksPromo)) {
+  if (dealSignals >= 2 || (dealSignals >= 1 && (sourceLooksPromo || listicleSignals >= 1))) {
     return { reject: true, reason: 'blocked-deal' as const }
   }
 

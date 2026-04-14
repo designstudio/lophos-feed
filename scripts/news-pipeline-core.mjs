@@ -51,6 +51,20 @@ const DEAL_SOURCE_HINTS = [
   'meliuz',
 ]
 
+const ARCHIVE_HINT_PATTERNS = [
+  /\barquivos?\b/i,
+  /\barquivo(s)?\b/i,
+  /\barchive(s)?\b/i,
+  /\broundup(s)?\b/i,
+  /\bcollection\b/i,
+]
+
+const LISTICLE_HINT_PATTERNS = [
+  /\b\d+\s+(melhores|ofertas|op[çc]oes|opções|produtos|itens|motivos)\b/i,
+  /\b(top|ranking|lista|guia|sele(c|ç)(ao|ão))\b/i,
+  /\b(confira|check out|veja|clique)\b/i,
+]
+
 // Stopwords PT + EN + palavras de formato editorial e plataformas de streaming
 const STOPWORDS = new Set([
   // Português — artigos, preposições, pronomes, verbos comuns
@@ -171,24 +185,58 @@ export function shouldMergeTexts(a, b, { similarityThreshold = 0.3, minStrongTok
   }
 }
 
-export function shouldRejectPreflightItem({ title, description = '', url = '', sourceName = '' }) {
-  const haystack = [title, description, url, sourceName]
+export function shouldRejectPreflightItem({
+  title,
+  description = '',
+  url = '',
+  sourceName = '',
+  sections = [],
+  rawTexts = [],
+}) {
+  const sectionText = Array.isArray(sections)
+    ? sections.map((section) => `${section?.heading || ''} ${section?.body || ''}`).join(' \n ')
+    : ''
+
+  const haystack = [title, description, sectionText, ...rawTexts, url, sourceName]
     .filter(Boolean)
     .join(' \n ')
     .toLowerCase()
+
+  if (countMatches(haystack, ARCHIVE_HINT_PATTERNS) >= 1) {
+    return { reject: true, reason: 'blocked-archive' }
+  }
 
   if (countMatches(haystack, HARD_BLOCK_PATTERNS) >= 1) {
     return { reject: true, reason: 'blocked-gambling' }
   }
 
   const dealSignals = countMatches(haystack, DEAL_HINT_PATTERNS)
+  const listicleSignals = countMatches(haystack, LISTICLE_HINT_PATTERNS)
   const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
 
-  if (dealSignals >= 2 || (dealSignals >= 1 && sourceLooksPromo)) {
+  if (dealSignals >= 2 || (dealSignals >= 1 && (sourceLooksPromo || listicleSignals >= 1))) {
     return { reject: true, reason: 'blocked-deal' }
   }
 
   return { reject: false, reason: null }
+}
+
+export function buildNewsSourceFromItem(item) {
+  const rawUrl = item?.url || item?.source_url || ''
+  const canonicalUrl = canonicalizeUrl(rawUrl)
+  let hostname = 'source'
+
+  try {
+    hostname = new URL(canonicalUrl || rawUrl).hostname.replace(/^www\./, '')
+  } catch {
+    hostname = String(item?.source_name || 'source').trim() || 'source'
+  }
+
+  return {
+    name: String(item?.source_name || hostname).trim() || hostname,
+    url: canonicalUrl || rawUrl,
+    favicon: `https://www.google.com/s2/favicons?domain=${canonicalUrl || rawUrl}&sz=32`,
+  }
 }
 
 export function buildPreflightKey(item) {

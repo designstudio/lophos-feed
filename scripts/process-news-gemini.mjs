@@ -6,7 +6,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { canonicalizeUrl, strongIntersection, textOverlapScore } from './news-pipeline-core.mjs'
+import { buildNewsSourceFromItem, canonicalizeUrl, shouldRejectPreflightItem, strongIntersection, textOverlapScore } from './news-pipeline-core.mjs'
 import { processTopicWithGemini } from './process-news.mjs'
 
 const SIMILARITY_THRESHOLD = 0.30
@@ -138,7 +138,7 @@ async function main() {
   const since72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
-    .select('id, title, summary, sources, keywords, matched_topics, image_url, video_url')
+    .select('id, title, summary, sources, source_ids, keywords, matched_topics, image_url, video_url')
     .gte('published_at', since72h)
     .order('published_at', { ascending: false })
     .limit(300)
@@ -148,6 +148,7 @@ async function main() {
     title: r.title,
     summary: r.summary || '',
     sources: r.sources || [],
+    source_ids: r.source_ids || [],
     keywords: r.keywords || [],
     matched_topics: r.matched_topics || [],
     image_url: r.image_url || null,
@@ -158,7 +159,9 @@ async function main() {
   let totalGenerated = 0
   let totalMerged = 0
   let totalSaved = 0
+  let totalSemanticAttached = 0
   let hadTopicError = false
+  const semanticProcessedRawIds = new Set()
 
   for (let ti = 0; ti < topicPayloads.length; ti++) {
     const topicPayload = topicPayloads[ti]
@@ -234,12 +237,12 @@ async function main() {
       }
 
       for (const item of newsItems) {
-        const contentDecision = shouldRejectContent({
+        const contentDecision = shouldRejectPreflightItem({
           title: item.title,
-          summary: item.summary,
+          description: item.summary || '',
+          url: Array.isArray(item.sources) ? item.sources.map((source) => source?.url).filter(Boolean).join(' \n ') : '',
+          sourceName: Array.isArray(item.sources) ? item.sources.map((source) => source?.name).filter(Boolean).join(' \n ') : '',
           sections: item.sections || [],
-          urls: Array.isArray(item.sources) ? item.sources.map((source) => source?.url).filter(Boolean) : [],
-          sourceNames: Array.isArray(item.sources) ? item.sources.map((source) => source?.name).filter(Boolean) : [],
         })
 
         if (contentDecision.reject) {
@@ -299,16 +302,19 @@ async function main() {
           const newSources = item.sources.filter((s) => !existingUrls.has(canonicalizeUrl(s.url)))
           const mergedKeywords = [...new Set([...match.keywords, ...(item.keywords || [])])]
           const mergedMatchedTopics = [...new Set([...match.matched_topics, ...(item.matched_topics || [])])]
+          const mergedSourceIds = uniqueIds([...(match.source_ids || []), ...(item.source_ids || [])])
           const shouldBackfillImage = !match.image_url && !!item.image_url
           const shouldBackfillVideo = !match.video_url && !!item.video_url
 
           const keywordsChanged = mergedKeywords.length > match.keywords.length
           const topicsChanged = mergedMatchedTopics.length > match.matched_topics.length
+          const sourceIdsChanged = mergedSourceIds.length > (match.source_ids || []).length
 
-          if (newSources.length > 0 || keywordsChanged || topicsChanged || shouldBackfillImage || shouldBackfillVideo) {
+          if (newSources.length > 0 || keywordsChanged || topicsChanged || sourceIdsChanged || shouldBackfillImage || shouldBackfillVideo) {
             const mergedSources = [...match.sources, ...newSources]
             const updatePayload = {
               sources: mergedSources,
+              source_ids: mergedSourceIds,
               keywords: mergedKeywords,
               matched_topics: mergedMatchedTopics,
             }
@@ -324,6 +330,7 @@ async function main() {
               console.error(`[${topic}] ⚠️  Merge error: ${mergeError.message}. Item não será marcado como processado.`)
             } else {
               match.sources = mergedSources
+              match.source_ids = mergedSourceIds
               match.keywords = mergedKeywords
               match.matched_topics = mergedMatchedTopics
               if (shouldBackfillImage) match.image_url = item.image_url
@@ -382,6 +389,7 @@ async function main() {
               title: item.title,
               summary: item.summary || '',
               sources: item.sources,
+              source_ids: item.source_ids || [],
               keywords: item.keywords || [],
               matched_topics: item.matched_topics || [],
             })
@@ -419,6 +427,221 @@ async function main() {
     }
   }
 
+  const semanticMatches = Array.isArray(clusterRun.payload.semanticMatches) ? clusterRun.payload.semanticMatches : []
+  if (semanticMatches.length > 0) {
+    console.log(`\n[semantic] Attachando ${semanticMatches.length} duplicatas como fontes extras`)
+
+    const currentSemanticIds = uniqueIds(semanticMatches.map((match) => match.currentId))
+    const historySemanticIds = uniqueIds(semanticMatches.map((match) => match.historyId))
+
+    const [currentSemanticRows, historySemanticRows] = await Promise.all([
+      currentSemanticIds.length > 0
+        ? db
+          .from('raw_items')
+          .select('id, url, title, summary, source_name, source_url, topic, image_url, video_url')
+          .in('id', currentSemanticIds)
+        : Promise.resolve({ data: [], error: null }),
+      historySemanticIds.length > 0
+        ? db
+          .from('raw_items')
+          .select('id, url, title, summary, source_name, source_url, topic, image_url, video_url')
+          .in('id', historySemanticIds)
+        : Promise.resolve({ data: [], error: null }),
+    ])
+
+    if (currentSemanticRows.error) {
+      console.warn(`[semantic] Could not load current raw items: ${currentSemanticRows.error.message}`)
+    }
+    if (historySemanticRows.error) {
+      console.warn(`[semantic] Could not load history raw items: ${historySemanticRows.error.message}`)
+    }
+
+    const currentRawById = new Map((currentSemanticRows.data || []).map((row) => [row.id, row]))
+    const historyRawById = new Map((historySemanticRows.data || []).map((row) => [row.id, row]))
+
+    const articleById = new Map()
+    const articleBySourceId = new Map()
+    const articleBySourceUrl = new Map()
+
+    const indexArticle = (article) => {
+      if (!article?.id) return
+      articleById.set(article.id, article)
+
+      for (const sourceId of article.source_ids || []) {
+        if (sourceId && !articleBySourceId.has(sourceId)) {
+          articleBySourceId.set(sourceId, article)
+        }
+      }
+
+      for (const source of article.sources || []) {
+        const canonicalSourceUrl = canonicalizeUrl(source?.url || '')
+        if (canonicalSourceUrl && !articleBySourceUrl.has(canonicalSourceUrl)) {
+          articleBySourceUrl.set(canonicalSourceUrl, article)
+        }
+      }
+    }
+
+    allProcessedArticles.forEach(indexArticle)
+
+    const attachmentsByArticleId = new Map()
+
+    for (const match of semanticMatches) {
+      const currentRaw = currentRawById.get(match.currentId)
+      const historyRaw = historyRawById.get(match.historyId)
+      if (!currentRaw || !historyRaw) continue
+
+      let targetArticle = articleBySourceId.get(match.historyId) || null
+
+      if (!targetArticle) {
+        const historyUrl = canonicalizeUrl(historyRaw.url || '')
+        if (historyUrl) {
+          targetArticle = articleBySourceUrl.get(historyUrl) || null
+        }
+      }
+
+      if (!targetArticle) {
+        const { data: anchorBySourceId, error: anchorBySourceIdError } = await db
+          .from('articles')
+          .select('id, title, summary, sources, source_ids, keywords, matched_topics, image_url, video_url')
+          .contains('source_ids', [match.historyId])
+          .limit(1)
+          .maybeSingle()
+
+        if (anchorBySourceIdError) {
+          console.warn(`[semantic] Could not load anchor by source_id for ${match.historyId.slice(0, 8)}: ${anchorBySourceIdError.message}`)
+        } else if (anchorBySourceId) {
+          targetArticle = {
+            id: anchorBySourceId.id,
+            title: anchorBySourceId.title,
+            summary: anchorBySourceId.summary || '',
+            sources: anchorBySourceId.sources || [],
+            source_ids: anchorBySourceId.source_ids || [],
+            keywords: anchorBySourceId.keywords || [],
+            matched_topics: anchorBySourceId.matched_topics || [],
+            image_url: anchorBySourceId.image_url || null,
+            video_url: anchorBySourceId.video_url || null,
+          }
+          indexArticle(targetArticle)
+        }
+      }
+
+      if (!targetArticle) {
+        const fallbackText = `${historyRaw.title || ''} ${historyRaw.summary || ''}`.trim()
+        if (fallbackText) {
+          targetArticle = allProcessedArticles.find((article) => {
+            const candidateText = `${article.title || ''} ${article.summary || ''}`
+            return textOverlapScore(candidateText, fallbackText) >= SIMILARITY_THRESHOLD
+          }) || null
+        }
+      }
+
+      if (!targetArticle) {
+        console.warn(`[semantic] Could not resolve article anchor for ${match.currentId.slice(0, 8)} → ${match.historyId.slice(0, 8)} (${match.historyTitle?.slice(0, 60) || 'unknown'})`)
+        continue
+      }
+
+      const bucket = attachmentsByArticleId.get(targetArticle.id) || {
+        article: targetArticle,
+        rawItems: [],
+        matches: [],
+      }
+
+      bucket.rawItems.push(currentRaw)
+      bucket.matches.push(match)
+      attachmentsByArticleId.set(targetArticle.id, bucket)
+    }
+
+    for (const { article, rawItems } of attachmentsByArticleId.values()) {
+      const existingSourceUrls = new Set((article.sources || []).map((source) => canonicalizeUrl(source?.url || '')))
+      const mergedSources = [...(article.sources || [])]
+      const mergedSourceIds = uniqueIds([...(article.source_ids || [])])
+      const mergedMatchedTopics = uniqueIds([...(article.matched_topics || [])])
+      let shouldBackfillImage = !article.image_url
+      let shouldBackfillVideo = !article.video_url
+
+      for (const rawItem of rawItems) {
+        const newsSource = buildNewsSourceFromItem(rawItem)
+        const sourceUrl = canonicalizeUrl(newsSource.url || rawItem.url || rawItem.source_url || '')
+
+        if (sourceUrl && !existingSourceUrls.has(sourceUrl)) {
+          mergedSources.push(newsSource)
+          existingSourceUrls.add(sourceUrl)
+        }
+
+        mergedSourceIds.push(rawItem.id)
+
+        if (rawItem.topic) mergedMatchedTopics.push(rawItem.topic)
+        if (rawItem.image_url && !article.image_url) shouldBackfillImage = true
+        if (rawItem.video_url && !article.video_url) shouldBackfillVideo = true
+      }
+
+      const finalSourceIds = uniqueIds(mergedSourceIds)
+      const finalMatchedTopics = uniqueIds(mergedMatchedTopics)
+      const sourceIdsChanged = finalSourceIds.length !== (article.source_ids || []).length
+      const sourcesChanged = mergedSources.length !== (article.sources || []).length
+      const topicsChanged = finalMatchedTopics.length !== (article.matched_topics || []).length
+
+      if (!sourcesChanged && !sourceIdsChanged && !topicsChanged && !shouldBackfillImage && !shouldBackfillVideo) {
+        for (const rawItem of rawItems) {
+          semanticProcessedRawIds.add(rawItem.id)
+          totalSemanticAttached++
+        }
+        continue
+      }
+
+      const updatePayload = {
+        sources: mergedSources,
+        source_ids: finalSourceIds,
+        matched_topics: finalMatchedTopics,
+      }
+      if (shouldBackfillImage) {
+        const firstImage = rawItems.find((rawItem) => rawItem.image_url)?.image_url
+        if (firstImage) updatePayload.image_url = firstImage
+      }
+      if (shouldBackfillVideo) {
+        const firstVideo = rawItems.find((rawItem) => rawItem.video_url)?.video_url
+        if (firstVideo) updatePayload.video_url = firstVideo
+      }
+
+      const { error: attachError } = await db
+        .from('articles')
+        .update(updatePayload)
+        .eq('id', article.id)
+
+      if (attachError) {
+        console.warn(`[semantic] Could not attach sources to article ${article.id}: ${attachError.message}`)
+        continue
+      }
+
+      article.sources = mergedSources
+      article.source_ids = finalSourceIds
+      article.matched_topics = finalMatchedTopics
+      if (updatePayload.image_url) article.image_url = updatePayload.image_url
+      if (updatePayload.video_url) article.video_url = updatePayload.video_url
+      indexArticle(article)
+
+      for (const rawItem of rawItems) {
+        semanticProcessedRawIds.add(rawItem.id)
+        totalSemanticAttached++
+      }
+
+      console.log(`[semantic] ✓ artigo ${article.id} recebeu ${rawItems.length} fonte(s) extra(s)`)
+    }
+
+    if (semanticProcessedRawIds.size > 0) {
+      const { error: semanticMarkError } = await db
+        .from('raw_items')
+        .update({ processed: true })
+        .in('id', Array.from(semanticProcessedRawIds))
+
+      if (semanticMarkError) {
+        console.warn(`[semantic] Could not mark attached semantic duplicates as processed: ${semanticMarkError.message}`)
+      } else {
+        console.log(`[semantic] ✓ ${semanticProcessedRawIds.size} semantic duplicate raw items marcados como processados`)
+      }
+    }
+  }
+
   const finalStatus = hadTopicError ? 'failed' : 'processed'
   const { error: statusUpdateError } = await db
     .from('news_cluster_runs')
@@ -438,6 +661,7 @@ async function main() {
   const totalProcessed = totalSaved + totalMerged
   console.log(`\n✨ FAXINA CONCLUÍDA!`)
   console.log(`Topics: ${topicPayloads.length} | Artigos gerados: ${totalGenerated} | Salvos: ${totalSaved} | Merges: ${totalMerged}`)
+  console.log(`Duplicatas semânticas anexadas: ${totalSemanticAttached}`)
   console.log(`Total processado com sucesso: ${totalProcessed} notícias 🎉\n`)
 }
 

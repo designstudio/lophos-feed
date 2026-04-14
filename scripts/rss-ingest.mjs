@@ -71,6 +71,20 @@ const DEAL_SOURCE_HINTS = [
   'meliuz',
 ]
 
+const ARCHIVE_HINT_PATTERNS = [
+  /\barquivos?\b/i,
+  /\barquivo(s)?\b/i,
+  /\barchive(s)?\b/i,
+  /\broundup(s)?\b/i,
+  /\bcollection\b/i,
+]
+
+const LISTICLE_HINT_PATTERNS = [
+  /\b\d+\s+(melhores|ofertas|op[çc]oes|opções|produtos|itens|motivos)\b/i,
+  /\b(top|ranking|lista|guia|sele(c|ç)(ao|ão))\b/i,
+  /\b(confira|check out|veja|clique)\b/i,
+]
+
 function matchesAnyPattern(text, patterns) {
   return patterns.some((pattern) => pattern.test(text))
 }
@@ -78,14 +92,19 @@ function matchesAnyPattern(text, patterns) {
 function shouldRejectRawItem({ title, description, url, sourceName }) {
   const haystack = [title, description, url, sourceName].filter(Boolean).join(' \n ').toLowerCase()
 
+  if (ARCHIVE_HINT_PATTERNS.some((pattern) => pattern.test(haystack))) {
+    return { reject: true, reason: 'blocked-archive' }
+  }
+
   if (matchesAnyPattern(haystack, HARD_BLOCK_PATTERNS)) {
     return { reject: true, reason: 'blocked-gambling' }
   }
 
   const dealSignals = DEAL_HINT_PATTERNS.filter((pattern) => pattern.test(haystack)).length
+  const listicleSignals = LISTICLE_HINT_PATTERNS.filter((pattern) => pattern.test(haystack)).length
   const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
 
-  if (dealSignals >= 2 || (dealSignals >= 1 && sourceLooksPromo)) {
+  if (dealSignals >= 2 || (dealSignals >= 1 && (sourceLooksPromo || listicleSignals >= 1))) {
     return { reject: true, reason: 'blocked-deal' }
   }
 
