@@ -51,6 +51,32 @@ const DEAL_SOURCE_HINTS = [
   'meliuz',
 ]
 
+// Stopwords PT + EN + palavras de formato editorial e plataformas de streaming
+const STOPWORDS = new Set([
+  // Português — artigos, preposições, pronomes, verbos comuns
+  'o','a','os','as','um','uma','uns','umas','de','do','da','dos','das','em','no','na','nos','nas',
+  'por','para','com','sem','sob','sobre','entre','ate','apos','que','se','mas','ou','e','ao','aos',
+  'eh','esta','este','estes','estas','isso','aqui','la','nao','sim','ja','so','mais','menos',
+  'muito','pouco','bem','mal','ainda','agora','quando','como','onde','ser','foi','era','sao',
+  'tem','ter','vai','vou','pode','ira','sera','esta','estao','estou','tudo','todos','toda',
+  // Inglês — artigos, preposições, auxiliares
+  'the','an','of','to','in','for','on','with','at','by','from','up','about','into',
+  'is','are','was','were','be','been','being','have','has','had','do','does','did',
+  'will','would','could','should','may','might','not','no','or','and','but','if','as',
+  'it','its','that','this','they','them','their','there','then','than','so','all',
+  'also','just','more','can','we','you','he','she','our','his','her','new',
+  // Palavras de formato/editorial
+  'estreia','estreias','estreou','lancamento','lancamentos','lanca','lancou',
+  'anuncia','anuncio','confirma','confirmado','confirmada','revelado','revelada',
+  'revela','veja','assista','saiba','novo','nova','novos','novas','primeiro','primeira',
+  'ultimas','ultima','ultimo','noticias','exclusivo','exclusiva','especial',
+  'serie','series','filme','filmes','animacao','documentario','temporada',
+  'episodio','episodios','parte','capitulo','trailer','review','critica',
+  // Plataformas de streaming (evita que "netflix" vire o único token relevante)
+  'netflix','disney','hbo','max','prime','amazon','apple','hulu','paramount',
+  'peacock','globo','globoplay','youtube','twitch','spotify',
+])
+
 function countMatches(text, patterns) {
   return patterns.reduce((total, pattern) => total + (pattern.test(text) ? 1 : 0), 0)
 }
