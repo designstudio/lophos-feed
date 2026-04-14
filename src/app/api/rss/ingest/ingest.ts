@@ -1,29 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { XMLParser } from 'fast-xml-parser'
-import crypto from 'crypto'
-
-function createDedupHash(title: string): string {
-  const normalized = title.toLowerCase().trim()
-  return crypto.createHash('md5').update(normalized).digest('hex')
-}
-
-function extractText(val: any): string {
-  if (!val) return ''
-  if (typeof val === 'object') return val['#text'] || ''
-  return String(val)
-}
-
-function stripHtml(html: any): string {
-  const text = extractText(html)
-  if (!text) return ''
-  return text
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&')
-    .trim()
-}
+import { createDedupHash, extractText, stripHtml } from '@/lib/news-preprocessing'
 
 function isYouTubeOrVimeo(url: string | undefined): boolean {
   if (!url) return false

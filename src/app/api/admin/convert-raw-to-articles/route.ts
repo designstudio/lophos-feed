@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
+import { buildFaviconUrl } from '@/lib/news-preprocessing'
 
 export const maxDuration = 300
 
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
         const newSource = {
           name: item.source_name,
           url: item.source_url,
-          favicon: `https://www.google.com/s2/favicons?domain=${item.source_url}&sz=32`
+          favicon: buildFaviconUrl(item.source_url)
         }
 
         let similarArticle = null
