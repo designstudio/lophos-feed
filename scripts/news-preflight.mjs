@@ -100,6 +100,7 @@ async function main() {
   console.log(`Histórico de raw_items indexado: ${historyKeys.size} chaves únicas\n`)
 
   const allReports = []
+  const allSemanticMatches = []
   let totalFetched = 0
   let totalAccepted = 0
   let totalRejected = 0
@@ -154,6 +155,11 @@ async function main() {
       semanticPreview.forEach((line) => console.log(`    ${line}`))
     }
 
+    allSemanticMatches.push(...semanticMatches.map((match) => ({
+      topic: topicReport.topic,
+      ...match,
+    })))
+
     printTopicReport(topicReport)
 
     allReports.push({
@@ -181,7 +187,7 @@ async function main() {
   console.log(`  duplicados semânticos: ${totalSemanticDuplicates}`)
 
   console.log('\nJSON do preflight:')
-  console.log(JSON.stringify({
+  const payload = {
     windowHours: PROCESS_LOOKBACK_HOURS,
     batchSize: BATCH_SIZE,
     totalFetched,
@@ -190,7 +196,31 @@ async function main() {
     totalDuplicates,
     totalSemanticDuplicates,
     topics: allReports,
-  }, null, 2))
+    semanticMatches: allSemanticMatches,
+  }
+
+  console.log(JSON.stringify(payload, null, 2))
+
+  const { data: insertedRow, error: insertError } = await db
+    .from('news_preflight_runs')
+    .insert({
+      window_hours: PROCESS_LOOKBACK_HOURS,
+      batch_size: BATCH_SIZE,
+      total_fetched: totalFetched,
+      total_accepted: totalAccepted,
+      total_rejected: totalRejected,
+      total_duplicates: totalDuplicates,
+      total_semantic_duplicates: totalSemanticDuplicates,
+      payload,
+    })
+    .select('id, created_at')
+    .single()
+
+  if (insertError) {
+    console.error(`Falha ao salvar execução do preflight: ${insertError.message}`)
+  } else if (insertedRow) {
+    console.log(`\nPreflight salvo em news_preflight_runs: ${insertedRow.id} (${insertedRow.created_at})`)
+  }
 }
 
 main().catch((err) => {
