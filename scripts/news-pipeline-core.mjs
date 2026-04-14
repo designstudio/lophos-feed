@@ -171,7 +171,13 @@ export function buildPreflightKey(item) {
   return `${canonicalUrl}::${titleHash}`
 }
 
-export function preflightRawItems(items) {
+export function buildHistoryKey(item) {
+  const canonicalUrl = canonicalizeUrl(item.url)
+  const titleHash = item.dedup_hash || createDedupHash(item.title)
+  return `${canonicalUrl}::${titleHash}`
+}
+
+export function preflightRawItems(items, historyKeys = new Set()) {
   const accepted = []
   const rejected = []
   const duplicateIds = []
@@ -195,7 +201,7 @@ export function preflightRawItems(items) {
     }
 
     const key = buildPreflightKey(item)
-    if (seenKeys.has(key)) {
+    if (seenKeys.has(key) || historyKeys.has(key)) {
       duplicateIds.push(item.id)
       continue
     }
@@ -252,6 +258,10 @@ export function clusterDeterministicItems(items, options = {}) {
 }
 
 export function summarizePreflightByTopic(items) {
+  return summarizePreflightByTopicWithHistory(items, new Set())
+}
+
+export function summarizePreflightByTopicWithHistory(items, historyKeys = new Set()) {
   const byTopic = new Map()
 
   for (const item of items) {
@@ -263,7 +273,7 @@ export function summarizePreflightByTopic(items) {
 
   return Array.from(byTopic.entries())
     .map(([topic, topicItems]) => {
-      const { accepted, rejected, duplicateIds } = preflightRawItems(topicItems)
+      const { accepted, rejected, duplicateIds } = preflightRawItems(topicItems, historyKeys)
 
       return {
         topic,

@@ -9,7 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { summarizePreflightByTopic } from './news-pipeline-core.mjs'
+import { buildHistoryKey, summarizePreflightByTopicWithHistory } from './news-pipeline-core.mjs'
 
 const PROCESS_LOOKBACK_HOURS = 12
 const BATCH_SIZE = 100
@@ -63,6 +63,33 @@ async function main() {
   console.log(`Janela de processamento: últimas ${PROCESS_LOOKBACK_HOURS}h (${rawLookbackSince})`)
   console.log(`Topics encontrados: ${topics.join(', ')}\n`)
 
+  const historyKeys = new Set()
+  const pageSize = 1000
+  let offset = 0
+
+  while (true) {
+    const { data: historyRows, error: historyError } = await db
+      .from('raw_items')
+      .select('id, url, title, dedup_hash')
+      .order('fetched_at', { ascending: false })
+      .range(offset, offset + pageSize - 1)
+
+    if (historyError) {
+      throw new Error('History DB error: ' + historyError.message)
+    }
+
+    if (!historyRows?.length) break
+
+    historyRows.forEach((row) => {
+      historyKeys.add(buildHistoryKey(row))
+    })
+
+    offset += pageSize
+    if (historyRows.length < pageSize) break
+  }
+
+  console.log(`Histórico de raw_items indexado: ${historyKeys.size} chaves únicas\n`)
+
   const allReports = []
   let totalFetched = 0
   let totalAccepted = 0
@@ -84,7 +111,11 @@ async function main() {
       continue
     }
 
-    const report = summarizePreflightByTopic(rawItems || [])
+    const currentKeys = new Set((rawItems || []).map((item) => buildHistoryKey(item)))
+    const topicHistoryKeys = new Set(historyKeys)
+    currentKeys.forEach((key) => topicHistoryKeys.delete(key))
+
+    const report = summarizePreflightByTopicWithHistory(rawItems || [], topicHistoryKeys)
     const topicReport = report[0] || {
       topic,
       total: 0,
