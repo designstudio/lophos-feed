@@ -70,6 +70,24 @@ function uniqueIds(values) {
   return [...new Set((values || []).filter(Boolean))]
 }
 
+function articleComparableText(article) {
+  const sectionsText = Array.isArray(article?.sections)
+    ? article.sections
+        .map((section) => `${section?.heading || ''} ${section?.body || ''}`)
+        .join(' ')
+    : ''
+
+  return [
+    article?.title,
+    article?.summary,
+    sectionsText,
+    article?.conclusion,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+}
+
 function countMatches(text, patterns) {
   return patterns.reduce((total, pattern) => total + (pattern.test(text) ? 1 : 0), 0)
 }
@@ -138,15 +156,17 @@ async function main() {
   const since72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
-    .select('id, title, summary, sources, source_ids, keywords, matched_topics, image_url, video_url')
+    .select('id, title, summary, sections, conclusion, sources, source_ids, keywords, matched_topics, image_url, video_url')
     .gte('published_at', since72h)
     .order('published_at', { ascending: false })
-    .limit(1000)
+    .limit(300)
 
   const allProcessedArticles = (globalExisting || []).map((r) => ({
     id: r.id,
     title: r.title,
     summary: r.summary || '',
+    sections: r.sections || [],
+    conclusion: r.conclusion || '',
     sources: r.sources || [],
     source_ids: r.source_ids || [],
     keywords: r.keywords || [],
@@ -253,7 +273,7 @@ async function main() {
           continue
         }
 
-        const itemText = `${item.title || ''} ${item.summary || ''}`
+        const itemText = articleComparableText(item)
 
         let bestMatch = null
         let bestScore = 0
@@ -263,7 +283,7 @@ async function main() {
         let auditTitle = ''
 
         for (const existing of allProcessedArticles) {
-          const existingText = `${existing.title || ''} ${existing.summary || ''}`
+          const existingText = articleComparableText(existing)
           const score = textOverlapScore(itemText, existingText)
 
           if (score < SIMILARITY_THRESHOLD) {
@@ -388,6 +408,8 @@ async function main() {
               id: item.id,
               title: item.title,
               summary: item.summary || '',
+              sections: item.sections || [],
+              conclusion: item.conclusion || '',
               sources: item.sources,
               source_ids: item.source_ids || [],
               keywords: item.keywords || [],
@@ -502,7 +524,7 @@ async function main() {
       if (!targetArticle) {
         const { data: anchorBySourceId, error: anchorBySourceIdError } = await db
           .from('articles')
-          .select('id, title, summary, sources, source_ids, keywords, matched_topics, image_url, video_url')
+          .select('id, title, summary, sections, conclusion, sources, source_ids, keywords, matched_topics, image_url, video_url')
           .contains('source_ids', [match.historyId])
           .limit(1)
           .maybeSingle()
@@ -514,6 +536,8 @@ async function main() {
             id: anchorBySourceId.id,
             title: anchorBySourceId.title,
             summary: anchorBySourceId.summary || '',
+            sections: anchorBySourceId.sections || [],
+            conclusion: anchorBySourceId.conclusion || '',
             sources: anchorBySourceId.sources || [],
             source_ids: anchorBySourceId.source_ids || [],
             keywords: anchorBySourceId.keywords || [],
@@ -529,7 +553,7 @@ async function main() {
         const fallbackText = `${historyRaw.title || ''} ${historyRaw.summary || ''}`.trim()
         if (fallbackText) {
           targetArticle = allProcessedArticles.find((article) => {
-            const candidateText = `${article.title || ''} ${article.summary || ''}`
+            const candidateText = articleComparableText(article)
             return textOverlapScore(candidateText, fallbackText) >= SIMILARITY_THRESHOLD
           }) || null
         }

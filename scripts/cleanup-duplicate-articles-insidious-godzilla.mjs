@@ -430,7 +430,7 @@ async function main() {
 
   const duplicateGroups = Array.from(groups.values())
     .filter((group) => group.length > 1)
-    .map((group) => group.sort((a, b) => b._sortKey - a._sortKey))
+    .map((group) => group.sort((a, b) => a._sortKey - b._sortKey))
     .sort((a, b) => b.length - a.length)
 
   console.log(`[dedupe] Pair checks: ${pairChecks}`)

@@ -1,23 +1,9 @@
 /**
- * Lophos News Processing — PAID TIER TURBO MODE 🚀
+ * LEGACY news pipeline.
  *
- * Fase 1: Agrupamento Inteligente (Gemini 2.5 Flash-Lite)
- * ✅ Agrupa os 15 títulos em clusters de mesmo assunto
- * ✅ Retorna apenas IDs agrupados (poucos tokens)
- * ✅ Evita duplicatas na origem
- *
- * Fase 2: Geração de Conteúdo (Gemini 2.5 Flash-Lite)
- * ✅ Processa cada cluster com conteúdo completo
- * ✅ Gera artigos ricos com múltiplas fontes
- * ✅ Merging real: 5 fontes sobre iPhone = 1 artigo
- *
- * PAID TIER OPTIMIZATIONS:
- * ✅ Cota ilimitada (4K RPM)
- * ✅ Sem delays entre clusters (execução imediata)
- * ✅ Delay mínimo entre tópicos (1s apenas)
- * ✅ Processa backlog em segundos
- *
- * Benefício: Inteligência de curadoria a velocidade MÁXIMA.
+ * This file kept the original monolithic implementation used before the
+ * pipeline was split into preflight, cluster and Gemini runner stages.
+ * The active cron path no longer imports this file.
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -330,6 +316,7 @@ export async function processTopicWithGemini(topic, results, existingTitles, clu
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const allParsedItems = [] // Array de { item, clusterSourceIds }
   const allProcessedClusterSourceIds = new Set() // Rastreia TODOS os clusters processados com sucesso
+  const quarantinedClusterSourceIds = new Set() // Clusters inválidos que não devem voltar para retry automático
 
   // Processar cada cluster (contém source_ids reais, não índices)
   for (let clusterIdx = 0; clusterIdx < clusters.length; clusterIdx++) {
@@ -439,6 +426,10 @@ ${context}`
 
       if (firstBracket === -1 || lastBracket === -1) {
         console.warn(`[${topic}] Cluster ${clusterNum}: JSON inválido`)
+        clusterSourceIds.forEach(id => {
+          allProcessedClusterSourceIds.add(id)
+          quarantinedClusterSourceIds.add(id)
+        })
       } else {
         try {
           const jsonStr = text.substring(firstBracket, lastBracket + 1)
@@ -454,7 +445,10 @@ ${context}`
           console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) ✓`)
         } catch (parseErr) {
           console.warn(`[${topic}] Cluster ${clusterNum}: Parse JSON falhou: ${parseErr.message}`)
-          // NÃO marca como processado se parse falhar
+          clusterSourceIds.forEach(id => {
+            allProcessedClusterSourceIds.add(id)
+            quarantinedClusterSourceIds.add(id)
+          })
         }
       }
     } catch (err) {
@@ -608,7 +602,12 @@ ${context}`
     })
   }
 
-  return { newsItems, success: true, processedClusterSourceIds: Array.from(allProcessedClusterSourceIds) }
+  return {
+    newsItems,
+    success: true,
+    processedClusterSourceIds: Array.from(allProcessedClusterSourceIds),
+    quarantinedClusterSourceIds: Array.from(quarantinedClusterSourceIds),
+  }
 }
 
 async function processTopic(topic, acceptedItems, existingTitles, clusters, rawItemsMap, rejectedRawIds = []) {
@@ -664,7 +663,7 @@ async function main() {
     .select('id, title, summary, sources, keywords, matched_topics, image_url, video_url')
     .gte('published_at', since72h)
     .order('published_at', { ascending: false })
-    .limit(1000)
+    .limit(300)
 
   const allProcessedArticles = (globalExisting || []).map(r => ({
     id: r.id,

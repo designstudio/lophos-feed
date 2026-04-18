@@ -51,51 +51,51 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        // Determine which is newer
+        // Keep the older article as canonical and add the newer one as source.
         const article1 = articles.find(a => a.id === id1)!
         const article2 = articles.find(a => a.id === id2)!
 
-        const newerArticle = new Date(article1.published_at) > new Date(article2.published_at) ? article1 : article2
-        const olderArticle = newerArticle.id === article1.id ? article2 : article1
+        const olderArticle = new Date(article1.published_at) <= new Date(article2.published_at) ? article1 : article2
+        const newerArticle = olderArticle.id === article1.id ? article2 : article1
 
-        console.log(`[merge-duplicates-simple] Merging ${newerArticle.id} (newer) with ${olderArticle.id} (older)`)
+        console.log(`[merge-duplicates-simple] Merging ${olderArticle.id} (older) with ${newerArticle.id} (newer)`)
 
         // Combine sources
-        const newerSources = newerArticle.sources || []
         const olderSources = olderArticle.sources || []
+        const newerSources = newerArticle.sources || []
 
         // Remove duplicates by URL
         const uniqueSources = [
-          ...newerSources,
-          ...olderSources.filter((os: any) => !newerSources.some((ns: any) => ns.url === os.url))
+          ...olderSources,
+          ...newerSources.filter((ns: any) => !olderSources.some((os: any) => os.url === ns.url))
         ]
 
-        // Update newer article with combined sources
+        // Update older article with combined sources
         const { error: updateError } = await db
           .from('articles')
           .update({ sources: uniqueSources })
-          .eq('id', newerArticle.id)
+          .eq('id', olderArticle.id)
 
         if (updateError) {
-          errors.push(`Could not update article ${newerArticle.id}: ${updateError.message}`)
+          errors.push(`Could not update article ${olderArticle.id}: ${updateError.message}`)
           continue
         }
 
-        // Delete older article
+        // Delete newer article
         const { error: deleteError } = await db
           .from('articles')
           .delete()
-          .eq('id', olderArticle.id)
+          .eq('id', newerArticle.id)
 
         if (deleteError) {
-          errors.push(`Could not delete article ${olderArticle.id}: ${deleteError.message}`)
+          errors.push(`Could not delete article ${newerArticle.id}: ${deleteError.message}`)
           continue
         }
 
         mergedCount++
         deletedCount++
 
-        console.log(`[merge-duplicates-simple] Successfully merged pair: ${newerArticle.id} + ${olderArticle.id}`)
+        console.log(`[merge-duplicates-simple] Successfully merged pair: ${olderArticle.id} + ${newerArticle.id}`)
       } catch (err: any) {
         errors.push(`Error processing pair: ${err.message}`)
       }

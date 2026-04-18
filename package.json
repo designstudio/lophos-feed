@@ -9,6 +9,7 @@
     "news:ingest": "node scripts/news-ingest.mjs",
     "news:preflight": "node scripts/news-preflight.mjs",
     "news:cluster": "node scripts/news-cluster.mjs",
+    "news:embedding-test": "node scripts/news-embedding-test.mjs",
     "news:process": "node scripts/news-process.mjs",
     "news:process-gemini": "node scripts/process-news-gemini.mjs",
     "news:cron": "node scripts/news-cron.mjs",
@@ -19,6 +20,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6",
     "@google/generative-ai": "^0.24.1",
+    "@xenova/transformers": "^2.17.2",
     "@supabase/supabase-js": "^2",
     "@untitledui/icons": "^0.0.22",
     "clsx": "^2.1.1",
