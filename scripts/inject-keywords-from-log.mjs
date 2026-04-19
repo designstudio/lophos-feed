@@ -1,6 +1,6 @@
 /**
  * Parses the backfill log file and injects keywords directly into the database,
- * bypassing the need to re-run Gemini.
+ * bypassing the need to re-run synthesis.
  *
  * Usage: node scripts/inject-keywords-from-log.mjs <path-to-log-file>
  */

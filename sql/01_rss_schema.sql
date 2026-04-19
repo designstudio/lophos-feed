@@ -12,7 +12,7 @@ create table if not exists raw_items (
   pub_date      timestamptz,
   fetched_at    timestamptz default now(),
   dedup_hash    text,         -- hash do título normalizado para dedup rápida
-  processed     boolean default false  -- true quando já foi sintetizado pelo Gemini
+  processed     boolean default false  -- true quando já foi sintetizado pelo Mistral
 );
 
 create index if not exists raw_items_topic_idx      on raw_items(topic);
@@ -22,7 +22,18 @@ create index if not exists raw_items_dedup_hash_idx on raw_items(dedup_hash);
 create index if not exists raw_items_fetched_at_idx on raw_items(fetched_at desc);
 
 alter table raw_items enable row level security;
-create policy "service role all" on raw_items for all using (true);
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'raw_items'
+      and policyname = 'service role all'
+  ) then
+    create policy "service role all" on raw_items for all using (true);
+  end if;
+end $$;
 
 -- rss_feeds: catálogo de feeds com metadados
 create table if not exists rss_feeds (
@@ -43,7 +54,18 @@ create index if not exists rss_feeds_topics_idx  on rss_feeds using gin(topics);
 create index if not exists rss_feeds_active_idx  on rss_feeds(active);
 
 alter table rss_feeds enable row level security;
-create policy "service role all" on rss_feeds for all using (true);
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_policies
+    where schemaname = 'public'
+      and tablename = 'rss_feeds'
+      and policyname = 'service role all'
+  ) then
+    create policy "service role all" on rss_feeds for all using (true);
+  end if;
+end $$;
 
 -- Seed: feeds iniciais curados por tópico
 insert into rss_feeds (url, name, topics, language) values

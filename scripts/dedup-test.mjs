@@ -12,11 +12,11 @@
  * Limitação conhecida:
  *  - Títulos sobre o MESMO fato em idiomas DIFERENTES (PT vs EN) produzem tokens distintos
  *    e podem ficar abaixo do threshold Jaccard. Nesses casos o agrupamento deve ocorrer
- *    na Fase 1 (clustering Gemini), não no dedup pós-geração.
+ *    na Fase 1 (clustering determinístico/Mistral), não no dedup pós-geração.
  */
 
-// ─── Réplica fiel das helpers de process-news.mjs ────────────────────────────
-// (manter sincronizado ao editar process-news.mjs)
+// ─── Réplica fiel das helpers de process-news-mistral.mjs ────────────────────
+// (manter sincronizado ao editar process-news-mistral.mjs)
 
 const STOPWORDS = new Set([
   'o','a','os','as','um','uma','uns','umas','de','do','da','dos','das','em','no','na','nos','nas',
@@ -76,7 +76,7 @@ function strongIntersection(a, b) {
   return common
 }
 
-// ─── Parâmetros (manter sincronizado com process-news.mjs) ───────────────────
+// ─── Parâmetros (manter sincronizado com process-news-mistral.mjs) ───────────
 
 const SIMILARITY_THRESHOLD = 0.30
 const MIN_STRONG_TOKENS    = 3
@@ -199,12 +199,12 @@ const tests = [
 
   {
     id: 'KNOWN-LIMIT-1',
-    label: '[LIMITAÇÃO CROSS-LANG] Swapped PT vs EN — dedup deve ocorrer na Fase 1 (Gemini)',
-    expectMerge: false, // não mergeamos cross-language nesta fase — Gemini cuida disso
+    label: '[LIMITAÇÃO CROSS-LANG] Swapped PT vs EN — dedup deve ocorrer na Fase 1 (cluster)',
+    expectMerge: false, // não mergeamos cross-language nesta fase — o cluster cuida disso
     a: 'Swapped com Emma Myers estreia na Netflix como comédia romântica baseada em livro',
     b: 'Swapped: Stranger Things star Emma Myers to lead new Netflix romantic comedy',
     note: 'Tokens são muito diferentes entre PT e EN para sobreposição Jaccard funcionar. ' +
-          'O Gemini clustering na Fase 1 agrupa por semântica, cobindo este caso.',
+          'O clustering na Fase 1 agrupa por semântica, cobrindo este caso.',
   },
 ]
 
@@ -248,7 +248,7 @@ console.log(`  Resultado: ${passed} passed | ${failed} failed (de ${tests.filter
 console.log('═'.repeat(72))
 
 if (failed > 0) {
-  console.log('\n⚠️  Ajuste SIMILARITY_THRESHOLD ou MIN_STRONG_TOKENS em process-news.mjs e aqui.')
+  console.log('\n⚠️  Ajuste SIMILARITY_THRESHOLD ou MIN_STRONG_TOKENS em process-news-mistral.mjs e aqui.')
   console.log('   Sugestão: se MERGE falha → baixar threshold ou MIN_STRONG_TOKENS.')
   console.log('   Sugestão: se NO-MERGE falha → aumentar threshold ou MIN_STRONG_TOKENS.')
   process.exit(1)

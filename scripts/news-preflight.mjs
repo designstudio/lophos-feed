@@ -1,7 +1,7 @@
 /**
  * News preflight
  *
- * Faz a triagem determinística antes do Gemini:
+ * Faz a triagem determinística antes do Mistral:
  * - busca raw_items ainda não processados
  * - remove lixo/boilerplate de forma local
  * - identifica duplicatas óbvias
@@ -10,10 +10,13 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { buildHistoryKey, findSemanticDuplicateMatches, summarizePreflightByTopicWithHistory } from './news-pipeline-core.mjs'
+import { loadScriptEnvironment } from './script-env.mjs'
 
 const PROCESS_LOOKBACK_HOURS = 12
 const HISTORY_LOOKBACK_HOURS = 72
 const BATCH_SIZE = 100
+
+loadScriptEnvironment()
 
 function assertEnv(name) {
   const value = process.env[name]
@@ -197,7 +200,7 @@ async function main() {
 
   console.log('\nResumo geral')
   console.log(`  raw_items vistos: ${totalFetched}`)
-  console.log(`  prontos para Gemini: ${totalAccepted}`)
+  console.log(`  prontos para Mistral: ${totalAccepted}`)
   console.log(`  rejeitados localmente: ${totalRejected}`)
   console.log(`  duplicados óbvios: ${totalDuplicates}`)
   console.log(`  duplicados semânticos: ${totalSemanticDuplicates}`)

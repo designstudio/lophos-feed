@@ -217,15 +217,15 @@ export async function collectRawForTopic(topic: string): Promise<TavilyResult[]>
 export async function fetchNewsForTopic(
   topic: string,
   existingTitles: string[] = [],
-  onDiag?: (stats: { tavily: number; filtered: number; gemini: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; geminiRaw?: string; droppedItems?: { title: string; score: number }[] }) => void
+  onDiag?: (stats: { tavily: number; filtered: number; ai: number; kept: number; dropped: number; rejected?: { url?: string; reason: string }[]; aiRaw?: string; droppedItems?: { title: string; score: number }[] }) => void
 ): Promise<NewsItem[]> {
   console.warn(`[news] fetchNewsForTopic called but Tavily has been removed`)
   return []
 }
 
 type DiagCallback = (stats: {
-  gemini: number; kept: number; dropped: number
-  geminiRaw?: string; droppedItems?: { title: string; score: number }[]
+  ai: number; kept: number; dropped: number
+  aiRaw?: string; droppedItems?: { title: string; score: number }[]
 }) => void
 
 // Legacy helper kept for compatibility, but the active news pipeline no longer
@@ -238,7 +238,7 @@ export async function processRawBatch(
   tavilyImages: string[] = []
 ): Promise<NewsItem[]> {
   console.warn(`[news] processRawBatch is deprecated and no longer uses Groq. Returning no items for ${topic}.`)
-  onDiag?.({ gemini: 0, kept: 0, dropped: 0 })
+  onDiag?.({ ai: 0, kept: 0, dropped: 0 })
   return []
 }
 

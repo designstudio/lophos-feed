@@ -58,7 +58,7 @@ WHERE id IN (
 ### C. Reprocessar com Script Novo
 
 ```bash
-node scripts/process-news.mjs
+node scripts/process-news-mistral.mjs
 ```
 
 Agora com clustering rígido, evita os mishmashes.

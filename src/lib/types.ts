@@ -22,7 +22,7 @@ export interface NewsItem {
   videoUrl?: string      // YouTube/Vimeo URL extraída do RSS
   publishedAt: string
   cachedAt: string
-  matchedTopics?: string[]  // keywords geradas pelo Gemini para matching com tópicos do usuário
+  matchedTopics?: string[]  // keywords geradas pelo Mistral para matching com tópicos do usuário
   tavilyRaw?: { url: string; title: string; content: string; image?: string }[]  // original Tavily results
 }
 

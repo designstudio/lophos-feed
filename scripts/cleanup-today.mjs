@@ -4,6 +4,9 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+import { loadScriptEnvironment } from './script-env.mjs'
+
+loadScriptEnvironment()
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -46,13 +49,13 @@ async function cleanup() {
     console.log('   ℹ️  Nenhum artigo encontrado para hoje')
   }
 
-  // 2. Reset raw_items processed today
+  // 2. Reset raw_items fetched today
   console.log('\n2️⃣  Resetando raw_items processados de hoje...')
   const { data: rawItemsToReset, error: fetchRawError } = await db
     .from('raw_items')
     .select('id, topic, title')
     .eq('processed', true)
-    .gte('created_at', todayISO)
+    .gte('fetched_at', todayISO)
 
   if (fetchRawError) {
     console.error('❌ Erro ao buscar raw_items:', fetchRawError.message)
@@ -64,7 +67,7 @@ async function cleanup() {
       .from('raw_items')
       .update({ processed: false })
       .eq('processed', true)
-      .gte('created_at', todayISO)
+      .gte('fetched_at', todayISO)
 
     if (updateError) {
       console.error('❌ Erro ao resetar raw_items:', updateError.message)

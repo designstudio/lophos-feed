@@ -1,19 +1,22 @@
 /**
- * Shared Gemini synthesis core.
+ * Shared Mistral synthesis core.
  *
- * Imported by the Gemini runner. This file should contain the article
+ * Imported by the Mistral runner. This file should contain the article
  * generation logic, but not the cron orchestration.
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { randomUUID } from 'crypto'
 import { buildNewsSourceFromItem } from './news-pipeline-core.mjs'
+import { loadScriptEnvironment } from './script-env.mjs'
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+loadScriptEnvironment()
 
-const model = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash-lite',
-})
+const MISTRAL_API_URL = (process.env.MISTRAL_API_URL || 'https://api.mistral.ai/v1/chat/completions').replace(/\/+$/, '')
+const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY
+const MISTRAL_MODEL = process.env.MISTRAL_MODEL || 'mistral-large-latest'
+const MISTRAL_TIMEOUT_MS = Number(process.env.MISTRAL_TIMEOUT_MS || 300000)
+const MISTRAL_RETRY_BASE_DELAY_MS = Number(process.env.MISTRAL_RETRY_BASE_DELAY_MS || 2000)
+const MISTRAL_CLUSTER_DELAY_MS = Number(process.env.MISTRAL_CLUSTER_DELAY_MS || 500)
 
 const CONTENT_CHARS = 2000
 
@@ -169,7 +172,99 @@ function shouldRejectContent({ title, summary = '', sections = [], urls = [], so
   return { reject: false, reason: null }
 }
 
-export async function processTopicWithGemini(topic, results, existingTitles, clusters, rawItemsMap) {
+function extractMessageText(content) {
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (!part) return ''
+        if (typeof part === 'string') return part
+        if (typeof part.text === 'string') return part.text
+        return ''
+      })
+      .join('')
+  }
+  return ''
+}
+
+async function generateWithMistral(prompt) {
+  if (!MISTRAL_API_KEY) {
+    throw new Error('Missing environment variable: MISTRAL_API_KEY')
+  }
+
+  const maxAttempts = 3
+  let lastError = null
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), MISTRAL_TIMEOUT_MS)
+
+    try {
+      const response = await fetch(MISTRAL_API_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${MISTRAL_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: MISTRAL_MODEL,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          response_format: {
+            type: 'json_object',
+          },
+          temperature: 0.2,
+          max_tokens: 4096,
+          stream: false,
+          safe_prompt: false,
+        }),
+        signal: controller.signal,
+      })
+
+      const rawText = await response.text()
+      if (!response.ok) {
+        const error = new Error(`Mistral API error (${response.status}): ${rawText}`)
+        error.status = response.status
+
+        if ((response.status === 429 || response.status === 503) && attempt < maxAttempts) {
+          lastError = error
+          const backoffMs = MISTRAL_RETRY_BASE_DELAY_MS * attempt
+          await new Promise((resolve) => setTimeout(resolve, backoffMs))
+          continue
+        }
+
+        throw error
+      }
+
+      const data = JSON.parse(rawText)
+      const text = extractMessageText(data?.choices?.[0]?.message?.content)
+
+      if (typeof text !== 'string' || !text.trim()) {
+        throw new Error('Mistral returned an empty response.')
+      }
+
+      return text
+    } catch (err) {
+      lastError = err
+      if ((err?.name === 'AbortError' || err?.status === 429 || err?.status === 503) && attempt < maxAttempts) {
+        const backoffMs = MISTRAL_RETRY_BASE_DELAY_MS * attempt
+        await new Promise((resolve) => setTimeout(resolve, backoffMs))
+        continue
+      }
+      throw err
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+
+  throw lastError || new Error('Mistral request failed.')
+}
+
+export async function processTopicWithMistral(topic, results, existingTitles, clusters, rawItemsMap) {
   if (!results.length || !clusters.length) return []
 
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -191,7 +286,16 @@ export async function processTopicWithGemini(topic, results, existingTitles, clu
     console.log(`[${topic}] Cluster ${clusterNum}/${clusters.length}: Processando ${clusterItems.length} fontes relacionadas (source_ids: ${clusterSourceIds.join(',')})...`)
 
     const context = clusterItems
-      .map((r, i) => `[${i + 1}] ${new URL(r.url).hostname.replace('www.', '')} - "${r.title}"\n${(r.content || '').slice(0, CONTENT_CHARS)}`)
+      .map((r, i) => {
+        const hostname = new URL(r.url).hostname.replace('www.', '')
+        const meta = [
+          r.sourceName ? `fonte: ${r.sourceName}` : null,
+          r.pubDate ? `data: ${r.pubDate}` : null,
+          r.summary ? `resumo: ${r.summary}` : null,
+        ].filter(Boolean).join(' | ')
+
+        return `[${i + 1}] ${hostname} - "${r.title}"${meta ? `\n${meta}` : ''}\n${(r.content || '').slice(0, CONTENT_CHARS)}`
+      })
       .join('\n\n')
 
     const existingContext = existingTitles.length > 0
@@ -208,17 +312,18 @@ Sua missao: transformar um cluster de fontes relacionadas no artigo mais denso, 
 - Numeros, datas, nomes e especificacoes devem ser literais. Se a fonte diz "aumento significativo", NAO transforme em "15%".
 - Tom seco, direto e jornalistico. Sem introducoes poeticas ou floreios.
 
-O cluster ja passou por validacao local antes de chegar aqui. Se ainda parecer inconsistente, retorne [].
+O cluster ja passou por validacao local antes de chegar aqui. Nesta etapa, nunca retorne []. Sempre gere exatamente 1 artigo JSON com base nas fontes do cluster.
 
 **2. CRITERIOS DE NOTICIABILIDADE (FILTRO DE QUALIDADE):**
 - **GERAR ARTIGO:** Lancamentos de produtos/hardware (Galaxy S26, PS5, Switch 2), trailers, anuncios de filmes/series, atualizacoes de games (patch notes), mudancas de precos de mercado (gasolina, dolar, acoes), contratacoes relevantes e colaboracoes (ex: Ed Sheeran x Pokemon).
-- **IGNORAR (Retornar []):**
+- **IGNORAR (em tese, para clusters que escapem do preflight):**
   - Promocoes, descontos, black friday, cupons, ofertas relampago
   - Listas puras de cupons sem contexto de lancamento
   - Anuncios genericos de "compre agora" ou "economize X%" ou "madrugada"
   - Palavras-chave PROIBIDAS: "promocao", "desconto", "oferta", "cupom", "black friday", "% off", "economize", "madrugada", "deal"
-  - Se a noticia e APENAS sobre preco/desconto de um produto, IGNORAR completamente.
-- **NA DUVIDA:** Gere o artigo. O Lophos prefere informar ao silenciar.
+  - Se a noticia e APENAS sobre preco/desconto de um produto, escreva o artigo mais enxuto possivel sem inventar detalhes; nao retorne [].
+- **NA DUVIDA:** Gere o artigo. Prefira um artigo curto e factual a retornar [].
+- Nao retorne [] apenas porque ha uma unica fonte; se houver fato jornalistico claro, gere.
 
 **INSTRUCOES DE PROCESSAMENTO:**
 - Regra de ouro: multiplas fontes sobre o mesmo fato viram um unico artigo com todas as fontes.
@@ -256,7 +361,8 @@ Retorne EXCLUSIVAMENTE um array JSON com UM artigo (ou [] se vazio). Sem markdow
 
 **REGRAS FINAIS:**
 - Retorne EXCLUSIVAMENTE o array JSON.
-- Se as fontes forem lixo (cupons, promocoes vazias etc.), retorne [].
+- Se as fontes forem lixo (cupons, promocoes vazias etc.), gere o artigo mais curto e factual possivel, sem inventar dados.
+- Caso contrario, gere o melhor artigo possivel, mesmo que a cobertura esteja enxuta.
 - Nunca adicione markdown, explicacao ou texto fora do JSON.
 - sourceIndexes: obrigatorio, so as fontes realmente usadas
 - keywords: 5 a 15 termos em minusculo, separados por virgula, otimizados para SEO
@@ -272,42 +378,36 @@ FONTES:
 ${context}`
 
     try {
-      const result = await model.generateContent(prompt)
-      const response = result.response
-      const text = response.text()
+      const text = await generateWithMistral(prompt)
 
-      const firstBracket = text.indexOf('[')
-      const lastBracket = text.lastIndexOf(']')
+      try {
+        const parsedRaw = JSON.parse(text)
+        const parsed = Array.isArray(parsedRaw) ? parsedRaw : [parsedRaw]
 
-      if (firstBracket === -1 || lastBracket === -1) {
-        console.warn(`[${topic}] Cluster ${clusterNum}: JSON invalido`)
+        if (parsed.length === 0) {
+          throw new Error('Mistral returned an empty article list.')
+        }
+
+        clusterSourceIds.forEach((id) => allProcessedClusterSourceIds.add(id))
+        parsed.forEach((item) => {
+          allParsedItems.push({ item, clusterSourceIds, clusterItems })
+        })
+        console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) OK`)
+      } catch (parseErr) {
+        console.warn(`[${topic}] Cluster ${clusterNum}: Parse JSON falhou: ${parseErr.message}`)
         clusterSourceIds.forEach((id) => {
           allProcessedClusterSourceIds.add(id)
           quarantinedClusterSourceIds.add(id)
         })
-      } else {
-        try {
-          const jsonStr = text.substring(firstBracket, lastBracket + 1)
-          const parsed = JSON.parse(jsonStr)
-
-          clusterSourceIds.forEach((id) => allProcessedClusterSourceIds.add(id))
-
-          parsed.forEach((item) => {
-            allParsedItems.push({ item, clusterSourceIds, clusterItems })
-          })
-          console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) ✓`)
-        } catch (parseErr) {
-          console.warn(`[${topic}] Cluster ${clusterNum}: Parse JSON falhou: ${parseErr.message}`)
-          clusterSourceIds.forEach((id) => {
-            allProcessedClusterSourceIds.add(id)
-            quarantinedClusterSourceIds.add(id)
-          })
-        }
       }
     } catch (err) {
       const statusCode = err.status || err.message.match(/\d{3}/)
-      console.error(`[${topic}] ⚠️  Erro na IA (cluster ${clusterNum}, ${statusCode}): ${err.message}. Mantendo items como nao-processados para retry.`)
+      console.error(`[${topic}] ERROR IA (cluster ${clusterNum}, ${statusCode}): ${err.message}. Mantendo items como nao-processados para retry.`)
       throw err
+    } finally {
+      if (clusterIdx < clusters.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, MISTRAL_CLUSTER_DELAY_MS))
+      }
     }
   }
 
@@ -315,9 +415,14 @@ ${context}`
   const newsItems = []
 
   for (const { item, clusterSourceIds, clusterItems } of allParsedItems) {
+
     if (!item.sourceIndexes || !Array.isArray(item.sourceIndexes) || item.sourceIndexes.length === 0) {
-      console.warn(`[${topic}] ⚠️  DESCARTE: sourceIndexes ausente/invalido em artigo gerado`)
-      continue
+      if (clusterSourceIds.length === 1) {
+        item.sourceIndexes = [1]
+      } else {
+        console.warn(`[${topic}] ⚠️  DESCARTE: sourceIndexes ausente/invalido em artigo gerado`)
+        continue
+      }
     }
 
     const sourceIndexes = item.sourceIndexes.map((n) => n - 1)

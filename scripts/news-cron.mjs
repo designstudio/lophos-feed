@@ -4,10 +4,13 @@
  * Order:
  * 1. news:ingest
  * 2. news:process
- * 3. news:process-gemini
+ * 3. news:process-mistral
  */
 
 import { spawnSync } from 'child_process'
+import { loadScriptEnvironment } from './script-env.mjs'
+
+loadScriptEnvironment()
 
 function runStep(label, commandArgs) {
   console.log(`\n[news:cron] Running ${label}...`)
@@ -30,7 +33,7 @@ function runStep(label, commandArgs) {
 async function main() {
   runStep('news:ingest', ['npm', 'run', 'news:ingest'])
   runStep('news:process', ['npm', 'run', 'news:process'])
-  runStep('news:process-gemini', ['npm', 'run', 'news:process-gemini'])
+  runStep('news:process-mistral', ['npm', 'run', 'news:process-mistral'])
 
   console.log('\n[news:cron] Completed full 6h pipeline.')
 }

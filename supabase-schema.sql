@@ -81,7 +81,7 @@ create table if not exists topic_fetches (
   updated_at   timestamptz not null default now()
 );
 
--- Phase 2: Raw articles staging — stores Tavily raw results before Gemini processing
+-- Phase 2: Raw articles staging — stores Tavily raw results before Mistral processing
 create table if not exists raw_articles (
   id             uuid default gen_random_uuid() primary key,
   topic          text not null,

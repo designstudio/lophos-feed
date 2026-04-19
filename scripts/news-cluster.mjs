@@ -2,14 +2,17 @@
  * News cluster stage
  *
  * Consome o último preflight salvo no Supabase, carrega os raw_items aprovados
- * e monta clusters determinísticos prontos para o Gemini.
+ * e monta clusters determinísticos prontos para o Mistral.
  */
 
 import { createClient } from '@supabase/supabase-js'
 import { clusterDeterministicItems } from './news-pipeline-core.mjs'
+import { loadScriptEnvironment } from './script-env.mjs'
 
 const DEFAULT_SIMILARITY_THRESHOLD = 0.3
 const DEFAULT_MIN_STRONG_TOKENS = 3
+
+loadScriptEnvironment()
 
 function assertEnv(name) {
   const value = process.env[name]

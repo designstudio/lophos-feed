@@ -10,6 +10,9 @@
 import { createClient } from '@supabase/supabase-js'
 import { XMLParser } from 'fast-xml-parser'
 import crypto from 'crypto'
+import { loadScriptEnvironment } from './script-env.mjs'
+
+loadScriptEnvironment()
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,

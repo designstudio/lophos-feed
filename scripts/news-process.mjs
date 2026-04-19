@@ -5,11 +5,14 @@
  * - news-preflight
  * - news-cluster
  *
- * Gemini processing stays separate in news:process-gemini.
+ * Mistral processing stays separate in news:process-mistral.
  */
 
 import { spawnSync } from 'child_process'
 import { fileURLToPath } from 'url'
+import { loadScriptEnvironment } from './script-env.mjs'
+
+loadScriptEnvironment()
 
 function runStep(label, scriptPath) {
   console.log(`\n[news:process] Running ${label}...`)

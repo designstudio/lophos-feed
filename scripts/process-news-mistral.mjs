@@ -1,17 +1,18 @@
 /**
- * Gemini-only news processing
+ * Mistral-only news processing
  *
- * Consome um cluster run já preparado, chama o Gemini para sintetizar
+ * Consome um cluster run já preparado, chama o Mistral para sintetizar
  * e persiste articles/raw_items processed.
  */
 
 import { createClient } from '@supabase/supabase-js'
 import { buildNewsSourceFromItem, canonicalizeUrl, shouldRejectPreflightItem, strongIntersection, textOverlapScore } from './news-pipeline-core.mjs'
-import { processTopicWithGemini } from './news-gemini-core.mjs'
+import { loadScriptEnvironment } from './script-env.mjs'
+import { processTopicWithMistral } from './news-mistral-core.mjs'
 
 const SIMILARITY_THRESHOLD = 0.30
 const MIN_STRONG_TOKENS = 3
-const DELAY_BETWEEN_TOPICS_MS = 100
+const DELAY_BETWEEN_TOPICS_MS = Number(process.env.MISTRAL_TOPIC_DELAY_MS || 1500)
 const DEBUG_DEDUP = process.env.DEBUG_DEDUP === '1'
 
 const HARD_BLOCK_PATTERNS = [
@@ -57,6 +58,8 @@ const DEAL_HINT_PATTERNS = [
 ]
 
 const DEAL_SOURCE_HINTS = ['promobit', 'pelando', 'buscape', 'zoom.com', 'cuponomia', 'meliuz']
+
+loadScriptEnvironment()
 
 function assertEnv(name) {
   const value = process.env[name]
@@ -148,10 +151,10 @@ async function main() {
   const windowHours = clusterRun.payload.windowHours || 12
   const historyHours = clusterRun.payload.historyHours || 72
 
-  console.log(`\n🧪 Gemini-only processing`)
+  console.log(`\n🧪 Mistral-only processing`)
   console.log(`Cluster run: ${clusterRun.id} (${clusterRun.created_at})`)
   console.log(`Janela de entrada: últimas ${windowHours}h | histórico de comparação: ${historyHours}h`)
-  console.log(`Topics prontos para Gemini: ${topicPayloads.map((entry) => entry.topic).join(', ')}\n`)
+  console.log(`Topics prontos para Mistral: ${topicPayloads.map((entry) => entry.topic).join(', ')}\n`)
 
   const since72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
@@ -211,23 +214,27 @@ async function main() {
     }
 
     try {
-      console.log(`[${topic}] ${acceptedItems.length} items → Gemini only (${clusters.length} clusters)`)
+      console.log(`[${topic}] ${acceptedItems.length} items → Mistral only (${clusters.length} clusters)`)
 
       const rawItemsMap = new Map(acceptedItems.map((item) => [item.id, item]))
       const results = acceptedItems.map((item) => ({
         url: item.url,
         title: item.title,
+        summary: item.summary || '',
         content: item.content || '',
+        sourceName: item.source_name || '',
+        sourceUrl: item.source_url || '',
+        pubDate: item.pub_date || '',
         image: item.image_url,
         video: item.video_url,
       }))
 
       const {
         newsItems,
-        geminiError,
+        mistralError,
         processedClusterSourceIds,
         rejectedRawIds: localRejectedRawIds = [],
-      } = await processTopicWithGemini(
+      } = await processTopicWithMistral(
         topic,
         results,
         allProcessedArticles.map((a) => a.title),
@@ -242,7 +249,7 @@ async function main() {
         ...(processedClusterSourceIds || []),
       ])
 
-      if (geminiError) {
+      if (mistralError) {
         hadTopicError = true
         if (successfullyProcessedRawIds.size > 0) {
           await db.from('raw_items')
@@ -672,7 +679,7 @@ async function main() {
     .update({
       status: finalStatus,
       processed_at: new Date().toISOString(),
-      error_message: hadTopicError ? 'One or more topics failed during Gemini processing' : null,
+      error_message: hadTopicError ? 'One or more topics failed during Mistral processing' : null,
     })
     .eq('id', clusterRun.id)
 

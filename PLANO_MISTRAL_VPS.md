@@ -1,17 +1,17 @@
-# Plano de execucao: pre-processamento antes do Gemini
+# Plano de execucao: pre-processamento antes do Mistral
 
 ## O que ja foi encaminhado
 
 - Centralizei regras basicas de limpeza e preparo em `src/lib/news-preprocessing.ts`.
 - A ingestao RSS passou a usar os helpers compartilhados.
 - O fluxo administrativo de conversao de itens brutos para artigos tambem passou a usar a mesma base.
-- Criei um preflight deterministico em `scripts/news-preflight.mjs` para rodar antes do Gemini.
+- Criei um preflight deterministico em `scripts/news-preflight.mjs` para rodar antes do Mistral.
 
 ## O que isso significa
 
 - As regras de preparacao ficam mais consistentes.
 - A base fica pronta para receber uma etapa separada de pre-processamento na VPS.
-- O Gemini continua existindo, mas a ideia e deixar ele so para sintese final.
+- O Mistral continua existindo, mas a ideia e deixar ele so para sintese final.
 
 ## O que voce precisa fazer agora
 
@@ -25,7 +25,7 @@
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `RSS_INGEST_SECRET`
    - `CRON_SECRET`
-   - `GEMINI_API_KEY`
+   - `MISTRAL_API_KEY`
 
 3. **Verificar as tabelas no Supabase**
    - `rss_feeds`
@@ -40,8 +40,8 @@
    - Confirmar que os artigos continuam aparecendo depois do Process News.
 
 5. **Depois disso, fazer a proxima etapa**
-   - Criar um worker dedicado na VPS para limpar e agrupar os itens antes do Gemini.
-   - So entao mandar para o Gemini a versao ja filtrada e agrupada.
+   - Criar um worker dedicado na VPS para limpar e agrupar os itens antes do Mistral.
+   - So entao mandar para o Mistral a versao ja filtrada e agrupada.
 
 ## Como saber se esta certo
 
@@ -49,7 +49,7 @@
 - Os artigos continuam sendo publicados.
 - O numero de duplicatas obvias tende a cair.
 - Os filtros de conteudo ruim continuam funcionando.
-- O preflight mostra exatamente o lote pronto para o Gemini.
+- O preflight mostra exatamente o lote pronto para o Mistral.
 
 ## Proximo passo recomendado
 
@@ -58,4 +58,4 @@
   - limpeza
   - deduplicacao
   - agrupamento
-  - sintese com Gemini
+  - sintese com Mistral
