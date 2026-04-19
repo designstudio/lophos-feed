@@ -75,7 +75,7 @@ insert into rss_feeds (url, name, topics, language) values
   ('https://www.invenglobal.com/rss', 'Inven Global', '{"Valorant","League of Legends"}', 'en'),
   ('https://vlr.gg/rss', 'VLR.gg', '{"Valorant"}', 'en'),
   ('https://www.dbltap.com/rss', 'DBLTAP', '{"Valorant","Overwatch"}', 'en'),
-  ('https://gamerant.com/feed/', 'Game Rant', '{"League of Legends","TFT","Overwatch"}', 'en'),
+  ('https://gamerant.com/feed/', 'Game Rant', '{"Games","E-sports"}', 'en'),
 
   -- Cinema / Séries / Entretenimento
   ('https://deadline.com/feed/', 'Deadline', '{"Cinema","Séries","Entretenimento"}', 'en'),
