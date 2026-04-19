@@ -4,20 +4,28 @@ const HARD_BLOCK_PATTERNS = [
   /\bcasino(s)?\b/i,
   /\bcassino(s)?\b/i,
   /\bgambling\b/i,
-  /\bbet(ting)?\b/i,
-  /\bapostas?\b/i,
   /\bslots?\b/i,
   /\bpoker\b/i,
   /\broulette\b/i,
   /\broleta\b/i,
-  /\bjackpot\b/i,
-  /\bbonus\b/i,
-  /\bb[oô]nus\b/i,
   /\bno deposit\b/i,
   /\bsem dep[oó]sito\b/i,
   /\bsweepstakes?\b/i,
   /\bbookmaker\b/i,
   /\bcassino online\b/i,
+]
+
+const GAMBLING_CONTEXT_PATTERNS = [
+  /\bbet(ting)?\b/i,
+  /\bapostas?\b/i,
+  /\bjackpot\b/i,
+  /\bbonus\b/i,
+  /\bb[oô]nus\b/i,
+  /\bsports?book\b/i,
+  /\bodd(s)?\b/i,
+  /\bodds\b/i,
+  /\bprobabilidade(s)?\b/i,
+  /\blive bet\b/i,
 ]
 
 const DEAL_HINT_PATTERNS = [
@@ -151,7 +159,10 @@ export function shouldRejectRawItem({
     return { reject: true, reason: 'blocked-archive' as const }
   }
 
-  if (countMatches(haystack, HARD_BLOCK_PATTERNS) >= 1) {
+  const gamblingSignals = countMatches(haystack, HARD_BLOCK_PATTERNS)
+  const gamblingContextSignals = countMatches(haystack, GAMBLING_CONTEXT_PATTERNS)
+
+  if (gamblingSignals >= 2 || (gamblingSignals >= 1 && gamblingContextSignals >= 1)) {
     return { reject: true, reason: 'blocked-gambling' as const }
   }
 

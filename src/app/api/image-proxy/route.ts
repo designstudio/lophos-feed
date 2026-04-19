@@ -30,6 +30,11 @@ export async function GET(req: NextRequest) {
     })
 
     if (!res.ok) {
+      // Some CDNs reject server-side proxying but still allow the browser to load the image directly.
+      // Falling back to a redirect keeps the card usable instead of breaking the whole article image.
+      if (res.status === 403) {
+        return Response.redirect(target.toString(), 307)
+      }
       return new Response(`Upstream error: ${res.status}`, { status: 502 })
     }
 
@@ -51,4 +56,3 @@ export async function GET(req: NextRequest) {
     return new Response('Proxy fetch failed', { status: 502 })
   }
 }
-
