@@ -27,9 +27,21 @@ create table if not exists user_reactions (
   user_id text not null,
   article_id uuid not null,
   topic text not null,
+  matched_topics text[] not null default '{}',
   reaction text not null check (reaction in ('like', 'dislike')),
   created_at timestamptz default now(),
   unique(user_id, article_id)
+);
+
+-- Learned negative topics inferred from disliked articles
+create table if not exists user_negative_topics (
+  id uuid default gen_random_uuid() primary key,
+  user_id text not null,
+  topic text not null,
+  dislike_count integer not null default 0,
+  first_disliked_at timestamptz default now(),
+  last_disliked_at timestamptz default now(),
+  unique(user_id, topic)
 );
 
 -- Indexes
@@ -37,15 +49,43 @@ create index if not exists news_cache_topic_idx on news_cache(topic);
 create index if not exists news_cache_cached_at_idx on news_cache(cached_at desc);
 create index if not exists user_topics_user_id_idx on user_topics(user_id);
 create index if not exists user_reactions_user_id_idx on user_reactions(user_id);
+create index if not exists user_negative_topics_user_id_idx on user_negative_topics(user_id);
+create index if not exists user_negative_topics_topic_idx on user_negative_topics(topic);
 
 -- RLS
 alter table user_topics enable row level security;
 alter table news_cache enable row level security;
 alter table user_reactions enable row level security;
+alter table user_negative_topics enable row level security;
 
-create policy "service role all" on user_topics for all using (true);
-create policy "service role all" on news_cache for all using (true);
-create policy "service role all" on user_reactions for all using (true);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'user_topics' and policyname = 'service role all'
+  ) then
+    create policy "service role all" on user_topics for all using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'news_cache' and policyname = 'service role all'
+  ) then
+    create policy "service role all" on news_cache for all using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'user_reactions' and policyname = 'service role all'
+  ) then
+    create policy "service role all" on user_reactions for all using (true);
+  end if;
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'user_negative_topics' and policyname = 'service role all'
+  ) then
+    create policy "service role all" on user_negative_topics for all using (true);
+  end if;
+end
+$$;
 
 -- Permanent articles table — never cleared, preserves articles the user has opened
 create table if not exists articles (
@@ -62,7 +102,16 @@ create table if not exists articles (
 
 create index if not exists articles_topic_idx on articles(topic);
 alter table articles enable row level security;
-create policy "service role all" on articles for all using (true);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'articles' and policyname = 'service role all'
+  ) then
+    create policy "service role all" on articles for all using (true);
+  end if;
+end
+$$;
 
 -- Add sections and conclusion columns to news_cache and articles
 alter table news_cache add column if not exists sections jsonb default '[]';
@@ -97,4 +146,13 @@ create index if not exists raw_articles_fetched_at_idx on raw_articles(fetched_a
 create index if not exists raw_articles_status_idx     on raw_articles(status);
 
 alter table raw_articles enable row level security;
-create policy "service role all" on raw_articles for all using (true);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'raw_articles' and policyname = 'service role all'
+  ) then
+    create policy "service role all" on raw_articles for all using (true);
+  end if;
+end
+$$;

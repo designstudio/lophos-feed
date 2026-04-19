@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { loadBlockedTopics } from '@/lib/topic-signals'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +17,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ hasUpdates: false })
 
   const db = getSupabaseAdmin()
+  const blockedTopics = await loadBlockedTopics(db, userId, topics)
+  const blockedSet = new Set(blockedTopics)
 
   // Check if there are articles newer than `since` matching user's topics
   const { data, error } = await db
@@ -28,8 +31,13 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ hasUpdates: false })
 
+  const visibleRows = (data ?? []).filter((row: any) => {
+    const matchedTopics = Array.isArray(row.matched_topics) ? row.matched_topics : []
+    return !matchedTopics.some((topic: string) => blockedSet.has(String(topic).toLowerCase().trim()))
+  })
+
   return NextResponse.json({
-    hasUpdates: (data?.length ?? 0) > 0,
-    items: data ?? [],
+    hasUpdates: visibleRows.length > 0,
+    items: visibleRows,
   })
 }

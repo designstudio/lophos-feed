@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { NewsItem } from '@/lib/types'
+import { loadBlockedTopics } from '@/lib/topic-signals'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -68,17 +69,6 @@ export async function POST(req: NextRequest) {
       return jsonError(400, 'No topics')
     }
 
-    const { data: excludedData, error: excludedError } = await db
-      .from('user_excluded_topics')
-      .select('topic')
-      .eq('user_id', userId)
-
-    if (excludedError) {
-      console.error('[feed] error loading excluded topics:', excludedError)
-      return jsonError(500, 'Failed to load excluded topics', excludedError)
-    }
-
-    const excludedTopics: string[] = (excludedData ?? []).map((r: any) => r.topic)
     const encoder = new TextEncoder()
     const stream = new TransformStream()
     const writer = stream.writable.getWriter()
@@ -107,13 +97,15 @@ export async function POST(req: NextRequest) {
         }
 
         console.log(
-          `[feed] calling get_personalized_feed with topics=${JSON.stringify(topics)}, days=${days}, excluded=${JSON.stringify(excludedTopics)}`,
+          `[feed] calling get_personalized_feed with topics=${JSON.stringify(topics)}, days=${days}`,
         )
+        const blockedTopics = await loadBlockedTopics(db, userId, topics)
+        console.log(`[feed] blocked topics=${JSON.stringify(blockedTopics)}`)
         const { data: allArticles, error } = await db.rpc('get_personalized_feed', {
           p_user_id: userId,
           p_topics: topics,
           p_days: days,
-          p_excluded_topics: excludedTopics,
+          p_excluded_topics: blockedTopics,
         })
 
         if (error) {

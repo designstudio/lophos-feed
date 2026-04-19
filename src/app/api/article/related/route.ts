@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { loadBlockedTopics } from '@/lib/topic-signals'
 
 export async function GET(req: NextRequest) {
   const { userId } = await auth()
@@ -21,6 +22,7 @@ export async function GET(req: NextRequest) {
 
   const userTopics: string[] = (userTopicsRows ?? []).map((r: any) => r.topic)
   const hiddenIds = new Set((hiddenRows ?? []).map((r: any) => r.article_id))
+  const blockedTopics = new Set(await loadBlockedTopics(db, userId, userTopics))
 
   if (!current?.matched_topics?.length || userTopics.length === 0) {
     return NextResponse.json({ items: [] })
@@ -49,6 +51,7 @@ export async function GET(req: NextRequest) {
 
   const items = (rows || [])
     .filter((row: any) => !hiddenIds.has(row.id))
+    .filter((row: any) => !(Array.isArray(row.matched_topics) && row.matched_topics.some((topic: string) => blockedTopics.has(String(topic).toLowerCase().trim()))))
     .slice(0, 4)
     .map((row: any) => ({
       id: row.id,
