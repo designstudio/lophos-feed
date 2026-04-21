@@ -55,6 +55,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <script dangerouslySetInnerHTML={{ __html: `
             if ('serviceWorker' in navigator) {
               window.addEventListener('load', function() {
+                var isLocalhost =
+                  location.hostname === 'localhost' ||
+                  location.hostname === '127.0.0.1' ||
+                  location.hostname === '[::1]';
+
+                if (isLocalhost) {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    return Promise.all(registrations.map(function(registration) {
+                      return registration.unregister();
+                    }));
+                  }).catch(function() {});
+
+                  if ('caches' in window) {
+                    caches.keys().then(function(keys) {
+                      return Promise.all(keys.map(function(key) {
+                        return caches.delete(key);
+                      }));
+                    }).catch(function() {});
+                  }
+
+                  return;
+                }
+
                 navigator.serviceWorker.register('/sw.js');
               });
             }

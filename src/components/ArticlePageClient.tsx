@@ -6,12 +6,12 @@ import { useParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
 import { ArticleAssistant } from '@/components/ArticleAssistant'
-import { IconHeartFilled } from '@/components/icons'
-import { LinkExternal02 as SquareTopDown, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ArrowNarrowLeft as ArrowLeft, Heart as HeartAngle, Share07 as Share } from '@untitledui/icons'
+import { LinkExternal02 as SquareTopDown, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ArrowNarrowLeft as ArrowLeft, Heart as HeartAngle, ThumbsDown as Dislike, Copy06 as Copy, Share07 as Share } from '@untitledui/icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { IconHeartFilled } from '@/components/icons'
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
@@ -100,7 +100,8 @@ export default function ArticlePageClient() {
   const [showAllSources, setShowAllSources] = useState(false)
   const [related, setRelated] = useState<RelatedItem[]>([])
   const [liked, setLiked] = useState(false)
-  const [likeLoading, setLikeLoading] = useState(false)
+  const [disliked, setDisliked] = useState(false)
+  const [reactionLoading, setReactionLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -151,35 +152,66 @@ export default function ArticlePageClient() {
     if (!isSignedIn) return
     fetch('/api/reactions')
       .then((r) => r.json())
-      .then((data) => setLiked((data.reactions ?? {})[id] === 'like'))
+      .then((data) => {
+        const reaction = (data.reactions ?? {})[id]
+        setLiked(reaction === 'like')
+        setDisliked(reaction === 'dislike')
+      })
       .catch(() => {})
   }, [id, isSignedIn])
 
-  const toggleLike = async () => {
-    if (!isSignedIn || likeLoading) return
-    setLikeLoading(true)
-    const newLiked = !liked
-    setLiked(newLiked)
+  const updateReaction = async (nextReaction: 'like' | 'dislike' | null) => {
+    if (!isSignedIn || reactionLoading) return
+    setReactionLoading(true)
+    const previousReaction = liked ? 'like' : disliked ? 'dislike' : null
+    setLiked(nextReaction === 'like')
+    setDisliked(nextReaction === 'dislike')
     try {
       await fetch('/api/reactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId: id, topic: item?.topic ?? '', reaction: newLiked ? 'like' : null }),
+        body: JSON.stringify({ articleId: id, topic: item?.topic ?? '', reaction: nextReaction }),
       })
     } catch {
-      setLiked(!newLiked)
+      setLiked(previousReaction === 'like')
+      setDisliked(previousReaction === 'dislike')
     }
-    setLikeLoading(false)
+    setReactionLoading(false)
   }
 
-  const shareArticle = () => {
+  const toggleLike = () => {
+    updateReaction(liked ? null : 'like')
+  }
+
+  const toggleDislike = () => {
+    updateReaction(disliked ? null : 'dislike')
+  }
+
+  const copyArticleLink = async () => {
     const url = `${window.location.origin}/article/${id}`
-    navigator.clipboard.writeText(url).then(() => {
+    try {
+      await navigator.clipboard.writeText(url)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    }).catch(() => {
-      if (navigator.share) navigator.share({ title: item?.title, url })
-    })
+    } catch {
+      if (navigator.share) {
+        await navigator.share({ title: item?.title, url })
+      }
+    }
+  }
+
+  const shareArticle = async () => {
+    const url = `${window.location.origin}/article/${id}`
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: item?.title, url })
+        return
+      } catch {
+        // If the share sheet is dismissed or unavailable, fall back to copy.
+      }
+    }
+
+    await copyArticleLink()
   }
 
   const shownSources = item?.sources?.slice(0, 3) || []
@@ -232,28 +264,6 @@ export default function ArticlePageClient() {
               </div>
 
               <div className="flex items-center gap-1 flex-shrink-0">
-                {isSignedIn && (
-                  <motion.button
-                    onClick={toggleLike}
-                    title={liked ? 'Descurtir' : 'Curtir'}
-                    whileTap={{ scale: 0.85 }}
-                    className={`flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${liked ? 'text-red-500 hover:bg-red-50' : 'text-ink-secondary hover:bg-bg-secondary'}`}
-                  >
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.span
-                        key={liked ? 'filled' : 'outline'}
-                        initial={{ scale: 0.5, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.5, opacity: 0 }}
-                        transition={{ duration: 0.15, ease: 'easeOut' }}
-                        style={{ display: 'flex' }}
-                      >
-                        {liked ? <IconHeartFilled size={18} /> : <HeartAngle size={18} />}
-                      </motion.span>
-                    </AnimatePresence>
-                  </motion.button>
-                )}
-
                 <button
                   onClick={shareArticle}
                   className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] text-[13px] font-medium text-white hover:opacity-80"
@@ -347,6 +357,75 @@ export default function ArticlePageClient() {
                       ))}
                     </div>
                   )}
+
+                  <div className="flex items-center gap-1.5 mb-8">
+                    <motion.button
+                      type="button"
+                      onClick={toggleLike}
+                      disabled={!isSignedIn || reactionLoading}
+                      title={liked ? 'Descurtir' : 'Curtir'}
+                      whileTap={{ scale: 0.85 }}
+                      className={cn(
+                        'flex items-center justify-center w-8 h-8 rounded-full transition-colors',
+                        liked
+                          ? 'bg-red-50 text-red-500'
+                          : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
+                        (!isSignedIn || reactionLoading) && 'opacity-60 cursor-not-allowed',
+                      )}
+                    >
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.span
+                          key={liked ? 'filled' : 'outline'}
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.5, opacity: 0 }}
+                          transition={{ duration: 0.15, ease: 'easeOut' }}
+                          style={{ display: 'flex' }}
+                        >
+                          {liked ? <IconHeartFilled size={16} /> : <HeartAngle size={16} />}
+                        </motion.span>
+                      </AnimatePresence>
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      onClick={toggleDislike}
+                      disabled={!isSignedIn || reactionLoading}
+                      title={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}
+                      whileTap={{ scale: 0.85 }}
+                      className={cn(
+                        'flex items-center justify-center w-8 h-8 rounded-full transition-colors',
+                        disliked
+                          ? 'bg-zinc-100 text-zinc-600'
+                          : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
+                        (!isSignedIn || reactionLoading) && 'opacity-60 cursor-not-allowed',
+                      )}
+                    >
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.span
+                          key={disliked ? 'filled' : 'outline'}
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.5, opacity: 0 }}
+                          transition={{ duration: 0.15, ease: 'easeOut' }}
+                          style={{ display: 'flex' }}
+                        >
+                          <Dislike size={16} />
+                        </motion.span>
+                      </AnimatePresence>
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      onClick={copyArticleLink}
+                      title={copied ? 'Link copiado' : 'Copiar link'}
+                      whileTap={{ scale: 0.85 }}
+                      className="flex items-center justify-center w-8 h-8 rounded-full text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary transition-colors"
+                    >
+                      <Copy size={16} />
+                    </motion.button>
+
+                  </div>
 
                   {item.sources && item.sources.length > 0 && (
                     <div className="mb-8">
