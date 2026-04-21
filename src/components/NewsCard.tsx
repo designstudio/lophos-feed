@@ -281,7 +281,7 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
+        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.displayTopic ?? item.topic}</span>
         <h2
           className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
           style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
