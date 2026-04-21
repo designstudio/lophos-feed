@@ -11,6 +11,7 @@ import { loadScriptEnvironment } from './script-env.mjs'
 
 const DEFAULT_SIMILARITY_THRESHOLD = 0.3
 const DEFAULT_MIN_STRONG_TOKENS = 3
+const RAW_ITEMS_BATCH_SIZE = 100
 
 loadScriptEnvironment()
 
@@ -31,20 +32,27 @@ function flattenTopicIds(topics, key) {
 }
 
 async function fetchItemsByIds(db, ids) {
-  const uniqueIds = unique(ids)
+  const uniqueIds = unique(ids).filter((id) => typeof id === 'string' && id.trim().length > 0)
   if (uniqueIds.length === 0) return []
 
-  const { data, error } = await db
-    .from('raw_items')
-    .select('id, url, title, content, summary, image_url, video_url, topic, source_name, source_url, pub_date, fetched_at, dedup_hash')
-    .in('id', uniqueIds)
-    .eq('processed', false)
+  const items = []
 
-  if (error) {
-    throw new Error(`Failed to load raw_items for cluster stage: ${error.message}`)
+  for (let i = 0; i < uniqueIds.length; i += RAW_ITEMS_BATCH_SIZE) {
+    const batch = uniqueIds.slice(i, i + RAW_ITEMS_BATCH_SIZE)
+    const { data, error } = await db
+      .from('raw_items')
+      .select('id, url, title, content, summary, image_url, video_url, topic, source_name, source_url, pub_date, fetched_at, dedup_hash')
+      .in('id', batch)
+      .eq('processed', false)
+
+    if (error) {
+      throw new Error(`Failed to load raw_items for cluster stage (batch ${Math.floor(i / RAW_ITEMS_BATCH_SIZE) + 1}/${Math.ceil(uniqueIds.length / RAW_ITEMS_BATCH_SIZE)}): ${error.message}`)
+    }
+
+    items.push(...(data || []))
   }
 
-  const byId = new Map((data || []).map((item) => [item.id, item]))
+  const byId = new Map(items.map((item) => [item.id, item]))
   return uniqueIds.map((id) => byId.get(id)).filter(Boolean)
 }
 

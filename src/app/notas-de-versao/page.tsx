@@ -3,6 +3,27 @@ import { LegalPage } from '@/components/LegalPage'
 
 const RELEASES = [
   {
+    date: '20 abr 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'A sidebar ganhou um ajuste fino no bloco de Histórico, ocupando melhor o espaço disponível sem mexer no restante da navegação.',
+          'O feed passou a aprender sinais negativos a partir das reações, ajudando a reduzir repeticoes e a refinar as recomendações relacionadas.',
+          'A ingestão e o image proxy de RSS ficaram mais rígidos, reduzindo ruído e bloqueando imagens problemáticas com mais consistência.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'Removemos o Gemini do pipeline de notícias e consolidamos a operação em Mistral, com scripts e cron mais previsíveis dentro do container.',
+          'Corrigimos o mapeamento de tópicos do Game Rant para preservar a classificação correta das matérias.',
+          'Ajustamos o comportamento da sidebar ao alternar o menu para evitar efeitos colaterais visuais.',
+        ],
+      },
+    ],
+  },
+  {
     date: '14 abr 2026',
     sections: [
       {

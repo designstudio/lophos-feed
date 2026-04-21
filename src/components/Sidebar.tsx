@@ -296,7 +296,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           >
             <div className="flex items-center gap-1">
               {isEditing ? (
-                <div className="flex min-w-0 flex-1 items-center gap-1 px-2.5 py-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-1 px-2.5 py-1.5">
                   <input
                     ref={renameInputRef}
                     type="text"
@@ -316,7 +316,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                         cancelInlineRename()
                       }
                     }}
-                    className="min-w-0 flex-1 bg-transparent text-[0.875rem] font-medium leading-5 text-ink-primary outline-none"
+                    className="min-w-0 flex-1 bg-transparent text-[0.85rem] font-medium leading-5 text-ink-primary outline-none"
                     disabled={renamingThread}
                   />
                   <button
@@ -352,10 +352,10 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                     setNavigatingThreadId(thread.id)
                     options?.onNavigate?.()
                   }}
-                  className="min-w-0 flex-1 px-2.5 py-2"
+                  className="min-w-0 flex-1 px-2.5 py-1.5"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-[0.875rem] font-medium leading-5">{thread.title}</p>
+                    <p className="truncate text-[0.85rem] font-medium leading-5">{thread.title}</p>
                   </div>
                 </Link>
               )}
@@ -401,9 +401,9 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   )
 
   const renderThreadSkeleton = () => (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {[1, 2, 3].map((item) => (
-        <div key={item} className="rounded-xl px-2.5 py-2">
+        <div key={item} className="rounded-xl px-2.5 py-1.5">
           <div className="h-4 w-full rounded bg-bg-secondary animate-pulse" />
         </div>
       ))}
@@ -589,9 +589,9 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           )}
 
           {!collapsed && (
-            <div className="min-h-0 pt-3 pb-2">
-              <div className="px-2.5 pb-2">
-                <p className="text-[0.813rem] font-semibold text-ink-tertiary">
+            <div className="min-h-0 pt-2.5 pb-1.5">
+              <div className="px-2.5 pb-1.5">
+                <p className="text-[0.75rem] font-semibold leading-none text-ink-tertiary">
                   Histórico
                 </p>
               </div>
@@ -604,7 +604,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                   {renderThreadList()}
                 </div>
               ) : (
-                <div className="px-2.5 py-2 text-[0.813rem] text-ink-tertiary">
+                <div className="px-2.5 py-1.5 text-[0.813rem] text-ink-tertiary">
                   Nenhuma conversa ainda
                 </div>
               )}
