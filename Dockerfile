@@ -31,17 +31,12 @@ RUN npm install --omit=dev --ignore-scripts
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/.next ./.next
 
 RUN mkdir -p /app/logs /etc/crontabs \
   && printf '%s\n' \
     '0 0,6,12,18 * * * cd /app && /usr/local/bin/npm run news:cron >> /app/logs/news-cron.log 2>&1' \
     > /etc/crontabs/root
-
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 COPY --chown=nextjs:nodejs docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
