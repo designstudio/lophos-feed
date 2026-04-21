@@ -13,6 +13,7 @@
     "news:process": "node scripts/news-process.mjs",
     "news:process-mistral": "node scripts/process-news-mistral.mjs",
     "news:cleanup-today": "node scripts/cleanup-today.mjs",
+    "news:cleanup-mislabeled": "node scripts/cleanup-mislabeled-articles.mjs",
     "news:cron": "node scripts/news-cron.mjs",
     "news:dedupe": "node scripts/cleanup-duplicate-articles.mjs",
     "news:dedupe-signals": "node scripts/cleanup-duplicate-articles-signals.mjs",
