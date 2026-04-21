@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { NewsItem } from '@/lib/types'
 import { loadBlockedTopics } from '@/lib/topic-signals'
+import { inferRssTopic } from '@/lib/topic-classifier'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -176,7 +177,16 @@ export async function POST(req: NextRequest) {
 
 function rowToItem(row: any, userTopics?: string[]): NewsItem {
   const matchedTopics: string[] = row.matched_topics ?? []
-  const displayTopic = userTopics?.find((t) => matchedTopics.includes(t)) ?? row.topic
+  const inferredTopic = inferRssTopic({
+    feedTopics: userTopics,
+    title: row.title,
+    description: row.summary || row.conclusion || '',
+    sourceName: Array.isArray(row.sources) ? row.sources.map((source: any) => source?.name).filter(Boolean).join(' ') : '',
+  })
+  const displayTopic =
+    userTopics?.find((t) => t === inferredTopic && matchedTopics.includes(t)) ??
+    inferredTopic ??
+    row.topic
 
   return {
     id: row.id,

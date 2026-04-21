@@ -60,6 +60,13 @@ const TOPIC_KEYWORDS: Record<string, string[]> = {
 }
 
 const BROAD_TOPIC_FALLBACKS = new Set(['games', 'e-sports', 'esports'])
+const NARROW_TOPIC_FALLBACKS = new Set([
+  'valorant',
+  'league of legends',
+  'lol',
+  'tft',
+  'overwatch',
+])
 
 function normalizeText(value: string): string {
   return String(value || '')
@@ -96,6 +103,10 @@ function isBroadTopic(topic: string): boolean {
   return BROAD_TOPIC_FALLBACKS.has(normalizeText(topic))
 }
 
+function isNarrowTopic(topic: string): boolean {
+  return NARROW_TOPIC_FALLBACKS.has(normalizeText(topic))
+}
+
 export function inferRssTopic({
   feedTopics = [],
   title = '',
@@ -112,9 +123,23 @@ export function inferRssTopic({
   )
 
   if (cleanedTopics.length === 0) return 'geral'
-  if (cleanedTopics.length === 1) return cleanedTopics[0]
 
   const haystack = normalizeText([title, description, sourceName].filter(Boolean).join(' '))
+  if (cleanedTopics.length === 1) {
+    const onlyTopic = cleanedTopics[0]
+    const onlyScore = scoreTopic(onlyTopic, haystack)
+
+    if (onlyScore > 0 || !isNarrowTopic(onlyTopic)) {
+      return onlyTopic
+    }
+
+    if (/\b(esports?|gaming|game|games|jogo|jogos|vct|owl|owcs|lolesports)\b/i.test(haystack)) {
+      return cleanedTopics.find((topic) => /e-?sports|games?/i.test(topic)) || 'games'
+    }
+
+    return 'games'
+  }
+
   const scoredTopics = cleanedTopics
     .map((topic) => ({ topic, score: scoreTopic(topic, haystack) }))
     .filter((entry) => entry.score > 0)
