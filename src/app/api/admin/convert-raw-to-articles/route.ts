@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
 import { buildFaviconUrl } from '@/lib/news-preprocessing'
+import { inferRssTopic } from '@/lib/topic-classifier'
 
 export const maxDuration = 300
 
@@ -80,6 +81,13 @@ export async function POST(req: NextRequest) {
     // Convert each raw_item to an article
     for (const item of rawItems) {
       try {
+        const inferredTopic = inferRssTopic({
+          feedTopics: item.topic ? [item.topic] : [],
+          title: item.title,
+          description: item.summary || item.content || '',
+          sourceName: item.source_name,
+        })
+
         // Check if similar article exists
         const newSource = {
           name: item.source_name,
@@ -126,7 +134,7 @@ export async function POST(req: NextRequest) {
           // Create new article
           const article = {
             id: randomUUID(),
-            topic: item.topic || 'geral',
+            topic: inferredTopic || item.topic || 'geral',
             title: item.title,
             summary: item.summary || item.content?.slice(0, 300) || '',
             sections: [
@@ -141,7 +149,7 @@ export async function POST(req: NextRequest) {
             video_url: item.video_url,
             published_at: item.pub_date || now,
             cached_at: now,
-            matched_topics: [item.topic]
+            matched_topics: [inferredTopic || item.topic].filter(Boolean)
           }
 
           const { error: insertError } = await db

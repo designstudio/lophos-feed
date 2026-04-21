@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { XMLParser } from 'fast-xml-parser'
 import { createDedupHash, extractText, stripHtml } from '@/lib/news-preprocessing'
+import { inferRssTopic } from '@/lib/topic-classifier'
 
 function isYouTubeOrVimeo(url: string | undefined): boolean {
   if (!url) return false
@@ -275,7 +276,12 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
         if (!title || !url) { totalSkipped++; continue }
 
         const dedup_hash = createDedupHash(title)
-        const itemTopic = ((feed.topics as string[])?.[0] || 'tecnologia').toLowerCase().trim()
+        const itemTopic = inferRssTopic({
+          feedTopics: feed.topics as string[],
+          title,
+          description,
+          sourceName: feed.name,
+        })
 
         const { data: existing } = await db.from('raw_items').select('id').eq('url', url).single()
         if (existing) { totalSkipped++; continue }
