@@ -16,7 +16,7 @@ const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY
 const MISTRAL_MODEL = process.env.MISTRAL_MODEL || 'mistral-large-latest'
 const MISTRAL_TIMEOUT_MS = Number(process.env.MISTRAL_TIMEOUT_MS || 300000)
 const MISTRAL_RETRY_BASE_DELAY_MS = Number(process.env.MISTRAL_RETRY_BASE_DELAY_MS || 2000)
-const MISTRAL_CLUSTER_DELAY_MS = Number(process.env.MISTRAL_CLUSTER_DELAY_MS || 500)
+const MISTRAL_CLUSTER_DELAY_MS = Number(process.env.MISTRAL_CLUSTER_DELAY_MS || 1500)
 
 const CONTENT_CHARS = 2000
 
@@ -271,6 +271,8 @@ export async function processTopicWithMistral(topic, results, existingTitles, cl
   const allParsedItems = []
   const allProcessedClusterSourceIds = new Set()
   const quarantinedClusterSourceIds = new Set()
+  const failedClusterSourceIds = new Set()
+  let hadClusterError = false
 
   for (let clusterIdx = 0; clusterIdx < clusters.length; clusterIdx++) {
     const clusterSourceIds = clusters[clusterIdx]
@@ -403,7 +405,9 @@ ${context}`
     } catch (err) {
       const statusCode = err.status || err.message.match(/\d{3}/)
       console.error(`[${topic}] ERROR IA (cluster ${clusterNum}, ${statusCode}): ${err.message}. Mantendo items como nao-processados para retry.`)
-      throw err
+      hadClusterError = true
+      clusterSourceIds.forEach((id) => failedClusterSourceIds.add(id))
+      continue
     } finally {
       if (clusterIdx < clusters.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, MISTRAL_CLUSTER_DELAY_MS))
@@ -538,7 +542,9 @@ ${context}`
   return {
     newsItems,
     success: true,
+    mistralError: hadClusterError ? new Error('One or more clusters failed during Mistral processing') : null,
     processedClusterSourceIds: Array.from(allProcessedClusterSourceIds),
     quarantinedClusterSourceIds: Array.from(quarantinedClusterSourceIds),
+    failedClusterSourceIds: Array.from(failedClusterSourceIds),
   }
 }

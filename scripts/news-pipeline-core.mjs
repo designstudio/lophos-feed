@@ -392,6 +392,154 @@ export function clusterDeterministicItems(items, options = {}) {
     .filter((cluster) => cluster.length > 0)
 }
 
+export function stripEditorialNoise(title) {
+  return tokenize(title)
+    .filter((token) =>
+      ![
+        'novo',
+        'nova',
+        'novos',
+        'novas',
+        'trailer',
+        'teaser',
+        'sinopse',
+        'data',
+        'lança',
+        'lanca',
+        'lançamento',
+        'lancamento',
+        'estreia',
+        'estreiam',
+        'anuncia',
+        'anunci',
+        'confirma',
+        'divulga',
+        'apresenta',
+        'mostra',
+        'revela',
+        'revelado',
+        'revelada',
+        'ganha',
+        'ganham',
+        'primeiro',
+        'primeira',
+        'segundo',
+        'segunda',
+      ].includes(token)
+    )
+    .join(' ')
+}
+
+export function buildArticleDedupProfile(article) {
+  const sectionsText = Array.isArray(article?.sections)
+    ? article.sections
+        .map((section) => `${section?.heading || ''} ${section?.body || ''}`)
+        .join(' ')
+    : ''
+
+  const title = String(article?.title || '')
+  const summary = String(article?.summary || '')
+  const text = [title, summary, sectionsText]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+
+  return {
+    titleText: normalizeText(title),
+    coreTitleText: stripEditorialNoise(title),
+    text,
+  }
+}
+
+export function findBestArticleDuplicateMatch(article, candidates, options = {}) {
+  const similarityThreshold = options.similarityThreshold ?? 0.22
+  const minStrongTokens = options.minStrongTokens ?? 2
+  const minTitleScore = options.minTitleScore ?? 0.4
+  const minTitleSharedTokens = options.minTitleSharedTokens ?? 2
+  const minCompactTitleScore = options.minCompactTitleScore ?? 0.4
+  const minCompactTitleTokens = options.minCompactTitleTokens ?? 2
+  const minSupportScore = options.minSupportScore ?? 0.18
+  const minSupportTokens = options.minSupportTokens ?? 2
+
+  const sourceProfile = buildArticleDedupProfile(article)
+  let bestMatch = null
+  let bestScore = 0
+  let bestStrong = []
+
+  for (const candidate of candidates || []) {
+    if (!candidate || candidate.id === article?.id) continue
+
+    const candidateProfile = candidate._dedupProfile || buildArticleDedupProfile(candidate)
+
+    const sameTitle = sourceProfile.titleText && sourceProfile.titleText === candidateProfile.titleText
+    const titleContains =
+      sourceProfile.titleText &&
+      candidateProfile.titleText &&
+      (
+        sourceProfile.titleText.includes(candidateProfile.titleText) ||
+        candidateProfile.titleText.includes(sourceProfile.titleText)
+      )
+
+    const titleScore = textOverlapScore(sourceProfile.titleText, candidateProfile.titleText)
+    const titleSharedTokens = strongIntersection(sourceProfile.titleText, candidateProfile.titleText).length
+    const coreTitleScore = textOverlapScore(sourceProfile.coreTitleText, candidateProfile.coreTitleText)
+    const coreSharedTokens = strongIntersection(sourceProfile.coreTitleText, candidateProfile.coreTitleText).length
+
+    const score = textOverlapScore(sourceProfile.text, candidateProfile.text)
+    const strong = strongIntersection(sourceProfile.text, candidateProfile.text)
+    const titleStrong = strongIntersection(sourceProfile.titleText, candidateProfile.titleText)
+
+    const verySimilarTitles = titleScore >= minTitleScore && titleSharedTokens >= minTitleSharedTokens
+    const verySimilarCoreTitles = coreTitleScore >= minTitleScore && coreSharedTokens >= minTitleSharedTokens
+
+    const headlineMatch =
+      sameTitle ||
+      titleContains ||
+      verySimilarTitles ||
+      verySimilarCoreTitles ||
+      (titleSharedTokens >= 3 && titleScore >= 0.45)
+
+    const bodyMatch = score >= similarityThreshold && strong.length >= minStrongTokens
+    const compactMatch = titleScore >= minCompactTitleScore && titleStrong.length >= minCompactTitleTokens
+    const supportMatch =
+      headlineMatch && (
+        bodyMatch ||
+        compactMatch ||
+        (score >= minSupportScore && strong.length >= minSupportTokens)
+      )
+
+    if (!(bodyMatch || supportMatch)) continue
+
+    if (score > bestScore) {
+      bestScore = score
+      bestStrong = strong
+      bestMatch = {
+        candidate,
+        score,
+        strong,
+        titleScore,
+        titleSharedTokens,
+        coreTitleScore,
+        coreSharedTokens,
+        sameTitle,
+        titleContains,
+        verySimilarTitles,
+        verySimilarCoreTitles,
+        bodyMatch,
+        supportMatch,
+        compactMatch,
+      }
+    }
+  }
+
+  return bestMatch
+    ? {
+        ...bestMatch,
+        strong: bestStrong,
+      }
+    : null
+}
+
 export function summarizePreflightByTopic(items) {
   return summarizePreflightByTopicWithHistory(items, new Set())
 }

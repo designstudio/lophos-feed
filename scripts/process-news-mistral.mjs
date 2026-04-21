@@ -6,13 +6,15 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { buildNewsSourceFromItem, canonicalizeUrl, shouldRejectPreflightItem, strongIntersection, textOverlapScore } from './news-pipeline-core.mjs'
+import { buildArticleDedupProfile, buildNewsSourceFromItem, canonicalizeUrl, findBestArticleDuplicateMatch, shouldRejectPreflightItem, strongIntersection, textOverlapScore } from './news-pipeline-core.mjs'
 import { loadScriptEnvironment } from './script-env.mjs'
 import { processTopicWithMistral } from './news-mistral-core.mjs'
 
 const SIMILARITY_THRESHOLD = 0.30
 const MIN_STRONG_TOKENS = 3
 const DELAY_BETWEEN_TOPICS_MS = Number(process.env.MISTRAL_TOPIC_DELAY_MS || 1500)
+const DEDUP_HISTORY_HOURS = Number(process.env.MISTRAL_DEDUP_HISTORY_HOURS || 168)
+const DEDUP_HISTORY_LIMIT = Number(process.env.MISTRAL_DEDUP_HISTORY_LIMIT || 1000)
 const DEBUG_DEDUP = process.env.DEBUG_DEDUP === '1'
 
 const HARD_BLOCK_PATTERNS = [
@@ -156,13 +158,13 @@ async function main() {
   console.log(`Janela de entrada: últimas ${windowHours}h | histórico de comparação: ${historyHours}h`)
   console.log(`Topics prontos para Mistral: ${topicPayloads.map((entry) => entry.topic).join(', ')}\n`)
 
-  const since72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+  const sinceDedup = new Date(Date.now() - DEDUP_HISTORY_HOURS * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
     .select('id, title, summary, sections, conclusion, sources, source_ids, keywords, matched_topics, image_url, video_url')
-    .gte('published_at', since72h)
+    .gte('published_at', sinceDedup)
     .order('published_at', { ascending: false })
-    .limit(300)
+    .limit(DEDUP_HISTORY_LIMIT)
 
   const allProcessedArticles = (globalExisting || []).map((r) => ({
     id: r.id,
@@ -176,8 +178,9 @@ async function main() {
     matched_topics: r.matched_topics || [],
     image_url: r.image_url || null,
     video_url: r.video_url || null,
+    _dedupProfile: buildArticleDedupProfile(r),
   }))
-  console.log(`Artigos existentes (últimas 72h): ${allProcessedArticles.length}\n`)
+  console.log(`Artigos existentes (últimas ${DEDUP_HISTORY_HOURS}h): ${allProcessedArticles.length}\n`)
 
   let totalGenerated = 0
   let totalMerged = 0
@@ -234,6 +237,7 @@ async function main() {
         mistralError,
         processedClusterSourceIds,
         rejectedRawIds: localRejectedRawIds = [],
+        failedClusterSourceIds = [],
       } = await processTopicWithMistral(
         topic,
         results,
@@ -251,16 +255,12 @@ async function main() {
 
       if (mistralError) {
         hadTopicError = true
+        console.warn(`[${topic}] ⚠️  Um ou mais clusters falharam no Mistral (${failedClusterSourceIds.length} source_ids). Continuando com os artigos já gerados.`)
         if (successfullyProcessedRawIds.size > 0) {
           await db.from('raw_items')
             .update({ processed: true })
             .in('id', Array.from(successfullyProcessedRawIds))
         }
-        if (ti < topicPayloads.length - 1) {
-          console.log(`Aguardando ${DELAY_BETWEEN_TOPICS_MS / 1000}s antes do próximo tópico...\n`)
-          await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_TOPICS_MS))
-        }
-        continue
       }
 
       for (const item of newsItems) {
@@ -280,51 +280,22 @@ async function main() {
           continue
         }
 
-        const itemText = articleComparableText(item)
+        const dedupMatch = findBestArticleDuplicateMatch(item, allProcessedArticles, {
+          similarityThreshold: 0.22,
+          minStrongTokens: 2,
+          minTitleScore: 0.4,
+          minTitleSharedTokens: 2,
+          minCompactTitleScore: 0.4,
+          minCompactTitleTokens: 2,
+          minSupportScore: 0.18,
+          minSupportTokens: 2,
+        })
 
-        let bestMatch = null
-        let bestScore = 0
-        let bestStrongCommon = []
-        let auditScore = 0
-        let auditReason = ''
-        let auditTitle = ''
-
-        for (const existing of allProcessedArticles) {
-          const existingText = articleComparableText(existing)
-          const score = textOverlapScore(itemText, existingText)
-
-          if (score < SIMILARITY_THRESHOLD) {
-            if (score > auditScore) {
-              auditScore = score
-              auditReason = `below-threshold(${score.toFixed(3)}<${SIMILARITY_THRESHOLD})`
-              auditTitle = existing.title
-            }
-            continue
-          }
-
-          const strongCommon = strongIntersection(itemText, existingText)
-          if (strongCommon.length < MIN_STRONG_TOKENS) {
-            if (score > auditScore) {
-              auditScore = score
-              auditReason = `anchor-miss([${strongCommon.join(',')}] ${strongCommon.length}/${MIN_STRONG_TOKENS})`
-              auditTitle = existing.title
-            }
-            if (DEBUG_DEDUP) {
-              console.log(`  [DEDUP] ⚓ ANCHOR-MISS score=${score.toFixed(3)} tokens=[${strongCommon.join(',')}](${strongCommon.length}<${MIN_STRONG_TOKENS}) existing="${existing.title?.slice(0, 55)}"`)
-            }
-            continue
-          }
-
-          if (score > bestScore) {
-            bestScore = score
-            bestMatch = existing
-            bestStrongCommon = strongCommon
-          }
-        }
-
-        if (bestMatch) {
-          const match = bestMatch
-          console.log(`  [DEDUP] 🔀 MERGE score=${bestScore.toFixed(3)} anchor=[${bestStrongCommon.join(',')}] id=${match.id?.slice(0, 8)} | existing="${match.title?.slice(0, 55)}" → new="${item.title?.slice(0, 55)}"`)
+        if (dedupMatch) {
+          const match = dedupMatch.candidate
+          const score = dedupMatch.score
+          const anchor = dedupMatch.strong || []
+          console.log(`  [DEDUP] ?? MERGE score=${score.toFixed(3)} anchor=[${anchor.join(',')}] id=${match.id?.slice(0, 8)} | existing="${match.title?.slice(0, 55)}" ? new="${item.title?.slice(0, 55)}"`)
           const existingUrls = new Set((match.sources || []).map((s) => canonicalizeUrl(s.url)))
           const newSources = item.sources.filter((s) => !existingUrls.has(canonicalizeUrl(s.url)))
           const mergedKeywords = [...new Set([...match.keywords, ...(item.keywords || [])])]
@@ -354,7 +325,7 @@ async function main() {
               .eq('id', match.id)
 
             if (mergeError) {
-              console.error(`[${topic}] ⚠️  Merge error: ${mergeError.message}. Item não será marcado como processado.`)
+              console.error(`[${topic}] ??  Merge error: ${mergeError.message}. Item n�o ser� marcado como processado.`)
             } else {
               match.sources = mergedSources
               match.source_ids = mergedSourceIds
@@ -362,6 +333,7 @@ async function main() {
               match.matched_topics = mergedMatchedTopics
               if (shouldBackfillImage) match.image_url = item.image_url
               if (shouldBackfillVideo) match.video_url = item.video_url
+              match._dedupProfile = buildArticleDedupProfile(match)
               totalMerged++
               if (Array.isArray(item.source_ids) && item.source_ids.length > 0) {
                 item.source_ids.forEach((id) => successfullyProcessedRawIds.add(id))
@@ -372,13 +344,11 @@ async function main() {
           }
         } else {
           if (DEBUG_DEDUP) {
-            const auditMsg = auditScore > 0
-              ? `best-rejected=${auditScore.toFixed(3)} reason=${auditReason} candidate="${auditTitle?.slice(0, 50)}"`
-              : 'no-candidates'
-            console.log(`  [DEDUP] ✨ NEW "${item.title?.slice(0, 60)}" | ${auditMsg}`)
+            console.log(`  [DEDUP] ? NEW "${item.title?.slice(0, 60)}"`)
           }
           dedupedItems.push(item)
         }
+
       }
 
       const validArticles = []
@@ -421,6 +391,7 @@ async function main() {
               source_ids: item.source_ids || [],
               keywords: item.keywords || [],
               matched_topics: item.matched_topics || [],
+              _dedupProfile: buildArticleDedupProfile(item),
             })
             item.source_ids.forEach((id) => successfullyProcessedRawIds.add(id))
           }
@@ -700,3 +671,4 @@ main().catch((err) => {
   console.error(err)
   process.exit(1)
 })
+
