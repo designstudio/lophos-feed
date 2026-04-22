@@ -589,7 +589,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           )}
 
           {!collapsed && (
-            <div className="min-h-0 pt-2.5 pb-1.5">
+            <div className="flex min-h-0 flex-1 flex-col pt-2.5 pb-1.5">
               <div className="px-2.5 pb-1.5">
                 <p className="text-[0.75rem] font-semibold leading-none text-ink-tertiary">
                   Histórico
@@ -600,7 +600,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
                   {renderThreadSkeleton()}
                 </div>
               ) : recentThreads.length > 0 ? (
-                <div className="max-h-[18rem] overflow-y-auto pr-1">
+                <div className="flex-1 min-h-0 overflow-y-auto pr-1">
                   {renderThreadList()}
                 </div>
               ) : (

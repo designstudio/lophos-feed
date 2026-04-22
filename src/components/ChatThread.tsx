@@ -135,7 +135,7 @@ export function ChatThread({
   }, [isEmbedded, isLoading, messages])
 
   const paddingLeft = sidebarCollapsed ? 'md:pl-[3.5rem]' : 'md:pl-[16.1rem]'
-  const composerOffset = sidebarCollapsed ? 'md:left-[3.5rem]' : 'md:left-[16.1rem]'
+  const composerOffset = sidebarCollapsed ? 'md:left-[5rem]' : 'md:left-[17.6rem]'
 
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto'
@@ -401,10 +401,10 @@ export function ChatThread({
 
       <div className={`mobile-chat-dock fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
         {!isEmbedded && (
-          <div className="absolute inset-x-0 bottom-0 h-8 bg-bg-primary" />
+          <div className="mobile-chat-bottom-bg absolute inset-x-0 bottom-0 h-8 bg-bg-primary" />
         )}
 
-        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-0 pt-1'}>
+        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'mobile-chat-compose-shell pointer-events-auto relative mx-auto article-layout px-0 pb-5 pt-1'}>
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}

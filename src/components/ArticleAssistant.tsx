@@ -91,16 +91,16 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
     return null
   }
 
-  const composerOffset = sidebarCollapsed ? 'md:left-[3.5rem]' : 'md:left-[16.1rem]'
+  const composerOffset = sidebarCollapsed ? 'md:left-[5rem]' : 'md:left-[17.6rem]'
 
   return (
     <>
       <div aria-hidden="true" className="mt-10" style={{ height: '88px' }} />
 
       <div className={`mobile-chat-dock fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
-        <div className="absolute inset-x-0 bottom-0 h-8 bg-bg-primary" />
+        <div className="mobile-chat-bottom-bg absolute inset-x-0 bottom-0 h-8 bg-bg-primary" />
 
-        <div className="pointer-events-auto relative mx-auto article-layout px-0 pb-0 pt-1">
+        <div className="mobile-chat-compose-shell pointer-events-auto relative mx-auto article-layout px-0 pb-5 pt-1">
           <div className="mobile-chat-composer flex min-h-16 items-center gap-3 rounded-[1.5rem] border border-border bg-white px-3 py-2 shadow-[0_18px_40px_rgba(20,20,20,0.08)]">
             <textarea
               ref={inputRef}
