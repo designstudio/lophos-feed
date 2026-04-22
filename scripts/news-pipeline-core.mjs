@@ -73,6 +73,12 @@ const LISTICLE_HINT_PATTERNS = [
   /\b(confira|check out|veja|clique)\b/i,
 ]
 
+const LISTICLE_STRONG_TITLE_PATTERNS = [
+  /^(?:\d{1,3}|top|ranking)\s+(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b/i,
+  /^(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b.*\bque\b/i,
+  /^(?:os|as|um|uma|uns|umas)\s+(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b.*\bque\b/i,
+]
+
 // Stopwords PT + EN + palavras de formato editorial e plataformas de streaming
 const STOPWORDS = new Set([
   // Português — artigos, preposições, pronomes, verbos comuns
@@ -108,6 +114,16 @@ export function normalizeText(value) {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()
+}
+
+export function foldText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export function canonicalizeUrl(url) {
@@ -209,6 +225,7 @@ export function shouldRejectPreflightItem({
     .filter(Boolean)
     .join(' \n ')
     .toLowerCase()
+  const foldedTitle = foldText(title)
 
   if (countMatches(haystack, ARCHIVE_HINT_PATTERNS) >= 1) {
     return { reject: true, reason: 'blocked-archive' }
@@ -221,9 +238,18 @@ export function shouldRejectPreflightItem({
     return { reject: true, reason: 'blocked-gambling' }
   }
 
+  const strongListicleTitle = LISTICLE_STRONG_TITLE_PATTERNS.some((pattern) => pattern.test(foldedTitle))
   const dealSignals = countMatches(haystack, DEAL_HINT_PATTERNS)
   const listicleSignals = countMatches(haystack, LISTICLE_HINT_PATTERNS)
   const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
+  const hasListicleStructure =
+    strongListicleTitle ||
+    (listicleSignals >= 2) ||
+    (listicleSignals >= 1 && /\b(10|15|20|25|30|50)\b/.test(foldedTitle))
+
+  if (hasListicleStructure) {
+    return { reject: true, reason: 'blocked-listicle' }
+  }
 
   if (dealSignals >= 2 || (dealSignals >= 1 && (sourceLooksPromo || listicleSignals >= 1))) {
     return { reject: true, reason: 'blocked-deal' }
@@ -393,41 +419,91 @@ export function clusterDeterministicItems(items, options = {}) {
 }
 
 export function stripEditorialNoise(title) {
-  return tokenize(title)
-    .filter((token) =>
-      ![
-        'novo',
-        'nova',
-        'novos',
-        'novas',
-        'trailer',
-        'teaser',
-        'sinopse',
-        'data',
-        'lança',
-        'lanca',
-        'lançamento',
-        'lancamento',
-        'estreia',
-        'estreiam',
-        'anuncia',
-        'anunci',
-        'confirma',
-        'divulga',
-        'apresenta',
-        'mostra',
-        'revela',
-        'revelado',
-        'revelada',
-        'ganha',
-        'ganham',
-        'primeiro',
-        'primeira',
-        'segundo',
-        'segunda',
-      ].includes(token)
-    )
+  const foldedTitle = foldText(title)
+  const noiseTokens = new Set([
+    'novo',
+    'nova',
+    'novos',
+    'novas',
+    'trailer',
+    'teaser',
+    'sinopse',
+    'data',
+    'lanca',
+    'lancamento',
+    'estreia',
+    'estreiam',
+    'anuncia',
+    'anunci',
+    'confirma',
+    'divulga',
+    'apresenta',
+    'mostra',
+    'revela',
+    'revelado',
+    'revelada',
+    'ganha',
+    'ganham',
+    'primeiro',
+    'primeira',
+    'segundo',
+    'segunda',
+    'nomeia',
+    'nomeado',
+    'nomeada',
+    'contrata',
+    'contratado',
+    'contratada',
+    'assume',
+    'assumir',
+    'deixa',
+    'deixou',
+    'sai',
+    'saiu',
+    'retorna',
+    'retornar',
+    'volta',
+    'voltar',
+    'dirige',
+    'dirigido',
+    'dirigida',
+    'dirigindo',
+  ])
+
+  const rawTokens = foldedTitle
+    .split(' ')
+    .map((token) => token.trim())
+    .filter(Boolean)
+
+  const tokens = []
+  for (let index = 0; index < rawTokens.length; index += 1) {
+    const fourTokenPhrase = rawTokens.slice(index, index + 4).join(' ')
+    const threeTokenPhrase = rawTokens.slice(index, index + 3).join(' ')
+
+    if (
+      fourTokenPhrase === 'the texas chainsaw massacre' ||
+      fourTokenPhrase === 'o massacre da serra eletrica'
+    ) {
+      tokens.push('texas', 'chainsaw', 'massacre')
+      index += 3
+      continue
+    }
+
+    if (threeTokenPhrase === 'massacre da serra eletrica') {
+      tokens.push('texas', 'chainsaw', 'massacre')
+      index += 2
+      continue
+    }
+
+    const token = rawTokens[index]
+    if (token.length >= 3 && !noiseTokens.has(token)) {
+      tokens.push(token)
+    }
+  }
+
+  return tokens
     .join(' ')
+    .trim() || foldedTitle
 }
 
 export function buildArticleDedupProfile(article) {

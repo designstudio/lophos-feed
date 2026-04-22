@@ -88,12 +88,29 @@ const LISTICLE_HINT_PATTERNS = [
   /\b(confira|check out|veja|clique)\b/i,
 ]
 
+const LISTICLE_STRONG_TITLE_PATTERNS = [
+  /^(?:\d{1,3}|top|ranking)\s+(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b/i,
+  /^(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b.*\bque\b/i,
+  /^(?:os|as|um|uma|uns|umas)\s+(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b.*\bque\b/i,
+]
+
+function foldText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function matchesAnyPattern(text, patterns) {
   return patterns.some((pattern) => pattern.test(text))
 }
 
 function shouldRejectRawItem({ title, description, url, sourceName }) {
   const haystack = [title, description, url, sourceName].filter(Boolean).join(' \n ').toLowerCase()
+  const foldedTitle = foldText(title)
 
   if (ARCHIVE_HINT_PATTERNS.some((pattern) => pattern.test(haystack))) {
     return { reject: true, reason: 'blocked-archive' }
@@ -103,9 +120,18 @@ function shouldRejectRawItem({ title, description, url, sourceName }) {
     return { reject: true, reason: 'blocked-gambling' }
   }
 
+  const strongListicleTitle = LISTICLE_STRONG_TITLE_PATTERNS.some((pattern) => pattern.test(foldedTitle))
   const dealSignals = DEAL_HINT_PATTERNS.filter((pattern) => pattern.test(haystack)).length
   const listicleSignals = LISTICLE_HINT_PATTERNS.filter((pattern) => pattern.test(haystack)).length
   const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
+  const hasListicleStructure =
+    strongListicleTitle ||
+    listicleSignals >= 2 ||
+    (listicleSignals >= 1 && /\b(10|15|20|25|30|50)\b/.test(foldedTitle))
+
+  if (hasListicleStructure) {
+    return { reject: true, reason: 'blocked-listicle' }
+  }
 
   if (dealSignals >= 2 || (dealSignals >= 1 && (sourceLooksPromo || listicleSignals >= 1))) {
     return { reject: true, reason: 'blocked-deal' }

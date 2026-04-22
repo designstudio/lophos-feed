@@ -67,6 +67,8 @@ function dedupeConsecutiveMessages(messages: ChatMessage[]) {
 }
 
 const FULLPAGE_COMPOSER_HEIGHT = 88
+const EMBEDDED_TEXTAREA_BASE_HEIGHT = 42
+const FULLPAGE_TEXTAREA_BASE_HEIGHT = 66
 
 export function ChatThread({
   threadId,
@@ -137,7 +139,10 @@ export function ChatThread({
 
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto'
-    const newHeight = Math.min(Math.max(textarea.scrollHeight, isEmbedded ? 40 : 64), isEmbedded ? 100 : 160)
+    const newHeight = Math.min(
+      Math.max(textarea.scrollHeight, isEmbedded ? EMBEDDED_TEXTAREA_BASE_HEIGHT : FULLPAGE_TEXTAREA_BASE_HEIGHT),
+      isEmbedded ? 100 : 160
+    )
     textarea.style.height = `${newHeight}px`
   }
 
@@ -232,7 +237,9 @@ export function ChatThread({
 
     setInputValue('')
     if (inputRef.current) {
-      inputRef.current.style.height = isEmbedded ? '40px' : '64px'
+      inputRef.current.style.height = isEmbedded
+        ? `${EMBEDDED_TEXTAREA_BASE_HEIGHT}px`
+        : `${FULLPAGE_TEXTAREA_BASE_HEIGHT}px`
     }
 
     const userMessage: ChatMessage = {
@@ -392,12 +399,12 @@ export function ChatThread({
 
       {!isEmbedded && <div className="pointer-events-none" style={{ height: `${FULLPAGE_COMPOSER_HEIGHT}px` }} />}
 
-      <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
+      <div className={`mobile-chat-dock fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
         {!isEmbedded && (
           <div className="absolute inset-x-0 bottom-0 h-8 bg-bg-primary" />
         )}
 
-        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-5 pt-1'}>
+        <div className={isEmbedded ? 'pointer-events-auto relative mx-auto article-layout p-4 md:p-6' : 'pointer-events-auto relative mx-auto article-layout px-0 pb-0 pt-1'}>
           {isSending && isEmbedded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -425,7 +432,7 @@ export function ChatThread({
                 placeholder="Pergunte qualquer coisa"
                 rows={1}
                 disabled={isSending}
-                className="w-full resize-none rounded-xl border border-border bg-white px-4 py-3 pr-12 text-black placeholder-ink-muted transition-colors focus:border-accent focus:outline-none disabled:opacity-50 dark:bg-[#2a2a2a] dark:text-white dark:focus:border-accent"
+                className="w-full resize-none rounded-xl border border-border bg-white px-4 pt-3 pb-0 pr-12 text-black placeholder-ink-muted transition-colors focus:border-accent focus:outline-none disabled:opacity-50 dark:bg-[#2a2a2a] dark:text-white dark:focus:border-accent"
               />
 
               <button
@@ -438,7 +445,7 @@ export function ChatThread({
               </button>
             </>
           ) : (
-            <div className="flex min-h-16 items-center gap-3 rounded-[1.5rem] border border-border bg-white px-3 py-2 shadow-[0_18px_40px_rgba(20,20,20,0.08)]">
+            <div className="mobile-chat-composer flex min-h-16 items-center gap-3 rounded-[1.5rem] border border-border bg-white px-3 py-2 shadow-[0_18px_40px_rgba(20,20,20,0.08)]">
               <textarea
                 ref={inputRef}
                 value={inputValue}
@@ -447,7 +454,7 @@ export function ChatThread({
                 placeholder="Pergunte qualquer coisa"
                 rows={1}
                 disabled={isSending}
-                className="min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-black placeholder-ink-muted transition-colors focus:outline-none disabled:opacity-50 dark:text-white"
+                className="min-h-10 flex-1 resize-none bg-transparent px-2 pt-2 pb-0 text-black placeholder-ink-muted transition-colors focus:outline-none disabled:opacity-50 dark:text-white"
               />
 
               <button

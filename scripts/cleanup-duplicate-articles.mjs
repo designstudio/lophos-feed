@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import {
   canonicalizeUrl,
   normalizeText,
+  stripEditorialNoise,
   strongIntersection,
   textOverlapScore,
 } from './news-pipeline-core.mjs'
@@ -166,6 +167,10 @@ function intersectionCount(left, right) {
   return count
 }
 
+function coreTitleText(article) {
+  return stripEditorialNoise(article.title || '')
+}
+
 function normalizeList(values) {
   return [...new Set(
     (values || [])
@@ -295,6 +300,7 @@ async function main() {
       _sortKey: articleDate(article),
       _text: articleText(article),
       _titleText: titleText(article),
+      _coreTitleText: coreTitleText(article),
       _normalizedTitle: normalizeText(article.title),
     }))
     .filter((article) => article._sortKey >= since.getTime())
@@ -340,18 +346,25 @@ async function main() {
          right._normalizedTitle.includes(left._normalizedTitle))
       const titleScore = textOverlapScore(left._titleText, right._titleText)
       const titleSharedTokens = intersectionCount(left._titleText, right._titleText)
+      const coreTitleScore = textOverlapScore(left._coreTitleText, right._coreTitleText)
+      const coreTitleSharedTokens = intersectionCount(left._coreTitleText, right._coreTitleText)
 
       const score = textOverlapScore(left._text, right._text)
       const strong = strongIntersection(left._text, right._text)
       const titleStrong = strongIntersection(left._titleText, right._titleText)
+      const coreTitleStrong = strongIntersection(left._coreTitleText, right._coreTitleText)
 
       const verySimilarTitles =
         titleScore >= 0.55 && titleSharedTokens >= 2
+
+      const verySimilarCoreTitles =
+        coreTitleScore >= 0.4 && coreTitleSharedTokens >= 2
 
       const headlineMatch =
         sameTitle ||
         titleContains ||
         verySimilarTitles ||
+        verySimilarCoreTitles ||
         (titleSharedTokens >= 3 && titleScore >= 0.45)
 
       const bodyMatch =
@@ -363,6 +376,7 @@ async function main() {
         headlineMatch && (
           bodyMatch ||
           compactMatch ||
+          coreTitleStrong.length >= 2 ||
           (score >= 0.2 && strong.length >= 2)
         )
 

@@ -386,6 +386,18 @@ html, body {
     font-size: 1.25rem !important;
     height: auto !important;
   }
+
+  .mobile-chat-composer {
+    min-height: 3.5rem !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+  }
+
+  .mobile-chat-dock {
+    left: calc(1rem + 3.5rem + 0.75rem) !important;
+    right: 1rem !important;
+    bottom: 18px !important;
+  }
 }
 
 /* ─── PWA iOS ─────────────────────────────────────── */

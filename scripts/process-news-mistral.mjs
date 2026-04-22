@@ -13,7 +13,6 @@ import { processTopicWithMistral } from './news-mistral-core.mjs'
 const SIMILARITY_THRESHOLD = 0.30
 const MIN_STRONG_TOKENS = 3
 const DELAY_BETWEEN_TOPICS_MS = Number(process.env.MISTRAL_TOPIC_DELAY_MS || 1500)
-const DEDUP_HISTORY_HOURS = Number(process.env.MISTRAL_DEDUP_HISTORY_HOURS || 168)
 const DEDUP_HISTORY_LIMIT = Number(process.env.MISTRAL_DEDUP_HISTORY_LIMIT || 1000)
 const DEBUG_DEDUP = process.env.DEBUG_DEDUP === '1'
 
@@ -73,6 +72,18 @@ function assertEnv(name) {
 
 function uniqueIds(values) {
   return [...new Set((values || []).filter(Boolean))]
+}
+
+function sanitizeArticleForSave(article) {
+  const {
+    _dedupProfile,
+    _isPendingDedupCandidate,
+    ...persisted
+  } = article || {}
+  return {
+    ...persisted,
+    topic: persisted.topic || '',
+  }
 }
 
 function articleComparableText(article) {
@@ -158,7 +169,7 @@ async function main() {
   console.log(`Janela de entrada: últimas ${windowHours}h | histórico de comparação: ${historyHours}h`)
   console.log(`Topics prontos para Mistral: ${topicPayloads.map((entry) => entry.topic).join(', ')}\n`)
 
-  const sinceDedup = new Date(Date.now() - DEDUP_HISTORY_HOURS * 60 * 60 * 1000).toISOString()
+  const sinceDedup = new Date(Date.now() - historyHours * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
     .from('articles')
     .select('id, title, summary, sections, conclusion, sources, source_ids, keywords, matched_topics, image_url, video_url')
@@ -180,7 +191,7 @@ async function main() {
     video_url: r.video_url || null,
     _dedupProfile: buildArticleDedupProfile(r),
   }))
-  console.log(`Artigos existentes (últimas ${DEDUP_HISTORY_HOURS}h): ${allProcessedArticles.length}\n`)
+  console.log(`Artigos existentes (últimas ${historyHours}h): ${allProcessedArticles.length}\n`)
 
   let totalGenerated = 0
   let totalMerged = 0
@@ -195,6 +206,7 @@ async function main() {
     const acceptedItems = topicPayload.acceptedItems || []
     const clusters = topicPayload.clusters || []
     const rejectedRawIds = uniqueIds(topicPayload.rejectedRawIds || [])
+    const topicPendingArticles = []
 
     if (!acceptedItems.length && !rejectedRawIds.length) {
       continue
@@ -280,7 +292,7 @@ async function main() {
           continue
         }
 
-        const dedupMatch = findBestArticleDuplicateMatch(item, allProcessedArticles, {
+        const dedupMatch = findBestArticleDuplicateMatch(item, [...allProcessedArticles, ...topicPendingArticles], {
           similarityThreshold: 0.22,
           minStrongTokens: 2,
           minTitleScore: 0.4,
@@ -319,10 +331,12 @@ async function main() {
             if (shouldBackfillImage) updatePayload.image_url = item.image_url
             if (shouldBackfillVideo) updatePayload.video_url = item.video_url
 
-            const { error: mergeError } = await db
-              .from('articles')
-              .update(updatePayload)
-              .eq('id', match.id)
+            const { error: mergeError } = match._isPendingDedupCandidate
+              ? { error: null }
+              : await db
+                .from('articles')
+                .update(updatePayload)
+                .eq('id', match.id)
 
             if (mergeError) {
               console.error(`[${topic}] ??  Merge error: ${mergeError.message}. Item n�o ser� marcado como processado.`)
@@ -346,7 +360,24 @@ async function main() {
           if (DEBUG_DEDUP) {
             console.log(`  [DEDUP] ? NEW "${item.title?.slice(0, 60)}"`)
           }
-          dedupedItems.push(item)
+          const pendingArticle = {
+            id: item.id,
+            topic,
+            title: item.title,
+            summary: item.summary || '',
+            sections: item.sections || [],
+            conclusion: item.conclusion || '',
+            sources: item.sources,
+            source_ids: item.source_ids || [],
+            keywords: item.keywords || [],
+            matched_topics: item.matched_topics || [],
+            image_url: item.image_url || null,
+            video_url: item.video_url || null,
+            _isPendingDedupCandidate: true,
+            _dedupProfile: buildArticleDedupProfile(item),
+          }
+          dedupedItems.push(pendingArticle)
+          topicPendingArticles.push(pendingArticle)
         }
 
       }
@@ -370,19 +401,22 @@ async function main() {
         validArticles.push(item)
       }
 
-      if (validArticles.length > 0) {
-        console.log(`[${topic}] 📦 Gravando no BD: ${validArticles.length} artigos`)
-        const { error: saveError } = await db.from('articles').upsert(validArticles, { onConflict: 'id' })
+      const articlesToSave = validArticles.map((article) => sanitizeArticleForSave(article))
+
+      if (articlesToSave.length > 0) {
+        console.log(`[${topic}] 📦 Gravando no BD: ${articlesToSave.length} artigos`)
+        const { error: saveError } = await db.from('articles').upsert(articlesToSave, { onConflict: 'id' })
 
         if (saveError) {
-          console.error(`[${topic}] ⚠️  Save error: ${saveError.message}. ${validArticles.length} items não serão marcados como processados.`)
+          console.error(`[${topic}] ⚠️  Save error: ${saveError.message}. ${articlesToSave.length} items não serão marcados como processados.`)
         } else {
-          console.log(`[${topic}] ✅ ${validArticles.length} artigos salvos com sucesso`)
-          totalSaved += validArticles.length
+          console.log(`[${topic}] ✅ ${articlesToSave.length} artigos salvos com sucesso`)
+          totalSaved += articlesToSave.length
 
-          for (const item of validArticles) {
+          for (const item of articlesToSave) {
             allProcessedArticles.push({
               id: item.id,
+              topic: item.topic || topic,
               title: item.title,
               summary: item.summary || '',
               sections: item.sections || [],

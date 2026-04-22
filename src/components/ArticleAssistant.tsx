@@ -16,6 +16,7 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
   const [error, setError] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
+  const textareaBaseHeight = 66
 
   useEffect(() => {
     setMounted(true)
@@ -44,7 +45,7 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
 
   const resizeTextarea = (textarea: HTMLTextAreaElement) => {
     textarea.style.height = 'auto'
-    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 64), 140)}px`
+    textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, textareaBaseHeight), 140)}px`
   }
 
   const handleSend = async () => {
@@ -96,11 +97,11 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
     <>
       <div aria-hidden="true" className="mt-10" style={{ height: '88px' }} />
 
-      <div className={`fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
+      <div className={`mobile-chat-dock fixed bottom-0 left-0 right-0 ${composerOffset} z-30 pointer-events-none transition-all duration-300`}>
         <div className="absolute inset-x-0 bottom-0 h-8 bg-bg-primary" />
 
-        <div className="pointer-events-auto relative mx-auto article-layout px-0 pb-5 pt-1">
-          <div className="flex min-h-16 items-center gap-3 rounded-[1.5rem] border border-border bg-white px-3 py-2 shadow-[0_18px_40px_rgba(20,20,20,0.08)]">
+        <div className="pointer-events-auto relative mx-auto article-layout px-0 pb-0 pt-1">
+          <div className="mobile-chat-composer flex min-h-16 items-center gap-3 rounded-[1.5rem] border border-border bg-white px-3 py-2 shadow-[0_18px_40px_rgba(20,20,20,0.08)]">
             <textarea
               ref={inputRef}
               value={inputValue}
@@ -117,7 +118,7 @@ export function ArticleAssistant({ articleId }: ArticleAssistantProps) {
               rows={1}
               disabled={isSending}
               placeholder="Pergunte qualquer coisa"
-              className="min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-black placeholder-ink-muted transition-colors focus:outline-none disabled:opacity-50"
+              className="min-h-10 flex-1 resize-none bg-transparent px-2 pt-2 pb-0 text-black placeholder-ink-muted transition-colors focus:outline-none disabled:opacity-50"
             />
 
             <button
