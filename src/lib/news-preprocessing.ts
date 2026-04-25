@@ -73,6 +73,32 @@ const LISTICLE_HINT_PATTERNS = [
   /\b(confira|check out|veja|clique)\b/i,
 ]
 
+const LAUNCH_VERB_PATTERNS = [
+  /\blan[cç]a\b/i,
+  /\blan[cç]ou\b/i,
+  /\blan[cç]amento\b/i,
+  /\banuncia\b/i,
+  /\banunciou\b/i,
+  /\bpresenta\b/i,
+  /\bapresenta\b/i,
+  /\brevela\b/i,
+  /\brevelou\b/i,
+  /\bestreia\b/i,
+  /\bestreou\b/i,
+]
+
+const LEGACY_TECH_MARKERS = [
+  /\bm1\b/i,
+  /\bm2\b/i,
+  /\bm3\b/i,
+  /\bintel\b/i,
+  /\bmacbook air m1\b/i,
+  /\biphone 11\b/i,
+  /\biphone 12\b/i,
+  /\bps4\b/i,
+  /\bxbox one\b/i,
+]
+
 export function extractText(value: unknown): string {
   if (!value) return ''
   if (typeof value === 'object') {
@@ -135,6 +161,32 @@ function countMatches(text: string, patterns: RegExp[]) {
   return patterns.reduce((total, pattern) => total + (pattern.test(text) ? 1 : 0), 0)
 }
 
+export function isLikelyStaleLaunchArticle({
+  title = '',
+  description = '',
+  sourceName = '',
+  topic = '',
+}: {
+  title?: string
+  description?: string
+  sourceName?: string
+  topic?: string
+}) {
+  const haystack = [title, description, sourceName, topic].filter(Boolean).join(' \n ').toLowerCase()
+
+  if (!haystack.trim()) return false
+
+  const archiveSignal =
+    /\b(retrospectiva|retrospectivas|throwback|relembrando|revisitando|republicado|repostado|repost|archive|arquivo|arquivos|originalmente publicado)\b/i.test(haystack)
+
+  const launchSignal = LAUNCH_VERB_PATTERNS.some((pattern) => pattern.test(haystack))
+  const legacySignal = LEGACY_TECH_MARKERS.some((pattern) => pattern.test(haystack))
+
+  const techTopic = /\b(tecnologia|tech|gadget|mobile|hardware|apple|android)\b/i.test(haystack)
+
+  return archiveSignal || (techTopic && launchSignal && legacySignal)
+}
+
 export function shouldRejectRawItem({
   title,
   description = '',
@@ -157,6 +209,16 @@ export function shouldRejectRawItem({
 
   if (countMatches(haystack, ARCHIVE_HINT_PATTERNS) >= 1) {
     return { reject: true, reason: 'blocked-archive' as const }
+  }
+
+  if (
+    isLikelyStaleLaunchArticle({
+      title,
+      description,
+      sourceName,
+    })
+  ) {
+    return { reject: true, reason: 'blocked-stale-launch' as const }
   }
 
   const gamblingSignals = countMatches(haystack, HARD_BLOCK_PATTERNS)

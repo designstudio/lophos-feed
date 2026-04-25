@@ -74,6 +74,32 @@ const DEAL_SOURCE_HINTS = [
   'meliuz',
 ]
 
+const LAUNCH_VERB_PATTERNS = [
+  /\blan[cç]a\b/i,
+  /\blan[cç]ou\b/i,
+  /\blan[cç]amento\b/i,
+  /\banuncia\b/i,
+  /\banunciou\b/i,
+  /\bpresenta\b/i,
+  /\bapresenta\b/i,
+  /\brevela\b/i,
+  /\brevelou\b/i,
+  /\bestreia\b/i,
+  /\bestreou\b/i,
+]
+
+const LEGACY_TECH_MARKERS = [
+  /\bm1\b/i,
+  /\bm2\b/i,
+  /\bm3\b/i,
+  /\bintel\b/i,
+  /\bmacbook air m1\b/i,
+  /\biphone 11\b/i,
+  /\biphone 12\b/i,
+  /\bps4\b/i,
+  /\bxbox one\b/i,
+]
+
 const ARCHIVE_HINT_PATTERNS = [
   /\barquivos?\b/i,
   /\barquivo(s)?\b/i,
@@ -114,6 +140,16 @@ function shouldRejectRawItem({ title, description, url, sourceName }) {
 
   if (ARCHIVE_HINT_PATTERNS.some((pattern) => pattern.test(haystack))) {
     return { reject: true, reason: 'blocked-archive' }
+  }
+
+  const archiveSignal =
+    /\b(retrospectiva|retrospectivas|throwback|relembrando|revisitando|republicado|repostado|repost|archive|arquivo|arquivos|originalmente publicado)\b/i.test(haystack)
+  const launchSignal = LAUNCH_VERB_PATTERNS.some((pattern) => pattern.test(haystack))
+  const legacySignal = LEGACY_TECH_MARKERS.some((pattern) => pattern.test(haystack))
+  const techTopic = /\b(tecnologia|tech|gadget|mobile|hardware|apple|android)\b/i.test(haystack)
+
+  if (archiveSignal || (techTopic && launchSignal && legacySignal)) {
+    return { reject: true, reason: 'blocked-stale-launch' }
   }
 
   if (matchesAnyPattern(haystack, HARD_BLOCK_PATTERNS)) {

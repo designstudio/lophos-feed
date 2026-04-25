@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { isLikelyStaleLaunchArticle } from '@/lib/news-preprocessing'
 import { NewsItem } from '@/lib/types'
 import { loadBlockedTopics } from '@/lib/topic-signals'
 
@@ -130,12 +131,23 @@ export async function POST(req: NextRequest) {
         }
 
         const allExisting = (allArticles ?? []).map((row: any) => rowToItem(row, topics))
+        const visibleItems = allExisting.filter((item: NewsItem) => !isLikelyStaleLaunchArticle({
+          title: item.title,
+          description: item.summary,
+          sourceName: item.sources?.[0]?.name || '',
+          topic: item.topic,
+        }))
 
-        if (allExisting.length > 0) {
-          await send(allExisting)
+        const filteredOut = allExisting.length - visibleItems.length
+        if (filteredOut > 0) {
+          console.warn(`[feed] filtered ${filteredOut} stale/archived article(s) before sending to client`)
         }
 
-        if (allExisting.length === 0) {
+        if (visibleItems.length > 0) {
+          await send(visibleItems)
+        }
+
+        if (visibleItems.length === 0) {
           await writer.write(encoder.encode(JSON.stringify({ coldStart: true }) + '\n'))
         }
 

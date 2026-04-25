@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { randomUUID } from 'crypto'
-import { buildFaviconUrl } from '@/lib/news-preprocessing'
+import { buildFaviconUrl, isLikelyStaleLaunchArticle } from '@/lib/news-preprocessing'
 import { inferRssTopic } from '@/lib/topic-classifier'
 
 export const maxDuration = 300
@@ -81,6 +81,24 @@ export async function POST(req: NextRequest) {
     // Convert each raw_item to an article
     for (const item of rawItems) {
       try {
+        if (
+          isLikelyStaleLaunchArticle({
+            title: item.title,
+            description: item.summary || item.content || '',
+            sourceName: item.source_name,
+            topic: item.topic,
+          })
+        ) {
+          await db
+            .from('raw_items')
+            .update({ processed: true })
+            .eq('id', item.id)
+
+          itemsSkipped++
+          console.log(`[convert-raw-to-articles] Skipped stale launch/article archive ${item.id}`)
+          continue
+        }
+
         const inferredTopic = inferRssTopic({
           feedTopics: item.topic ? [item.topic] : [],
           title: item.title,
