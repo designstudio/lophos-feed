@@ -25,6 +25,8 @@
 
   --color-border:        rgba(26, 25, 22, 0.08);
   --color-border-strong: rgba(26, 25, 22, 0.15);
+  --color-scrollbar-thumb: rgba(26, 25, 22, 0.18);
+  --color-scrollbar-thumb-hover: rgba(26, 25, 22, 0.28);
 
   /* Typography */
   --text-headline:       1.75rem;
@@ -55,11 +57,15 @@ html, body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar-thumb) transparent;
 }
 
-::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(26,25,22,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--color-scrollbar-thumb); border-radius: 9999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-scrollbar-thumb-hover); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 
 /* ─── Border radius overrides ────────────────────────────── */
 .rounded-lg { border-radius: 0.75rem !important; }
@@ -78,6 +84,8 @@ html, body {
   --color-ink-muted:     #858585;
   --color-border:        rgba(255,255,255,0.08);
   --color-border-strong: rgba(255,255,255,0.15);
+  --color-scrollbar-thumb: rgba(255,255,255,0.18);
+  --color-scrollbar-thumb-hover: rgba(255,255,255,0.28);
 }
 
 .dark html, .dark body, html.dark, body.dark {
@@ -106,7 +114,6 @@ html, body {
   color: var(--color-ink-primary) !important;
   border-color: var(--color-border) !important;
 }
-.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
 
 .text-headline {
   font-size: var(--text-headline);
