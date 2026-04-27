@@ -1,17 +1,13 @@
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
-FROM base AS deps
+FROM base AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
 RUN npm install --ignore-scripts
 
-# Rebuild the source code only when needed
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 RUN npm run build
@@ -26,16 +22,14 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 RUN apk add --no-cache su-exec
 
-COPY package.json package-lock.json* ./
-RUN npm install --omit=dev --ignore-scripts
-
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/scripts ./scripts
-COPY --from=builder /app/.next ./.next
 
 RUN mkdir -p /app/logs /etc/crontabs \
   && printf '%s\n' \
-    '0 0,6,12,18 * * * cd /app && /usr/local/bin/npm run news:cron >> /app/logs/news-cron.log 2>&1' \
+    '0 0,6,12,18 * * * cd /app && node scripts/news-cron.mjs >> /app/logs/news-cron.log 2>&1' \
     > /etc/crontabs/root
 
 COPY --chown=nextjs:nodejs docker/entrypoint.sh /usr/local/bin/entrypoint.sh

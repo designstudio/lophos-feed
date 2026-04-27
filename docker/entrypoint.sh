@@ -17,7 +17,7 @@ fi
 
 if [ $((NOW_SECONDS - LAST_SUCCESS_SECONDS)) -ge "$STALE_AFTER_SECONDS" ]; then
   echo "[entrypoint] Bootstrapping news:cron because last success is stale or missing."
-  (cd /app && /usr/local/bin/npm run news:cron >> /app/logs/news-cron.log 2>&1) &
+  (cd /app && node scripts/news-cron.mjs >> /app/logs/news-cron.log 2>&1) &
 fi
 
-exec su-exec nextjs npm run start
+exec su-exec nextjs node server.js
