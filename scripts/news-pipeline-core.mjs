@@ -157,19 +157,16 @@ export function isLikelyStaleLaunchArticle({
 
 export function normalizeText(value) {
   return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()
 }
 
 export function foldText(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return normalizeText(value)
 }
 
 export function canonicalizeUrl(url) {
