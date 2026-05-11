@@ -27,7 +27,8 @@ COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/scripts ./scripts
 
-RUN mkdir -p /app/logs /etc/crontabs \
+RUN mkdir -p /app/logs /app/.next/cache /etc/crontabs \
+  && chown -R nextjs:nodejs /app \
   && printf '%s\n' \
     '0 0,6,12,18 * * * cd /app && node scripts/news-cron.mjs >> /app/logs/news-cron.log 2>&1' \
     > /etc/crontabs/root

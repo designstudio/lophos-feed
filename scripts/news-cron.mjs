@@ -17,9 +17,25 @@ loadScriptEnvironment()
 const LOG_DIR = path.resolve(process.cwd(), 'logs')
 const STATE_FILE = path.join(LOG_DIR, 'news-cron-state.json')
 const LOCK_FILE = path.join(LOG_DIR, 'news-cron.lock')
+const LOCK_STALE_MS = Number(process.env.NEWS_CRON_LOCK_STALE_MS || 8 * 60 * 60 * 1000)
 
 function ensureLogDir() {
   fs.mkdirSync(LOG_DIR, { recursive: true })
+}
+
+function readLockState() {
+  try {
+    return JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+function lockLooksStale(lockState) {
+  if (!lockState?.startedAt) return true
+  const startedAtMs = Date.parse(lockState.startedAt)
+  if (!Number.isFinite(startedAtMs)) return true
+  return Date.now() - startedAtMs > LOCK_STALE_MS
 }
 
 function acquireLock() {
@@ -29,6 +45,12 @@ function acquireLock() {
     return fd
   } catch (err) {
     if (err?.code === 'EEXIST') {
+      const lockState = readLockState()
+      if (lockLooksStale(lockState)) {
+        console.warn(`[news:cron] Found stale lock from pid=${lockState?.pid ?? 'unknown'} startedAt=${lockState?.startedAt ?? 'unknown'}. Removing it.`)
+        fs.unlinkSync(LOCK_FILE)
+        return acquireLock()
+      }
       console.log(`[news:cron] Another run is already active. Skipping.`)
       process.exit(0)
     }

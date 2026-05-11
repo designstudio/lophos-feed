@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ingestAllFeeds } from './ingest'
 
-
+export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 export async function POST(req: NextRequest) {

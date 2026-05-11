@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ingestAllFeeds } from '@/app/api/rss/ingest/ingest'
+import { getSupabaseAdmin } from '@/lib/supabase'
+import { convertRawItemsToArticles } from '@/lib/raw-to-articles'
 
+export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 export async function GET(req: NextRequest) {
@@ -11,8 +14,14 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await ingestAllFeeds({})
-    return NextResponse.json(result)
+    const ingestResult = await ingestAllFeeds({})
+    const db = getSupabaseAdmin()
+    const convertResult = await convertRawItemsToArticles(db, { limit: 250 })
+
+    return NextResponse.json({
+      ...ingestResult,
+      fallbackConversion: convertResult,
+    })
   } catch (err: any) {
     console.error('[cron/rss-ingest] error:', err)
     return NextResponse.json(
