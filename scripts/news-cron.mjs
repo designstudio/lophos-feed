@@ -69,7 +69,18 @@ function releaseLock(fd) {
 
 function writeState(payload) {
   try {
-    fs.writeFileSync(STATE_FILE, JSON.stringify(payload, null, 2))
+    const previousState = (() => {
+      try {
+        return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'))
+      } catch {
+        return {}
+      }
+    })()
+
+    fs.writeFileSync(STATE_FILE, JSON.stringify({
+      ...previousState,
+      ...payload,
+    }, null, 2))
   } catch (err) {
     console.warn('[news:cron] Could not write state file:', err?.message || err)
   }
@@ -97,8 +108,15 @@ async function main() {
   ensureLogDir()
   const lockFd = acquireLock()
   const startedAt = Date.now()
+  const startedAtIso = new Date(startedAt).toISOString()
 
   process.on('exit', () => releaseLock(lockFd))
+
+  writeState({
+    lastStartedAt: startedAtIso,
+    status: 'running',
+    pid: process.pid,
+  })
 
   runStep('news:ingest', ['npm', 'run', 'news:ingest'])
   runStep('news:process', ['npm', 'run', 'news:process'])
@@ -106,6 +124,8 @@ async function main() {
 
   const durationMs = Date.now() - startedAt
   writeState({
+    status: 'success',
+    lastFinishedAt: new Date().toISOString(),
     lastSuccessAt: new Date().toISOString(),
     durationMs,
     pid: process.pid,
@@ -116,6 +136,9 @@ async function main() {
 main().catch((err) => {
   ensureLogDir()
   writeState({
+    status: 'failure',
+    lastFinishedAt: new Date().toISOString(),
+    lastStartedAt: new Date().toISOString(),
     lastFailureAt: new Date().toISOString(),
     pid: process.pid,
     error: err?.message || String(err),

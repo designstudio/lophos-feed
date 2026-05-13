@@ -335,6 +335,12 @@ export default function FeedPage() {
           try {
             const chunk = JSON.parse(line)
             if (chunk.topics) { setTopics(chunk.topics); continue }
+            if (chunk.error) {
+              console.error('[feed] stream chunk error:', chunk)
+              setError(typeof chunk.error === 'string' ? chunk.error : 'Erro ao carregar feed.')
+              setColdStart(false)
+              continue
+            }
             if (chunk.coldStart) {
               setError(null)
               setColdStart(true)
@@ -393,11 +399,16 @@ export default function FeedPage() {
                 })
               }
             }
-          } catch {}
+          } catch (parseError) {
+            console.error('[feed] failed to parse stream chunk:', parseError, line)
+          }
         }
       }
     } catch (e: any) {
-      if (e?.name !== 'AbortError') console.error(e)
+      if (e?.name !== 'AbortError') {
+        console.error('[feed] request failed:', e)
+        setError('Erro ao carregar feed.')
+      }
     } finally {
       if (allStreamedItems.length > 0) {
         try {

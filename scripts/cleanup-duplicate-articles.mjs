@@ -278,23 +278,36 @@ async function main() {
   const since = new Date()
   since.setDate(since.getDate() - args.days)
   const sinceIso = since.toISOString()
+  const pageSize = 1000
 
   console.log(`[dedupe] Loading articles from the last ${args.days} day(s)...`)
   console.log(`[dedupe] Cutoff: ${sinceIso}`)
 
-  const { data: rows, error } = await db
-    .from('articles')
-    .select('id, topic, title, summary, sections, sources, source_ids, keywords, matched_topics, image_url, video_url, published_at, cached_at')
-    .or(`published_at.gte.${sinceIso},cached_at.gte.${sinceIso}`)
-    .order('published_at', { ascending: false, nullsFirst: false })
-    .order('cached_at', { ascending: false, nullsFirst: false })
-    .limit(args.limit)
+  const rows = []
+  let offset = 0
 
-  if (error) {
-    throw new Error(`Failed to load articles: ${error.message}`)
+  while (rows.length < args.limit) {
+    const batchSize = Math.min(pageSize, args.limit - rows.length)
+    const { data: batch, error } = await db
+      .from('articles')
+      .select('id, topic, title, summary, sections, sources, source_ids, keywords, matched_topics, image_url, video_url, published_at, cached_at')
+      .or(`published_at.gte.${sinceIso},cached_at.gte.${sinceIso}`)
+      .order('published_at', { ascending: false, nullsFirst: false })
+      .order('cached_at', { ascending: false, nullsFirst: false })
+      .range(offset, offset + batchSize - 1)
+
+    if (error) {
+      throw new Error(`Failed to load articles: ${error.message}`)
+    }
+
+    if (!batch?.length) break
+
+    rows.push(...batch)
+    if (batch.length < batchSize) break
+    offset += batchSize
   }
 
-  const articles = (rows || [])
+  const articles = rows
     .map((article) => ({
       ...article,
       _sortKey: articleDate(article),
