@@ -73,17 +73,48 @@ export async function POST(req: NextRequest) {
     const encoder = new TextEncoder()
     const stream = new TransformStream()
     const writer = stream.writable.getWriter()
+    let requestAborted = req.signal.aborted
+
+    const abortWriter = async () => {
+      try {
+        await writer.abort(new Error('Feed request aborted by client'))
+      } catch (abortErr) {
+        console.error('[feed] writer abort error:', serializeError(abortErr))
+      }
+    }
+
+    const handleAbort = () => {
+      requestAborted = true
+      console.warn('[feed] request aborted by client')
+      void abortWriter()
+    }
+
+    req.signal.addEventListener('abort', handleAbort, { once: true })
+
+    const writeChunk = async (payload: unknown) => {
+      if (requestAborted) return false
+      try {
+        await writer.write(encoder.encode(JSON.stringify(payload) + '\n'))
+        return true
+      } catch (writeErr) {
+        if (requestAborted) return false
+        throw writeErr
+      }
+    }
 
     const send = async (items: NewsItem[]) => {
       if (items.length === 0) return
-      await writer.write(encoder.encode(JSON.stringify({ items }) + '\n'))
+      await writeChunk({ items })
     }
 
     const closeWriter = async () => {
+      if (requestAborted) return
       try {
         await writer.close()
       } catch (closeErr) {
-        console.error('[feed] writer close error:', serializeError(closeErr))
+        if (!requestAborted) {
+          console.error('[feed] writer close error:', serializeError(closeErr))
+        }
       }
     }
 
@@ -92,15 +123,16 @@ export async function POST(req: NextRequest) {
     ;(async () => {
       try {
         console.log(`[feed] stream task START at ${new Date().toISOString()}`)
-        await writer.write(encoder.encode(JSON.stringify({ topics }) + '\n'))
+        if (!(await writeChunk({ topics }))) return
         if (debug) {
-          await writer.write(encoder.encode(JSON.stringify({ debug: { phase: 'start' } }) + '\n'))
+          if (!(await writeChunk({ debug: { phase: 'start' } }))) return
         }
 
         console.log(
           `[feed] calling get_personalized_feed with topics=${JSON.stringify(topics)}, days=${days}`,
         )
         const blockedTopics = await loadBlockedTopics(db, userId, topics)
+        if (requestAborted) return
         console.log(`[feed] blocked topics=${JSON.stringify(blockedTopics)}`)
         const { data: allArticles, error } = await db.rpc('get_personalized_feed', {
           p_user_id: userId,
@@ -111,14 +143,10 @@ export async function POST(req: NextRequest) {
 
         if (error) {
           console.error('[feed] RPC error:', error)
-          await writer.write(
-            encoder.encode(
-              JSON.stringify({
-                error: 'RPC get_personalized_feed failed',
-                detail: includeErrorDetails ? serializeError(error) : undefined,
-              }) + '\n',
-            ),
-          )
+          await writeChunk({
+            error: 'RPC get_personalized_feed failed',
+            detail: includeErrorDetails ? serializeError(error) : undefined,
+          })
           await closeWriter()
           return
         }
@@ -148,26 +176,28 @@ export async function POST(req: NextRequest) {
         }
 
         if (visibleItems.length === 0) {
-          await writer.write(encoder.encode(JSON.stringify({ coldStart: true }) + '\n'))
+          if (!(await writeChunk({ coldStart: true }))) return
         }
 
-        await writer.write(encoder.encode(JSON.stringify({ refreshComplete: true }) + '\n'))
+        await writeChunk({ refreshComplete: true })
 
         console.log(`[feed] closing writer at ${new Date().toISOString()}`)
         await closeWriter()
       } catch (streamErr) {
+        if (requestAborted) {
+          console.warn('[feed] stream task stopped after abort')
+          return
+        }
         console.error('[feed] stream task failed:', streamErr)
         try {
-          await writer.write(
-            encoder.encode(
-              JSON.stringify({
-                error: 'Feed streaming failed',
-                detail: includeErrorDetails ? serializeError(streamErr) : undefined,
-              }) + '\n',
-            ),
-          )
+          await writeChunk({
+            error: 'Feed streaming failed',
+            detail: includeErrorDetails ? serializeError(streamErr) : undefined,
+          })
         } catch {}
         await closeWriter()
+      } finally {
+        req.signal.removeEventListener('abort', handleAbort)
       }
     })().catch((unhandledErr) => {
       console.error('[feed] unhandled stream task rejection:', unhandledErr)
@@ -176,7 +206,6 @@ export async function POST(req: NextRequest) {
     return new Response(stream.readable, {
       headers: {
         'Content-Type': 'application/x-ndjson',
-        'Transfer-Encoding': 'chunked',
         'Cache-Control': 'no-cache',
       },
     })
