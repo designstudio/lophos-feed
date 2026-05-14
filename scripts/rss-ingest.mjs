@@ -10,6 +10,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { XMLParser } from 'fast-xml-parser'
 import crypto from 'crypto'
+import fs from 'fs'
+import path from 'path'
 import { loadScriptEnvironment } from './script-env.mjs'
 
 loadScriptEnvironment()
@@ -18,6 +20,63 @@ const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
 )
+
+const LOG_DIR = path.resolve(process.cwd(), 'logs')
+const INGEST_LOCK_FILE = path.join(LOG_DIR, 'rss-ingest.lock')
+const INGEST_LOCK_STALE_MS = Number(process.env.RSS_INGEST_LOCK_STALE_MS || 2 * 60 * 60 * 1000)
+
+function ensureLogDir() {
+  fs.mkdirSync(LOG_DIR, { recursive: true })
+}
+
+function readLockState() {
+  try {
+    return JSON.parse(fs.readFileSync(INGEST_LOCK_FILE, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+function lockLooksStale(lockState) {
+  if (!lockState?.startedAt) return true
+  const startedAtMs = Date.parse(lockState.startedAt)
+  if (!Number.isFinite(startedAtMs)) return true
+  return Date.now() - startedAtMs > INGEST_LOCK_STALE_MS
+}
+
+function acquireIngestLock() {
+  ensureLogDir()
+
+  try {
+    const fd = fs.openSync(INGEST_LOCK_FILE, 'wx')
+    fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, startedAt: new Date().toISOString(), source: 'script' }, null, 2))
+    return { acquired: true, fd }
+  } catch (err) {
+    if (err?.code === 'EEXIST') {
+      const lockState = readLockState()
+      if (lockLooksStale(lockState)) {
+        console.warn(`[rss/ingest] Found stale lock from pid=${lockState?.pid ?? 'unknown'} startedAt=${lockState?.startedAt ?? 'unknown'}. Removing it.`)
+        fs.unlinkSync(INGEST_LOCK_FILE)
+        return acquireIngestLock()
+      }
+
+      console.log('[rss/ingest] Another ingest run is already active. Skipping.')
+      return { acquired: false, reason: 'lock-active', lockState }
+    }
+
+    throw err
+  }
+}
+
+function releaseIngestLock(fd) {
+  try {
+    if (typeof fd === 'number') fs.closeSync(fd)
+  } catch {}
+
+  try {
+    fs.unlinkSync(INGEST_LOCK_FILE)
+  } catch {}
+}
 
 function createDedupHash(title) {
   return crypto.createHash('md5').update(title.toLowerCase().trim()).digest('hex')
@@ -375,6 +434,11 @@ async function fetchAndParseFeed(feed) {
 }
 
 async function main() {
+  const lock = acquireIngestLock()
+  if (!lock.acquired) return
+
+  process.on('exit', () => releaseIngestLock(lock.fd))
+
   const { data: feeds, error: feedError } = await db
     .from('rss_feeds')
     .select('id, url, name, topics, language, last_etag, last_modified')

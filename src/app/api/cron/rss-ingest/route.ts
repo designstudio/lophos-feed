@@ -15,6 +15,13 @@ export async function GET(req: NextRequest) {
 
   try {
     const ingestResult = await ingestAllFeeds({})
+    if ((ingestResult as any).skipped) {
+      return NextResponse.json({
+        ...ingestResult,
+        fallbackConversion: null,
+      })
+    }
+
     const db = getSupabaseAdmin()
     const convertResult = await convertRawItemsToArticles(db, { limit: 250 })
 

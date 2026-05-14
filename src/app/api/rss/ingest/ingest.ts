@@ -1,7 +1,70 @@
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { XMLParser } from 'fast-xml-parser'
+import fs from 'fs'
+import path from 'path'
 import { createDedupHash, extractText, stripHtml } from '@/lib/news-preprocessing'
 import { inferRssTopic } from '@/lib/topic-classifier'
+
+const LOG_DIR = path.resolve(process.cwd(), 'logs')
+const INGEST_LOCK_FILE = path.join(LOG_DIR, 'rss-ingest.lock')
+const INGEST_LOCK_STALE_MS = Number(process.env.RSS_INGEST_LOCK_STALE_MS || 2 * 60 * 60 * 1000)
+
+function ensureLogDir() {
+  fs.mkdirSync(LOG_DIR, { recursive: true })
+}
+
+function readLockState() {
+  try {
+    return JSON.parse(fs.readFileSync(INGEST_LOCK_FILE, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+function lockLooksStale(lockState: { startedAt?: string } | null) {
+  if (!lockState?.startedAt) return true
+  const startedAtMs = Date.parse(lockState.startedAt)
+  if (!Number.isFinite(startedAtMs)) return true
+  return Date.now() - startedAtMs > INGEST_LOCK_STALE_MS
+}
+
+function acquireIngestLock() {
+  ensureLogDir()
+
+  try {
+    const fd = fs.openSync(INGEST_LOCK_FILE, 'wx')
+    fs.writeFileSync(fd, JSON.stringify({
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      source: 'next-route',
+    }, null, 2))
+    return { acquired: true as const, fd }
+  } catch (err: any) {
+    if (err?.code === 'EEXIST') {
+      const lockState = readLockState()
+      if (lockLooksStale(lockState)) {
+        console.warn(`[rss/ingest] Found stale lock from pid=${(lockState as any)?.pid ?? 'unknown'} startedAt=${lockState?.startedAt ?? 'unknown'}. Removing it.`)
+        fs.unlinkSync(INGEST_LOCK_FILE)
+        return acquireIngestLock()
+      }
+
+      console.log('[rss/ingest] Another ingest run is already active. Skipping.')
+      return { acquired: false as const, reason: 'lock-active' as const, lockState }
+    }
+
+    throw err
+  }
+}
+
+function releaseIngestLock(fd: number) {
+  try {
+    fs.closeSync(fd)
+  } catch {}
+
+  try {
+    fs.unlinkSync(INGEST_LOCK_FILE)
+  } catch {}
+}
 
 function isYouTubeOrVimeo(url: string | undefined): boolean {
   if (!url) return false
@@ -234,7 +297,13 @@ interface IngestOptions {
 }
 
 export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptions) {
+  const lock = acquireIngestLock()
+  if (!lock.acquired) {
+    return { feedsProcessed: 0, itemsAdded: 0, itemsSkipped: 0, errors: [], skipped: true, reason: lock.reason }
+  }
+
   const db = getSupabaseAdmin()
+  try {
 
   let query = db
     .from('rss_feeds')
@@ -333,4 +402,7 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
   }
 
   return { feedsProcessed: feeds.length, itemsAdded: totalAdded, itemsSkipped: totalSkipped, errors: errors.slice(0, 10) }
+  } finally {
+    releaseIngestLock(lock.fd)
+  }
 }
