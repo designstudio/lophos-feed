@@ -90,6 +90,7 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
         {/* Like com animação de pop */}
         <Tooltip content="Curtir" side="top">
           <motion.button
+            type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('like') }}
             whileTap={{ scale: 0.85 }}
             className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
@@ -113,6 +114,7 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
         {/* Dislike com animação de pop — tom neutro zinc quando ativo */}
         <Tooltip content="Não tenho interesse" side="top">
           <motion.button
+            type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
             whileTap={{ scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 400, damping: 17 }}

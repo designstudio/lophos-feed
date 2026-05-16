@@ -1,5 +1,5 @@
-const CACHE = 'lophos-v1'
-const PRECACHE = ['/feed', '/site.webmanifest', '/apple-touch-icon.png']
+const CACHE = 'lophos-static-v2'
+const PRECACHE = ['/site.webmanifest', '/apple-touch-icon.png', '/favicon-32x32.png']
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()))
@@ -14,15 +14,23 @@ self.addEventListener('activate', e => {
 })
 
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url)
-
-  // Sempre network-first para APIs e auth
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/')) {
-    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)))
+  if (e.request.method !== 'GET') {
     return
   }
 
-  // Cache-first para assets estáticos
+  const url = new URL(e.request.url)
+
+  // Never intercept authenticated APIs or dynamic App Router documents.
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/_next/') ||
+    e.request.mode === 'navigate' ||
+    e.request.destination === 'document'
+  ) {
+    return
+  }
+
+  // Cache-first only for stable static assets.
   if (e.request.destination === 'image' || e.request.destination === 'style' || e.request.destination === 'script') {
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
@@ -31,11 +39,5 @@ self.addEventListener('fetch', e => {
         return res
       }))
     )
-    return
   }
-
-  // Network-first para páginas (com fallback para /feed)
-  e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request) || caches.match('/feed'))
-  )
 })

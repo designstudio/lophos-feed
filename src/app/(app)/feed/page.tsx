@@ -89,6 +89,7 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={() => setOpen(v => !v)}
         className={cn(
           'flex items-center gap-1.5 text-[0.875rem] px-4 h-[60px] border-b-2 transition-all font-medium',
@@ -109,6 +110,7 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
           style={{ animation: 'slideUp 0.12s ease' }}>
           {activeFilter && (
             <button
+              type="button"
               onClick={() => { onSelect(null); setOpen(false) }}
               className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-ink-tertiary hover:bg-gray-50 transition-colors"
             >
@@ -118,6 +120,7 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
           )}
           {topics.map(t => (
             <button key={t}
+              type="button"
               onClick={() => { onSelect(t); setOpen(false) }}
               className={cn(
                 'flex items-center w-full px-4 py-2.5 text-sm transition-colors text-left',
@@ -158,6 +161,7 @@ function TimeFilterDropdown({ days, onChange }: { days: number; onChange: (d: nu
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={() => setOpen(v => !v)}
         className={cn(
           'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all spring-press',
@@ -176,6 +180,7 @@ function TimeFilterDropdown({ days, onChange }: { days: number; onChange: (d: nu
           {TIME_OPTIONS.map(o => (
             <button
               key={o.days}
+              type="button"
               onClick={() => { onChange(o.days); setOpen(false) }}
               className={cn(
                 'flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors',
@@ -557,6 +562,7 @@ export default function FeedPage() {
               <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
               <div className="flex flex-1 justify-center">
                 <button
+                  type="button"
                   onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                   className={cn(
                     'text-[0.875rem] px-4 h-[60px] border-b-2 transition-all font-medium',
@@ -609,6 +615,7 @@ export default function FeedPage() {
               return (
                 <button
                   key={t ?? 'top'}
+                  type="button"
                   onClick={() => { setActiveFilter(val); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
                   className={cn(
                     'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
@@ -660,6 +667,7 @@ export default function FeedPage() {
               {updatesReady && (
                 <div className="mb-4 px-1">
                   <button
+                    type="button"
                     onClick={applyPendingUpdates}
                     className="text-sm text-white bg-ink-primary hover:bg-ink-secondary px-3 py-2 rounded-full transition-colors"
                   >
@@ -672,7 +680,7 @@ export default function FeedPage() {
                 <div className="flex flex-col items-center justify-center py-32 text-center">
                   <Feed size={32} className="text-ink-muted mb-4" />
                   <p className="text-ink-secondary">{emptyMessage}</p>
-                  <button onClick={() => fetchFeed(true)} className="mt-4 text-sm text-accent hover:underline">
+                  <button type="button" onClick={() => fetchFeed(true)} className="mt-4 text-sm text-accent hover:underline">
                     Tentar novamente
                   </button>
                 </div>

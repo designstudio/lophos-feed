@@ -31,6 +31,8 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const enablePwa = process.env.NEXT_PUBLIC_ENABLE_PWA === 'true'
+
   return (
     <ClerkProvider>
       <html lang="pt-BR" suppressHydrationWarning>
@@ -59,8 +61,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   location.hostname === 'localhost' ||
                   location.hostname === '127.0.0.1' ||
                   location.hostname === '[::1]';
+                var enablePwa = ${JSON.stringify(enablePwa)};
 
-                if (isLocalhost) {
+                if (isLocalhost || !enablePwa) {
                   navigator.serviceWorker.getRegistrations().then(function(registrations) {
                     return Promise.all(registrations.map(function(registration) {
                       return registration.unregister();

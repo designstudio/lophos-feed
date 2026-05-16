@@ -137,6 +137,7 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
             autoFocus
           />
           <button
+            type="button"
             onClick={onClose}
             className="flex-shrink-0 text-ink-tertiary hover:text-ink-primary transition-colors p-1"
           >
@@ -154,6 +155,7 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-semibold text-ink-primary">Buscas recentes</h3>
                     <button
+                      type="button"
                       onClick={handleClearHistory}
                       className="text-xs text-ink-tertiary hover:text-ink-secondary transition-colors"
                     >
@@ -164,6 +166,7 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
                     {history.map((item) => (
                       <button
                         key={item}
+                        type="button"
                         onClick={() => handleHistoryClick(item)}
                         className="w-full flex items-center gap-2 p-3 rounded-lg hover:bg-bg-secondary transition-colors text-left"
                       >
