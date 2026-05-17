@@ -2,7 +2,12 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
-import { Heart as HeartAngle, ThumbsDown as Dislike, Clock as ClockCircle, ThumbsDown as DislikeFilled } from '@untitledui/icons'
+import {
+  Heart as HeartAngle,
+  ThumbsDown as Dislike,
+  Clock as ClockCircle,
+  ThumbsDown as DislikeFilled,
+} from '@untitledui/icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format, formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -14,7 +19,7 @@ const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spa
 
 function proxyImage(url: string | undefined): string | undefined {
   if (!url) return undefined
-  if (LAZY_PATTERNS.some(p => url.toLowerCase().includes(p))) return undefined
+  if (LAZY_PATTERNS.some((pattern) => url.toLowerCase().includes(pattern))) return undefined
   return `/api/image-proxy?url=${encodeURIComponent(url)}`
 }
 
@@ -22,7 +27,11 @@ function getSourceLabel(sources: NewsItem['sources']): string {
   const name = sources?.[0]?.name?.trim()
   if (!name) return 'Fonte'
   const parts = name.replace(/\s+/g, ' ').split(' ')
-  const initials = parts.slice(0, 2).map(p => p[0]).join('').toUpperCase()
+  const initials = parts
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
   return initials || name.slice(0, 2).toUpperCase()
 }
 
@@ -52,26 +61,37 @@ interface Props {
   onReactionChange?: (articleId: string, reaction: 'like' | 'dislike' | null) => void
 }
 
-function SourcesAndReactions({ sources, reaction, onReact }: {
+function SourcesAndReactions({
+  sources,
+  reaction,
+  onReact,
+}: {
   sources: NewsItem['sources']
   reaction: 'like' | 'dislike' | null
   onReact: (t: 'like' | 'dislike') => void
 }) {
   const shown = (sources || []).slice(0, 4)
+
   return (
     <div className="flex items-center justify-between mt-2.5">
-      {/* Sources — left */}
       <div className="flex items-center gap-1.5">
         <div className="flex items-center">
           {shown.map((src, i) => (
-            <div key={i}
+            <div
+              key={i}
               className="w-5 h-5 rounded-full border-2 border-bg-primary overflow-hidden bg-bg-secondary flex-shrink-0"
               style={{ marginLeft: i === 0 ? 0 : '-6px', zIndex: shown.length - i }}
             >
               {src.favicon ? (
-                <img src={src.favicon} alt="" width={20} height={20}
+                <img
+                  src={src.favicon}
+                  alt=""
+                  width={20}
+                  height={20}
                   className="w-full h-full object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).style.display = 'none'
+                  }}
                 />
               ) : (
                 <span className="w-full h-full block bg-bg-tertiary" />
@@ -85,17 +105,24 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
           </span>
         )}
       </div>
-      {/* Reactions — right */}
+
       <div className="flex items-center gap-0.5">
-        {/* Like com animação de pop */}
         <Tooltip content="Curtir" side="top">
           <motion.button
             type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('like') }}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onReact('like')
+            }}
             whileTap={{ scale: 0.85 }}
-            className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
-              reaction === 'like' ? 'bg-red-50 dark:bg-red-950 text-red-500 dark:text-red-400' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
-            )}>
+            className={cn(
+              'flex items-center px-2 py-1 rounded-full transition-colors',
+              reaction === 'like'
+                ? 'bg-red-50 dark:bg-red-950 text-red-500 dark:text-red-400'
+                : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary',
+            )}
+          >
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
                 key={reaction === 'like' ? 'filled' : 'outline'}
@@ -111,16 +138,23 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
           </motion.button>
         </Tooltip>
 
-        {/* Dislike com animação de pop — tom neutro zinc quando ativo */}
-        <Tooltip content="Não tenho interesse" side="top">
+        <Tooltip content="Nao tenho interesse" side="top">
           <motion.button
             type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onReact('dislike') }}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onReact('dislike')
+            }}
             whileTap={{ scale: 0.8 }}
             transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            className={cn('flex items-center px-2 py-1 rounded-full transition-colors',
-              reaction === 'dislike' ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400' : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary'
-            )}>
+            className={cn(
+              'flex items-center px-2 py-1 rounded-full transition-colors',
+              reaction === 'dislike'
+                ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
+                : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary',
+            )}
+          >
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
                 key={reaction === 'dislike' ? 'filled' : 'outline'}
@@ -140,8 +174,13 @@ function SourcesAndReactions({ sources, reaction, onReact }: {
   )
 }
 
-// Imagem do card — mesma altura em todos os variants no mobile (via CSS global)
-function CardImage({ proxiedImage, title, sources, onError, tall }: {
+function CardImage({
+  proxiedImage,
+  title,
+  sources,
+  onError,
+  tall,
+}: {
   proxiedImage: string | undefined
   title: string
   sources: NewsItem['sources']
@@ -149,10 +188,18 @@ function CardImage({ proxiedImage, title, sources, onError, tall }: {
   tall?: boolean
 }) {
   const showImage = !!proxiedImage
+
   return (
-    <div className={cn('news-card-image w-full rounded-2xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative', tall ? 'h-48' : 'h-36')}>
+    <div
+      className={cn(
+        'news-card-image w-full rounded-2xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative',
+        tall ? 'h-48' : 'h-36',
+      )}
+    >
       {showImage ? (
-        <img src={proxiedImage} alt={title}
+        <img
+          src={proxiedImage}
+          alt={title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           onError={onError}
         />
@@ -180,7 +227,27 @@ function PublishedMeta({ publishedAt }: { publishedAt?: string }) {
   )
 }
 
-export function NewsCard({ item, variant = 'card', className, initialReaction = null, fadingOut = false, solo = false, onReactionChange }: Props) {
+function CardLinkOverlay({ href, title }: { href: string; title: string }) {
+  return (
+    <Link
+      href={href}
+      aria-label={title}
+      className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ui-strong)] focus-visible:ring-offset-2"
+    >
+      <span className="sr-only">{title}</span>
+    </Link>
+  )
+}
+
+export function NewsCard({
+  item,
+  variant = 'card',
+  className,
+  initialReaction = null,
+  fadingOut = false,
+  solo = false,
+  onReactionChange,
+}: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
   const [reacting, setReacting] = useState(false)
   const [imgFailed, setImgFailed] = useState(false)
@@ -188,53 +255,82 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
   const proxiedImage = proxyImage(item.imageUrl)
   const showImage = !!proxiedImage && !imgFailed
 
-  // Sync when parent loads reactions from API
-  useEffect(() => { setReaction(initialReaction) }, [initialReaction])
+  useEffect(() => {
+    setReaction(initialReaction)
+  }, [initialReaction])
 
   const react = async (type: 'like' | 'dislike') => {
     if (reacting) return
+
     setReacting(true)
     const newReaction = reaction === type ? null : type
     setReaction(newReaction)
     onReactionChange?.(item.id, newReaction)
+
     try {
       await fetch('/api/reactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ articleId: item.id, topic: item.topic, reaction: newReaction }),
       })
-    } catch (e) { console.error(e) }
+    } catch (e) {
+      console.error(e)
+    }
+
     setReacting(false)
   }
 
-  // ── Mobile: todos os variants usam o mesmo layout coluna única ──
-  // Padrão: imagem → categoria → título → fontes+reações → divider
-  // Desktop: layout específico por variant
-
   if (variant === 'card') {
     return (
-      <Link href={href} className={cn('news-card group flex flex-col pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
-        <CardImage proxiedImage={showImage ? proxiedImage : undefined} title={item.title} sources={item.sources} onError={() => setImgFailed(true)} tall={solo} />
-        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">{item.displayTopic ?? item.topic}</span>
+      <article
+        className={cn(
+          'news-card group relative flex flex-col pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300',
+          fadingOut && 'opacity-0 pointer-events-none',
+          className,
+        )}
+      >
+        <CardLinkOverlay href={href} title={item.title} />
+        <CardImage
+          proxiedImage={showImage ? proxiedImage : undefined}
+          title={item.title}
+          sources={item.sources}
+          onError={() => setImgFailed(true)}
+          tall={solo}
+        />
+        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">
+          {item.displayTopic ?? item.topic}
+        </span>
         <h2
           className="text-card-title text-ink-primary group-hover:text-accent transition-colors line-clamp-3 md-h2-fixed"
           style={{ height: 'calc(3 * 1.625rem)' }}
-        >{item.title}</h2>
+        >
+          {item.title}
+        </h2>
         <div className="md:hidden">
           <PublishedMeta publishedAt={item.publishedAt} />
         </div>
-        <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
-      </Link>
+        <div className="relative z-20">
+          <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
+        </div>
+      </article>
     )
   }
 
   if (variant === 'full-left') {
     return (
-      <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
-        {/* Mobile: imagem no topo. Desktop: imagem à direita (order-last) */}
+      <article
+        className={cn(
+          'news-card group relative flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300',
+          fadingOut && 'opacity-0 pointer-events-none',
+          className,
+        )}
+      >
+        <CardLinkOverlay href={href} title={item.title} />
         <div className="news-card-image order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-[12.5rem] rounded-2xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
           {showImage ? (
-            <img src={proxiedImage} alt={item.title}
+            <img
+              src={proxiedImage}
+              alt={item.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={() => setImgFailed(true)}
             />
@@ -248,28 +344,41 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.displayTopic ?? item.topic}</span>
+          <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">
+            {item.displayTopic ?? item.topic}
+          </span>
           <h2
             className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
             style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
-          >{item.title}</h2>
+          >
+            {item.title}
+          </h2>
           <PublishedMeta publishedAt={item.publishedAt} />
           <div className="hidden md:block">
             <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
           </div>
-          <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
+          <div className="relative z-20">
+            <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
+          </div>
         </div>
-      </Link>
+      </article>
     )
   }
 
-  // full-right
   return (
-    <Link href={href} className={cn('news-card group flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300', fadingOut && 'opacity-0 pointer-events-none', className)}>
-      {/* Mobile: imagem no topo. Desktop: imagem à esquerda */}
+    <article
+      className={cn(
+        'news-card group relative flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300',
+        fadingOut && 'opacity-0 pointer-events-none',
+        className,
+      )}
+    >
+      <CardLinkOverlay href={href} title={item.title} />
       <div className="news-card-image w-full md:w-80 md:flex-shrink-0 md:h-[12.5rem] rounded-2xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
         {showImage ? (
-          <img src={proxiedImage} alt={item.title}
+          <img
+            src={proxiedImage}
+            alt={item.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             onError={() => setImgFailed(true)}
           />
@@ -283,17 +392,23 @@ export function NewsCard({ item, variant = 'card', className, initialReaction = 
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.displayTopic ?? item.topic}</span>
+        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">
+          {item.displayTopic ?? item.topic}
+        </span>
         <h2
           className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
           style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
-        >{item.title}</h2>
+        >
+          {item.title}
+        </h2>
         <PublishedMeta publishedAt={item.publishedAt} />
         <div className="hidden md:block">
           <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
         </div>
-        <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
+        <div className="relative z-20">
+          <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
+        </div>
       </div>
-    </Link>
+    </article>
   )
 }
