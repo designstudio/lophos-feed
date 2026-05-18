@@ -66,7 +66,6 @@ insert into rss_feeds (url, name, topics, language) values
 ('https://deadline.com/feed/', 'Deadline', '{"Cinema","Filmes","Séries","Entretenimento"}', 'en'),
 ('https://variety.com/feed/', 'Variety', '{"Cinema","Filmes","Séries","Música"}', 'en'),
 ('https://www.hollywoodreporter.com/feed/', 'Hollywood Reporter', '{"Cinema","Filmes","Séries"}', 'en'),
-('https://collider.com/feed/', 'Collider', '{"Cinema","Filmes","Séries"}', 'en'),
 ('https://screenrant.com/feed/', 'Screen Rant', '{"Filmes","Séries","Games"}', 'en'),
 ('https://www.empireonline.com/movies/news/rss/', 'Empire', '{"Cinema","Filmes"}', 'en'),
 ('https://www.cinemablend.com/rss/news', 'CinemaBlend', '{"Cinema","Filmes","Séries"}', 'en'),
