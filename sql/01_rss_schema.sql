@@ -80,8 +80,6 @@ insert into rss_feeds (url, name, topics, language) values
   -- Cinema / Séries / Entretenimento
   ('https://deadline.com/feed/', 'Deadline', '{"Cinema","Séries","Entretenimento"}', 'en'),
   ('https://variety.com/feed/', 'Variety', '{"Cinema","Séries","Entretenimento","Música"}', 'en'),
-  ('https://www.hollywoodreporter.com/feed/', 'Hollywood Reporter', '{"Cinema","Séries"}', 'en'),
-  ('https://screenrant.com/feed/', 'Screen Rant', '{"Cinema","Séries"}', 'en'),
 
   -- Música
   ('https://www.billboard.com/feed/', 'Billboard', '{"Música"}', 'en'),
