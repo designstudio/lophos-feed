@@ -17,6 +17,18 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next()
   }
 
+  // This app does not use Server Actions or page-level POST handlers.
+  // Reject non-GET page requests early so malformed bot/proxy traffic
+  // cannot reach Next's internal action/form parser.
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return new NextResponse('Method Not Allowed', {
+      status: 405,
+      headers: {
+        Allow: 'GET, HEAD, OPTIONS',
+      },
+    })
+  }
+
   const { userId } = await auth()
 
   // Not logged in and trying to access protected route
