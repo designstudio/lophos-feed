@@ -48,38 +48,20 @@ export async function POST(req: NextRequest) {
     const days: number = body.days ?? 2
     const db = getSupabaseAdmin()
 
-    let topics: string[] = body.topics ?? []
-    if (topics.length === 0) {
-      const { data, error } = await db
-        .from('user_topics')
-        .select('topic')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true })
-
-      if (error) {
-        console.error('[feed] error loading user topics:', error)
-        return jsonError(500, 'Failed to load user topics', error)
-      }
-
-      topics = (data ?? []).map((r: any) => r.topic)
-      console.log(`[feed] fetched ${topics.length} topics from user_topics for user ${userId}: ${JSON.stringify(topics)}`)
-    }
-
-    if (topics.length === 0) {
-      console.warn(`[feed] no topics found for user ${userId}`)
-      return jsonError(400, 'No topics')
-    }
-
     const encoder = new TextEncoder()
     const stream = new TransformStream()
     const writer = stream.writable.getWriter()
     let requestAborted = req.signal.aborted
+    let writerClosed = false
 
     const abortWriter = async () => {
+      if (writerClosed) return
       try {
         await writer.abort(new Error('Feed request aborted by client'))
       } catch (abortErr) {
         console.error('[feed] writer abort error:', serializeError(abortErr))
+      } finally {
+        writerClosed = true
       }
     }
 
@@ -108,13 +90,15 @@ export async function POST(req: NextRequest) {
     }
 
     const closeWriter = async () => {
-      if (requestAborted) return
+      if (requestAborted || writerClosed) return
       try {
         await writer.close()
       } catch (closeErr) {
         if (!requestAborted) {
           console.error('[feed] writer close error:', serializeError(closeErr))
         }
+      } finally {
+        writerClosed = true
       }
     }
 
@@ -123,6 +107,41 @@ export async function POST(req: NextRequest) {
     ;(async () => {
       try {
         console.log(`[feed] stream task START at ${new Date().toISOString()}`)
+        // Send an immediate chunk so proxies/clients don't wait several seconds
+        // for the first byte while we load user topics and query the feed RPC.
+        if (!(await writeChunk({ ready: true }))) return
+
+        let topics: string[] = body.topics ?? []
+        if (topics.length === 0) {
+          const { data, error } = await db
+            .from('user_topics')
+            .select('topic')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: true })
+
+          if (error) {
+            console.error('[feed] error loading user topics:', error)
+            await writeChunk({
+              error: 'Failed to load user topics',
+              detail: includeErrorDetails ? serializeError(error) : undefined,
+            })
+            await closeWriter()
+            return
+          }
+
+          topics = (data ?? []).map((r: any) => r.topic)
+          console.log(
+            `[feed] fetched ${topics.length} topics from user_topics for user ${userId}: ${JSON.stringify(topics)}`,
+          )
+        }
+
+        if (topics.length === 0) {
+          console.warn(`[feed] no topics found for user ${userId}`)
+          await writeChunk({ error: 'No topics' })
+          await closeWriter()
+          return
+        }
+
         if (!(await writeChunk({ topics }))) return
         if (debug) {
           if (!(await writeChunk({ debug: { phase: 'start' } }))) return

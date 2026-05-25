@@ -438,6 +438,12 @@ export default function FeedPage() {
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
 
   useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
+
+  useEffect(() => {
     if (!isLoaded || !isSignedIn) return
 
     fetch('/api/topics')
