@@ -152,6 +152,7 @@ async function main() {
     batchSize: latestPreflight.batch_size,
     rejectedRawIds,
     semanticDuplicateRawIds,
+    semanticMatches: latestPreflight.payload.semanticMatches || [],
     topics: topicPayloads,
   }
 
@@ -176,7 +177,9 @@ async function main() {
   }
 
   console.log(`\nCluster run salvo em news_cluster_runs: ${insertedRow.id} (${insertedRow.created_at})`)
-  console.log(`Resumo: topics=${topicPayloads.length}, accepted=${totalAccepted}, clusters=${totalClusters}, rejected=${rejectedRawIds.length}`)
+  console.log(
+    `Resumo: topics=${topicPayloads.length}, accepted=${totalAccepted}, clusters=${totalClusters}, rejected=${rejectedRawIds.length}, semantic_duplicates=${semanticDuplicateRawIds.length}`,
+  )
 }
 
 main().catch((err) => {

@@ -163,11 +163,14 @@ async function main() {
   const topicPayloads = clusterRun.payload.topics || []
   const windowHours = clusterRun.payload.windowHours || 12
   const historyHours = clusterRun.payload.historyHours || 72
+  const semanticMatches = Array.isArray(clusterRun.payload.semanticMatches) ? clusterRun.payload.semanticMatches : []
+  const semanticDuplicateRawIds = uniqueIds(clusterRun.payload.semanticDuplicateRawIds || [])
 
   console.log(`\n🧪 Mistral-only processing`)
   console.log(`Cluster run: ${clusterRun.id} (${clusterRun.created_at})`)
   console.log(`Janela de entrada: últimas ${windowHours}h | histórico de comparação: ${historyHours}h`)
   console.log(`Topics prontos para Mistral: ${topicPayloads.map((entry) => entry.topic).join(', ')}\n`)
+  console.log(`Pendências semânticas: matches=${semanticMatches.length} raw_ids=${semanticDuplicateRawIds.length}\n`)
 
   const sinceDedup = new Date(Date.now() - historyHours * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
@@ -461,7 +464,6 @@ async function main() {
     }
   }
 
-  const semanticMatches = Array.isArray(clusterRun.payload.semanticMatches) ? clusterRun.payload.semanticMatches : []
   if (semanticMatches.length > 0) {
     console.log(`\n[semantic] Attachando ${semanticMatches.length} duplicatas como fontes extras`)
 

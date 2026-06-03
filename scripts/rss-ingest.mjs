@@ -458,6 +458,10 @@ async function main() {
 
   for (const feed of feeds) {
     try {
+      let feedAdded = 0
+      let feedSkipped = 0
+      let feedRejected = 0
+      let feedDuplicates = 0
       const { items, etag, modified, error } = await fetchAndParseFeed(feed)
 
       if (error) {
@@ -473,7 +477,11 @@ async function main() {
         const url = item.link?.trim()
         const description = stripHtml(extractText(item['content:encoded']) || extractText(item.description) || '')
 
-        if (!title || !url) { totalSkipped++; continue }
+        if (!title || !url) {
+          totalSkipped++
+          feedSkipped++
+          continue
+        }
 
         const rawDecision = shouldRejectRawItem({
           title,
@@ -483,6 +491,8 @@ async function main() {
         })
         if (rawDecision.reject) {
           totalSkipped++
+          feedSkipped++
+          feedRejected++
           console.log(`⛔ ${feed.name}: ${rawDecision.reason} | ${title.slice(0, 90)}`)
           continue
         }
@@ -491,7 +501,12 @@ async function main() {
         const itemTopic = (feed.topics?.[0] || 'tecnologia').toLowerCase().trim()
 
         const { data: existing } = await db.from('raw_items').select('id').eq('url', url).single()
-        if (existing) { totalSkipped++; continue }
+        if (existing) {
+          totalSkipped++
+          feedSkipped++
+          feedDuplicates++
+          continue
+        }
 
         let image_url
         if (item['media:content']?.['@_url']) {
@@ -523,7 +538,13 @@ async function main() {
           fetched_at: new Date().toISOString(), dedup_hash, processed: false,
         })
 
-        if (insertError) { totalSkipped++ } else { totalAdded++ }
+        if (insertError) {
+          totalSkipped++
+          feedSkipped++
+        } else {
+          totalAdded++
+          feedAdded++
+        }
       }
 
       await db.from('rss_feeds').update({
@@ -532,7 +553,7 @@ async function main() {
         last_error: null, last_error_at: null,
       }).eq('id', feed.id)
 
-      console.log(`✅ ${feed.name}`)
+      console.log(`✅ ${feed.name} | fetched=${items.length} added=${feedAdded} skipped=${feedSkipped} rejected=${feedRejected} duplicates=${feedDuplicates}`)
     } catch (err) {
       errors.push(`${feed.name}: ${err.message}`)
       console.error(`❌ ${feed.name}: ${err.message}`)

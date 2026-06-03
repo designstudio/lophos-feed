@@ -129,6 +129,10 @@ async function main() {
       continue
     }
 
+    if ((rawItems || []).length === BATCH_SIZE) {
+      console.warn(`[${topic}] atingiu o limite de ${BATCH_SIZE} raw_items no preflight; pode haver mais itens pendentes fora deste lote`)
+    }
+
     const currentKeys = new Set((rawItems || []).map((item) => buildHistoryKey(item)))
     const topicHistoryKeys = new Set(historyKeys)
     currentKeys.forEach((key) => topicHistoryKeys.delete(key))
