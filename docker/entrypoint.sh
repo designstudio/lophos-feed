@@ -3,8 +3,8 @@ set -e
 
 mkdir -p /app/logs
 
-# BusyBox crond reads jobs from /etc/crontabs/root in Alpine.
-/usr/sbin/crond -f -l 8 -L /dev/stdout &
+# Debian cron reads the preserved production schedule from /etc/cron.d.
+/usr/sbin/cron -f &
 
 STATE_FILE="/app/logs/news-cron-state.json"
 STALE_AFTER_SECONDS=$((5 * 60 * 60 + 30 * 60))
@@ -20,4 +20,4 @@ if [ $((NOW_SECONDS - LAST_ATTEMPT_SECONDS)) -ge "$STALE_AFTER_SECONDS" ]; then
   (cd /app && node scripts/news-cron.mjs >> /app/logs/news-cron.log 2>&1) &
 fi
 
-exec su-exec nextjs node server.js
+exec gosu nextjs node server.js
