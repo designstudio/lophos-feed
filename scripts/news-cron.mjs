@@ -4,7 +4,8 @@
  * Order:
  * 1. news:ingest
  * 2. news:process
- * 3. news:process-mistral
+ * 3. news:cluster-v2-shadow (optional, isolated)
+ * 4. news:process-mistral
  */
 
 import { spawnSync } from 'child_process'
@@ -108,6 +109,20 @@ function isMistralStageDisabled() {
   return process.env.NEWS_ENABLE_MISTRAL?.trim().toLowerCase() === 'false'
 }
 
+function isClusterV2ShadowEnabled() {
+  return process.env.NEWS_ENABLE_CLUSTER_V2_SHADOW?.trim().toLowerCase() === 'true'
+}
+
+function runIsolatedStep(label, commandArgs) {
+  try {
+    runStep(label, commandArgs)
+    return true
+  } catch (error) {
+    console.error(`[news:cron] ${label} failed in isolated mode; continuing the normal pipeline:`, error?.message || error)
+    return false
+  }
+}
+
 async function main() {
   ensureLogDir()
   const lockFd = acquireLock()
@@ -124,6 +139,9 @@ async function main() {
 
   runStep('news:ingest', ['npm', 'run', 'news:ingest'])
   runStep('news:process', ['npm', 'run', 'news:process'])
+  if (isClusterV2ShadowEnabled()) {
+    runIsolatedStep('news:cluster-v2-shadow', ['npm', 'run', 'news:cluster-v2-shadow'])
+  }
   if (isMistralStageDisabled()) {
     console.log('\n[news:cron] Mistral stage disabled by NEWS_ENABLE_MISTRAL=false')
   } else {

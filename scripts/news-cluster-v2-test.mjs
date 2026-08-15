@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { clusterDeterministicItems, preflightRawItems } from './news-pipeline-core.mjs'
 import { loadScriptEnvironment } from './script-env.mjs'
-import { DEFAULT_V2_OPTIONS, clusterItemsV2, composeEventText, embedEventTexts, loadLocalEmbeddingExtractor } from './news-cluster-v2-core.mjs'
+import { DEFAULT_V2_OPTIONS, clusterItemsV2WithRoles, composeEventText, embedEventTexts, loadLocalEmbeddingExtractor } from './news-cluster-v2-core.mjs'
 
 loadScriptEnvironment()
 
@@ -73,6 +73,14 @@ function clusterIndex(clusters) {
   return index
 }
 
+function formatItem(item) {
+  return `[${item.topic || 'sem-topico'}] ${item.source_name || 'fonte'} — ${item.title} | lang=${item.language || item.lang || 'n/a'} | ${item.pub_date || 'n/a'}`
+}
+
+function searchable(value) {
+  return String(value || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+}
+
 function printStats(label, value) {
   console.log(`${label}: clusters=${value.count} avg_sources=${value.average.toFixed(2)} singletons=${value.singletons} pairs=${value.pairs} 3+=${value.threePlus}`)
   console.log(`  distribution=${Object.entries(value.distribution).map(([size, count]) => `${size}:${count}`).join(', ')}`)
@@ -85,6 +93,8 @@ async function main() {
   const maxPairHours = argNumber('max-pair-hours', Math.min(18, hours))
   const topK = argNumber('top-k', DEFAULT_V2_OPTIONS.topK)
   const nearMissLimit = argNumber('near-miss-limit', 25)
+  const singletonLimit = argNumber('singleton-limit', 2000)
+  const focusTerms = argString('focus', '').split(',').map((term) => searchable(term.trim())).filter(Boolean)
   const modelId = process.env.EMBEDDING_MODEL || DEFAULT_V2_OPTIONS.modelId
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Supabase environment is not configured')
@@ -110,47 +120,81 @@ async function main() {
   const titleVectors = await embedEventTexts(extractor, items.map((item) => item.title || ''))
   const embeddingMs = performance.now() - embeddingStarted
   const clusteringStarted = performance.now()
-  const v2 = clusterItemsV2(items, vectors, { semanticThreshold: threshold, maxPairHours, topK, titleVectors })
+  const v2 = clusterItemsV2WithRoles(items, vectors, { semanticThreshold: threshold, maxPairHours, topK, titleVectors })
   const clusteringMs = performance.now() - clusteringStarted
   const totalMs = performance.now() - totalStarted
   const heapAfter = process.memoryUsage().rss
 
   console.log('\nSUMMARY')
   printStats('V1', stats(v1))
-  printStats('V2', stats(v2.clusters))
-  console.log(`model=${modelId} threshold=${threshold} high_confidence=${v2.options.highConfidenceThreshold} max_pair_hours=${maxPairHours} top_k=${topK}`)
+  printStats('V2 binary (audit baseline)', stats(v2.clusters))
+  printStats('V2 primary-only', stats(v2.primaryClusters))
+  console.log(`roles: primary=${v2.sourceProfiles.filter((profile) => profile.role === 'PRIMARY_EVENT_SOURCE').length} supporting_candidates=${v2.supportingSources.length} primary_events=${v2.eventClusters.length} supporting_attachments=${v2.eventClusters.reduce((sum, cluster) => sum + cluster.supporting.length, 0)} standalone=${v2.standaloneSources.length}`)
+  console.log(`model=${modelId} threshold=${threshold} high_confidence=${v2.options.highConfidenceThreshold} supporting_threshold=${v2.options.supportingSemanticThreshold} max_pair_hours=${maxPairHours} top_k=${topK}`)
   console.log(`timing: total_v2=${(totalMs / 1000).toFixed(2)}s model_load=${(modelLoadMs / 1000).toFixed(2)}s embeddings=${(embeddingMs / 1000).toFixed(2)}s clustering=${(clusteringMs / 1000).toFixed(2)}s`)
   console.log(`embedding throughput=${items.length ? ((items.length * 2) / (embeddingMs / 1000)).toFixed(2) : '0'} vectors/s (${items.length} items x event+title) | pair_checks=${v2.pairChecks} candidate_pairs=${v2.candidatePairs}`)
   console.log(`rss_memory_before=${(heapBefore / 1048576).toFixed(1)}MB after=${(heapAfter / 1048576).toFixed(1)}MB delta=${((heapAfter - heapBefore) / 1048576).toFixed(1)}MB`)
 
   if (hasFlag('performance-only')) return
 
-  console.log('\nV2 MULTI-SOURCE CLUSTERS')
-  v2.clusters.filter((cluster) => cluster.ids.length >= 2).forEach((cluster, index) => {
+  console.log('\nV2 PRIMARY EVENT CLUSTERS')
+  v2.eventClusters.forEach((cluster, index) => {
     const best = [...cluster.merges].sort((a, b) => b.semanticScore - a.semanticScore)[0]
-    console.log(`\nCLUSTER ${index + 1} — ${cluster.ids.length} fontes`)
+    console.log(`\nEVENT ${index + 1} — primary=${cluster.ids.length} supporting=${cluster.supporting.length}`)
     console.log(`score=${best?.semanticScore.toFixed(4)} criterion=${best?.reason} lexical=${best?.lexicalScore.toFixed(3)} rare=[${best?.rareTokens.join(', ') || ''}] numbers=[${best?.sharedNumbers.join(', ') || ''}]`)
-    cluster.items.forEach((item) => console.log(`* [${item.topic || 'sem-topico'}] ${item.source_name || 'fonte'} — ${item.title} | lang=${item.language || item.lang || 'n/a'} | ${item.pub_date || 'n/a'}`))
+    console.log('PRIMARY')
+    cluster.items.forEach((item) => console.log(`* ${formatItem(item)}`))
+    console.log('SUPPORTING')
+    if (!cluster.supporting.length) console.log('* none')
+    cluster.supporting.forEach(({ item, profile, relation }) => {
+      console.log(`* ${formatItem(item)} [${profile.kind}; ${relation.reason}; score=${relation.semanticScore.toFixed(4)}; lexical=${relation.lexicalScore.toFixed(3)}; anchors=${relation.sharedAnchors.join(',')}]`)
+    })
   })
 
+  console.log(`\nSTANDALONE SOURCES — showing=${Math.min(v2.standaloneSources.length, singletonLimit)} total=${v2.standaloneSources.length}`)
+  v2.standaloneSources.slice(0, singletonLimit).forEach(({ item, role, profile, reason }) => {
+    console.log(`* role=${role} kind=${profile.kind} reason=${reason} | ${formatItem(item)}`)
+  })
+
+  if (focusTerms.length) {
+    console.log(`\nFOCUS AUDIT — terms=[${focusTerms.join(', ')}]`)
+    items.forEach((item, itemIndex) => {
+      if (!focusTerms.some((term) => searchable(`${item.title} ${item.summary}`).includes(term))) return
+      const profile = v2.sourceProfiles[itemIndex]
+      const primaryClusterIndex = v2.primaryClusters.findIndex((cluster) => cluster.ids.includes(item.id))
+      const attachedEventIndices = v2.eventClusters
+        .map((cluster, index) => cluster.supporting.some((entry) => entry.item.id === item.id) ? index + 1 : null)
+        .filter(Boolean)
+      const relevantRelations = v2.supportRelations
+        .filter((relation) => relation.supportingId === item.id)
+        .sort((left, right) => Number(right.attach) - Number(left.attach) || right.semanticScore - left.semanticScore)
+      const bestRelation = relevantRelations[0]
+      const primaryCluster = primaryClusterIndex >= 0 ? v2.primaryClusters[primaryClusterIndex] : null
+      const finalRole = profile.role
+      console.log(`\nrole=${finalRole} detected=${profile.kind} reasons=[${profile.reasons.join(', ')}] primary_cluster_size=${primaryCluster?.ids.length || 0} attached_events=[${attachedEventIndices.join(', ')}]`)
+      if (bestRelation) console.log(`best_support_relation=${bestRelation.attach ? 'SUPPORTING_SOURCE' : 'UNRELATED'} reason=${bestRelation.reason} attach=${bestRelation.attach} score=${bestRelation.semanticScore.toFixed(4)} lexical=${bestRelation.lexicalScore.toFixed(3)} anchors=[${bestRelation.sharedAnchors.join(', ')}] blockers=[${bestRelation.blockers.join(', ')}]`)
+      console.log(formatItem(item))
+    })
+  }
+
   const v1Index = clusterIndex(v1)
-  const v2Index = clusterIndex(v2.clusters)
-  console.log('\nDIFF — V2 juntou, V1 separou')
-  v2.clusters.filter((cluster) => cluster.ids.length > 1 && new Set(cluster.ids.map((id) => v1Index.get(id))).size > 1)
+  const v2Index = clusterIndex(v2.primaryClusters)
+  console.log('\nDIFF — V2 primary juntou, V1 separou')
+  v2.primaryClusters.filter((cluster) => cluster.ids.length > 1 && new Set(cluster.ids.map((id) => v1Index.get(id))).size > 1)
     .forEach((cluster) => console.log(`- ${cluster.items.map((item) => `[${item.topic}] ${item.source_name}: ${item.title}`).join(' || ')}`))
-  console.log('\nDIFF — V1 juntou, V2 separou')
+  console.log('\nDIFF — V1 juntou, V2 primary separou')
   v1.filter((cluster) => cluster.length > 1 && new Set(cluster.map((id) => v2Index.get(id))).size > 1)
     .forEach((cluster) => console.log(`- ${cluster.map((id) => items.find((item) => item.id === id)?.title || id).join(' || ')}`))
 
   const itemCluster = new Map()
-  v2.clusters.forEach((cluster, index) => cluster.ids.forEach((id) => itemCluster.set(id, index)))
+  v2.primaryClusters.forEach((cluster, index) => cluster.ids.forEach((id) => itemCluster.set(id, index)))
   const nearMisses = [...v2.pairDecisions.entries()]
     .map(([pairKey, decision]) => {
       const [leftIndex, rightIndex] = pairKey.split(':').map(Number)
       return { pairKey, leftIndex, rightIndex, left: items[leftIndex], right: items[rightIndex], decision }
     })
     .filter((entry) => entry.decision.semanticScore >= 0.80)
-    .filter((entry) => itemCluster.get(entry.left.id) !== itemCluster.get(entry.right.id))
+    .filter((entry) => (itemCluster.get(entry.left.id) ?? `item:${entry.left.id}`) !== (itemCluster.get(entry.right.id) ?? `item:${entry.right.id}`))
     .filter((entry) => entry.decision.hoursApart === null || entry.decision.hoursApart <= maxPairHours)
     .filter((entry) => !entry.decision.sameSource)
     .filter((entry) =>

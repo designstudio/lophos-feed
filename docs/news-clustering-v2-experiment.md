@@ -8,7 +8,8 @@ It never writes to Supabase and does not change `raw_items.processed`.
 - `npm run news:cluster-v2-synthetic`: precision-oriented multilingual synthetic suite.
 - `npm run news:cluster-v2-test -- --hours=12`: read-only V1 versus V2 benchmark on recent `raw_items`.
 - `npm run news:cluster-v2-eval`: regression metrics on the manually labeled real-data fixture.
-- Optional benchmark flags: `--hours`, `--limit`, `--threshold`, `--max-pair-hours`, and `--top-k`.
+- Optional benchmark flags: `--hours`, `--limit`, `--threshold`, `--max-pair-hours`, `--top-k`,
+  `--near-miss-limit`, `--singleton-limit`, and `--focus=term1,term2`.
 
 The real-data benchmark queries `raw_items` directly instead of consuming the latest
 `news_preflight_runs` payload. This avoids inheriting its per-topic limits and semantic exclusions.
@@ -27,6 +28,52 @@ filters are reapplied.
    conflicting years, and same-publisher pairs are blocked.
 5. Build clusters with complete-link agglomeration: every cross-pair must pass before two groups can
    merge. This limits transitive chaining and prioritizes precision.
+
+## Primary and supporting source roles
+
+The experimental role-aware pass runs after embeddings and pair decisions are cached. It does not
+replace or connect to any production command.
+
+1. Titles with structured roundup/liveblog/recap framing, multi-announcement event framing, review
+   framing, or explicit analysis/opinion framing are marked as supporting candidates. A lone word
+   such as `everything` is not sufficient.
+2. Only `PRIMARY_EVENT_SOURCE` items enter top-k selection and complete-link clustering.
+3. A `SUPPORTING_SOURCE` is evaluated only after a primary cluster already contains at least two
+   sources. It must pass the time/same-source/year/event protections, share at least two central
+   title anchors, and have qualified semantic plus factual evidence.
+4. A supporting item may be attached to more than one already-established event, as a conference
+   roundup naturally can be. It never creates an event, joins two events, participates in
+   complete-link, or acts as a transitive edge. A rejected source-event relation is `UNRELATED`.
+
+The global semantic thresholds remain 0.86 and 0.93. The attachment stage has a separate 0.84
+containment floor, but that path also requires at least three central anchors and lexical overlap;
+it cannot create a primary cluster. A narrow summary-noise rescue was added for primary pairs: when
+combined title/summary event types conflict but at least one headline has no conflicting type, the
+pair may pass only at event score >= 0.90, two rare shared tokens, and lexical score >= 0.12. Explicit
+headline conflicts such as trailer versus box office remain blocked.
+
+### Role-aware real-data snapshot (2026-08-15, fixed 12-hour window)
+
+- Input: 181 raw/accepted items.
+- V1: 175 clusters, 170 singletons, 4 pairs, 1 cluster with 3+ sources.
+- Binary V2 audit baseline: 177 clusters, 173 singletons, 4 pairs.
+- Role-aware V2: 175 primary candidates and 6 supporting candidates; 3 primary events with two
+  sources; 4 supporting attachments; 172 standalone sources/candidates.
+- Correct primary events found: X-Men casting, Frozen III footage, and Star Wars: Starfighter first
+  footage/look.
+- X-Men support: the D23 roundup and IGN opinion/analysis were attached only after the two primary
+  reports formed the event.
+- Starfighter support: the Ahsoka/Starfighter multi-event story and the general D23 roundup were
+  attached after the IGN/TheWrap primary pair formed.
+- Avengers: Doomsday remained a primary singleton. The roundup did not create a two-source event.
+- No new primary or supporting false positive was observed in manual review of this focused batch.
+  Confirmed false negatives remain among additional X-Men hard-news sources (G1 and Dread Central),
+  so rollout is still not recommended.
+
+Measured on the Windows development host for this fixed batch: 7.78-8.44 s total, 0.80-0.82 s
+model load, 5.22-5.84 s embeddings, 1.74-1.79 s clustering, 61.96-69.40 vectors/s, and approximately
+778 MB final RSS (+698 MB). The role pass reuses all vectors and pair decisions; its incremental CPU
+and memory cost is included in the clustering figure and is small relative to embedding inference.
 
 For a few hundred items the implementation deliberately computes the pairwise cosine matrix in
 memory. At 418 items this was 87,153 pair checks and 5,893 retained candidate pairs. This is simple
@@ -71,8 +118,9 @@ The accepted recall additions are deliberately narrow:
   >= 0.93, and at least three shared title anchors;
 - a year conflict found in the combined text can be rescued only when headline years do not conflict,
   event score >= 0.90, four rare tokens and lexical score >= 0.12 agree;
-- an event-type conflict found in combined text can be rescued only when headline event types do not
-  conflict, event score >= 0.88, four rare tokens and lexical score >= 0.12 agree.
+- an event-type conflict found in combined text can be rescued when headline event types do not
+  conflict, event score >= 0.88, four rare tokens and lexical score >= 0.12 agree; the narrower
+  summary-noise variant described above applies when one headline has no event type.
 
 Complete-link and all same-publisher, time-window, explicit title-year, and title-event protections
 remain enabled.
@@ -113,3 +161,40 @@ Latest Windows development measurement for 410 items with event + title embeddin
 - clustering: 7.13 s;
 - throughput: 79.53 vectors/s (two vectors per item);
 - RSS: 100.9 MB before, 897.0 MB after, +796.1 MB.
+
+## Optional cron shadow mode
+
+Set `NEWS_ENABLE_CLUSTER_V2_SHADOW=true` to run the role-aware V2 audit after `news:process` and
+before the independently configured Mistral stage. Missing values, `false`, and every value other
+than an explicit case-insensitive `true` leave the cron behavior unchanged.
+
+The shadow subprocess only issues `SELECT` queries against recent `raw_items`. It does not consume
+or write `news_cluster_runs`, update `raw_items.processed`, create articles, invoke an editorial
+model, or change the V1 output. A non-zero shadow exit is logged by `news:cron` and deliberately does
+not fail or stop the normal pipeline. `NEWS_ENABLE_MISTRAL=false` remains independent.
+
+Every invocation appends exactly one compact JSON object followed by a newline to:
+
+```text
+/app/logs/news-cluster-v2-shadow.jsonl
+```
+
+Successful records contain the window and input counts, V1 and V2-primary distributions, primary
+events, supporting attachments and reasons, both V1/V2 diff directions, primary-only near misses,
+timings, embedding throughput, RSS, algorithm/schema versions, and effective thresholds. Audit
+items contain title, source, topic, language when available, and publication date; summaries,
+article bodies, URLs, and Supabase IDs are omitted. Failed invocations append a small `status=error`
+record with the failed stage and sanitized error name/message before returning a non-zero status to
+the isolating cron wrapper.
+
+Manual read-only execution inside the container:
+
+```sh
+npm run news:cluster-v2-shadow -- --hours=12
+tail -n 1 /app/logs/news-cluster-v2-shadow.jsonl
+```
+
+Optional controls are `NEWS_CLUSTER_V2_SHADOW_HOURS`, `NEWS_CLUSTER_V2_SHADOW_LIMIT`,
+`NEWS_CLUSTER_V2_SHADOW_NEAR_MISS_LIMIT`, `NEWS_CLUSTER_V2_SHADOW_MAX_PAIR_HOURS`, and
+`NEWS_CLUSTER_V2_SHADOW_TOP_K`, with equivalent CLI flags. These settings affect only the shadow
+report.

@@ -3,6 +3,7 @@ node_modules/
 .env.local
 .env
 out/
+/logs/news-cluster-v2-shadow.jsonl
 *.tsbuildinfo
 .vercel
 
