@@ -1,0 +1,2082 @@
+{
+  "version": 1,
+  "createdAt": "2026-08-15T01:05:31.822Z",
+  "source": "Supabase raw_items read-only snapshots from 2026-08-12 through 2026-08-15",
+  "labeling": "Manual review of real cluster and near-miss reports; synthetic cases excluded.",
+  "items": [
+    {
+      "key": "i1",
+      "title": "&#8220;Bette the Puppet&#8221; Introduced for &#8216;SAW: Genesis&#8217;",
+      "summary": "Move over Billy, it’s Bette’s turn.\nBloober Team took to Twitter to announce Bette the Puppet, a new character in the upcoming SAW: Genesis game.\n\n\nMeet Bette the Puppet! A handmade doll whose very sight induces terror.\nBette is always watching and hoping to finger paint with your blood. ?#SAWGenesi",
+      "source_name": "Horror News Network",
+      "topic": "horror",
+      "pub_date": "2026-08-14T23:58:11+00:00"
+    },
+    {
+      "key": "i2",
+      "title": "‘SAW: Genesis’ Introduces Bette, a Creepy New Puppet for the Jigsaw Universe",
+      "summary": "Billy has some competition.\n\n\n\nThe upcoming multiplayer horror game SAW: Genesis is introducing a brand-new puppet to the Saw universe, and today we have our first proper introduction to Bette the Puppet.\n\n\n\nDescribed as a handmade doll whose “creepy, curious presence reminds you that you’re probabl",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-14T16:03:49+00:00"
+    },
+    {
+      "key": "i3",
+      "title": "&#8216;SAW: Genesis&#8217; Video Game Will Introduce a Brand New Puppet Named Bette",
+      "summary": "With SAW: Genesis taking place before the events of the Saw films, we won&#8217;t actually have Billy the Puppet roaming around on his trike. Not to worry, as The Judge has his own puppet in Bette, which will carry the same functions as Billy does for Jigsaw.\nBloober Team took to X via the official ",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-14T16:33:03+00:00"
+    },
+    {
+      "key": "i4",
+      "title": "Discord foi usado em ao menos 7 operações policiais no Brasil desde 2023, diz MJ",
+      "summary": "Ao menos sete operações policiais realizadas entre 2023 e 2026 envolveram o uso da plataforma Discord, segundo documento do Ministério da Justiça (MJ) enviado ao Congresso Nacional. O órgão afirma ter identificado de forma recorrente a utilização de servidores e comunidades da plataforma para a prát",
+      "source_name": "Olhar Digital",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T22:45:34+00:00"
+    },
+    {
+      "key": "i5",
+      "title": "Discord: em quatro anos, ao menos sete operações policiais envolveram o uso da plataforma, diz Ministério da Justiça",
+      "summary": "Discord tem até esta sexta (14) para concluir respostas\nEntre 2023 e 2026, ao menos sete operações policiais envolveram o uso da plataforma Discord. É o que mostra documento do Ministério da Justiça (MJ).  \n \"O CIBERLAB [do Ministério da Justiça] tem identificado, de forma recorrente, a utilização d",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T20:09:24+00:00"
+    },
+    {
+      "key": "i6",
+      "title": "Quaest: Lula tem 43% e Flávio Bolsonaro 40% no segundo turno",
+      "summary": "Pesquisa Quaest divulgada nesta sexta-feira (14), às vésperas do início oficial da campanha eleitoral, dão vantagem a Lula (43%) num eventual segundo turno com Flávio Bolsonaro (40%). Apesar da dianteira nas intenções de voto, a situação é de empate técnico, já que a margem de erro da pesquisa é de ",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T22:07:07+00:00"
+    },
+    {
+      "key": "i7",
+      "title": "Quaest, 2º turno: Lula, 43%; Flávio Bolsonaro, 40%",
+      "summary": "Quaest: Lula tem 43% no 2° turno; Flávio soma 40%\nPesquisa Quaest divulgada nesta sexta-feira (14) mostra que o presidente Lula (PT) tem 43% das intenções de voto em um eventual 2º turno contra Flávio Bolsonaro (PL), que soma 40%. \nOs números mostram empate técnico, dentro da margem de erro.\nA pesqu",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T21:01:41+00:00"
+    },
+    {
+      "key": "i8",
+      "title": "França suspende lei que bania redes sociais para menores",
+      "summary": "A França suspendeu a lei de banir o acesso de menores de 15 anos às redes sociais após o projeto ser barrado pelo Conselho Constitucional, a corte máxima do país. O órgão entendeu que a lei que proibiria esse acesso seria uma violação direta à liberdade de expressão e de comunicação dos jovens.O con",
+      "source_name": "TecMundo",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T22:00:00+00:00"
+    },
+    {
+      "key": "i9",
+      "title": "Supremo Tribunal da França decide que proibir redes sociais de menores de 15 anos limita liberdade de expressão",
+      "summary": "França aprova lei que proíbe o uso de redes sociais por menores de 15 anos\nO Conselho Constitucional da França, principal tribunal constitucional do país, bloqueou nesta sexta-feira (14) uma lei que proibia menores de 15 anos de acessar redes sociais. Segundo a corte, a medida viola a liberdade de e",
+      "source_name": "G1 Tecnologia",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T13:36:31+00:00"
+    },
+    {
+      "key": "i10",
+      "title": "Mangione se declara culpado por crime de CEO e arrisca prisão perpétua",
+      "summary": "O Tribunal de Nova York realizou nesta sexta-feira (14/08) uma nova etapa do julgamento do engenheiro informático Luigi Mangione, preso em 2024 sob a acusação de ter assassinado o empresário Brian Thompson, CEO da companhia de planos de saúde United Healthcare.\nNa audiência desta sexta, Mangione se ",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T21:50:25+00:00"
+    },
+    {
+      "key": "i11",
+      "title": "Luigi Mangione admite em tribunal ter atirado em CEO de operadora de saúde em NY",
+      "summary": "Polícia divulga vídeo do momento da prisão de Luigi Mangione em lanchonete na Pensilvânia\nLuigi Mangione, acusado de matar o CEO da UnitedHealthcare, Brian Thompson, admitiu nesta sexta-feira (14) ter atirado contra Thompson, durante sessão judicial em um tribunal de Nova York. \nMangione também se d",
+      "source_name": "G1 Mundo",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T15:18:58+00:00"
+    },
+    {
+      "key": "i12",
+      "title": "&#8216;Black Mirror&#8217; director turns down offer to work on &#8216;Harry Potter&#8217; series: &#8220;Absolutely fucking not&#8221;",
+      "summary": "Black Mirror director Ally Pankiw has said she rejected an opportunity to work on HBO&#8216;s upcoming Harry Potter series because of J.K. Rowling&#8216;s views on gender.\nPankiw, who directed the 2023 Black Mirror episode &#8216;Joan Is Awful&#8217;, shared a screenshot on Instagram of what appeare",
+      "source_name": "NME",
+      "topic": "music",
+      "pub_date": "2026-08-14T19:26:14+00:00"
+    },
+    {
+      "key": "i13",
+      "title": "&#8216;Harry Potter&#8217; HBO Series Lost 2 Directors Over JK Rowling&#8217;s Anti-Trans Views",
+      "summary": "Directors Ally Pankiw and Kate Herron have both shared on social media that they declined offers to direct episodes of HBO&#8217;s forthcoming &#8220;Harry Potter&#8221; TV series over author J.K. Rowling&#8216;s well-publicized anti-trans views.\n\n\n\nPankiw, whose credits include the Seasons 6 and 7 ",
+      "source_name": "TheWrap",
+      "topic": "movies",
+      "pub_date": "2026-08-14T18:54:59+00:00"
+    },
+    {
+      "key": "i14",
+      "title": "Google now lets you remove the watermark from Gemini&#8217;s creations",
+      "summary": "Credit: Joe Maring / Android Authority\n\n\nTL;DR\n\nGoogle has introduced a new setting in Gemini called Media Watermark.\nThis setting will allow you remove visible watermarks from images, videos, and music creations.\n\n\nWhen creating content with Gemini, you could always count on a visible watermark bei",
+      "source_name": "Android Authority",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T18:18:57+00:00"
+    },
+    {
+      "key": "i15",
+      "title": "You can now turn off Google Gemini&#8217;s visible watermarks",
+      "summary": "Google will now allow you to remove visible watermarks from the images, videos, and music made with AI tools. With the update, you can toggle off a new \"Media watermark\" setting in Gemini and Google's AI video generator, Flow. When toggled off, Google will remove the \"sparkle\" watermark that appears",
+      "source_name": "The Verge",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T16:39:32+00:00"
+    },
+    {
+      "key": "i16",
+      "title": "Lula diz que vencerá EUA pela narrativa e cobra respeito de Donald Trump",
+      "summary": "O presidente Luiz Inácio Lula da Silva afirmou, nesta sexta-feira (14/08), que pretende enfrentar as investidas do governo de Donald Trump contra o Brasil por meio da diplomacia e da defesa da soberania nacional. Segundo ele, o país não precisa de poderio militar para se contrapor aos Estados Unidos",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T16:40:26+00:00"
+    },
+    {
+      "key": "i17",
+      "title": "Lula diz que vai 'vencer' EUA na narrativa e defende reciprocidade para mostrar que Brasil 'não é pouca coisa'",
+      "summary": "Lula participa de entrevistas a podcasts nesta sexta-feira (14).\nReprodução/ Youtube\nO presidente Luiz Inácio Lula da Silva (PT) afirmou nesta sexta-feira (14) que vai \"vencer os Estados Unidos\" por meio da narrativa e que o Brasil iniciou o processo para adotar a reciprocidade com o objetivo de mos",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T14:58:38+00:00"
+    },
+    {
+      "key": "i18",
+      "title": "Xbox Confirms Call of Duty: Modern Warfare 4 Beta Will Feature Single-Player Campaign Mission for the First Time",
+      "summary": "Xbox is trying something new with the Call of Duty: Modern Warfare 4 beta, as the company has announced this month&#39;s pre-release tests will include a single-player campaign mission for the first time.Activision&#39;s best-selling first-person shooter franchise is no stranger to beta tests. The s",
+      "source_name": "IGN PC",
+      "topic": "games",
+      "pub_date": "2026-08-14T15:52:48+00:00"
+    },
+    {
+      "key": "i19",
+      "title": "Call Of Duty: Modern Warfare 4 Beta Will Do Something No Previous CoD Beta Has",
+      "summary": "Activision has announced that the upcoming Call of Duty: Modern Warfare 4 beta will have more than just multiplayer content. The MW4 beta will also include access to the campaign mission, Entrenched, along with the upcoming Warzone mode, Resurgence Zodiac. \n\n\n\nActivision will show off some of this c",
+      "source_name": "GameSpot",
+      "topic": "games",
+      "pub_date": "2026-08-14T14:48:08+00:00"
+    },
+    {
+      "key": "i20",
+      "title": "Netflix Orders &#8216;Sid &#038; Zoey&#8217;, Supernatural Romance About Two Teens Drawn Into the Dark Secrets Beneath an Idyllic Mississippi Town",
+      "summary": "Netflix has given a straight-to-series order to Sid & Zoey, a supernatural mystery/romance from creator Jon Kasdan (Disney+’s Willow, The First Time) and co-showrunner John Shiban (Ozark, Breaking Bad), reports THR. \n\n\n\nJ.J. Abrams’ Bad Robot and Blumhouse Atomic Monster are also involved.\n\n\n\nNetfli",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-14T15:50:38+00:00"
+    },
+    {
+      "key": "i21",
+      "title": "&#8216;Sid &#038; Zoey&#8217; &#8211; Netflix Orders Supernatural Young Adult Series from Blumhouse and Bad Robot",
+      "summary": "Blumhouse Atomic Monster and Bad Robot join forces for the upcoming young adult supernatural mystery series &#8220;Sid & Zoey,&#8221; and Netflix has ordered the project to series this week.\nDeadline reports that &#8220;Sid & Zoey&#8221; will be an 8-episode series at Netflix.\nThe young adult series",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-14T15:39:39+00:00"
+    },
+    {
+      "key": "i22",
+      "title": "Kingdom Hearts Is a Billion-Dollar Franchise, Disney Declares Ahead of Hotly Anticipated D23 Panel",
+      "summary": "Kingdom Hearts is one of nine billion-dollar franchises Disney has under its video game banner.The news comes ahead of a hotly anticipated panel at D23, where Disney is expected to talk about Kingdom Hearts 4.In a blog post, Disney said its Disney Games Group portfolio “spans nine billion-dollar fra",
+      "source_name": "IGN PC",
+      "topic": "games",
+      "pub_date": "2026-08-14T15:16:44+00:00"
+    },
+    {
+      "key": "i23",
+      "title": "Disney Has 9 Gaming Franchises That Have Generated $1 Billion+ At Retail, Including Kingdom Hearts",
+      "summary": "Disney has outlined just how powerful and important video games are to the company's future. In a blog post ahead of D23--where Kingdom Hearts news is expected--the company's gaming boss, Sean Shoptaw, revealed that games are now a \"fundamental part of the broader entertainment landscape.\"\n\n\n\nHe sai",
+      "source_name": "GameSpot",
+      "topic": "games",
+      "pub_date": "2026-08-14T14:26:23+00:00"
+    },
+    {
+      "key": "i24",
+      "title": "Mark McKenna and Stephen Lang Lead Psychological Thriller ‘Isolation Booth’",
+      "summary": "Mark McKenna (Overlord) and Stephen Lang (Don&#8217;t Breathe) lead the indie thriller Isolation Booth, which recently wrapped filming in Minnesota, reports Deadline.\n\n\n\nThe psychological thriller follows a once-celebrated songwriter battling addiction as he retreats to a secluded studio for one las",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-14T14:52:12+00:00"
+    },
+    {
+      "key": "i25",
+      "title": "&#8216;Isolation Booth&#8217; &#8211; Stephen Lang Stars in Music-Themed Psychological Thriller",
+      "summary": "Stephen Lang (Don&#8217;t Breathe) will star in the upcoming psychological thriller Isolation Booth, Deadline reports, with the main cast also including Mark McKenna (Sing Street).\nJohn Beckham makes his feature directorial debut with Isolation Booth.\nThe thriller from Shifted Industry and Witchcraf",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-14T14:32:01+00:00"
+    },
+    {
+      "key": "i26",
+      "title": "Luigi Mangione admits to shooting UnitedHealthcare CEO: &#39;I knew what I was doing&#39;",
+      "summary": "Luigi Mangione in an earlier appearance in state court, ahead of a scheduled murder trial. The Ivy League graduate pleaded guilty to separate stalking charges in federal court.David Dee Delgado-Pool/Getty ImagesLuigi Mangione pleaded guilty to stalking charges in federal court in a striking reversal",
+      "source_name": "Business Insider",
+      "topic": "economia",
+      "pub_date": "2026-08-14T17:10:09+00:00"
+    },
+    {
+      "key": "i27",
+      "title": "Diretoras de 'Black mirror' e 'Loki' dizem que rejeitaram trabalho em 'Harry Potter' por 'transfobia' de J. K. Rowling",
+      "summary": "Assista ao trailer da série 'Harry Potter e a Pedra Filosofal'\nAs diretoras de TV Ally Pankiw (\"Black mirror\") e Kate Herron (\"Loki\") afirmaram que negaram trabalhos na série de \"Harry Potter\" por causa do que classificam como \"transfobia\" da autora dos livros do personagem, J. K. Rowling.\nConhecida",
+      "source_name": "G1 Pop & Arte",
+      "topic": "cultura",
+      "pub_date": "2026-08-14T19:05:09+00:00"
+    },
+    {
+      "key": "i28",
+      "title": "The X-Files creator Chris Carter wanted to make a more horrific movie",
+      "summary": "The version of The X-Files: I Want to Believe that premiered in 2008 was not exactly the movie co-writer / director Chris Carter intended to make. Carter wanted to bring agents Mulder and Scully back to the big screen with a grisly story about faith and the supernatural. But executives at 20th Centu",
+      "source_name": "The Verge",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T18:00:00+00:00"
+    },
+    {
+      "key": "i29",
+      "title": "Chris Carter Talks Scarier ‘The X-Files: I Want to Believe’ Director’s Cut and Teases Third Movie",
+      "summary": "It’s a good time to be a fan of The X-Files. While the franchise has had its ups and downs over the years, no amount of freakish monsters or vast alien conspiracies can keep Mulder and Scully retired for long &#8211; and 2026 is shaping up to be an especially interesting year for the paranormal inve",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-14T16:00:04+00:00"
+    },
+    {
+      "key": "i30",
+      "title": "Terremoto na Colômbia: número de mortos sobe para 281 enquanto esperança de achar sobreviventes diminui",
+      "summary": "Equipes buscam sobreviventes do terremoto na Colômbia\nO número de mortos decorrentes do terremoto que atingiu a Colômbia na segunda-feira (10) subiu para 281.\n✅ Siga o canal de notícias internacionais do g1 no WhatsApp\nA desesperada busca por sobreviventes na Colômbia: 'Cada vez que anunciam uma pes",
+      "source_name": "G1 Mundo",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T10:35:09+00:00"
+    },
+    {
+      "key": "i31",
+      "title": "Colômbia: sobe para 281 mortes em terremoto, enquanto governo limita ajuda internacional",
+      "summary": "O balanço mais recente do Posto de Comando Unificado sobre o terremoto que atingiu a região oeste da Colômbia divulgado nesta quinta-feira (13/08) registra pelo menos 281 mortes, 3.824 pessoas feridas e 379 desaparecidas em decorrência da tragédia. O abalo sísmico de magnitude 7,4 aconteceu no iníci",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T03:40:52+00:00"
+    },
+    {
+      "key": "i32",
+      "title": "Como uma visita a uma ilha reacendeu tensões entre Rússia e Japão",
+      "summary": "Vladimir Putin faz 1ª visita estatal às Ilhas Curilhas \nRússia e Japão trocaram duras críticas nesta quinta-feira (13) após o presidente russo, Vladimir Putin, visitar pela primeira vez uma das ilhas disputadas pelos dois países no Pacífico Norte desde 2010.\n✅ Siga o canal de notícias internacionais",
+      "source_name": "G1",
+      "topic": "brasil",
+      "pub_date": "2026-08-14T06:00:38+00:00"
+    },
+    {
+      "key": "i33",
+      "title": "Putin visita Ilhas Curilas e eleva tensões com Japão: entenda disputa histórica pela região",
+      "summary": "O presidente russo, Vladimir Putin, fez nesta quinta-feira (13/08) sua primeira visita às Ilhas Curilas em todo o período em que esteve na presidência do país. O Japão, que contesta a soberania sobre a região, criticou a viagem e convocou o embaixador russo. Moscou rechaçou as críticas japonesas, cl",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T04:40:34+00:00"
+    },
+    {
+      "key": "i34",
+      "title": "Brasil dá início ao processo de reciprocidade contra EUA: veja os próximos passos",
+      "summary": "O governo brasileiro informou nesta quinta-feira (13) que deu início ao processo para aplicar medidas de reciprocidade contra os Estados Unidos por conta das tarifas impostas pelo governo norte-americano a produtos brasileiros.\n➡️A Lei de Reciprocidade, aprovada por unanimidade no Congresso Nacional",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T03:00:11+00:00"
+    },
+    {
+      "key": "i35",
+      "title": "Brasil abre processo para adotar reciprocidade contra tarifaço dos EUA",
+      "summary": "O governo federal anunciou nesta quinta-feira (13/08) a abertura formal do processo para avaliar se a imposição unilateral de tarifas por parte dos Estados Unidos (EUA) contra exportações brasileiras será respondida com base na Lei da Reciprocidade Econômica.\nEm nota, o Palácio do Planalto informou ",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T02:40:17+00:00"
+    },
+    {
+      "key": "i36",
+      "title": "O que é a Lei da Reciprocidade Econômica, que Brasil aciona contra os EUA",
+      "summary": "Brasil inicia processo para adotar medidas de reciprocidade em resposta ao tarifaço americano\nO governo brasileiro informou nesta quinta-feira (13) que iniciou o processo para adotar medidas de reciprocidade contra os Estados Unidos em resposta às tarifas aplicadas pelo governo norte-americano sobre",
+      "source_name": "G1 Economia",
+      "topic": "economia",
+      "pub_date": "2026-08-14T03:00:16+00:00"
+    },
+    {
+      "key": "i37",
+      "title": "Colômbia: sobe para 273 mortes em terremoto, enquanto governo limita ajuda internacional",
+      "summary": "O balanço mais recente do Posto de Comando Unificado sobre o terremoto que atingiu a região oeste da Colômbia divulgado nesta quinta-feira (13/08) registra pelo menos 273 mortes, 3.824 pessoas feridas e 377 desaparecidas em decorrência da tragédia. O abalo sísmico de magnitude 7,4 aconteceu no iníci",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T03:40:52+00:00"
+    },
+    {
+      "key": "i38",
+      "title": "Jornal Nacional ouve relatos emocionados de sobreviventes do terremoto na Colômbia",
+      "summary": "Sobreviventes de terremoto relatam momentos de desespero\nSubiu para 273 o número de mortos após o terremoto que atingiu a Colômbia na segunda-feira (10).\nA temperatura nesta quinta-feira (11) passou dos 30ºC em Cali. E foi o quarto dia em que bombeiros trabalharam sobre os escombros. Mas o mais difí",
+      "source_name": "G1",
+      "topic": "brasil",
+      "pub_date": "2026-08-14T00:56:57+00:00"
+    },
+    {
+      "key": "i39",
+      "title": "Help build a monument to that ‘sad little bitch’ Elon Musk",
+      "summary": "Cards Against Humanity is gearing up to build \"something that will annoy Elon Musk,\" and it's crowdfunding the project with its usual flavor of vulgarity. The company behind the card game announced plans to build \"a grand monument\" to Musk on the parcel of land it owns near Starbase, Texas, with the",
+      "source_name": "The Verge",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T08:40:13+00:00"
+    },
+    {
+      "key": "i40",
+      "title": "SpaceX’s Starbase is getting a few monuments dedicated to Elon Musk. Not all will be flattering.",
+      "summary": "The Elon Musk bust is now one of the few monuments dedicated to the CEO that will be placed near SpaceX&#39;s Starbase complex.Gabriel V. Cardenas/Bloomberg via Getty ImagesStarbase is an incorporated Texas city and the site of SpaceX's large launch complex.Fans and critics of Elon Musk have shared ",
+      "source_name": "Business Insider",
+      "topic": "economia",
+      "pub_date": "2026-08-14T00:50:09+00:00"
+    },
+    {
+      "key": "i41",
+      "title": "Juiz federal rejeita ação de Trump contra Harvard por suposto &#8216;antissemitismo&#8217;",
+      "summary": "O juiz federal de Boston, Richard G. Stearns, do Tribunal Distrital dos Estados Unidos, rejeitou nesta quinta-feira (13/08) a ação movida pelo governo do presidente dos Estados Unidos, Donald Trump, contra a Universidade de Harvard, que acusava a instituição de “fechar os olhos à discriminação contr",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-13T23:25:55+00:00"
+    },
+    {
+      "key": "i42",
+      "title": "Justiça dos EUA rejeita ação de Trump contra Harvard por antissemitismo",
+      "summary": "Governo Trump nega ter um plano para impedir reeleição de Lula\nUm juiz federal dos Estados Unidos rejeitou nesta quinta-feira (13) uma ação do governo do presidente Donald Trump contra a Universidade Harvard. O processo acusava a instituição de não proteger estudantes judeus e israelenses de episódi",
+      "source_name": "G1 Mundo",
+      "topic": "mundo",
+      "pub_date": "2026-08-13T20:28:42+00:00"
+    },
+    {
+      "key": "i43",
+      "title": "Matthew McConaughey Confirms He Nearly Played Pedro Pascal&#8217;s Role in &#8216;The Last of Us&#8217;: &#8216;Wasn&#8217;t for Me&#8217;",
+      "summary": "Matthew McConaughey almost fought off clickers in &#8220;The Last of Us.&#8221;\n\n\n\nWhile talking on the &#8220;Happy, Sad, Confused&#8221; podcast, the Oscar winner and &#8220;True Detective&#8221; star revealed he was approached to take on the lead role of Joel in HBO&#8217;s adaptation of &#8220;T",
+      "source_name": "TheWrap",
+      "topic": "movies",
+      "pub_date": "2026-08-13T21:23:55+00:00"
+    },
+    {
+      "key": "i44",
+      "title": "Matthew McConaughey Discusses Passing On Playing Joel In The Last Of Us Show",
+      "summary": "Pedro Pascal plays Joel in HBO's popular The Last of Us, based on the Naughty Dog game, and he has been praised for his performance. However, he wasn't the only actor in the mix for the role.\n\n\n\nOscar-winner Matthew McConaughey revealed more details on the Happy Sad Confused podcast about why he did",
+      "source_name": "GameSpot",
+      "topic": "games",
+      "pub_date": "2026-08-13T19:58:36+00:00"
+    },
+    {
+      "key": "i45",
+      "title": "Matthew McConaughey Explains Why He Turned Down Playing Joel in HBO's The Last of Us Show",
+      "summary": "Matthew McConaughey opened up about being approached to star as Joel Miller in HBO’s The Last of Us series and revealed why he had to turn the opportunity down.In an August 13 episode of his Happy Sad Confused podcast, entertainment journalist Josh Horowitz mentioned that Craig Mazin — the co-creato",
+      "source_name": "IGN TV",
+      "topic": "movies",
+      "pub_date": "2026-08-13T18:47:52+00:00"
+    },
+    {
+      "key": "i46",
+      "title": "Netflix Closes Two Gaming Studios, Including Oxenfree Developer Night School",
+      "summary": "Netflix has spent the last five years attempting to expand its chokehold on the film and television industry into the video game space, but it's had limited success. Today, Game File reports that the streaming giant is receding from the gaming world a little more by closing two studios: Moonloot, wh",
+      "source_name": "Game Informer",
+      "topic": "games",
+      "pub_date": "2026-08-13T21:06:00+00:00"
+    },
+    {
+      "key": "i47",
+      "title": "Netflix is closing two game studios",
+      "summary": "Netflix plans to shut down two of its gaming studios, as reported by Game File and Variety, as it makes a bigger shift toward party games and titles streamed to TVs. One of the studios being shut down is Night School Studio, creators of the Oxenfree series. Netflix bought Night School in 2021, and i",
+      "source_name": "The Verge",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-13T20:52:58+00:00"
+    },
+    {
+      "key": "i48",
+      "title": "Google lança Gemini 3.7 Flash apenas três semanas após versão anterior",
+      "summary": "Gemini 3.7 Flash não estará disponível para usuários comuns inicialmente (ilustração: Vitor Pádua/Tecnoblog)\n\n\n\n    Resumo\n    \nO Google lançou o Gemini 3.7 Flash, modelo leve de inteligência artificial generativa, três semanas após o Gemini 3.6 Flash.\nO Gemini 3.7 Flash custa US$ 0,75 por milhão de",
+      "source_name": "TecnoBlog",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-13T20:44:57+00:00"
+    },
+    {
+      "key": "i49",
+      "title": "Google lança Gemini 3.7 Flash melhor em programação e mais econômico",
+      "summary": "O Google lançou o Gemini 3.7 Flash, seu mais novo modelo de inteligência artificial (IA), nesta quinta-feira (13). O modelo chega com performance comparável ao Claude Sonnet 5 e ao GPT-5.6 Terra, segundo benchmarks destacados pela gigante.A atualização chega apenas três semanas após a estreia do Gem",
+      "source_name": "TecMundo",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-13T20:30:00+00:00"
+    },
+    {
+      "key": "i50",
+      "title": "IA pode adicionar quase R$ 1 tri ao PIB do Brasil até 2030, diz estudo",
+      "summary": "A adoção de inteligência artificial (IA) pode acrescentar até R$ 986,7 bilhões ao Produto Interno Bruto (PIB) brasileiro entre 2027 e 2030, segundo estudo realizado pelo Reglab a pedido da OpenAI, empresa responsável pelo ChatGPT.\n\n\n\nO levantamento calcula o impacto potencial da tecnologia em 12 gra",
+      "source_name": "Olhar Digital",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-13T20:38:31+00:00"
+    },
+    {
+      "key": "i51",
+      "title": "OpenAI, do ChatGPT, diz que IA pode adicionar R$ 1 trilhão ao PIB do Brasil em três anos",
+      "summary": "Inteligência artificial impulsiona produtividade nas empresas\nA adoção de inteligência artificial (IA) pode adicionar até R$ 986,7 bilhões ao Produto Interno Bruto (PIB) brasileiro entre 2027 e 2030, segundo estudo do Reglab comissionado pela OpenAI, a dona do ChatGPT.\nO valor, calculado em termos p",
+      "source_name": "G1 Economia",
+      "topic": "economia",
+      "pub_date": "2026-08-13T16:12:24+00:00"
+    },
+    {
+      "key": "i52",
+      "title": "Peacock Reveals Two New Posters Promoting &#8216;Crystal Lake&#8217;",
+      "summary": "Some family traditions never die.\nPeacock took to X to reveal two new posters for their upcoming Friday the 13th prequel series Crystal Lake. The posters, which can be seen below, showcase Pamela and her son Jason.\n\n\nSome family traditions never die.#CrystalLake arrives October 15 on Peacock. pic.tw",
+      "source_name": "Horror News Network",
+      "topic": "horror",
+      "pub_date": "2026-08-13T19:54:23+00:00"
+    },
+    {
+      "key": "i53",
+      "title": "&#8216;Crystal Lake&#8217; Official Posters Give Us Our First Look at the Show&#8217;s Young Jason Voorhees",
+      "summary": "Coming to Peacock this Halloween season, the new prequel series “Crystal Lake” will tell the origin story of Pamela Voorhees and her young son Jason Voorhees, and Peacock has unleashed two brand new official posters this afternoon to whet your appetite for the upcoming 8-episode prequel to the origi",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T16:05:06+00:00"
+    },
+    {
+      "key": "i54",
+      "title": "OpenAI is losing its second executive this week",
+      "summary": "Another OpenAI executive is departing. Denise Dresser, who joined OpenAI as its chief revenue officer in December after serving as CEO of Slack, will be leaving in the \"coming weeks\" to \"pursue other opportunities,\" she said in a team note posted to LinkedIn. Dali Rajic, president and COO of Wiz, wi",
+      "source_name": "The Verge",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-13T19:28:39+00:00"
+    },
+    {
+      "key": "i55",
+      "title": "OpenAI shake-up continues with second major departure of the week",
+      "summary": "Denise Dresser is leaving her role as OpenAI&#39;s chief revenue officer.Bloomberg/Getty ImagesDenise Dresser is leaving her role as chief revenue officer at OpenAI after eight months.It's the latest in a batch of executive shake-ups at OpenAI as it positions for an IPO.Dali Rajic, the former chief ",
+      "source_name": "Business Insider",
+      "topic": "economia",
+      "pub_date": "2026-08-13T17:49:48+00:00"
+    },
+    {
+      "key": "i56",
+      "title": "Skeet Ulrich To Play Enigmatic Cult Leader In Horror Film &#8216;Deify&#8217; Starring Neil McDonough",
+      "summary": "Five Nights at Freddy’s 2 actor Skeet Ulrich is going back to his villainous Scream roots in psychological horror movie Deify, which Deadline reports will also star Neil McDonough (Resident Evil: Welcome to Raccoon City, Ravenous).\nSet to shoot in Chicago, Deify follows  a cult leader who is put on ",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T18:45:33+00:00"
+    },
+    {
+      "key": "i57",
+      "title": "Skeet Ulrich to Play a Cult Leader in Psychological Horror Film &#8216;Deify&#8217;",
+      "summary": "Actor Skeet Ulrich (pictured above in Scream) has a certain charm that makes him difficult to resist. Just ask Sidney Prescott. He&#8217;s the kind of guy you might imagine following anywhere. So, it makes sense that he&#8217;s been cast as a cult leader in the indie horror flick Deify, reports Dead",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-13T18:27:14+00:00"
+    },
+    {
+      "key": "i58",
+      "title": "Academy Museum Honors John Carpenter With Luminary Award This Halloween Season",
+      "summary": "The Academy Museum of Motion Pictures is celebrating Halloween with upcoming immersive exhibit “The Horror Show,” as well as recognizing the contributions of horror master John Carpenter this October.\nCarpenter is among this year’s honorees at the museum&#8217;s annual fundraising gala, Deadline rep",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T17:44:36+00:00"
+    },
+    {
+      "key": "i59",
+      "title": "John Carpenter, Colman Domingo, Charlize Theron to Be Honored by Academy Museum",
+      "summary": "John Carpenter, Colman Domingo and Charlize Theron will be the honorees at the Academy Museum of Motion Pictures Gala, to take place on Oct. 17, 2026. The Academy Museum made the announcement on Thursday. \n\n\n\nCarpenter, the legendary filmmaker and composer who changed the horror genre with his 1978 ",
+      "source_name": "TheWrap",
+      "topic": "movies",
+      "pub_date": "2026-08-13T17:00:00+00:00"
+    },
+    {
+      "key": "i60",
+      "title": "Quick Behind-the-Scenes Promo for Na Hong-jin&#039;s &#039;Hope&#039; Action Film",
+      "summary": "\"Loading the cartridges...\" Neon has debuted a new 60-second promo featurette for the action sci-fi movie Hope from Korean filmmaker Na Hong-jin (also of The Chaser, The Yellow Sea, The Wailing). Landing in US theaters this September! Get ready for an epic big screen experience! This premiered at th",
+      "source_name": "FirstShowing",
+      "topic": "movies",
+      "pub_date": "2026-08-13T17:30:03+00:00"
+    },
+    {
+      "key": "i61",
+      "title": "&#8216;Hope&#8217; Behind-The-Scenes Featurette Highlights High-Octane Action",
+      "summary": "A creature wreaks havoc upon a community in Hope, from writer-director Na Hong-jin (The Wailing), and a new featurette brings audiences behind the scenes of the sci-fi thriller&#8217;s intense action.\nThe Korean monster movie will be released in theaters in the United States by NEON on September 9.\n",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T16:00:32+00:00"
+    },
+    {
+      "key": "i62",
+      "title": "&#8216;Dark Hollow&#8217; Trailer Unearths Appalachian Creature Feature",
+      "summary": "Something inhuman breaks free from the dark depths of a coal mine in the trailer for Dark Hollow.\nBrainstorm Media releases the creature feature in select theaters and On Demand on September 4.\nDirected/Written by Daniel Byers (Eradication), Dark Hollow sees a nightmarish monster emerge from the dep",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T16:55:06+00:00"
+    },
+    {
+      "key": "i63",
+      "title": "&#8216;Dark Hollow&#8217; Trailer Unleashes an Old-School Monster Movie this September",
+      "summary": "I&#8217;m a sucker for old-school monster movies. Especially those in the vein of The Descent. And that looks exactly like what we&#8217;re getting in the new trailer for Dark Hollow. \n\n\n\nWhen a nightmarish monster emerges from the depths of an Appalachian coal mine, a young mother must hunt down th",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-13T16:47:05+00:00"
+    },
+    {
+      "key": "i64",
+      "title": "&#8216;The Devils&#8217; NC-17 Re-Release Gets Eye-Popping New Trailer",
+      "summary": "“The Devils” are on their way.\n\n\n\nA restored 4K re-release of Ken Russell’s controversial classic, which has been largely unavailable in the United States, is arriving this fall in a limited, one-week engagement beginning Oct. 16, complete with select 35mm screenings. (It will be followed by a U.K. ",
+      "source_name": "TheWrap",
+      "topic": "movies",
+      "pub_date": "2026-08-13T16:33:28+00:00"
+    },
+    {
+      "key": "i65",
+      "title": "Must See Official Trailer for &#039;Ken Russell&#039;s The Devils&#039; 4K Restoration",
+      "summary": "\"You have perverted the innocents.\" Warner Bros Clockwork has revealed the incredible full official trailer for Ken Russell's The Devils restored & uncut & ready to rock the screen again. This is Clockwork's first official release, a restoration of a controversial, one-of-a-kind, 1970s masterpiece t",
+      "source_name": "FirstShowing",
+      "topic": "movies",
+      "pub_date": "2026-08-13T16:48:46+00:00"
+    },
+    {
+      "key": "i66",
+      "title": "&#8216;The Devils&#8217; 4K Restoration Trailer Brings a Masterpiece Back to Theaters this October",
+      "summary": "There just isn&#8217;t another filmmaker like Ken Russell. And in that same regard, there&#8217;s nothing like his miracle of a masterpiece, The Devils. \n\n\n\nNewly restored in 4K, the director’s cut of Russell’s controversial 1971 masterpiece has officially been rated NC-17 for “sexual content/graphi",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-13T16:27:22+00:00"
+    },
+    {
+      "key": "i67",
+      "title": "‘Ken Russell’s The Devils’ 4K Restoration Trailer Unveils Never-Before-Seen Footage",
+      "summary": "For the first time ever, the Director’s Cut of Ken Russell’s controversial 1971 horror movie The Devils has been restored and remastered, and the new trailer teases never-before-seen footage.\nThis is the only version of the film that Ken Russell wanted audiences to see, uncensored and rated NC-17 by",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T16:02:06+00:00"
+    },
+    {
+      "key": "i68",
+      "title": "TSE adia debate sobre deepfakes e pode endurecer regras para eleição deste ano",
+      "summary": "O Tribunal Superior Eleitoral (TSE) transferiu para a próxima terça-feira (18) a reunião que discutirá o uso de vídeos produzidos ou alterados por inteligência artificial nas eleições de 2026. O encontro, inicialmente previsto para esta quinta-feira (13), foi convocado pelo presidente da Corte, Kass",
+      "source_name": "Olhar Digital",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-13T16:44:20+00:00"
+    },
+    {
+      "key": "i69",
+      "title": "TSE adia reunião que discutiria proibição do uso de deepfakes na campanha eleitoral",
+      "summary": "O Tribunal Superior Eleitoral (TSE) adiou a reunião que estava prevista para esta quinta-feira (13) para discutir uma possível proibição ampla do uso de deepfakes na campanha eleitoral e as punições para casos de descumprimento das regras. \nO encontro havia sido convocado pelo presidente da Corte, K",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-13T15:55:25+00:00"
+    },
+    {
+      "key": "i70",
+      "title": "Scary First Trailer for &#039;Beware Boiúna&#039; Ancient Amazon Snake Horror",
+      "summary": "\"If we don't leave here now, we all die!\" &#128013; She's coming and she's pissed! Lionsgate has revealed an official trailer for the horror movie Beware Boiúna, a survival thriller about a massive gigantic snake in the rain forest, made by filmmaker Mike P. Nelson. Since the recent Anaconda remake ",
+      "source_name": "FirstShowing",
+      "topic": "movies",
+      "pub_date": "2026-08-13T14:48:59+00:00"
+    },
+    {
+      "key": "i71",
+      "title": "&#8216;Beware Boiúna’ Trailer Awakens a Colossal Ancient Snake Deep in the Amazon",
+      "summary": "Director Mike P. Nelson (Wrong Turn, V/H/S/85, Silent Night, Deadly Night) unleashes a terrifying legend deep within the jungle in the first trailer for Beware Boiúna.\nBeware Boiúna will release in theaters October 2, 2026.\nIn the film, &#8220;Deep in the Amazon, a medical mission spirals into a fig",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T14:04:34+00:00"
+    },
+    {
+      "key": "i72",
+      "title": "UFO Crashes in &#8216;Final Invasion&#8217;: Emile Hirsch, Anthony Michael Hall, and Stephen Lang to Star",
+      "summary": "Emile Hirsch (The Autopsy of Jane Doe) has joined the cast of sci-fi action thriller Final Invasion opposite Anthony Michael Hall (Halloween Kills), Claire Forlani (Mystery Men), and Stephen Lang (Don’t Breathe) ahead of a New Mexico shoot later this year, Deadline reports.\n\n\n\nFinal Invasion begins ",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-13T14:48:20+00:00"
+    },
+    {
+      "key": "i73",
+      "title": "Emile Hirsch, Anthony Michael Hall, Claire Forlani, &#038; Stephen Lang To Battle Mutating Extraterrestrial In &#8216;Final Invasion&#8217;",
+      "summary": "Sci-fi thriller Final Invasion is gearing up to face an alien threat when it enters production in New Mexico, and Deadline reports it&#8217;s lined up its cast.\nEmile Hirsch (The Autopsy of Jane Doe), Anthony Michael Hall (Halloween Kills, Halloween Store), Claire Forlani (Meet Joe Black) and Stephe",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T13:40:29+00:00"
+    },
+    {
+      "key": "i74",
+      "title": "Final Trailer for &#039;Heart of the Beast&#039; Dog + Man Alaska Survival Thriller",
+      "summary": "\"No one's coming for us... We're just gonna have to do this the hard way.\" &#128021; Paramount Pictures unveiled the second & final official trailer for the wilderness survival thriller movie Heart of the Beast, co-starring a good boy trained doggie dog who was actually #1 on the call sheet. This do",
+      "source_name": "FirstShowing",
+      "topic": "movies",
+      "pub_date": "2026-08-13T13:49:44+00:00"
+    },
+    {
+      "key": "i75",
+      "title": "&#8216;Heart of the Beast&#8217; Official Trailer 2 &#8211; Brad Pitt and His Combat Canine Fight to Survive This September",
+      "summary": "From director David Ayer (Suicide Squad, Fury), Heart of the Beast stars Brad Pitt and a really good boy named Odin, and Paramount has released the new official trailer today.\nHeart of the Beast will hit theaters on September 25, 2026.\nWatch the brand new trailer for Heart of the Beast starring Brad",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-13T13:40:33+00:00"
+    },
+    {
+      "key": "i76",
+      "title": "Jason Voorhees Revealed in First ‘Crystal Lake’ Character Poster",
+      "summary": "There he is.\n\n\n\nPeacock has released a series of new character posters for A24 and Brad Caleb Kane’s upcoming Crystal Lake, and one of them gives us our very first look at young Jason Voorhees in the new Friday the 13th prequel series.\n\n\n\nCallum Vinson plays Jason, while another poster spotlights Li",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-13T16:31:22+00:00"
+    },
+    {
+      "key": "i77",
+      "title": "Night School Staff Speak Out After Netflix Shuts Down Developer Following 'Top Tier' Launch of Unhinged",
+      "summary": "Netflix is shuttering its Los Angeles-based game studio Night School, best known for side-scrolling psychological thrillers Oxenfree and Oxenfree 2: Lost Signals.The streamer is also shutting down Moonloot, its game studio based in Helsinki, Finland, which has not yet released any titles but was dev",
+      "source_name": "IGN PC",
+      "topic": "games",
+      "pub_date": "2026-08-13T22:43:14+00:00"
+    },
+    {
+      "key": "i78",
+      "title": "‘Beware Boiúna’ Trailer Pits Jessica Rothe Against an Enormous Amazonian Snake",
+      "summary": "“Witness terror on a gigantic scale.”\n\n\n\nLionsgate dropped the first trailer and official poster today for Beware Boiúna, and that wonderfully punny tagline pretty much tells you exactly what you&#8217;re getting: a giant fucking snake movie that looks like it&#8217;s taking itself just seriously en",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-13T14:00:00+00:00"
+    },
+    {
+      "key": "i79",
+      "title": "TV Globinho volta à programação da Globo para reviver nostalgia",
+      "summary": "Se voc&ecirc; cresceu com os desenhos da TV Globinho e sente muita saudade daquela &eacute;poca, prepare o cora&ccedil;&atilde;o: a Globo confirmou o retorno do programa em uma edi&ccedil;&atilde;o especial como parte da campanha Crian&ccedil;a Esperan&ccedil;a 2026.\nGrande sucesso da emissora nos a",
+      "source_name": "CanalTech",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-13T20:08:41+00:00"
+    },
+    {
+      "key": "i80",
+      "title": "TV Globinho volta com edição especial no Criança Esperança",
+      "summary": "TV Globinho\nGlobo\nPara quem sempre desejou a volta da TV Globinho, a espera acabou. Após mais de uma década fora do ar, o programa infantil retorna para uma edição única no dia 10 de outubro, como parte das comemorações do Criança Esperança 2026. \nCom o tema “Protegendo o Futuro das Crianças”, a cam",
+      "source_name": "G1 Pop & Arte",
+      "topic": "cultura",
+      "pub_date": "2026-08-13T14:37:57+00:00"
+    },
+    {
+      "key": "i81",
+      "title": "Quaest: 48% desaprovam e 46% aprovam governo Lula",
+      "summary": "Quaest: Lula tem 38% no 1° turno; Flávio, 31%\nPesquisa Quaest divulgada nesta sexta-feira (14) mostra a percepção dos eleitores sobre o governo Lula. 48% desaprovam o governo, enquanto 46% aprovam.\nA pesquisa é a primeira contratada pela Globo em parceria com o jornal O Globo. A Quaest ouviu 2.004 p",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T21:02:01+00:00"
+    },
+    {
+      "key": "i82",
+      "title": "Quaest: 33% apontam violência como principal preocupação",
+      "summary": "Violência é maior preocupação de brasileiros, diz Quaest\nReprodução/Imagem Ilustrativa\nPesquisa Quaest divulgada nesta sexta-feira (14) mostra que a violência é a principal preocupação dos eleitores, citada por 33% dos entrevistados.\nO levantamento é o primeiro encomendado pela Globo, em parceria co",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T21:26:07+00:00"
+    },
+    {
+      "key": "i83",
+      "title": "Governo Lula ouvirá empresários para decidir sobre reciprocidade contra EUA",
+      "summary": "O ministro da Fazenda, Dario Durigan, disse nesta sexta-feira (14/08) que ouvirá os empresários brasileiros e estrangeiros sobre os possíveis impactos da aplicação da Lei da Reciprocidade do Brasil, em resposta ao tarifaço imposto pelos Estados Unidos. A iniciativa levou a um aumento de 37,5% nos im",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T21:00:10+00:00"
+    },
+    {
+      "key": "i84",
+      "title": "Brasil notifica governo dos EUA sobre início de processo de reciprocidade contra tarifas",
+      "summary": "O governo dos Estados Unidos foi notificado nesta sexta-feira (14) sobre a abertura do processo de para aplicar medidas de reciprocidade por conta das tarifas impostas pelo governo norte-americano a produtos brasileiros.\nA notificação foi enviada aos departamentos de Estado e de Comércio e ao  Escri",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T18:55:37+00:00"
+    },
+    {
+      "key": "i85",
+      "title": "Discord: criptografia dificulta combate a abusos contra menores, alerta ANPD",
+      "summary": "A ativação da criptografia de ponta a ponta para chamadas de voz e vídeo do Discord dificulta o monitoramento de transmissões ao vivo na plataforma e, segundo a Agência Nacional de Proteção de Dados (ANPD), reduz a segurança desse tipo de conteúdo. O recurso foi ativado globalmente pouco antes da en",
+      "source_name": "Olhar Digital",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T21:05:52+00:00"
+    },
+    {
+      "key": "i86",
+      "title": "Após alerta da polícia, Discord demorou 25 minutos para derrubar live que vitimou menina de 13 anos",
+      "summary": "Após aviso da polícia, Discord demorou 25 minutos para derrubar live que vitimou menina\nO Discord foi avisado pela Polícia Civil de São Paulo e demorou 25 minutos para derrubar a sala em que ocorria a live que vitimou uma menina de 13 anos. A informação consta em um relatório apresentado pela própri",
+      "source_name": "G1 Política",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T20:20:11+00:00"
+    },
+    {
+      "key": "i87",
+      "title": "Trump minimiza crise em porta-aviões dos EUA e diz que 260 dias no mar 'está longe de ser tempo suficiente'",
+      "summary": "Presidente Donald Trump antes de embarcar no Air Force One em 14 de agosto de 2026.\nKen Cedeno/Reuters\nO presidente dos Estados Unidos, Donald Trump, minimizou nesta sexta-feira (14) os relatos sobre as condições enfrentadas por militares americanos a bordo do porta-aviões USS Abraham Lincoln, no Or",
+      "source_name": "G1 Mundo",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T19:12:12+00:00"
+    },
+    {
+      "key": "i88",
+      "title": "Mouse Razer Naga V3 Pro traz placas laterais magnéticas e bateria de até 280h",
+      "summary": "A Razer anunciou o mouse Naga V3 Pro, que traz novas funcionalidades para uma das mais consagradas linhas de periféricos da companhia. O ponto alto dessa nova versão é que a empresa mantém os painéis laterais modulares que podem ser trocados conforme a necessidade do usuário.O novo periférico mantém",
+      "source_name": "TecMundo",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T18:15:01+00:00"
+    },
+    {
+      "key": "i89",
+      "title": "Xiaomi anuncia HyperOS 4; veja novidades e celulares compatíveis",
+      "summary": "O HyperOS 4 já é oficial (imagem: reprodução/Xiaomi)\n\n\n\n    Resumo\n    \nXiaomi anunciou o HyperOS 4, nova versão de seu sistema operacional Android, com otimização de CPU e memória RAM, mais opções de personalização e assistente de IA Super XiaoAI 2.0;\nHyperOS 4 traz o design Soft Light Glass com ef",
+      "source_name": "TecnoBlog",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T14:32:33+00:00"
+    },
+    {
+      "key": "i90",
+      "title": "Terremoto na Colômbia: governo anuncia reconstrução de 44 mil casas",
+      "summary": "Pelo menos 285 pessoas morreram e 3.900 ficaram feridas no terremoto de magnitude 7,4 com epicentro em San José del Palmar, Chocó, que atingiu a Colômbia na última segunda-feira (10/08), segundo David Tamayo, diretor da Unidade Nacional de Gestão de Riscos de Desastres (UNGRD), em declaração à impre",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T19:20:54+00:00"
+    },
+    {
+      "key": "i91",
+      "title": "Seis trabalhadores ficam presos após explosão em mina na Colômbia",
+      "summary": "Seis trabalhadores ficaram presos, nesta sexta-feira (14), em uma mina na Colômbia após uma explosão. O acidente ocorreu enquanto equipes de resgate também atuam nas áreas afetadas pelo terremoto de magnitude 7,4 que atingiu o país no início da semana e deixou 278 mortos e milhares de estruturas des",
+      "source_name": "G1 Mundo",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T19:17:06+00:00"
+    },
+    {
+      "key": "i92",
+      "title": "Google Health now lets you remove AI guidance from the Today tab",
+      "summary": "TL;DR\n\n\nGoogle Health Premium includes AI-driven guidance in the Google Health app’s Today tab.\nThe latest version of Google Health adds a toggle to turn this Health Coach guidance off.\nYou’re still able to access Health Coach in other ways after removing it from the Today tab.\n\n\nOne of Google Healt",
+      "source_name": "Android Authority",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T17:42:19+00:00"
+    },
+    {
+      "key": "i93",
+      "title": "IA chinesa pode ter superado a Anthropic em teste de segurança cibernética",
+      "summary": "A empresa chinesa Z.ai anunciou nesta sexta-feira (14) que seu modelo de inteligência artificial GLM-5.3 alcançou desempenho ligeiramente superior ao Mythos 5, da Anthropic, em um teste voltado à identificação de vulnerabilidades em softwares. O resultado coloca a tecnologia chinesa entre os sistema",
+      "source_name": "Olhar Digital",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T21:18:32+00:00"
+    },
+    {
+      "key": "i94",
+      "title": "Adolescente é apreendido após esfaquear estudante durante briga em Indaiatuba",
+      "summary": "Unidade de Pronto Atendimento (UPA) Morada do Sol, em Indaiatuba, onde jovem ferido por canivete foi encaminhado\nPrefeitura de Indaiatuba\nUm adolescente de 17 anos foi apreendido por ato infracional análogo ao crime de tentativa de homicídio suspeito de ferir outro estudante com um canivete durante ",
+      "source_name": "G1",
+      "topic": "brasil",
+      "pub_date": "2026-08-14T23:09:03+00:00"
+    },
+    {
+      "key": "i95",
+      "title": "Histórico do ChatGPT \"entregou\" adolescente envolvido em duplo homicídio familiar",
+      "summary": "Um adolescente de 17 anos foi indiciado por matar a m&atilde;e e o irm&atilde;o mais novo dentro de casa em Massachusetts, nos Estados Unidos. Segundo a promotoria do condado de Middlesex, Arjun Aravind pesquisou no ChatGPT ideias te&oacute;ricas e hist&oacute;rias de fic&ccedil;&atilde;o sobre a mo",
+      "source_name": "CanalTech",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T19:01:00+00:00"
+    },
+    {
+      "key": "i96",
+      "title": "Pokémon Pokopia vende 5 milhões de cópias e já está presente em 21% de todos os Switch 2 do mundo",
+      "summary": "O Checkpoint desta sexta (14) chega com grandes notícias para Pokémon Pokopia, que já vendeu nada menos que 5 milhões de cópias. Os números, inclusive, indicam que o título está presente em 21% de todas as unidades vendidas do Switch 2 pelo mundo.Em outras notícias, também tivemos a confirmação da I",
+      "source_name": "TecMundo",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T20:45:49+00:00"
+    },
+    {
+      "key": "i97",
+      "title": "1 milhão de cópias em 1 semana: o que explica o sucesso absurdo de Big Walk?",
+      "summary": "A publisher indie Panic anunciou, nesta segunda-feira (10), que seu mais novo jogo multiplayer, Big Walk, alcan&ccedil;ou a marca de um milh&atilde;o de c&oacute;pias vendidas em menos de uma semana de lan&ccedil;amento.\nO jogo chegou ao PC, PlayStation 5, PS Plus e Nintendo Switch 2 em 4 de agosto ",
+      "source_name": "CanalTech",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T16:32:00+00:00"
+    },
+    {
+      "key": "i98",
+      "title": "This &#8216;KPop Demon Hunters&#8217; Sword Is the Closest Thing to a Lightsaber for Rumi Fans: Buy&#160;Online",
+      "summary": "All products and services featured are independently chosen by editors. However, Billboard may receive a commission on orders placed through its retail links, and the retailer may receive certain auditable data for accounting purposes.\n\n\tA KPop Demon Hunters Rumi sword is currently in the works, wit",
+      "source_name": "Billboard",
+      "topic": "music",
+      "pub_date": "2026-08-14T20:38:49+00:00"
+    },
+    {
+      "key": "i99",
+      "title": "&#8216;KPop Demon Hunters&#8217; Getting the Criterion Treatment This November",
+      "summary": "Here&#8217;s some golden news for fans of KPop Demon Hunters. Criterion announced their November titles this morning, and Netflix&#8217;s animated hit was among them!\n\n\n\nStill haven&#8217;t seen KPop Demon Hunters? It follows chart-topping girl group HUNTR/X, whose three members struggle to juggle t",
+      "source_name": "Dread Central",
+      "topic": "horror",
+      "pub_date": "2026-08-14T16:30:18+00:00"
+    },
+    {
+      "key": "i100",
+      "title": "The X-Files Returns to Comics With New Series From Dynamite Entertainment",
+      "summary": "The X-Files franchise is suddenly heating up again in 2026. Fresh off the release of The X-Files: I Want to Believe - Vrach Frankensteyn and LEGO&#39;s very first X-Files set comes the news that Dynamite Entertainment will publish a new X-Files comic starting this winter.What&#39;s more, the new ser",
+      "source_name": "IGN TV",
+      "topic": "movies",
+      "pub_date": "2026-08-14T15:59:25+00:00"
+    },
+    {
+      "key": "i101",
+      "title": "One UI 9.5 vaza com visual translúcido e bloqueio de apps por senha",
+      "summary": "As primeiras imagens da One UI 9.5 vazaram no X (ex-Twitter) nesta quinta-feira (13). O novo sistema da Samsung apresenta mudanças no visual, apostando em elementos com efeito de transparência e sombras por toda a interface.As imagens foram compartilhadas pelo informante Fahad Ali Javed (@fahadalija",
+      "source_name": "TecMundo",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T14:00:00+00:00"
+    },
+    {
+      "key": "i102",
+      "title": "Apple desenvolve modelo de IA para a China em parceria com Alibaba",
+      "summary": "A Apple está desenvolvendo um modelo de inteligência artificial (IA) que deverá ser disponibilizado exclusivamente na China, alimentando novos recursos para os dispositivos da marca vendidos no país. Detalhes da novidade foram revelados pela Reuters nesta sexta-feira (14).Segundo fontes entrevistada",
+      "source_name": "TecMundo",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T16:00:00+00:00"
+    },
+    {
+      "key": "i103",
+      "title": "EUA ameaçam Irã com isolamento econômico 'como o mundo nunca viu'",
+      "summary": "Prazo de 60 dias do Memorando de Entendimento para terminar guerra entre EUA e Irã se aproxima do fim com um impasse\nO secretário do Tesouro dos Estados Unidos, Scott Bessent, ameaçou o Irã com um isolamento econômico \"como o mundo nunca viu\", indicando que o governo Trump está disposto a exercer um",
+      "source_name": "G1 Mundo",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T10:01:30+00:00"
+    },
+    {
+      "key": "i104",
+      "title": "Vice de Trump diz que principal objetivo na guerra contra Irã é manter &#8216;gasolina barata&#8217; para povo dos EUA",
+      "summary": "O vice-presidente dos Estados Unidos, JD Vance, declarou que o principal objetivo do governo de Donald Trump na guerra contra o Irã é “manter o petróleo e a gasolina baratos para os norte-americanos”. A afirmação feita em entrevista à emissora conservadora Fox News nesta sexta-feira (14/08) sinalizo",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-14T06:00:39+00:00"
+    },
+    {
+      "key": "i105",
+      "title": "The Pixel 11 Pro is a slap in the face to Android enthusiasts everywhere",
+      "summary": "The Pixel 11 announcement felt like watching a car crash in slow motion. For months, we’ve heard rumors of Google price hikes, but I hoped that would be the only significant change. We already witnessed Samsung raise prices on some models, but with decent upgrades. Motorola kept the specs relatively",
+      "source_name": "Android Authority",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T10:30:31+00:00"
+    },
+    {
+      "key": "i106",
+      "title": "Tensor G6 explained: What Google&#8217;s chip actually means for your Pixel",
+      "summary": "The newly announced Pixel 11 series all run on the same Tensor G6 chip – Google’s latest mobile processor.\n\n\n\nBut what is Tensor G6 and how does it differ from its predecessors? Will Tensor G6 be faster and better than before?\n\n\n\nWe explain everything we know about Google Tensor G6, including how it",
+      "source_name": "Trusted Reviews",
+      "topic": "reviews",
+      "pub_date": "2026-08-14T10:29:59+00:00"
+    },
+    {
+      "key": "i107",
+      "title": "WhatsApp testa reações personalizada com emojis favoritos, mas tem uma \"pegadinha\"",
+      "summary": "O WhatsApp est&aacute; desenvolvendo uma fun&ccedil;&atilde;o que permitir&aacute; personalizar a bandeja de rea&ccedil;&otilde;es com os emojis favoritos do usu&aacute;rio. A novidade substitui a sele&ccedil;&atilde;o fixa de seis op&ccedil;&otilde;es exibida atualmente ao pressionar uma mensagem e",
+      "source_name": "CanalTech",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T21:07:00+00:00"
+    },
+    {
+      "key": "i108",
+      "title": "Bumble muda regras e permite que homens enviem primeira mensagem",
+      "summary": "Alteração elimina regra que deixou o aplicativo famoso (Imagem: Good Faces Agency / Unsplash)\n\n\n\n    Resumo\n    \nO Bumble encerrou a regra que permitia apenas às mulheres enviar a primeira mensagem, passando a permitir que os homens também iniciem a conversa.\nA mudança foi justificada com base em pe",
+      "source_name": "TecnoBlog",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T20:21:22+00:00"
+    },
+    {
+      "key": "i109",
+      "title": "MacBook Neo 2 pode ganhar mais memória RAM",
+      "summary": "Modelo atual já promete boa fluidez mesmo com muitas abas abertas no navegador (foto: Thássius Veloso/Tecnoblog)\n\n\n\n    Resumo\n    \nO próximo MacBook Neo 2 pode vir com 12 GB de memória unificada e processador A19 Pro para suportar recursos de IA do macOS 27.\nA atualização de hardware visa atender à",
+      "source_name": "TecnoBlog",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T16:06:57+00:00"
+    },
+    {
+      "key": "i110",
+      "title": "Five Dinosaur Movies to Stream This Weekend That Aren&#8217;t &#8216;Jurassic Park&#8217;",
+      "summary": "David Robert Mitchell&#8217;s The End of Oak Street is poised to make a strong showing at the box office this weekend, reinforcing the obvious: audiences love dinosaurs. Just look to the behemoth Jurassic Park franchise, still going strong with more sequels in development.\nIf this weekend&#8217;s ne",
+      "source_name": "Bloody Disgusting",
+      "topic": "horror",
+      "pub_date": "2026-08-14T19:04:31+00:00"
+    },
+    {
+      "key": "i111",
+      "title": "The End of Oak Street Ending Is So Much More Screwed Up Than You Realize",
+      "summary": "This article contains spoilers for The End of Oak Street\n\n\n\nDavid Robert Mitchell&#8217;s late-summer sci-fi movie The End of Oak Street has landed in theaters, and its final scenes feature some truly unexpected narrative twists and turns worth thinking twice about after the credits roll.\n\n\n\nIn the ",
+      "source_name": "Den of Geek",
+      "topic": "movies",
+      "pub_date": "2026-08-14T14:00:00+00:00"
+    },
+    {
+      "key": "i112",
+      "title": "Michael Giacchino’s Dino-mite ‘End of Oak Street’ Score Gets Vinyl Release From Mutant &#124; Exclusive",
+      "summary": "“The End of Oak Street,” one of the very best movies of the summer (and the year, for that matter) stomps into theaters this weekend.\n\n\n\nIn the movie, a suburban neighborhood is lifted out of the early 1980s and sent back in time to the era of the dinosaurs; everyday folk are forced to fend for thei",
+      "source_name": "TheWrap",
+      "topic": "movies",
+      "pub_date": "2026-08-14T16:00:00+00:00"
+    },
+    {
+      "key": "i113",
+      "title": "Marvel's Wolverine rodará a 60 FPS com Ray Tracing no PS5 base; veja detalhes",
+      "summary": "A Insomniac Games anunciou que Marvel's Wolverine ser&aacute; o primeiro jogo da desenvolvedora a rodar em 60 FPS com Ray Tracing ativado mesmo no modelo base do PlayStation 5. A informa&ccedil;&atilde;o foi revelada em uma entrevista do chefe de tecnologia do est&uacute;dio, Mike Fitzgerald, ao por",
+      "source_name": "CanalTech",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T17:10:02+00:00"
+    },
+    {
+      "key": "i114",
+      "title": "Roblox Is Now The Target Of A Congressional Investigation: &#8220;Children Are Hurting&#8221;",
+      "summary": "US Senators Josh Hawley and Dick Durbin have announced that Roblox will be the subject of a congressional investigation amid claims that the gaming platform is a threat to child safety. \n\n\n\n\"You trumpet Roblox as a safe digital playground for children as young as five,\" the pair wrote in an open let",
+      "source_name": "GameSpot",
+      "topic": "games",
+      "pub_date": "2026-08-14T14:49:40+00:00"
+    },
+    {
+      "key": "i115",
+      "title": "Pixel 11 Pro XL vs. Galaxy S26 Ultra: There&#8217;s only one I&#8217;d spend my money on",
+      "summary": "The Samsung Galaxy S26 Ultra arrived earlier this year to a much more positive reception than its predecessor. Not only is the new flagship thinner than ever, but it has faster charging, camera improvements, and more. Of course, the smartphone market doesn’t stand still. The Google Pixel 11 Pro XL h",
+      "source_name": "Android Authority",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T10:00:23+00:00"
+    },
+    {
+      "key": "i116",
+      "title": "Ele contou ao ChatGPT que queria matar o filho e foi preso — conversas com IA podem ser prova de crime no Brasil?",
+      "summary": "Getty Images/BBC\nAVISO DE CONTEÚDO SENSÍVEL: esta reportagem contém menções a violência e suicídio.\nDurante cerca de dois meses, João (nome fictício), 36 anos, manteve conversas com o ChatGPT que, segundo a Polícia Civil do Espírito Santo, indicavam um possível plano para matar o próprio filho, de 8",
+      "source_name": "G1 Economia",
+      "topic": "economia",
+      "pub_date": "2026-08-14T09:06:26+00:00"
+    },
+    {
+      "key": "i117",
+      "title": "ChatGPT vai lembrar o que você faz em apps e sites",
+      "summary": "O ChatGPT ganhou novo recurso que permite registrar atividades realizadas em aplicativos e sites no Mac para usar essas informações em conversas futuras. Chamado de Computer History, o recurso foi anunciado pela OpenAI nesta quinta-feira (13) e funciona de maneira opcional.\n\n\n\nA ideia é permitir que",
+      "source_name": "Olhar Digital",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T01:06:04+00:00"
+    },
+    {
+      "key": "i118",
+      "title": "Netflix Closes Two More Studios",
+      "summary": "Earlier this summer, Netflix-owned developer Night School released Unhinged, a horror game that was playable on televisions/screens through the streaming app. Unhinged was met with acclaim by players, and Netflix co-CEO Greg Peters recently called Unhinged one of \"our two most successful cloud game ",
+      "source_name": "GameSpot",
+      "topic": "games",
+      "pub_date": "2026-08-14T00:29:40+00:00"
+    },
+    {
+      "key": "i119",
+      "title": "Xbox's Separation from Compulsion Games Seems Complete as Studio Is Listed as the Publisher of South of Midnight on Steam",
+      "summary": "Xbox&#39;s separation from Compulsion Games – one of four studios it spun out independently during the recent Xbox \"reset\" amidst thousands of layoffs – appears to be complete, as the developer itself is now listed as the publisher of 2025&#39;s award-winning South of Midnight on Steam instead of Xb",
+      "source_name": "IGN PC",
+      "topic": "games",
+      "pub_date": "2026-08-14T01:45:24+00:00"
+    },
+    {
+      "key": "i120",
+      "title": "Trump é processado por vender assinatura mensal de R$ 520 mil para acesso antecipado a posts do Truth Social",
+      "summary": "O presidente dos Estados Unidos, Donald Trump, foi processado por vender um serviço de assinatura de até US$ 100 mil (aproximadamente R$ 520 mil) por mês pelo acesso antecipado às suas publicações na plataforma Truth Social, de acordo com uma reportagem publicada pela agência Bloomberg.\nA organizaçã",
+      "source_name": "Opera Mundi",
+      "topic": "mundo",
+      "pub_date": "2026-08-13T02:00:56+00:00"
+    },
+    {
+      "key": "i121",
+      "title": "ANPD suspende transmissões ao vivo do Discord no Brasil",
+      "summary": "ANPD suspende transmissões ao vivo do Discord no Brasil\nA Agência Nacional de Proteção de Dados suspendeu as transmissões ao vivo da rede social Discord no Brasil até que a plataforma prove que adotou medidas para proteger crianças e adolescentes.\nÉ a primeira vez que a agência adota esse tipo de me",
+      "source_name": "G1",
+      "topic": "brasil",
+      "pub_date": "2026-08-13T00:55:34+00:00"
+    },
+    {
+      "key": "i122",
+      "title": "The burger wars are heating up as McDonald&#39;s loses ground to an old rival",
+      "summary": "Some diners are turning away from McDonald&#39;s and toward rivals.Mike Kemp/In Pictures via Getty ImagesMcDonald's reported slowing sales growth for its second quarter.Some customers are looking elsewhere for cheap meals, from Burger King to gas stations.It's the latest evidence that the burger war",
+      "source_name": "Business Insider",
+      "topic": "economia",
+      "pub_date": "2026-08-14T09:07:01+00:00"
+    },
+    {
+      "key": "i123",
+      "title": "‘The Rivals of Amziah King’ Review: Matthew McConaughey’s Got Honey Troubles in This Genre-Defying Wonder",
+      "summary": "I’ve been trying to come up with the best way to describe Andrew Patterson’s second feature, “The Rivals of Amziah King,” for days. I could describe the plot, but it’s a surprising story, so doing justice to Patterson’s screenplay is a trick unto itself. I could celebrate Patterson’s ecstatic approa",
+      "source_name": "TheWrap",
+      "topic": "movies",
+      "pub_date": "2026-08-14T06:02:12+00:00"
+    },
+    {
+      "key": "i124",
+      "title": "Trump declares 100 percent tariffs on many drones and all aircraft parts",
+      "summary": "The United States has already banned future foreign drones from entering the United States unless their companies kiss the ring - as well as routers, robots, and Roombas. Now, President Donald Trump is targeting existing drone imports and parts, too. He's going to try to make them cost a lot more. I",
+      "source_name": "The Verge",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T01:06:15+00:00"
+    },
+    {
+      "key": "i125",
+      "title": "Shane Gillis Expresses Regret for Supporting Trump Before Epstein Files Fallout and Iran War",
+      "summary": "Shane Gillis treaded lightly while attending President Donald Trump&#8217;s UFC Freedom 250 event earlier this summer, telling Joe Rogan he avoided taking a picture with the president. \n\n\n\n&#8220;Let&#8217;s stop bringing that up,&#8221; the comedian said on &#8220;The Joe Rogan Experience&#8221; wh",
+      "source_name": "TheWrap",
+      "topic": "movies",
+      "pub_date": "2026-08-14T01:16:56+00:00"
+    },
+    {
+      "key": "i126",
+      "title": "Lua hoje: confira a fase da Lua desta sexta-feira 14/08/2026",
+      "summary": "Hoje, 14 de agosto de 2026, a Lua está na fase nova e 6% visível. Confira o calendário completo de fases da Lua deste mês, de acordo com o Instituto Nacional de Meteorologia (Inmet).\n\n\n\n\n\nConfira as próximas fases\n\n\n\nAs fases da Lua no mês de agosto de 2026 começaram no dia 5 com a chegada da Lua Mi",
+      "source_name": "Olhar Digital",
+      "topic": "tecnologia",
+      "pub_date": "2026-08-14T10:58:16+00:00"
+    }
+  ],
+  "pairs": [
+    {
+      "id": "p1",
+      "label": "SAME_EVENT",
+      "left": "i1",
+      "right": "i2",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p2",
+      "label": "SAME_EVENT",
+      "left": "i1",
+      "right": "i3",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p3",
+      "label": "SAME_EVENT",
+      "left": "i2",
+      "right": "i3",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p4",
+      "label": "SAME_EVENT",
+      "left": "i4",
+      "right": "i5",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p5",
+      "label": "SAME_EVENT",
+      "left": "i6",
+      "right": "i7",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p6",
+      "label": "SAME_EVENT",
+      "left": "i8",
+      "right": "i9",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p7",
+      "label": "SAME_EVENT",
+      "left": "i10",
+      "right": "i11",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p8",
+      "label": "SAME_EVENT",
+      "left": "i12",
+      "right": "i13",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p9",
+      "label": "SAME_EVENT",
+      "left": "i14",
+      "right": "i15",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p10",
+      "label": "SAME_EVENT",
+      "left": "i16",
+      "right": "i17",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p11",
+      "label": "SAME_EVENT",
+      "left": "i18",
+      "right": "i19",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p12",
+      "label": "SAME_EVENT",
+      "left": "i20",
+      "right": "i21",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p13",
+      "label": "SAME_EVENT",
+      "left": "i22",
+      "right": "i23",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p14",
+      "label": "SAME_EVENT",
+      "left": "i24",
+      "right": "i25",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p15",
+      "label": "SAME_EVENT",
+      "left": "i26",
+      "right": "i11",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p16",
+      "label": "SAME_EVENT",
+      "left": "i27",
+      "right": "i13",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p17",
+      "label": "SAME_EVENT",
+      "left": "i28",
+      "right": "i29",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p18",
+      "label": "SAME_EVENT",
+      "left": "i30",
+      "right": "i31",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p19",
+      "label": "SAME_EVENT",
+      "left": "i32",
+      "right": "i33",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p20",
+      "label": "SAME_EVENT",
+      "left": "i34",
+      "right": "i35",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p21",
+      "label": "SAME_EVENT",
+      "left": "i36",
+      "right": "i35",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p22",
+      "label": "SAME_EVENT",
+      "left": "i30",
+      "right": "i37",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p23",
+      "label": "SAME_EVENT",
+      "left": "i37",
+      "right": "i38",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p24",
+      "label": "SAME_EVENT",
+      "left": "i39",
+      "right": "i40",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p25",
+      "label": "SAME_EVENT",
+      "left": "i41",
+      "right": "i42",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p26",
+      "label": "SAME_EVENT",
+      "left": "i43",
+      "right": "i44",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p27",
+      "label": "SAME_EVENT",
+      "left": "i43",
+      "right": "i45",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p28",
+      "label": "SAME_EVENT",
+      "left": "i44",
+      "right": "i45",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p29",
+      "label": "SAME_EVENT",
+      "left": "i46",
+      "right": "i47",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p30",
+      "label": "SAME_EVENT",
+      "left": "i48",
+      "right": "i49",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p31",
+      "label": "SAME_EVENT",
+      "left": "i50",
+      "right": "i51",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p32",
+      "label": "SAME_EVENT",
+      "left": "i52",
+      "right": "i53",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p33",
+      "label": "SAME_EVENT",
+      "left": "i54",
+      "right": "i55",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p34",
+      "label": "SAME_EVENT",
+      "left": "i56",
+      "right": "i57",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p35",
+      "label": "SAME_EVENT",
+      "left": "i58",
+      "right": "i59",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p36",
+      "label": "SAME_EVENT",
+      "left": "i60",
+      "right": "i61",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p37",
+      "label": "SAME_EVENT",
+      "left": "i62",
+      "right": "i63",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p38",
+      "label": "SAME_EVENT",
+      "left": "i64",
+      "right": "i65",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p39",
+      "label": "SAME_EVENT",
+      "left": "i64",
+      "right": "i66",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p40",
+      "label": "SAME_EVENT",
+      "left": "i64",
+      "right": "i67",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p41",
+      "label": "SAME_EVENT",
+      "left": "i65",
+      "right": "i66",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p42",
+      "label": "SAME_EVENT",
+      "left": "i65",
+      "right": "i67",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p43",
+      "label": "SAME_EVENT",
+      "left": "i66",
+      "right": "i67",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p44",
+      "label": "SAME_EVENT",
+      "left": "i68",
+      "right": "i69",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p45",
+      "label": "SAME_EVENT",
+      "left": "i70",
+      "right": "i71",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p46",
+      "label": "SAME_EVENT",
+      "left": "i72",
+      "right": "i73",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p47",
+      "label": "SAME_EVENT",
+      "left": "i74",
+      "right": "i75",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p48",
+      "label": "SAME_EVENT",
+      "left": "i76",
+      "right": "i53",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p49",
+      "label": "SAME_EVENT",
+      "left": "i77",
+      "right": "i46",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p50",
+      "label": "SAME_EVENT",
+      "left": "i77",
+      "right": "i47",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p51",
+      "label": "SAME_EVENT",
+      "left": "i70",
+      "right": "i78",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p52",
+      "label": "SAME_EVENT",
+      "left": "i79",
+      "right": "i80",
+      "provenance": "manual-real-cluster-or-near-miss"
+    },
+    {
+      "id": "p53",
+      "label": "DIFFERENT_EVENT",
+      "left": "i6",
+      "right": "i81",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p54",
+      "label": "DIFFERENT_EVENT",
+      "left": "i6",
+      "right": "i82",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p55",
+      "label": "DIFFERENT_EVENT",
+      "left": "i83",
+      "right": "i84",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p56",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i86",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p57",
+      "label": "DIFFERENT_EVENT",
+      "left": "i87",
+      "right": "i16",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p58",
+      "label": "DIFFERENT_EVENT",
+      "left": "i88",
+      "right": "i89",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p59",
+      "label": "DIFFERENT_EVENT",
+      "left": "i90",
+      "right": "i91",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p60",
+      "label": "DIFFERENT_EVENT",
+      "left": "i92",
+      "right": "i15",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p61",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i5",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p62",
+      "label": "DIFFERENT_EVENT",
+      "left": "i93",
+      "right": "i89",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p63",
+      "label": "DIFFERENT_EVENT",
+      "left": "i94",
+      "right": "i95",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p64",
+      "label": "DIFFERENT_EVENT",
+      "left": "i96",
+      "right": "i97",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p65",
+      "label": "DIFFERENT_EVENT",
+      "left": "i98",
+      "right": "i99",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p66",
+      "label": "DIFFERENT_EVENT",
+      "left": "i100",
+      "right": "i29",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p67",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i101",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p68",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i93",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p69",
+      "label": "DIFFERENT_EVENT",
+      "left": "i103",
+      "right": "i104",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p70",
+      "label": "DIFFERENT_EVENT",
+      "left": "i105",
+      "right": "i106",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p71",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i108",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p72",
+      "label": "DIFFERENT_EVENT",
+      "left": "i109",
+      "right": "i102",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p73",
+      "label": "DIFFERENT_EVENT",
+      "left": "i110",
+      "right": "i111",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p74",
+      "label": "DIFFERENT_EVENT",
+      "left": "i112",
+      "right": "i111",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p75",
+      "label": "DIFFERENT_EVENT",
+      "left": "i113",
+      "right": "i109",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p76",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i114",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p77",
+      "label": "DIFFERENT_EVENT",
+      "left": "i115",
+      "right": "i106",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p78",
+      "label": "DIFFERENT_EVENT",
+      "left": "i116",
+      "right": "i117",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p79",
+      "label": "DIFFERENT_EVENT",
+      "left": "i118",
+      "right": "i119",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p80",
+      "label": "DIFFERENT_EVENT",
+      "left": "i120",
+      "right": "i121",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p81",
+      "label": "DIFFERENT_EVENT",
+      "left": "i122",
+      "right": "i123",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p82",
+      "label": "DIFFERENT_EVENT",
+      "left": "i124",
+      "right": "i125",
+      "provenance": "manual-real-near-miss"
+    },
+    {
+      "id": "p83",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i85",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p84",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i102",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p85",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i89",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p86",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i107",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p87",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i108",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p88",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i96",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p89",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i98",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p90",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i100",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p91",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i126",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p92",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i30",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p93",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i62",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p94",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i75",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p95",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i46",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p96",
+      "label": "DIFFERENT_EVENT",
+      "left": "i8",
+      "right": "i48",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p97",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i102",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p98",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i89",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p99",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i107",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p100",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i108",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p101",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i96",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p102",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i98",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p103",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i100",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p104",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i126",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p105",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i30",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p106",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i62",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p107",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i75",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p108",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i46",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p109",
+      "label": "DIFFERENT_EVENT",
+      "left": "i85",
+      "right": "i48",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p110",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i89",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p111",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i107",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p112",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i108",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p113",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i96",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p114",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i98",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p115",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i100",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p116",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i126",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p117",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i30",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p118",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i62",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p119",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i75",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p120",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i46",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p121",
+      "label": "DIFFERENT_EVENT",
+      "left": "i102",
+      "right": "i48",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p122",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i107",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p123",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i108",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p124",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i96",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p125",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i98",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p126",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i100",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p127",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i126",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p128",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i30",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p129",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i62",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p130",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i75",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p131",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i46",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p132",
+      "label": "DIFFERENT_EVENT",
+      "left": "i89",
+      "right": "i48",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p133",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i108",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p134",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i96",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p135",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i98",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p136",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i100",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p137",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i126",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p138",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i30",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p139",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i62",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p140",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i75",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p141",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i46",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p142",
+      "label": "DIFFERENT_EVENT",
+      "left": "i107",
+      "right": "i48",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p143",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i96",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p144",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i98",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p145",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i100",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p146",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i126",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p147",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i30",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p148",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i62",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p149",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i75",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p150",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i46",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p151",
+      "label": "DIFFERENT_EVENT",
+      "left": "i108",
+      "right": "i48",
+      "provenance": "manual-real-distinct-event-anchor"
+    },
+    {
+      "id": "p152",
+      "label": "DIFFERENT_EVENT",
+      "left": "i96",
+      "right": "i98",
+      "provenance": "manual-real-distinct-event-anchor"
+    }
+  ]
+}
