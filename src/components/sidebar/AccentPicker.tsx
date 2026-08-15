@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { ACCENT_COLORS, applyAccent } from './utils'
+import { ACCENT_COLORS } from './utils'
 
 export function AccentPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -29,7 +29,7 @@ export function AccentPicker({ value, onChange }: { value: string; onChange: (v:
         <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl border border-border shadow-lg z-50 py-1.5"
           style={{ animation: 'slideUp 0.12s ease' }}>
           {ACCENT_COLORS.map(c => (
-            <button key={c.label} onClick={() => { onChange(c.value); applyAccent(c.value); setOpen(false) }}
+            <button key={c.label} onClick={() => { onChange(c.value); setOpen(false) }}
               className="flex items-center gap-3 w-full px-3 py-2 hover:bg-gray-50 transition-colors text-sm text-gray-700">
               <span className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ background: c.dot }} />
               <span className="flex-1 text-left">{c.label}</span>

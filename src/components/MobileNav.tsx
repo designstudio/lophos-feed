@@ -19,11 +19,11 @@ export function MobileNav() {
           : 'md:hidden fixed left-1/2 -translate-x-1/2 z-40 header-blur'
       }
       style={{
-        bottom: '18px',
+        bottom: 'max(14px, env(safe-area-inset-bottom))',
         borderRadius: '9999px',
         border: '1px solid var(--color-border)',
-        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
-        boxShadow: '0 8px 28px rgba(17, 17, 17, .035)',
+        backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 92%, transparent)',
+        boxShadow: '0 14px 35px rgba(17, 17, 17, .08)',
       }}
     >
       <div
@@ -40,7 +40,7 @@ export function MobileNav() {
           )}
           style={
             isFeedActive
-              ? { backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 20%, transparent)' }
+              ? { backgroundColor: 'var(--color-bg-secondary)' }
               : undefined
           }
         >
@@ -57,7 +57,7 @@ export function MobileNav() {
             )}
             style={
               isSettingsActive
-                ? { backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 20%, transparent)' }
+                ? { backgroundColor: 'var(--color-bg-secondary)' }
                 : undefined
             }
           >

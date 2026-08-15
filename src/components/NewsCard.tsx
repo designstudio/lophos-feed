@@ -1,58 +1,107 @@
 'use client'
-import { useState, useEffect } from 'react'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { NewsItem } from '@/lib/types'
-import {
-  Heart as HeartAngle,
-  ThumbsDown as Dislike,
-  Clock as ClockCircle,
-  ThumbsDown as DislikeFilled,
-} from '@untitledui/icons'
-import { motion, AnimatePresence } from 'framer-motion'
-import { format, formatDistanceToNow } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Heart, ThumbsDown } from '@untitledui/icons'
+import { FeedItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { Tooltip } from '@/components/Tooltip'
 import { IconHeartFilled } from '@/components/icons'
+import { Tooltip } from '@/components/Tooltip'
 
 const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
 
 function proxyImage(url: string | undefined): string | undefined {
-  if (!url) return undefined
-  if (LAZY_PATTERNS.some((pattern) => url.toLowerCase().includes(pattern))) return undefined
+  if (!url || LAZY_PATTERNS.some((pattern) => url.toLowerCase().includes(pattern))) return undefined
   return `/api/image-proxy?url=${encodeURIComponent(url)}`
 }
 
-function getSourceLabel(sources: NewsItem['sources']): string {
-  const name = sources?.[0]?.name?.trim()
-  if (!name) return 'Fonte'
-  const parts = name.replace(/\s+/g, ' ').split(' ')
-  const initials = parts
+function publishedLabel(publishedAt?: string): string | null {
+  if (!publishedAt) return null
+  const date = new Date(publishedAt)
+  if (Number.isNaN(date.getTime())) return null
+  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
+}
+
+function sourceInitials(name?: string) {
+  return (name || 'Lophos')
+    .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0])
     .join('')
     .toUpperCase()
-  return initials || name.slice(0, 2).toUpperCase()
 }
 
-function getPublishedLabel(publishedAt?: string): string | null {
-  if (!publishedAt) return null
+function CoverageRail({ item }: { item: FeedItem }) {
+  const rawImages = (item.coverageImages || [])
+    .map((image) => proxyImage(image))
+    .filter((image): image is string => Boolean(image))
 
-  const date = new Date(publishedAt)
-  if (Number.isNaN(date.getTime())) return null
+  const coverage = rawImages
+    .filter((image, index, images) => images.indexOf(image) === index)
+    .slice(0, 4)
 
-  const ageMs = Date.now() - date.getTime()
-  const twoDaysMs = 1000 * 60 * 60 * 48
-
-  if (ageMs <= twoDaysMs) {
-    return `Publicado ${formatDistanceToNow(date, { addSuffix: true, locale: ptBR })}`
+  if (coverage.length === 0) {
+    const mainImage = proxyImage(item.imageUrl)
+    if (mainImage) coverage.push(mainImage)
   }
 
-  return `Publicado ${format(date, "d 'de' MMM. 'de' yyyy", { locale: ptBR })}`
+  return (
+    <div className="editorial-card__coverage" aria-hidden="true">
+      <div className={cn('editorial-card__coverage-track', coverage.length === 1 && 'is-solo')}>
+        {(coverage.length > 0 ? coverage : [null]).map((image, index) => (
+          <div className="editorial-card__coverage-item" key={image || `fallback-${index}`}>
+            <div className="editorial-card__coverage-media">
+              <div className="editorial-card__coverage-fallback" />
+              {image && (
+                <img
+                  src={image}
+                  alt=""
+                  className="editorial-card__coverage-image"
+                  onError={(event) => { event.currentTarget.style.display = 'none' }}
+                />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SourceAttribution({ sources }: { sources: FeedItem['sources'] }) {
+  const shown = (sources || []).slice(0, 4)
+  const total = (sources || []).length
+
+  return (
+    <div className="editorial-card__sources" aria-label={`${total} ${total === 1 ? 'fonte' : 'fontes'}`}>
+      <div className="flex items-center" aria-hidden="true">
+        {shown.map((source, index) => (
+          <div
+            key={`${source.url}-${index}`}
+            className="editorial-card__source-avatar"
+            style={{ marginLeft: index === 0 ? 0 : '-5px', zIndex: shown.length - index }}
+          >
+            <span>{sourceInitials(source.name)}</span>
+            {source.favicon && (
+              <img
+                src={source.favicon}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+                onError={(event) => { (event.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      <span>{total} {total === 1 ? 'fonte' : 'fontes'}</span>
+    </div>
+  )
 }
 
 interface Props {
-  item: NewsItem
+  item: FeedItem
   variant?: 'full-left' | 'full-right' | 'card'
   className?: string
   initialReaction?: 'like' | 'dislike' | null
@@ -61,352 +110,106 @@ interface Props {
   onReactionChange?: (articleId: string, reaction: 'like' | 'dislike' | null) => void
 }
 
-function SourcesAndReactions({
-  sources,
-  reaction,
-  onReact,
-}: {
-  sources: NewsItem['sources']
-  reaction: 'like' | 'dislike' | null
-  onReact: (t: 'like' | 'dislike') => void
-}) {
-  const shown = (sources || []).slice(0, 4)
-
-  return (
-    <div className="flex items-center justify-between mt-2.5">
-      <div className="flex items-center gap-1.5">
-        <div className="flex items-center">
-          {shown.map((src, i) => (
-            <div
-              key={i}
-              className="w-5 h-5 rounded-full border-2 border-bg-primary overflow-hidden bg-bg-secondary flex-shrink-0"
-              style={{ marginLeft: i === 0 ? 0 : '-6px', zIndex: shown.length - i }}
-            >
-              {src.favicon ? (
-                <img
-                  src={src.favicon}
-                  alt=""
-                  width={20}
-                  height={20}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    ;(e.target as HTMLImageElement).style.display = 'none'
-                  }}
-                />
-              ) : (
-                <span className="w-full h-full block bg-bg-tertiary" />
-              )}
-            </div>
-          ))}
-        </div>
-        {shown.length > 0 && (
-          <span className="text-[12px] text-ink-tertiary font-medium">
-            {sources!.length} {sources!.length === 1 ? 'fonte' : 'fontes'}
-          </span>
-        )}
-      </div>
-
-      <div className="flex items-center gap-0.5">
-        <Tooltip content="Curtir" side="top">
-          <motion.button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onReact('like')
-            }}
-            whileTap={{ scale: 0.85 }}
-            className={cn(
-              'flex items-center px-2 py-1 rounded-full transition-colors',
-              reaction === 'like'
-                ? 'bg-red-50 dark:bg-red-950 text-red-500 dark:text-red-400'
-                : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary',
-            )}
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={reaction === 'like' ? 'filled' : 'outline'}
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-                style={{ display: 'flex' }}
-              >
-                {reaction === 'like' ? <IconHeartFilled size={20} /> : <HeartAngle size={20} />}
-              </motion.span>
-            </AnimatePresence>
-          </motion.button>
-        </Tooltip>
-
-        <Tooltip content="Nao tenho interesse" side="top">
-          <motion.button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onReact('dislike')
-            }}
-            whileTap={{ scale: 0.8 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            className={cn(
-              'flex items-center px-2 py-1 rounded-full transition-colors',
-              reaction === 'dislike'
-                ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'
-                : 'text-ink-muted hover:text-ink-secondary hover:bg-bg-secondary',
-            )}
-          >
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={reaction === 'dislike' ? 'filled' : 'outline'}
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                style={{ display: 'flex' }}
-              >
-                {reaction === 'dislike' ? <DislikeFilled size={20} /> : <Dislike size={20} />}
-              </motion.span>
-            </AnimatePresence>
-          </motion.button>
-        </Tooltip>
-      </div>
-    </div>
-  )
-}
-
-function CardImage({
-  proxiedImage,
-  title,
-  sources,
-  onError,
-  tall,
-}: {
-  proxiedImage: string | undefined
-  title: string
-  sources: NewsItem['sources']
-  onError: () => void
-  tall?: boolean
-}) {
-  const showImage = !!proxiedImage
-
-  return (
-    <div
-      className={cn(
-        'news-card-image w-full rounded-2xl overflow-hidden bg-bg-secondary flex-shrink-0 mb-2.5 relative',
-        tall ? 'h-48' : 'h-36',
-      )}
-    >
-      {showImage ? (
-        <img
-          src={proxiedImage}
-          alt={title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          onError={onError}
-        />
-      ) : (
-        <>
-          <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
-          <div className="absolute bottom-2 left-2 px-2 py-1 rounded-md text-[10px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
-            {getSourceLabel(sources)}
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
-
-function PublishedMeta({ publishedAt }: { publishedAt?: string }) {
-  const label = getPublishedLabel(publishedAt)
-  if (!label) return null
-
-  return (
-    <div className="flex items-center gap-1.5 mt-2 text-ink-tertiary" style={{ fontSize: '0.813rem' }}>
-      <ClockCircle size={15} className="flex-shrink-0" />
-      <span>{label}</span>
-    </div>
-  )
-}
-
-function CardLinkOverlay({ href, title }: { href: string; title: string }) {
-  return (
-    <Link
-      href={href}
-      aria-label={title}
-      className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ui-strong)] focus-visible:ring-offset-2"
-    >
-      <span className="sr-only">{title}</span>
-    </Link>
-  )
-}
-
 export function NewsCard({
   item,
-  variant = 'card',
   className,
   initialReaction = null,
   fadingOut = false,
-  solo = false,
   onReactionChange,
 }: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
   const [reacting, setReacting] = useState(false)
-  const [imgFailed, setImgFailed] = useState(false)
-  const href = `/article/${item.id}`
-  const proxiedImage = proxyImage(item.imageUrl)
-  const showImage = !!proxiedImage && !imgFailed
+  const dateLabel = publishedLabel(item.publishedAt)
 
-  useEffect(() => {
-    setReaction(initialReaction)
-  }, [initialReaction])
+  useEffect(() => setReaction(initialReaction), [initialReaction])
 
   const react = async (type: 'like' | 'dislike') => {
     if (reacting) return
-
+    const previous = reaction
+    const next = reaction === type ? null : type
     setReacting(true)
-    const newReaction = reaction === type ? null : type
-    setReaction(newReaction)
-    onReactionChange?.(item.id, newReaction)
+    setReaction(next)
+    onReactionChange?.(item.id, next)
 
     try {
       await fetch('/api/reactions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId: item.id, topic: item.topic, reaction: newReaction }),
+        body: JSON.stringify({ articleId: item.id, topic: item.topic, reaction: next }),
       })
-    } catch (e) {
-      console.error(e)
+    } catch {
+      setReaction(previous)
+      onReactionChange?.(item.id, previous)
+    } finally {
+      setReacting(false)
     }
-
-    setReacting(false)
-  }
-
-  if (variant === 'card') {
-    return (
-      <article
-        className={cn(
-          'news-card group relative flex flex-col pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300',
-          fadingOut && 'opacity-0 pointer-events-none',
-          className,
-        )}
-      >
-        <CardLinkOverlay href={href} title={item.title} />
-        <CardImage
-          proxiedImage={showImage ? proxiedImage : undefined}
-          title={item.title}
-          sources={item.sources}
-          onError={() => setImgFailed(true)}
-          tall={solo}
-        />
-        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-1">
-          {item.displayTopic ?? item.topic}
-        </span>
-        <h2
-          className="text-card-title text-ink-primary group-hover:text-accent transition-colors line-clamp-3 md-h2-fixed"
-          style={{ height: 'calc(3 * 1.625rem)' }}
-        >
-          {item.title}
-        </h2>
-        <div className="md:hidden">
-          <PublishedMeta publishedAt={item.publishedAt} />
-        </div>
-        <div className="relative z-20">
-          <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
-        </div>
-      </article>
-    )
-  }
-
-  if (variant === 'full-left') {
-    return (
-      <article
-        className={cn(
-          'news-card group relative flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300',
-          fadingOut && 'opacity-0 pointer-events-none',
-          className,
-        )}
-      >
-        <CardLinkOverlay href={href} title={item.title} />
-        <div className="news-card-image order-first md:order-last w-full md:w-80 md:flex-shrink-0 md:h-[12.5rem] rounded-2xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
-          {showImage ? (
-            <img
-              src={proxiedImage}
-              alt={item.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              onError={() => setImgFailed(true)}
-            />
-          ) : (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
-              <div className="absolute bottom-3 left-3 px-2 py-1 rounded-md text-[11px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
-                {getSourceLabel(item.sources)}
-              </div>
-            </>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">
-            {item.displayTopic ?? item.topic}
-          </span>
-          <h2
-            className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
-            style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
-          >
-            {item.title}
-          </h2>
-          <PublishedMeta publishedAt={item.publishedAt} />
-          <div className="hidden md:block">
-            <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
-          </div>
-          <div className="relative z-20">
-            <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
-          </div>
-        </div>
-      </article>
-    )
   }
 
   return (
     <article
-      className={cn(
-        'news-card group relative flex flex-col md:flex-row gap-0 md:gap-8 items-start pt-4 pb-4 border-b border-border md:pt-0 md:pb-0 md:border-b-0 transition-opacity duration-300',
-        fadingOut && 'opacity-0 pointer-events-none',
-        className,
-      )}
+      className={cn('editorial-card group', fadingOut && 'pointer-events-none opacity-0', className)}
     >
-      <CardLinkOverlay href={href} title={item.title} />
-      <div className="news-card-image w-full md:w-80 md:flex-shrink-0 md:h-[12.5rem] rounded-2xl overflow-hidden bg-bg-secondary relative mb-2.5 md:mb-0">
-        {showImage ? (
-          <img
-            src={proxiedImage}
-            alt={item.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={() => setImgFailed(true)}
-          />
-        ) : (
-          <>
-            <div className="absolute inset-0 bg-gradient-to-br from-bg-tertiary via-bg-secondary to-bg-tertiary opacity-80" />
-            <div className="absolute bottom-3 left-3 px-2 py-1 rounded-md text-[11px] font-semibold text-ink-secondary bg-bg-primary/70 border border-border">
-              {getSourceLabel(item.sources)}
-            </div>
-          </>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">
-          {item.displayTopic ?? item.topic}
-        </span>
-        <h2
-          className="text-headline text-ink-primary group-hover:text-accent transition-colors mt-1 line-clamp-3"
-          style={{ height: 'calc(3 * 1.75rem * 1.20)' }}
-        >
-          {item.title}
-        </h2>
-        <PublishedMeta publishedAt={item.publishedAt} />
-        <div className="hidden md:block">
-          <p className="text-body text-ink-secondary mt-2 line-clamp-3">{item.summary}</p>
+      <Link
+        href={`/article/${item.id}`}
+        aria-label={item.title}
+        className="absolute inset-0 z-10 rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-4"
+      >
+        <span className="sr-only">{item.title}</span>
+      </Link>
+
+      <CoverageRail item={item} />
+
+      <div className="editorial-card__body">
+        <div className="editorial-card__eyebrow">
+          <span className="editorial-card__topic">{item.displayTopic ?? item.topic}</span>
+          {dateLabel && <><i aria-hidden="true" /> <span className="editorial-card__date">{dateLabel}</span></>}
         </div>
-        <div className="relative z-20">
-          <SourcesAndReactions sources={item.sources} reaction={reaction} onReact={react} />
+
+        <h2>{item.title}</h2>
+        <p className="editorial-card__summary">{item.summary}</p>
+
+        <div className="editorial-card__footer">
+          <SourceAttribution sources={item.sources} />
+          <div className="editorial-card__reactions">
+            <Tooltip content={reaction === 'like' ? 'Remover dos favoritos' : 'Salvar nos favoritos'} side="top">
+              <motion.button
+                type="button"
+                onClick={(event) => { event.preventDefault(); event.stopPropagation(); void react('like') }}
+                whileTap={{ scale: 0.85 }}
+                disabled={reacting}
+                className={cn('editorial-card__reaction editorial-card__reaction--like', reaction === 'like' && 'is-active')}
+                aria-label={reaction === 'like' ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+                aria-pressed={reaction === 'like'}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={reaction === 'like' ? 'filled' : 'outline'}
+                    initial={{ opacity: 0, scale: 0.65 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.65 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    className="flex"
+                  >
+                    {reaction === 'like' ? <IconHeartFilled size={20} /> : <Heart size={20} />}
+                  </motion.span>
+                </AnimatePresence>
+              </motion.button>
+            </Tooltip>
+
+            <Tooltip content="Não tenho interesse" side="top">
+              <motion.button
+                type="button"
+                onClick={(event) => { event.preventDefault(); event.stopPropagation(); void react('dislike') }}
+                whileTap={{ scale: 0.85 }}
+                disabled={reacting}
+                className={cn('editorial-card__reaction editorial-card__reaction--dislike', reaction === 'dislike' && 'is-active')}
+                aria-label="Não tenho interesse"
+                aria-pressed={reaction === 'dislike'}
+              >
+                <ThumbsDown size={20} />
+              </motion.button>
+            </Tooltip>
+          </div>
         </div>
       </div>
     </article>

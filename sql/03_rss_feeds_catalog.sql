@@ -3,10 +3,7 @@ truncate table rss_feeds;
 insert into rss_feeds (url, name, topics, language) values
 
 -- ── TECNOLOGIA + INOVAÇÃO ─────────────────────────────────────
-('https://techcrunch.com/feed/', 'TechCrunch', '{"Tecnologia","Inovação","Empreendedorismo"}', 'en'),
-('https://feeds.arstechnica.com/arstechnica/index', 'Ars Technica', '{"Tecnologia","Ciência","Inovação"}', 'en'),
 ('https://www.theverge.com/rss/index.xml', 'The Verge', '{"Tecnologia","Smartphones","Inovação"}', 'en'),
-('https://www.wired.com/feed/rss', 'Wired', '{"Tecnologia","Inovação","Ciência","Smartphones"}', 'en'),
 ('https://feeds.feedburner.com/venturebeat/SZYF', 'VentureBeat', '{"Tecnologia","Inovação"}', 'en'),
 ('https://thenextweb.com/feed/', 'The Next Web', '{"Tecnologia","Inovação"}', 'en'),
 ('https://www.pcworld.com/feed', 'PCWorld', '{"Tecnologia","Smartphones"}', 'en'),
@@ -48,8 +45,6 @@ insert into rss_feeds (url, name, topics, language) values
 
 -- ── GAMES ─────────────────────────────────────────────────────
 ('https://feeds.ign.com/ign/all', 'IGN', '{"Games","Filmes","Séries"}', 'en'),
-('https://gamerant.com/feed/', 'Game Rant', '{"Games","E-sports"}', 'en'),
-('https://kotaku.com/rss', 'Kotaku', '{"Games"}', 'en'),
 ('https://www.polygon.com/rss/index.xml', 'Polygon', '{"Games","Entretenimento"}', 'en'),
 ('https://www.eurogamer.net/?format=rss', 'Eurogamer', '{"Games"}', 'en'),
 ('https://www.gamespot.com/feeds/news/', 'GameSpot', '{"Games"}', 'en'),
@@ -63,8 +58,6 @@ insert into rss_feeds (url, name, topics, language) values
 ('https://www.necessario.com.br/feed/', 'Necessary', '{"E-sports","Games"}', 'pt'),
 
 -- ── CINEMA + FILMES + SÉRIES ──────────────────────────────────
-('https://deadline.com/feed/', 'Deadline', '{"Cinema","Filmes","Séries","Entretenimento"}', 'en'),
-('https://variety.com/feed/', 'Variety', '{"Cinema","Filmes","Séries","Música"}', 'en'),
 ('https://www.empireonline.com/movies/news/rss/', 'Empire', '{"Cinema","Filmes"}', 'en'),
 ('https://www.cinemablend.com/rss/news', 'CinemaBlend', '{"Cinema","Filmes","Séries"}', 'en'),
 ('https://www.adorocinema.com/rss/news/', 'AdoroCinema', '{"Cinema","Filmes"}', 'pt'),
@@ -72,7 +65,6 @@ insert into rss_feeds (url, name, topics, language) values
 
 -- ── ENTRETENIMENTO + POP + MÚSICA ─────────────────────────────
 ('https://www.billboard.com/feed/', 'Billboard', '{"Música","Pop","Entretenimento"}', 'en'),
-('https://www.rollingstone.com/music/feed/', 'Rolling Stone', '{"Música","Pop","Entretenimento"}', 'en'),
 ('https://consequence.net/feed/', 'Consequence of Sound', '{"Música"}', 'en'),
 ('https://www.nme.com/feed', 'NME', '{"Música","Pop","Cultura"}', 'en'),
 ('https://g1.globo.com/rss/g1/pop-arte/musica/', 'G1 Música', '{"Música","Pop"}', 'pt'),
@@ -93,7 +85,6 @@ insert into rss_feeds (url, name, topics, language) values
 ('https://feeds.bbci.co.uk/sport/rss.xml', 'BBC Sport', '{"Esportes"}', 'en'),
 ('https://www.espn.com/espn/rss/news', 'ESPN', '{"Esportes"}', 'en'),
 ('https://ge.globo.com/rss/ge.xml', 'GE Globo', '{"Esportes"}', 'pt'),
-('https://www.uol.com.br/esporte/futebol/rss.xml', 'UOL Esporte', '{"Esportes"}', 'pt'),
 ('https://www.lance.com.br/feed.xml', 'Lance!', '{"Esportes"}', 'pt'),
 
 -- ── POLÍTICA + MUNDO + BRASIL ─────────────────────────────────
@@ -101,10 +92,7 @@ insert into rss_feeds (url, name, topics, language) values
 ('https://feeds.bbci.co.uk/news/world/rss.xml', 'BBC World', '{"Mundo","Política"}', 'en'),
 ('https://www.theguardian.com/world/rss', 'The Guardian World', '{"Mundo","Política"}', 'en'),
 ('https://g1.globo.com/rss/g1/', 'G1', '{"Política","Brasil","Mundo","Economia"}', 'pt'),
-('https://feeds.folha.uol.com.br/folha/brasil/rss091.xml', 'Folha Brasil', '{"Política","Brasil"}', 'pt'),
-('https://feeds.folha.uol.com.br/folha/mundo/rss091.xml', 'Folha Mundo', '{"Mundo","Política"}', 'pt'),
 ('https://agenciabrasil.ebc.com.br/rss/ultimasnoticias/feed.xml', 'Agência Brasil', '{"Brasil","Política"}', 'pt'),
-('https://noticias.uol.com.br/rss.xml', 'UOL Notícias', '{"Brasil","Política","Economia"}', 'pt'),
 
 -- ── MEIO AMBIENTE ─────────────────────────────────────────────
 ('https://www.theguardian.com/environment/rss', 'The Guardian Environment', '{"Meio Ambiente","Ciência"}', 'en'),
@@ -115,7 +103,6 @@ insert into rss_feeds (url, name, topics, language) values
 -- ── EDUCAÇÃO ──────────────────────────────────────────────────
 ('https://porvir.org/feed/', 'Porvir', '{"Educação"}', 'pt'),
 ('https://www.nexojornal.com.br/feed.xml', 'Nexo Jornal', '{"Educação","Política","Cultura"}', 'pt'),
-('https://educacao.uol.com.br/rss.xml', 'UOL Educação', '{"Educação"}', 'pt'),
 
 -- ── TRABALHO E CARREIRA ───────────────────────────────────────
 ('https://exame.com/carreira/feed/', 'Exame Carreira', '{"Trabalho e Carreira"}', 'pt'),
@@ -125,7 +112,6 @@ insert into rss_feeds (url, name, topics, language) values
 ('https://www.cntraveler.com/feed/rss', 'Condé Nast Traveler', '{"Turismo","Viagem"}', 'en'),
 ('https://www.lonelyplanet.com/news/feed', 'Lonely Planet', '{"Turismo","Viagem"}', 'en'),
 ('https://www.mochileiros.com/feed/', 'Mochileiros', '{"Turismo","Viagem"}', 'pt'),
-('https://viagem.uol.com.br/rss.xml', 'UOL Viagem', '{"Turismo","Viagem"}', 'pt'),
 ('https://www.panrotas.com.br/rss/geral.xml', 'Panrotas', '{"Turismo","Viagem"}', 'pt'),
 ('https://viagem.abril.com.br/feed/', 'Abril Viagem', '{"Turismo","Viagem"}', 'pt'),
 ('https://g1.globo.com/rss/g1/turismo-e-viagem/', 'G1 Turismo', '{"Turismo","Viagem"}', 'pt'),

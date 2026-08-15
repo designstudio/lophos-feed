@@ -1,9 +1,63 @@
--- Disable incomplete RSS sources in the live rss_feeds catalog without deleting history.
+-- Disable selected RSS sources in the live rss_feeds catalog without deleting history.
 update rss_feeds
 set active = false
-where lower(name) in ('collider', 'screen rant', 'hollywood reporter')
+where lower(name) in (
+  'ars technica',
+  'critical hits',
+  'collider',
+  'dbltap',
+  'deadline',
+  'engadget',
+  'folha de s.paulo',
+  'folha brasil',
+  'folha mundo',
+  'game rant',
+  'hollywood reporter',
+  'inven global',
+  'kotaku',
+  'nextpit',
+  'pitchfork',
+  'rock paper shotgun',
+  'rolling stone',
+  'rolling stone music',
+  'screen rant',
+  'stereogum',
+  'techcrunch',
+  'the rift herald',
+  'uol',
+  'uol esporte',
+  'uol viagem',
+  'variety',
+  'vlr.gg',
+  'wired',
+  'y combinator'
+)
    or url in (
+     'https://www.riftherald.com/rss/index.xml',
+     'https://www.invenglobal.com/rss',
+     'https://vlr.gg/rss',
+     'https://www.dbltap.com/rss',
+     'https://gamerant.com/feed/',
+     'https://kotaku.com/rss',
      'https://collider.com/feed/',
+     'https://deadline.com/feed/',
+     'https://variety.com/feed/',
      'https://screenrant.com/feed/',
-     'https://www.hollywoodreporter.com/feed/'
+     'https://www.hollywoodreporter.com/feed/',
+     'https://pitchfork.com/rss/news/feed.xml',
+     'https://www.rollingstone.com/music/feed/',
+     'https://techcrunch.com/feed/',
+     'https://feeds.feedburner.com/TechCrunch/',
+     'https://feeds.arstechnica.com/arstechnica/index',
+     'https://arstechnica.com/feed/',
+     'https://www.wired.com/feed/rss',
+     'https://www.engadget.com/rss.xml',
+     'https://www.nextpit.com/feed',
+     'https://feeds.folha.uol.com.br/folha/brasil/rss091.xml',
+     'https://feeds.folha.uol.com.br/folha/mundo/rss091.xml',
+     'https://rss.uol.com.br/feed/noticias.xml',
+     'https://www.uol.com.br/esporte/futebol/rss.xml',
+     'https://noticias.uol.com.br/rss.xml',
+     'https://educacao.uol.com.br/rss.xml',
+     'https://viagem.uol.com.br/rss.xml'
    );

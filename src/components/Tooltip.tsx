@@ -21,7 +21,6 @@ const ANIMATION_BY_SIDE = {
 
 export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
   const [visible, setVisible] = useState(false)
-  const [isDark, setIsDark] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [anchor, setAnchor] = useState<React.CSSProperties>({})
   const triggerRef = React.useRef<HTMLDivElement>(null)
@@ -32,16 +31,6 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
 
   useEffect(() => {
     setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    const checkDarkMode = () => {
-      setIsDark(document.documentElement.classList.contains('dark'))
-    }
-    checkDarkMode()
-    const observer = new MutationObserver(checkDarkMode)
-    observer.observe(document.documentElement, { attributes: true })
-    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -104,6 +93,8 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
       className={cn('relative inline-flex', className)}
       onMouseEnter={() => setVisible(true)}
       onMouseLeave={() => setVisible(false)}
+      onFocus={() => setVisible(true)}
+      onBlur={() => setVisible(false)}
     >
       {children}
 
@@ -118,20 +109,8 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
                 transition={{ duration: 0.12, ease: 'easeOut' }}
               >
                 <span
-                  className="block px-2.5 py-1.5 text-[12px] font-semibold leading-none whitespace-nowrap"
-                  style={isDark ? {
-                    background: '#2a2a2a',
-                    color: '#f2f2f2',
-                    border: '1px solid #404040',
-                    borderRadius: '0.375rem',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.30)',
-                  } : {
-                    background: 'var(--color-bg-secondary)',
-                    color: '#0f1419',
-                    border: '1px solid #E9E9E9',
-                    borderRadius: '0.375rem',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-                  }}
+                  role="tooltip"
+                  className="block whitespace-nowrap rounded-full bg-black px-3 py-1.5 text-[12px] font-medium leading-none text-white shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
                 >
                   {content}
                 </span>

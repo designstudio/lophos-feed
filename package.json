@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "feed:pagination-benchmark": "node scripts/feed-pagination-benchmark.mjs",
     "news:ingest": "node scripts/news-ingest.mjs",
     "news:preflight": "node scripts/news-preflight.mjs",
     "news:cluster": "node scripts/news-cluster.mjs",

@@ -45,9 +45,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 if (dark) document.documentElement.classList.add('dark');
                 var accent = localStorage.getItem('accent_color');
                 if (accent) document.documentElement.style.setProperty('--color-accent', accent);
-                var sc = localStorage.getItem('sidebar_collapsed');
-                var isCollapsed = sc === 'true';
-                document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '3.5rem' : '16.1rem');
+                var sc = localStorage.getItem('sidebar_collapsed_v2');
+                var isCollapsed = sc === null ? true : sc === 'true';
+                document.documentElement.style.setProperty('--sidebar-width', isCollapsed ? '5rem' : '17rem');
                 if (navigator.standalone === true) {
                   document.documentElement.classList.add('pwa-ios');
                 }

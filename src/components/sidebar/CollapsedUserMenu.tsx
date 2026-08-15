@@ -34,10 +34,10 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
         <button
           ref={triggerRef}
           onClick={() => setOpen(v => !v)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:bg-bg-secondary"
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-bg-secondary"
         >
           {user?.imageUrl ? (
-            <img src={user.imageUrl} alt="" width={26} height={26} className="rounded-full" />
+            <img src={user.imageUrl} alt="" width={26} height={26} className="h-[26px] w-[26px] rounded-full object-cover" />
           ) : (
             <div
               className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-xs font-semibold text-white"

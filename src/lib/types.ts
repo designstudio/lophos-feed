@@ -9,19 +9,23 @@ export interface ArticleSection {
   body: string
 }
 
-export interface NewsItem {
+export interface FeedItem {
   id: string
   topic: string          // tópico original do artigo (ex: "anime")
   displayTopic?: string  // tópico do usuário que fez o match (ex: "música")
   title: string
   summary: string         // intro paragraph — used in feed cards
-  sections?: ArticleSection[]  // structured sections — used in article page
-  conclusion?: string     // "O que esperar" / "Próximos passos"
   sources: NewsSource[]
   imageUrl?: string
-  videoUrl?: string      // YouTube/Vimeo URL extraída do RSS
+  coverageImages?: string[] // image URLs only; no Tavily article content in the feed
   publishedAt: string
   cachedAt: string
+}
+
+export interface NewsItem extends FeedItem {
+  sections?: ArticleSection[]  // structured sections — used in article page
+  conclusion?: string     // "O que esperar" / "Próximos passos"
+  videoUrl?: string      // YouTube/Vimeo URL extraída do RSS
   matchedTopics?: string[]  // keywords geradas pelo Mistral para matching com tópicos do usuário
   tavilyRaw?: { url: string; title: string; content: string; image?: string }[]  // original Tavily results
 }

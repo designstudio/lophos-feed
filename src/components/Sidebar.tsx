@@ -22,7 +22,6 @@ import { IconFeed } from '@/components/icons'
 import { LophosLogo } from '@/components/LophosLogo'
 import { SearchModal } from '@/components/SearchModal'
 import { Tooltip } from '@/components/Tooltip'
-import { SettingsModal } from './sidebar/SettingsModal'
 import { UserMenu } from './sidebar/UserMenu'
 import { CollapsedUserMenu } from './sidebar/CollapsedUserMenu'
 
@@ -45,7 +44,6 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const router = useRouter()
   const [collapsed, setCollapsed] = useState<boolean | null>(null)
   const [mounted, setMounted] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
   const [userTopics, setUserTopics] = useState<string[]>([])
@@ -98,12 +96,13 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('sidebar_collapsed') === 'true'
+      const stored = localStorage.getItem('sidebar_collapsed_v2')
+      const saved = stored === null ? true : stored === 'true'
       setCollapsed(saved)
       lastCollapsedRef.current = saved
     } catch {
-      setCollapsed(false)
-      lastCollapsedRef.current = false
+      setCollapsed(true)
+      lastCollapsedRef.current = true
     }
     setMounted(true)
   }, [])
@@ -113,15 +112,9 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     if (lastCollapsedRef.current === collapsed) return
 
     lastCollapsedRef.current = collapsed
-    localStorage.setItem('sidebar_collapsed', String(collapsed))
+    localStorage.setItem('sidebar_collapsed_v2', String(collapsed))
     window.dispatchEvent(new CustomEvent('sidebar:toggle', { detail: { collapsed } }))
   }, [collapsed, mounted])
-
-  useEffect(() => {
-    if (path === '/settings') {
-      setShowSettings(true)
-    }
-  }, [path])
 
   useEffect(() => {
     const handlePointerDown = (event: MouseEvent) => {
@@ -185,9 +178,9 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const isCollapsed = collapsed ?? true
   const isReady = collapsed !== null
   const sidebarTransition = 'width 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease'
-  let resolvedWidth = 'var(--sidebar-width, 3.5rem)'
+  let resolvedWidth = 'var(--sidebar-width, 5rem)'
   if (collapsed !== null) {
-    resolvedWidth = isCollapsed ? '3.5rem' : '16.1rem'
+    resolvedWidth = isCollapsed ? '5rem' : '17rem'
   }
 
   const resetThreadMenu = () => {
@@ -414,12 +407,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
     <div>
       {!isReady && (
         <aside
-          className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border shadow-[0_8px_28px_rgba(17,17,17,0.035)]"
+          className="app-navigation-rail flex flex-shrink-0 flex-col overflow-hidden"
+          data-collapsed="true"
           style={{
             width: resolvedWidth,
-            height: 'calc(100dvh - 2rem)',
+            height: '100dvh',
             transition: 'none',
-            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
           }}
         >
           <div className="h-14 flex items-center justify-center border-b border-border">
@@ -437,24 +430,24 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
       )}
 
       <aside
-        className="my-4 ml-4 mr-2 flex flex-shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-border shadow-[0_8px_28px_rgba(17,17,17,0.035)]"
+        className="app-navigation-rail flex flex-shrink-0 flex-col overflow-hidden"
+        data-collapsed={collapsed ? 'true' : 'false'}
         style={{
           width: resolvedWidth,
-          height: 'calc(100dvh - 2rem)',
+          height: '100dvh',
           opacity: isReady ? 1 : 0,
           pointerEvents: isReady ? 'auto' : 'none',
           transition: sidebarTransition,
-          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 20%, transparent)',
         }}
       >
-        <div className="flex items-center px-3 mb-6 flex-shrink-0" style={{ minHeight: '2.5rem', paddingTop: '0.75rem' }}>
+        <div className="flex items-center px-4 mb-10 flex-shrink-0" style={{ minHeight: '4.75rem', paddingTop: '0.75rem' }}>
           <Tooltip content="Expandir menu" side="right" disabled={!collapsed}>
             <div
               className={cn('flex-shrink-0 relative', collapsed ? 'group cursor-pointer' : '')}
               onClick={collapsed ? toggle : undefined}
             >
               <div className={collapsed ? 'group-hover:opacity-0 transition-opacity' : ''}>
-                <LophosLogo size={28} />
+                <LophosLogo size={collapsed ? 48 : 30} />
               </div>
               {collapsed && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -497,10 +490,11 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           </Tooltip>
         </div>
 
-        <nav className="flex flex-col gap-0.5 flex-1 min-h-0 px-2">
+        <nav className="flex flex-col gap-2 flex-1 min-h-0 px-3">
           <Tooltip content="Meu feed" side="right" disabled={!collapsed} className="w-full">
             <Link
               href="/feed"
+              aria-current={path === '/feed' ? 'page' : undefined}
               className={cn(
                 'flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
                 path === '/feed' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
@@ -524,6 +518,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           <Tooltip content="Minhas curtidas" side="right" disabled={!collapsed} className="w-full">
             <Link
               href="/favorites"
+              aria-current={path === '/favorites' ? 'page' : undefined}
               className={cn(
                 'flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
                 path === '/favorites' ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
@@ -635,23 +630,13 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           )}
         </nav>
 
-        <div className="border-t border-border pt-3 px-2 pb-5 flex-shrink-0">
+        <div className={cn('pt-3 px-3 pb-5 flex-shrink-0', !collapsed && 'border-t border-border')}>
           {collapsed
-            ? <CollapsedUserMenu onOpenSettings={() => setShowSettings(true)} />
-            : <UserMenu onOpenSettings={() => setShowSettings(true)} />
+            ? <CollapsedUserMenu onOpenSettings={() => router.push('/settings')} />
+            : <UserMenu onOpenSettings={() => router.push('/settings')} />
           }
         </div>
       </aside>
-
-      {showSettings && mounted && createPortal(
-        <SettingsModal
-          onClose={() => {
-            setShowSettings(false)
-            if (path === '/settings') router.push('/feed')
-          }}
-        />,
-        document.body
-      )}
 
       {showSearch && mounted && createPortal(
         <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} userTopics={userTopics} />,

@@ -1,40 +1,48 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { Settings01 as Settings, X as CloseCircle, User03 as UserRounded, Sun, MoonStar, Monitor02 } from '@untitledui/icons'
+import { Sun, MoonStar, Monitor02 } from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 import { AccentPicker } from './AccentPicker'
-import { ACCENT_COLORS, WIDGET_OPTIONS, applyTheme, applyAccent } from './utils'
+import { WIDGET_OPTIONS, applyTheme, applyAccent } from './utils'
 
-type Tab = 'geral' | 'widgets' | 'conta'
-
-export function SettingsModal({ onClose }: { onClose: () => void }) {
+export function SettingsPageContent() {
   const { user } = useUser()
   const clerk = useClerk()
   const { triggerRefresh } = useFeedContext()
-  const [tab, setTab] = useState<Tab>('geral')
-
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const passwordEnabled = user?.passwordEnabled !== false
   // Geral
-  const [theme, setTheme] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('theme') || 'light' : 'light')
-  const [accentColor, setAccentColor] = useState(() => typeof window !== 'undefined' ? localStorage.getItem('accent_color') || '#ca774b' : '#ca774b')
+  const [theme, setTheme] = useState('light')
+  const [accentColor, setAccentColor] = useState('#ca774b')
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') || 'light'
+    const savedAccent = localStorage.getItem('accent_color') || '#ca774b'
+
+    setTheme(savedTheme)
+    setAccentColor(savedAccent)
+    applyTheme(savedTheme)
+    applyAccent(savedAccent)
+  }, [])
 
   // Widgets
-  const [widgetOrder, setWidgetOrder] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return WIDGET_OPTIONS.map(w => w.id)
+  const [widgetOrder, setWidgetOrder] = useState<string[]>(() => WIDGET_OPTIONS.map(w => w.id))
+  const [activeWidgets, setActiveWidgets] = useState<string[]>(() => ['weather', ...WIDGET_OPTIONS.map(w => w.id)])
+
+  useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('lophos_widgets') || '[]') as string[]
+      const savedValue = localStorage.getItem('lophos_widgets')
+      if (!savedValue) return
+
+      const saved = JSON.parse(savedValue) as string[]
       const ordered = saved.filter(id => id !== 'weather')
       const allIds = WIDGET_OPTIONS.map(w => w.id)
-      const merged = [...ordered, ...allIds.filter(id => !ordered.includes(id))]
-      return merged
-    } catch { return WIDGET_OPTIONS.map(w => w.id) }
-  })
-  const [activeWidgets, setActiveWidgets] = useState<string[]>(() => {
-    if (typeof window === 'undefined') return ['weather', ...WIDGET_OPTIONS.map(w => w.id)]
-    try { return JSON.parse(localStorage.getItem('lophos_widgets') || JSON.stringify(['weather', ...WIDGET_OPTIONS.map(w => w.id)])) as string[] }
-    catch { return ['weather'] }
-  })
+      setWidgetOrder([...ordered, ...allIds.filter(id => !ordered.includes(id))])
+      setActiveWidgets(saved)
+    } catch {}
+  }, [])
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
 
@@ -43,6 +51,20 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [lastName, setLastName] = useState(user?.lastName || '')
   const [savingName, setSavingName] = useState(false)
   const [nameSaved, setNameSaved] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarMessage, setAvatarMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showPasswordForm, setShowPasswordForm] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [savingPassword, setSavingPassword] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+    setFirstName(user.firstName || '')
+    setLastName(user.lastName || '')
+  }, [user])
 
   // Topics
   const [topics, setTopics] = useState<string[]>([])
@@ -145,6 +167,70 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     setTimeout(() => setNameSaved(false), 2000)
   }
 
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!user || !file) return
+    if (!file.type.startsWith('image/')) {
+      setAvatarMessage({ type: 'error', text: 'Selecione um arquivo de imagem válido.' })
+      event.target.value = ''
+      return
+    }
+
+    setUploadingAvatar(true)
+    setAvatarMessage(null)
+    try {
+      await user.setProfileImage({ file })
+      await user.reload()
+      setAvatarMessage({ type: 'success', text: 'Imagem atualizada.' })
+    } catch (error) {
+      setAvatarMessage({ type: 'error', text: getClerkErrorMessage(error, 'Não foi possível atualizar a imagem.') })
+    } finally {
+      setUploadingAvatar(false)
+      event.target.value = ''
+    }
+  }
+
+  const resetPasswordForm = () => {
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+    setPasswordMessage(null)
+    setShowPasswordForm(false)
+  }
+
+  const savePassword = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!user) return
+    if (newPassword.length < 8) {
+      setPasswordMessage({ type: 'error', text: 'A nova senha deve ter pelo menos 8 caracteres.' })
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'A confirmação não corresponde à nova senha.' })
+      return
+    }
+
+    setSavingPassword(true)
+    setPasswordMessage(null)
+    const hadPassword = user.passwordEnabled
+    try {
+      await user.updatePassword({
+        newPassword,
+        currentPassword: hadPassword ? currentPassword : undefined,
+        signOutOfOtherSessions: false,
+      })
+      await user.reload()
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordMessage({ type: 'success', text: hadPassword ? 'Senha atualizada.' : 'Senha criada.' })
+    } catch (error) {
+      setPasswordMessage({ type: 'error', text: getClerkErrorMessage(error, 'Não foi possível atualizar a senha.') })
+    } finally {
+      setSavingPassword(false)
+    }
+  }
+
   const saveTopics = async () => {
     if (topics.length === 0) return
     setSavingTopics(true)
@@ -153,7 +239,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     setTopicsSaved(true)
     setTimeout(() => setTopicsSaved(false), 2000)
     triggerRefresh()
-    onClose()
   }
 
   const saveExcludedTopics = async () => {
@@ -164,269 +249,318 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     setTimeout(() => setExcludedSaved(false), 2000)
   }
 
-  const TABS = [
-    { id: 'geral' as Tab,    label: 'Geral',    icon: <Settings size={15} /> },
-    { id: 'widgets' as Tab,  label: 'Widgets',  icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.8"/></svg> },
-    { id: 'conta' as Tab,    label: 'Conta',    icon: <UserRounded size={15} /> },
-  ]
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4" style={{ animation: 'fadeIn 0.15s ease' }}>
-      <div className="absolute inset-0" onClick={onClose} style={{ backgroundColor: "#05050533", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)" }} />
-      <div className="settings-modal relative shadow-2xl flex flex-col overflow-hidden" style={{ animation: 'slideUp 0.15s ease', backgroundColor: 'var(--color-bg-primary)' }}>
+    <div className="settings-page-scroll">
+      <main className="settings-page">
+        <header className="settings-page__header">
+          <h1>Configurações</h1>
+        </header>
 
-        {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 h-14 border-b" style={{ borderColor: 'var(--color-border)' }}>
-          <h2 className="font-semibold text-ink-primary" style={{ fontSize: '18px' }}>Configurações</h2>
-          <button onClick={onClose} className="text-ink-tertiary hover:text-ink-secondary transition-colors">
-            <CloseCircle size={20} />
-          </button>
-        </div>
-
-        {/* Mobile: horizontal tab nav */}
-        <div className="flex md:hidden border-b overflow-x-auto no-scrollbar" style={{ borderColor: 'var(--color-border)' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn(
-                'flex-shrink-0 flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-all',
-                tab === t.id ? 'border-accent text-ink-primary' : 'border-transparent text-ink-tertiary'
-              )}>
-              {t.icon}{t.label}
+        <div className="settings-page__stack">
+          <section className="settings-page-card settings-account-card" aria-labelledby="settings-avatar">
+            <div className="settings-page-card__header">
+              <h2 id="settings-avatar">Avatar</h2>
+              <p>Sua imagem de perfil.</p>
+            </div>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarChange}
+              className="hidden"
+              aria-label="Selecionar nova imagem de perfil"
+            />
+            <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={!user || uploadingAvatar} className="settings-account-avatar" aria-label="Alterar avatar">
+              {user?.imageUrl
+                ? <img src={user.imageUrl} alt="" />
+                : <span>{user?.firstName?.[0] ?? '?'}</span>}
             </button>
-          ))}
-        </div>
-
-        {/* Body */}
-        <div className="flex flex-1 overflow-hidden">
-
-        {/* Desktop: left nav */}
-        <div className="hidden md:flex flex-col flex-shrink-0 pt-4 pb-4 pl-3" style={{ width: '12rem' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={cn('w-full text-left px-4 py-2 text-sm transition-colors flex items-center gap-2.5 rounded-lg mx-1',
-                tab === t.id
-                  ? 'bg-bg-secondary font-medium text-ink-primary'
-                  : 'text-ink-tertiary hover:text-ink-primary hover:bg-bg-secondary'
-              )}>
-              {t.icon}{t.label}
+            <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={!user || uploadingAvatar} className="settings-button settings-button--secondary mt-7">
+              {uploadingAvatar ? 'Enviando…' : 'Alterar imagem'}
             </button>
-          ))}
-        </div>
+            {avatarMessage && (
+              <p className={cn('settings-form-message', avatarMessage.type === 'error' && 'is-error')} role={avatarMessage.type === 'error' ? 'alert' : 'status'}>
+                {avatarMessage.text}
+              </p>
+            )}
+          </section>
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-5 md:px-7 pt-4 pb-5">
-
-            {/* GERAL */}
-            {tab === 'geral' && (
+          <section className="settings-page-card" aria-labelledby="settings-basic-information">
+            <div className="settings-page-card__header">
+              <h2 id="settings-basic-information">Informações básicas</h2>
+              <p>Seu nome, endereço de e-mail e dados de acesso.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="settings-field">
+                <span>Nome</span>
+                <input value={firstName} onChange={(event) => { setFirstName(event.target.value); setNameSaved(false) }} />
+              </label>
+              <label className="settings-field">
+                <span>Sobrenome</span>
+                <input value={lastName} onChange={(event) => { setLastName(event.target.value); setNameSaved(false) }} />
+              </label>
+            </div>
+            <label className="settings-field mt-4">
+              <span>E-mail</span>
+              <input value={user?.primaryEmailAddress?.emailAddress ?? ''} readOnly disabled />
+            </label>
+            <button type="button" onClick={saveName} disabled={savingName} className="settings-button settings-button--primary mt-5">
+              {nameSaved ? '✓ Salvo!' : savingName ? 'Salvando…' : 'Salvar'}
+            </button>
+            <div className="settings-account-action settings-account-action--password">
               <div>
-                <section className="pb-5 border-b border-border">
-                  <h3 className="text-sm font-semibold text-ink-primary mb-1">Aparência</h3>
-                  <p className="text-sm text-ink-tertiary mb-4">Escolha como o Lophos aparece para você.</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    {([
-                      { id: 'light',  label: 'Claro', icon: <Sun size={22} /> },
-                      { id: 'dark',   label: 'Escuro', icon: <MoonStar size={22} /> },
-                      { id: 'system', label: 'Sistema', icon: <Monitor02 size={22} /> },
-                    ] as { id: string; label: string; icon: React.ReactNode }[]).map(t => (
-                      <button key={t.id} onClick={() => handleTheme(t.id)}
-                        className={cn(
-                          'flex flex-col items-center gap-2 py-4 rounded-xl border-2 text-sm font-medium transition-all',
-                          theme === t.id ? 'text-ink-primary' : 'border-border text-ink-tertiary hover:text-ink-secondary'
-                        )}
-                        style={theme === t.id ? { borderColor: 'var(--color-ui-strong)', backgroundColor: 'var(--color-bg-secondary)' } : {}}>
-                        {t.icon}
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="py-5 border-b border-border">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-ink-primary">Cor de ênfase</h3>
-                    <AccentPicker value={accentColor} onChange={handleAccent} />
-                  </div>
-                </section>
-
-                <section className="py-5">
-                  <h3 className="text-sm font-semibold text-ink-primary mb-1">Tópicos de interesse</h3>
-                  <p className="text-sm text-ink-tertiary mb-3">Personalize o que aparece no seu feed.</p>
-                  <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
-                    {topics.map(t => (
-                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] bg-bg-secondary text-ink-primary">
-                        {t}
-                        <button onClick={() => { setTopics(prev => prev.filter(x => x !== t)); setTopicsSaved(false) }}
-                          className="opacity-50 hover:opacity-100 leading-none">×</button>
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <input value={custom} onChange={e => setCustom(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
-                      placeholder="Adicionar tópico..."
-                      className="flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink-primary outline-none transition-colors focus:border-border-strong" />
-                    <button onClick={() => { if (custom.trim() && !topics.includes(custom.trim())) { setTopics(p => [...p, custom.trim()]); setCustom(''); setTopicsSaved(false) } }}
-                      className="rounded-lg border border-border px-4 py-2 text-sm text-ink-secondary transition-colors hover:border-border-strong hover:text-ink-primary">
-                      Adicionar
-                    </button>
-                  </div>
-                  <button onClick={saveTopics} disabled={savingTopics}
-                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)' }}>
-                    {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
-                  </button>
-                </section>
-
-                <section className="py-5 border-t border-border">
-                  <h3 className="text-sm font-semibold text-ink-primary mb-1">Tópicos excluídos</h3>
-                  <p className="text-sm text-ink-tertiary mb-3">Artigos com esses termos não aparecerão no seu feed.</p>
-                  <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
-                    {excludedTopics.map(t => (
-                      <span key={t} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px]" style={{ background: 'rgba(239,68,68,0.12)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)' }}>
-                        {t}
-                        <button onClick={() => { setExcludedTopics(prev => prev.filter(x => x !== t)); setExcludedSaved(false) }}
-                          className="opacity-60 hover:opacity-100 leading-none">×</button>
-                      </span>
-                    ))}
-                    {excludedTopics.length === 0 && (
-                      <p className="text-sm text-ink-tertiary italic">Nenhum tópico excluído</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <input value={excludedCustom} onChange={e => setExcludedCustom(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter' && excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) { setExcludedTopics(p => [...p, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false) } }}
-                      placeholder="Ex: anime, k-pop..."
-                      className="flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm text-ink-primary outline-none transition-colors focus:border-border-strong" />
-                    <button onClick={() => { if (excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) { setExcludedTopics(p => [...p, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false) } }}
-                      className="rounded-lg border border-border px-4 py-2 text-sm text-ink-secondary transition-colors hover:border-border-strong hover:text-ink-primary">
-                      Adicionar
-                    </button>
-                  </div>
-                  <button onClick={saveExcludedTopics} disabled={savingExcluded}
-                    className="mt-3 px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)' }}>
-                    {excludedSaved ? '✓ Salvo!' : savingExcluded ? 'Salvando…' : 'Salvar exclusões'}
-                  </button>
-                </section>
+                <h3>Senha</h3>
+                <p>{passwordEnabled ? 'Altere sua senha de acesso.' : 'Crie uma senha para acessar além do login social.'}</p>
               </div>
-            )}
-
-            {/* WIDGETS */}
-            {tab === 'widgets' && (
-              <div className="py-2">
-                <p className="text-sm text-gray-500 mb-5">Ative e ordene os widgets da barra lateral. Arraste para reordenar.</p>
-
-                <div className="flex items-center gap-3 py-3 px-3 rounded-xl border border-border mb-2 opacity-50 select-none">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M5 4h6M5 8h6M5 12h6" stroke="#999" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  <span className="text-sm text-gray-900 flex-1">Clima</span>
-                  <span className="text-xs text-gray-400 px-2 py-0.5 rounded-full bg-gray-100">Sempre ativo</span>
+              {!showPasswordForm && (
+                <button type="button" onClick={() => setShowPasswordForm(true)} className="settings-button settings-button--secondary">
+                  {passwordEnabled ? 'Alterar senha' : 'Criar senha'}
+                </button>
+              )}
+            </div>
+            {showPasswordForm && (
+              <form onSubmit={savePassword} className="settings-password-form">
+                {passwordEnabled && (
+                  <label className="settings-field">
+                    <span>Senha atual</span>
+                    <input
+                      type="password"
+                      autoComplete="current-password"
+                      value={currentPassword}
+                      onChange={(event) => setCurrentPassword(event.target.value)}
+                      required
+                    />
+                  </label>
+                )}
+                <div className="settings-password-form__grid">
+                  <label className="settings-field">
+                    <span>Nova senha</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      required
+                    />
+                  </label>
+                  <label className="settings-field">
+                    <span>Confirmar nova senha</span>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      minLength={8}
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      required
+                    />
+                  </label>
                 </div>
-
-                {widgetOrder.map((id, i) => {
-                  const w = WIDGET_OPTIONS.find(x => x.id === id)
-                  if (!w) return null
-                  return (
-                    <div key={id} draggable
-                      onDragStart={() => onDragStart(i)}
-                      onDragOver={e => onDragOver(e, i)}
-                      onDrop={() => onDrop(i)}
-                      onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
-                      className={cn(
-                        'flex items-center gap-3 py-3 px-3 rounded-xl border mb-2 cursor-grab active:cursor-grabbing transition-all select-none',
-                        dragOverIdx === i && dragIdx !== i ? 'border-accent bg-accent/5 scale-[1.02]' : 'border-border hover:border-gray-200'
-                      )}>
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-300 hover:text-gray-500 transition-colors flex-shrink-0">
-                        <path d="M5 4h6M5 8h6M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
-                      <span className="text-sm text-gray-900 flex-1">{w.label}</span>
-                      <button
-                        onClick={() => toggleWidget(id)}
-                        role="switch"
-                        aria-checked={activeWidgets.includes(id)}
-                        className="relative inline-flex flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none"
-                        style={{ width: '42px', height: '24px', background: activeWidgets.includes(id) ? 'var(--color-accent)' : 'var(--color-bg-secondary)' }}
-                      >
-                        <span className={cn(
-                          'pointer-events-none inline-block rounded-full bg-white shadow-md transform transition-transform duration-200',
-                          activeWidgets.includes(id) ? 'translate-x-[18px]' : 'translate-x-0'
-                        )}
-                        style={{ width: '20px', height: '20px' }} />
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
+                {passwordMessage && (
+                  <p className={cn('settings-form-message', passwordMessage.type === 'error' && 'is-error')} role={passwordMessage.type === 'error' ? 'alert' : 'status'}>
+                    {passwordMessage.text}
+                  </p>
+                )}
+                <div className="settings-password-form__actions">
+                  <button type="submit" disabled={savingPassword} className="settings-button settings-button--primary">
+                    {savingPassword ? 'Salvando…' : passwordEnabled ? 'Salvar nova senha' : 'Criar senha'}
+                  </button>
+                  <button type="button" onClick={resetPasswordForm} disabled={savingPassword} className="settings-button settings-button--secondary">
+                    Cancelar
+                  </button>
+                </div>
+              </form>
             )}
+          </section>
 
-            {/* CONTA */}
-            {tab === 'conta' && (
+          <section className="settings-page-card" aria-labelledby="settings-appearance">
+            <div className="settings-page-card__header">
+              <h2 id="settings-appearance">Aparência</h2>
+              <p>Escolha como o Lophos aparece para você.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {([
+                { id: 'light', label: 'Claro', icon: <Sun size={22} /> },
+                { id: 'dark', label: 'Escuro', icon: <MoonStar size={22} /> },
+                { id: 'system', label: 'Sistema', icon: <Monitor02 size={22} /> },
+              ] as { id: string; label: string; icon: React.ReactNode }[]).map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => handleTheme(option.id)}
+                  aria-pressed={theme === option.id}
+                  className={cn('settings-theme-option', theme === option.id && 'is-active')}
+                >
+                  {option.icon}
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="settings-page-card" aria-labelledby="settings-accent">
+            <div className="flex items-center justify-between gap-5">
+              <div className="settings-page-card__header mb-0">
+                <h2 id="settings-accent">Cor de ênfase</h2>
+                <p>Use uma cor para ações e detalhes importantes.</p>
+              </div>
+              <AccentPicker value={accentColor} onChange={handleAccent} />
+            </div>
+          </section>
+
+          <section className="settings-page-card" aria-labelledby="settings-topics">
+            <div className="settings-page-card__header">
+              <h2 id="settings-topics">Tópicos de interesse</h2>
+              <p>Personalize as histórias que aparecem no seu feed.</p>
+            </div>
+            <div className="mb-4 flex min-h-8 flex-wrap gap-2">
+              {topics.map((topic) => (
+                <span key={topic} className="settings-topic-chip">
+                  {topic}
+                  <button
+                    type="button"
+                    onClick={() => { setTopics((current) => current.filter((item) => item !== topic)); setTopicsSaved(false) }}
+                    aria-label={`Remover ${topic}`}
+                  >×</button>
+                </span>
+              ))}
+            </div>
+            <div className="settings-inline-form">
+              <input
+                value={custom}
+                onChange={(event) => setCustom(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && custom.trim() && !topics.includes(custom.trim())) {
+                    setTopics((current) => [...current, custom.trim()]); setCustom(''); setTopicsSaved(false)
+                  }
+                }}
+                aria-label="Novo tópico de interesse"
+                placeholder="Adicionar tópico..."
+              />
+              <button
+                type="button"
+                className="settings-button settings-button--secondary"
+                onClick={() => {
+                  if (custom.trim() && !topics.includes(custom.trim())) {
+                    setTopics((current) => [...current, custom.trim()]); setCustom(''); setTopicsSaved(false)
+                  }
+                }}
+              >Adicionar</button>
+            </div>
+            <button type="button" onClick={saveTopics} disabled={savingTopics} className="settings-button settings-button--primary mt-4">
+              {topicsSaved ? '✓ Salvo!' : savingTopics ? 'Salvando…' : 'Salvar tópicos'}
+            </button>
+          </section>
+
+          <section className="settings-page-card" aria-labelledby="settings-excluded-topics">
+            <div className="settings-page-card__header">
+              <h2 id="settings-excluded-topics">Tópicos excluídos</h2>
+              <p>Artigos com esses termos não aparecerão no seu feed.</p>
+            </div>
+            <div className="mb-4 flex min-h-8 flex-wrap gap-2">
+              {excludedTopics.map((topic) => (
+                <span key={topic} className="settings-topic-chip settings-topic-chip--excluded">
+                  {topic}
+                  <button
+                    type="button"
+                    onClick={() => { setExcludedTopics((current) => current.filter((item) => item !== topic)); setExcludedSaved(false) }}
+                    aria-label={`Remover exclusão ${topic}`}
+                  >×</button>
+                </span>
+              ))}
+              {excludedTopics.length === 0 && <p className="text-sm italic text-ink-tertiary">Nenhum tópico excluído</p>}
+            </div>
+            <div className="settings-inline-form">
+              <input
+                value={excludedCustom}
+                onChange={(event) => setExcludedCustom(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) {
+                    setExcludedTopics((current) => [...current, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false)
+                  }
+                }}
+                aria-label="Novo tópico excluído"
+                placeholder="Ex: anime, k-pop..."
+              />
+              <button
+                type="button"
+                className="settings-button settings-button--secondary"
+                onClick={() => {
+                  if (excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) {
+                    setExcludedTopics((current) => [...current, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false)
+                  }
+                }}
+              >Adicionar</button>
+            </div>
+            <button type="button" onClick={saveExcludedTopics} disabled={savingExcluded} className="settings-button settings-button--primary mt-4">
+              {excludedSaved ? '✓ Salvo!' : savingExcluded ? 'Salvando…' : 'Salvar exclusões'}
+            </button>
+          </section>
+
+          <section className="settings-page-card" aria-labelledby="settings-widgets">
+            <div className="settings-page-card__header">
+              <h2 id="settings-widgets">Widgets</h2>
+              <p>Ative e ordene os widgets. Arraste os itens para reordenar.</p>
+            </div>
+            <div className="settings-widget-row is-disabled">
+              <DragHandle />
+              <span className="flex-1">Clima</span>
+              <span className="settings-status-pill">Sempre ativo</span>
+            </div>
+            {widgetOrder.map((id, index) => {
+              const widget = WIDGET_OPTIONS.find((option) => option.id === id)
+              if (!widget) return null
+              const isActive = activeWidgets.includes(id)
+              return (
+                <div
+                  key={id}
+                  draggable
+                  onDragStart={() => onDragStart(index)}
+                  onDragOver={(event) => onDragOver(event, index)}
+                  onDrop={() => onDrop(index)}
+                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null) }}
+                  className={cn('settings-widget-row', dragOverIdx === index && dragIdx !== index && 'is-drag-over')}
+                >
+                  <DragHandle />
+                  <span className="flex-1">{widget.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleWidget(id)}
+                    role="switch"
+                    aria-checked={isActive}
+                    aria-label={`${isActive ? 'Desativar' : 'Ativar'} ${widget.label}`}
+                    className={cn('settings-switch', isActive && 'is-active')}
+                  ><span /></button>
+                </div>
+              )
+            })}
+          </section>
+
+          <section className="settings-page-card" aria-labelledby="settings-delete-account">
+            <div className="settings-account-action">
               <div>
-                <div className="flex items-center gap-4 py-5 border-b border-border">
-                  <div className="relative group cursor-pointer flex-shrink-0" onClick={() => clerk.openUserProfile()}>
-                    {user?.imageUrl
-                      ? <img src={user.imageUrl} alt="" width={52} height={52} className="rounded-full" />
-                      : <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-white font-semibold text-xl" style={{ background: 'var(--color-ui-strong)' }}>{user?.firstName?.[0] ?? '?'}</div>
-                    }
-                    <div className="absolute inset-0 rounded-full bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  <div>
-                    <p className="text-[15px] font-semibold text-gray-900">{user?.fullName}</p>
-                    <p className="text-sm text-gray-500">{user?.primaryEmailAddress?.emailAddress}</p>
-                  </div>
-                </div>
-
-                <section className="py-5 border-b border-border">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Editar perfil</h3>
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1.5 block">Nome</label>
-                      <input value={firstName} onChange={e => { setFirstName(e.target.value); setNameSaved(false) }}
-                        className="w-full text-sm px-3 py-2.5 rounded-lg border border-gray-200 outline-none focus:border-gray-400 bg-white text-gray-900" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-500 mb-1.5 block">Sobrenome</label>
-                      <input value={lastName} onChange={e => { setLastName(e.target.value); setNameSaved(false) }}
-                        className="w-full text-sm px-3 py-2.5 rounded-lg border border-gray-200 outline-none focus:border-gray-400 bg-white text-gray-900" />
-                    </div>
-                  </div>
-                  <button onClick={saveName} disabled={savingName}
-                    className="px-5 py-2.5 rounded-full text-sm font-medium text-white transition-colors disabled:opacity-50"
-                    style={{ background: 'var(--color-ui-strong)' }}>
-                    {nameSaved ? '✓ Salvo!' : savingName ? 'Salvando…' : 'Salvar'}
-                  </button>
-                </section>
-
-                <div className="flex items-center justify-between py-5 border-b border-border">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900">Senha</h3>
-                    <p className="text-sm text-gray-500 mt-0.5">Altere sua senha de acesso.</p>
-                  </div>
-                  <button onClick={() => clerk.openUserProfile()}
-                    className="flex-shrink-0 px-4 py-2 rounded-full border border-gray-200 text-sm text-gray-700 hover:border-gray-400 transition-colors">
-                    Alterar senha
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between py-5">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-900">Excluir conta</h3>
-                    <p className="text-sm text-gray-500 mt-0.5">Remove permanentemente sua conta e todos os seus dados.</p>
-                  </div>
-                  <button onClick={() => clerk.openUserProfile()}
-                    className="flex-shrink-0 px-4 py-2 rounded-full border border-red-200 text-sm text-red-500 transition-colors"
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = "rgba(239,68,68,0.10)")}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = "transparent")}>
-                    Excluir
-                  </button>
-                </div>
+                <h2 id="settings-delete-account">Excluir conta</h2>
+                <p>Remove permanentemente sua conta e todos os seus dados.</p>
               </div>
-            )}
-
-          </div>
+              <button type="button" onClick={() => clerk.openUserProfile()} className="settings-button settings-button--danger">Excluir conta</button>
+            </div>
+          </section>
         </div>
-        </div>
-      </div>
+      </main>
     </div>
   )
+}
+
+function DragHandle() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M5 4h6M5 8h6M5 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function getClerkErrorMessage(error: unknown, fallback: string) {
+  if (typeof error !== 'object' || error === null) return fallback
+  const clerkError = error as { errors?: Array<{ longMessage?: string; message?: string }>; message?: string }
+  return clerkError.errors?.[0]?.longMessage || clerkError.errors?.[0]?.message || clerkError.message || fallback
 }

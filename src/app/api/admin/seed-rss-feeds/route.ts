@@ -10,15 +10,11 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 const TECH_FEEDS = [
   { url: 'https://rss.tecmundo.com.br/feed', name: 'TecMundo', topics: ['tecnologia', 'gadgets'], language: 'pt' },
   { url: 'https://www.tudocelular.com/feed/', name: 'Tudo Celular', topics: ['tecnologia', 'mobile'], language: 'pt' },
-  { url: 'https://www.nextpit.com/feed', name: 'NextPit', topics: ['tecnologia', 'mobile', 'gadgets'], language: 'pt' },
   { url: 'https://tecnoblog.net/feed/', name: 'TecnoBlog', topics: ['tecnologia', 'gadgets'], language: 'pt' },
   { url: 'https://feeds.feedburner.com/canaltechbr', name: 'CanalTech', topics: ['tecnologia', 'gadgets'], language: 'pt' },
   { url: 'https://olhardigital.com.br/feed/', name: 'Olhar Digital', topics: ['tecnologia'], language: 'pt' },
   { url: 'https://www.theverge.com/rss/index.xml', name: 'The Verge', topics: ['tecnologia', 'gadgets'], language: 'en' },
-  { url: 'https://www.engadget.com/rss.xml', name: 'Engadget', topics: ['tecnologia', 'gadgets'], language: 'en' },
-  { url: 'https://arstechnica.com/feed/', name: 'Ars Technica', topics: ['tecnologia'], language: 'en' },
   { url: 'https://www.androidauthority.com/feed/', name: 'Android Authority', topics: ['tecnologia', 'mobile'], language: 'en' },
-  { url: 'https://feeds.feedburner.com/TechCrunch/', name: 'TechCrunch', topics: ['tecnologia', 'startup'], language: 'en' },
   { url: 'https://feeds.feedburner.com/ign/tech-articles', name: 'IGN Tech', topics: ['tecnologia', 'gadgets'], language: 'en' },
 ]
 

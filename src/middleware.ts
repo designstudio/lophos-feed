@@ -17,10 +17,10 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next()
   }
 
-  // This app does not use Server Actions or page-level POST handlers.
-  // Reject non-GET page requests early so malformed bot/proxy traffic
-  // cannot reach Next's internal action/form parser.
-  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+  // Reject ordinary non-GET page requests early, while preserving the
+  // App Router protocol used by legitimate Server Actions.
+  const isServerAction = req.method === 'POST' && req.headers.has('next-action')
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !isServerAction) {
     return new NextResponse('Method Not Allowed', {
       status: 405,
       headers: {

@@ -1,75 +1,199 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { RightSidebar } from '@/components/RightSidebar'
+import dynamic from 'next/dynamic'
 import { NewsCard } from '@/components/NewsCard'
 import { LophosLogo } from '@/components/LophosLogo'
 import { SkeletonBlock } from '@/components/SkeletonCard'
 import { IconFeed as Feed } from '@/components/icons'
 import { Settings04 as Tuning2 } from '@untitledui/icons'
-import Lottie from 'lottie-react'
-import blogAnimation from '@/lib/animations/blog.json'
-import { NewsItem } from '@/lib/types'
+import { FeedItem } from '@/lib/types'
 import { useFeedContext } from '@/components/FeedContext'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@clerk/nextjs'
+import { FEED_CACHE_MAX_ITEMS, FEED_CACHE_VERSION } from '@/lib/feed-pagination-config'
 
 const toTitleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 
+const FeedColdStartAnimation = dynamic(
+  () => import('@/components/FeedColdStartAnimation'),
+  { ssr: false },
+)
+
+const FEED_CACHE_KEY = 'lophos_feed_cache'
+const FEED_CACHE_TTL = 5 * 60 * 1000
+
+type FeedCache = {
+  version: typeof FEED_CACHE_VERSION
+  items: FeedItem[]
+  timestamp: number
+  days: number
+  nextCursor: string | null
+  hasMore: boolean
+  topics: string[]
+  activeFilter: string | null
+}
+
+function readFeedCache(expectedDays: number): FeedCache | null {
+  const serialized = sessionStorage.getItem(FEED_CACHE_KEY)
+  if (!serialized) return null
+
+  try {
+    const cache = JSON.parse(serialized) as Partial<FeedCache>
+    const isCurrent = cache.version === FEED_CACHE_VERSION
+      && typeof cache.timestamp === 'number'
+      && Date.now() - cache.timestamp < FEED_CACHE_TTL
+      && cache.days === expectedDays
+      && Array.isArray(cache.items)
+      && cache.items.length > 0
+      && cache.items.length <= FEED_CACHE_MAX_ITEMS
+      && (typeof cache.nextCursor === 'string' || cache.nextCursor === null)
+      && typeof cache.hasMore === 'boolean'
+      && Array.isArray(cache.topics)
+      && cache.topics.every((topic) => typeof topic === 'string')
+      && (typeof cache.activeFilter === 'string' || cache.activeFilter === null)
+
+    if (isCurrent) return cache as FeedCache
+  } catch {}
+
+  sessionStorage.removeItem(FEED_CACHE_KEY)
+  return null
+}
+
+function writeFeedCache(cache: Omit<FeedCache, 'version' | 'timestamp'>) {
+  // Keep unlimited navigation in memory, but retain only the first four pages as
+  // a coherent restorable checkpoint. Once the session passes that point, the
+  // existing checkpoint remains valid instead of pairing truncated items with a
+  // cursor from a much later page.
+  if (cache.items.length === 0 || cache.items.length > FEED_CACHE_MAX_ITEMS) return
+
+  try {
+    sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
+      ...cache,
+      version: FEED_CACHE_VERSION,
+      timestamp: Date.now(),
+    } satisfies FeedCache))
+  } catch {}
+}
+
+function mergeFeedItems(current: FeedItem[], incoming: FeedItem[], prepend = false) {
+  const ordered = prepend ? [...incoming, ...current] : [...current, ...incoming]
+  const byId = new Map<string, FeedItem>()
+
+  for (const item of ordered) {
+    const existing = byId.get(item.id)
+    if (!existing) {
+      byId.set(item.id, item)
+    } else if (!existing.imageUrl && item.imageUrl) {
+      byId.set(item.id, { ...existing, ...item })
+    }
+  }
+
+  return Array.from(byId.values())
+}
+
+type FeedPageResponse = {
+  items: FeedItem[]
+  topics: string[]
+  nextCursor: string | null
+  hasMore: boolean
+  coldStart: boolean
+}
+
+async function requestFeedPage({
+  days,
+  cursor,
+  force,
+  signal,
+}: {
+  days: number
+  cursor?: string | null
+  force?: boolean
+  signal: AbortSignal
+}): Promise<FeedPageResponse> {
+  const response = await fetch('/api/feed', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      topics: [],
+      forceRefresh: Boolean(force),
+      days,
+      ...(cursor ? { cursor } : {}),
+    }),
+    signal,
+  })
+
+  if (!response.ok) {
+    let message = 'Erro ao carregar feed.'
+    try {
+      const data = await response.json()
+      if (typeof data?.error === 'string') message = data.error
+    } catch {}
+    throw new Error(message)
+  }
+  if (!response.body) throw new Error('Resposta vazia ao carregar feed.')
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  const result: FeedPageResponse = {
+    items: [],
+    topics: [],
+    nextCursor: null,
+    hasMore: false,
+    coldStart: false,
+  }
+  let buffer = ''
+
+  const consumeLine = (line: string) => {
+    if (!line.trim()) return
+    const chunk = JSON.parse(line)
+    if (chunk.error) throw new Error(typeof chunk.error === 'string' ? chunk.error : 'Erro ao carregar feed.')
+    if (Array.isArray(chunk.topics)) result.topics = chunk.topics
+    if (Array.isArray(chunk.items)) result.items.push(...chunk.items)
+    if (chunk.coldStart) result.coldStart = true
+    if (typeof chunk.hasMore === 'boolean') result.hasMore = chunk.hasMore
+    if (typeof chunk.nextCursor === 'string' || chunk.nextCursor === null) {
+      result.nextCursor = chunk.nextCursor
+    }
+  }
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) consumeLine(line)
+  }
+  buffer += decoder.decode()
+  if (buffer.trim()) consumeLine(buffer)
+
+  return result
+}
+
 function FeedBlock({ items, blockIndex, reactions, fadingOut, onReactionChange }: {
-  items: NewsItem[]
+  items: FeedItem[]
   blockIndex: number
   reactions: Record<string, 'like' | 'dislike'>
   fadingOut: Set<string>
   onReactionChange: (id: string, r: 'like' | 'dislike' | null) => void
 }) {
-  const posInCycle = blockIndex % 3
-
-  if (posInCycle !== 1) {
-    const variant = posInCycle === 2 ? 'full-right' : 'full-left'
-    return (
-      <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant={variant} initialReaction={reactions[items[0].id] ?? null} fadingOut={fadingOut.has(items[0].id)} onReactionChange={onReactionChange} />
-      </div>
-    )
-  }
-
-  if (items.length === 1) {
-    return (
-      <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant="card" solo initialReaction={reactions[items[0].id] ?? null} fadingOut={fadingOut.has(items[0].id)} onReactionChange={onReactionChange} />
-      </div>
-    )
-  }
-
   return (
-    <div className="md:py-6 md:border-b md:border-border">
-      <div className={cn('grid gap-0', items.length === 2 ? 'grid-cols-1 md:grid-cols-2 md:gap-8' : 'grid-cols-1 md:grid-cols-3 md:gap-4')}>
-        {items.map(item => <NewsCard key={item.id} item={item} variant="card" initialReaction={reactions[item.id] ?? null} fadingOut={fadingOut.has(item.id)} onReactionChange={onReactionChange} />)}
-      </div>
+    <div className="editorial-card-stack" data-feed-block={blockIndex}>
+      {items.map((item) => (
+        <NewsCard
+          key={item.id}
+          item={item}
+          initialReaction={reactions[item.id] ?? null}
+          fadingOut={fadingOut.has(item.id)}
+          onReactionChange={onReactionChange}
+        />
+      ))}
     </div>
   )
 }
 
-function splitIntoBlocks(items: NewsItem[]): { items: NewsItem[]; isFull: boolean }[] {
-  const blocks: { items: NewsItem[]; isFull: boolean }[] = []
-  let i = 0
-  // Strict cycle: full, trio(1-3 cards), full, full, trio, full...
-  // Position in cycle: 0=full, 1=trio, 2=full → repeat
-  while (i < items.length) {
-    const pos = blocks.length % 3
-
-    if (pos === 1) {
-      // Trio slot — take up to 3, minimum 1
-      const count = Math.min(3, items.length - i)
-      blocks.push({ items: items.slice(i, i + count), isFull: false })
-      i += count
-    } else {
-      // Full slot
-      blocks.push({ items: [items[i]], isFull: true })
-      i++
-    }
-  }
-  return blocks
+function splitIntoBlocks(items: FeedItem[]): { items: FeedItem[]; isFull: boolean }[] {
+  return items.map((item) => ({ items: [item], isFull: true }))
 }
 
 function TopicsDropdown({ topics, activeFilter, onSelect }: {
@@ -92,10 +216,10 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
         type="button"
         onClick={() => setOpen(v => !v)}
         className={cn(
-          'flex items-center gap-1.5 text-[0.875rem] px-4 h-[60px] border-b-2 transition-all font-medium',
+          'editorial-filter flex items-center gap-1.5 transition-colors',
           activeFilter
-            ? 'border-ink-primary text-ink-primary'
-            : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
+            ? 'is-active'
+            : 'text-ink-tertiary hover:text-ink-primary'
         )}
       >
         {activeFilter ?? 'Tópicos'}
@@ -164,10 +288,10 @@ function TimeFilterDropdown({ days, onChange }: { days: number; onChange: (d: nu
         type="button"
         onClick={() => setOpen(v => !v)}
         className={cn(
-          'flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-all spring-press',
+          'editorial-filter flex items-center gap-1.5 transition-colors spring-press',
           !isDefault
-            ? 'border-ink-primary text-ink-primary bg-ink-primary/5'
-            : 'border-border text-ink-tertiary hover:text-ink-secondary hover:border-border-strong'
+            ? 'is-active'
+            : 'text-ink-tertiary hover:text-ink-primary'
         )}
       >
         <Tuning2 size={15} />
@@ -206,38 +330,45 @@ function TimeFilterDropdown({ days, onChange }: { days: number; onChange: (d: nu
 export default function FeedPage() {
   const { isLoaded, isSignedIn } = useAuth()
   const { setRefreshing, onRefreshCallback, updatesReady, setUpdatesReady, onApplyUpdatesCallback } = useFeedContext()
-  const [items, setItems]         = useState<NewsItem[]>([])
+  const [items, setItems]         = useState<FeedItem[]>([])
   const [topics, setTopics]       = useState<string[]>([])
   const [streaming, setStreamingLocal] = useState(true)
   const [initialized, setInitialized] = useState(false)
   const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
   const [hasData, setHasData]     = useState(false)
   const [error, setError]         = useState<string | null>(null)
-  const [pendingItems, setPendingItems] = useState<NewsItem[]>([])
+  const [pendingItems, setPendingItems] = useState<FeedItem[]>([])
   const [coldStartLoading, setColdStartLoading] = useState(false)
   const [reactions, setReactions] = useState<Record<string, 'like' | 'dislike'>>({})
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [timeDays, setTimeDays] = useState(2)
   const handleTimeDaysChange = (d: number) => {
+    sessionStorage.removeItem(FEED_CACHE_KEY)
+    setActiveFilter(null)
     setTimeDays(d)
     timeDaysRef.current = d
   }
-  const [visibleBlocks, setVisibleBlocks] = useState(4)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const sentinelRef  = useRef<HTMLDivElement>(null)
   const abortRef     = useRef<AbortController | null>(null)
+  const paginationAbortRef = useRef<AbortController | null>(null)
   const scrollRef    = useRef<HTMLDivElement>(null)
-  const initialCacheAppliedRef = useRef(false)
-  const pendingRef = useRef<NewsItem[]>([])
-  const coldStartRef = useRef(false)
+  const pendingRef = useRef<FeedItem[]>([])
   const timeDaysRef = useRef(2)
   const timeDaysMountedRef = useRef(false)
+  const nextCursorRef = useRef<string | null>(null)
+  const hasMoreRef = useRef(false)
+  const loadingMoreRef = useRef(false)
 
   const coldStartMessages = [
     'O Lophos está preparando o seu feed!',
     'Pode levar alguns minutos para você começar a ver os resultados.',
   ]
 
-  const setPending = (next: NewsItem[] | ((prev: NewsItem[]) => NewsItem[])) => {
+  const setPending = (next: FeedItem[] | ((prev: FeedItem[]) => FeedItem[])) => {
     setPendingItems(prev => {
       const resolved = typeof next === 'function' ? next(prev) : next
       pendingRef.current = resolved
@@ -247,21 +378,7 @@ export default function FeedPage() {
 
   const applyPendingUpdates = useCallback(() => {
     if (pendingItems.length === 0) return
-    setItems(prev => {
-      const byId = new Map(prev.map(x => [x.id, x]))
-      for (const x of pendingItems) {
-        const existing = byId.get(x.id)
-        if (!existing || (!existing.imageUrl && x.imageUrl)) {
-          byId.set(x.id, x)
-        }
-      }
-      const merged = Array.from(byId.values())
-      merged.sort((a, b) =>
-        new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
-        new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
-      )
-      return merged
-    })
+    setItems(prev => mergeFeedItems(prev, pendingItems, true))
     setPending([])
     setUpdatesReady(false)
   }, [pendingItems, setUpdatesReady, setPending, setItems])
@@ -271,31 +388,32 @@ export default function FeedPage() {
   }, [onApplyUpdatesCallback, applyPendingUpdates])
 
   const setColdStart = (v: boolean) => {
-    coldStartRef.current = v
     setColdStartLoading(v)
   }
-
-  const FEED_CACHE_KEY = 'lophos_feed_cache'
-  const FEED_CACHE_TTL = 5 * 60 * 1000 // 5 minutos
 
   const fetchFeed = useCallback(async (force = false) => {
     // Serve do cache se não forçado e o cache ainda é válido
     if (!force) {
       try {
-        const cached = sessionStorage.getItem(FEED_CACHE_KEY)
+        const cached = readFeedCache(timeDaysRef.current)
         if (cached) {
-          const { items: cachedItems, timestamp, days } = JSON.parse(cached)
-          if (Date.now() - timestamp < FEED_CACHE_TTL && days === timeDaysRef.current && cachedItems?.length > 0) {
-            setItems(cachedItems)
-            setHasData(true)
-            setInitialized(true)
-            return
-          }
+          setItems(cached.items)
+          setTopics(cached.topics)
+          setActiveFilter(cached.activeFilter)
+          setNextCursor(cached.nextCursor)
+          nextCursorRef.current = cached.nextCursor
+          setHasMore(cached.hasMore)
+          hasMoreRef.current = cached.hasMore
+          setHasData(true)
+          setInitialized(true)
+          setStreaming(false)
+          return
         }
       } catch {}
     }
 
     abortRef.current?.abort()
+    paginationAbortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
     setStreaming(true)
@@ -303,131 +421,94 @@ export default function FeedPage() {
     setUpdatesReady(false)
     setPending([])
     setColdStart(false)
-    initialCacheAppliedRef.current = false
-    if (force) { setItems([]); setHasData(false) }
-
-    const allStreamedItems: NewsItem[] = []
+    setLoadMoreError(null)
+    setNextCursor(null)
+    nextCursorRef.current = null
+    setHasMore(false)
+    hasMoreRef.current = false
+    if (force) {
+      setItems([])
+      setHasData(false)
+      sessionStorage.removeItem(FEED_CACHE_KEY)
+    }
 
     try {
-      const res = await fetch('/api/feed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topics: [], forceRefresh: force, days: timeDaysRef.current }),
+      let page = await requestFeedPage({
+        days: timeDaysRef.current,
+        force,
         signal: ctrl.signal,
       })
-      if (!res.ok) {
-        let msg = 'Erro ao carregar feed.'
-        try {
-          const data = await res.json()
-          if (typeof data?.error === 'string') msg = data.error
-        } catch {}
-        setError(msg)
-        return
+      const firstPageTopics = page.topics
+      for (let attempt = 0; attempt < 3 && page.items.length === 0 && page.hasMore && page.nextCursor; attempt += 1) {
+        page = await requestFeedPage({
+          days: timeDaysRef.current,
+          cursor: page.nextCursor,
+          signal: ctrl.signal,
+        })
       }
-      if (!res.body) return
-      const reader  = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-        for (const line of lines) {
-          if (!line.trim()) continue
-          try {
-            const chunk = JSON.parse(line)
-            if (chunk.topics) { setTopics(chunk.topics); continue }
-            if (chunk.error) {
-              console.error('[feed] stream chunk error:', chunk)
-              setError(typeof chunk.error === 'string' ? chunk.error : 'Erro ao carregar feed.')
-              setColdStart(false)
-              continue
-            }
-            if (chunk.coldStart) {
-              setError(null)
-              setColdStart(true)
-              continue
-            }
-            if (chunk.refreshComplete) {
-              setStreaming(false)
-              if (coldStartRef.current) {
-                if (pendingRef.current.length > 0) {
-                  setItems(pendingRef.current)
-                  setHasData(true)
-                }
-                setPending([])
-                setColdStart(false)
-              } else if (pendingRef.current.length > 0) {
-                setUpdatesReady(true)
-              }
-              continue
-            }
-            if (chunk.items?.length) {
-              for (const item of chunk.items as NewsItem[]) allStreamedItems.push(item)
-              if (!initialCacheAppliedRef.current && !coldStartLoading) {
-                setItems(prev => {
-                  const byId = new Map(prev.map(x => [x.id, x]))
-                  for (const x of chunk.items as NewsItem[]) {
-                    const existing = byId.get(x.id)
-                    if (!existing || (!existing.imageUrl && x.imageUrl)) {
-                      byId.set(x.id, x)
-                    }
-                  }
-                  const merged = Array.from(byId.values())
-                  merged.sort((a, b) =>
-                    new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
-                    new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
-                  )
-                  return merged
-                })
-                setHasData(true)
-                setError(null)
-                initialCacheAppliedRef.current = true
-              } else {
-                setPending(prev => {
-                  const byId = new Map(prev.map(x => [x.id, x]))
-                  for (const x of chunk.items as NewsItem[]) {
-                    const existing = byId.get(x.id)
-                    if (!existing || (!existing.imageUrl && x.imageUrl)) {
-                      byId.set(x.id, x)
-                    }
-                  }
-                  const merged = Array.from(byId.values())
-                  merged.sort((a, b) =>
-                    new Date(b.cachedAt ?? b.publishedAt ?? 0).getTime() -
-                    new Date(a.cachedAt ?? a.publishedAt ?? 0).getTime()
-                  )
-                  return merged
-                })
-              }
-            }
-          } catch (parseError) {
-            console.error('[feed] failed to parse stream chunk:', parseError, line)
-          }
-        }
-      }
+      if (page.topics.length === 0) page.topics = firstPageTopics
+      if (page.topics.length > 0) setTopics(page.topics)
+      setItems(page.items)
+      setHasData(page.items.length > 0)
+      setColdStart(page.coldStart)
+      setNextCursor(page.nextCursor)
+      nextCursorRef.current = page.nextCursor
+      setHasMore(page.hasMore)
+      hasMoreRef.current = page.hasMore
+      setError(null)
     } catch (e: any) {
       if (e?.name !== 'AbortError') {
         console.error('[feed] request failed:', e)
-        setError('Erro ao carregar feed.')
+        setError(e instanceof Error ? e.message : 'Erro ao carregar feed.')
       }
     } finally {
-      if (allStreamedItems.length > 0) {
-        try {
-          sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
-            items: allStreamedItems,
-            timestamp: Date.now(),
-            days: timeDaysRef.current,
-          }))
-        } catch {}
-      }
       setStreaming(false)
       setInitialized(true)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const loadNextPage = useCallback(async () => {
+    if (loadingMoreRef.current || !hasMoreRef.current || !nextCursorRef.current) return
+
+    loadingMoreRef.current = true
+    setLoadingMore(true)
+    setLoadMoreError(null)
+    const ctrl = new AbortController()
+    paginationAbortRef.current = ctrl
+
+    try {
+      let cursor: string | null = nextCursorRef.current
+      let page: FeedPageResponse | null = null
+
+      // A page can become empty after the existing stale-launch protection. In
+      // that rare case, advance over at most three candidate pages in one request
+      // cycle so the sentinel cannot get stuck without visible cards.
+      for (let attempt = 0; attempt < 3 && cursor; attempt += 1) {
+        page = await requestFeedPage({
+          days: timeDaysRef.current,
+          cursor,
+          signal: ctrl.signal,
+        })
+        cursor = page.nextCursor
+        if (page.items.length > 0 || !page.hasMore) break
+      }
+
+      if (!page) return
+      setItems(prev => mergeFeedItems(prev, page.items))
+      setNextCursor(page.nextCursor)
+      nextCursorRef.current = page.nextCursor
+      setHasMore(page.hasMore)
+      hasMoreRef.current = page.hasMore
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') {
+        console.error('[feed] next page failed:', e)
+        setLoadMoreError(e instanceof Error ? e.message : 'Erro ao carregar mais notícias.')
+      }
+    } finally {
+      loadingMoreRef.current = false
+      setLoadingMore(false)
+    }
   }, [])
 
   // Register fetchFeed with the shared layout so Sidebar can trigger it
@@ -435,11 +516,24 @@ export default function FeedPage() {
     onRefreshCallback.current = () => fetchFeed(true)
   }, [fetchFeed])
 
+  useEffect(() => {
+    if (!initialized || items.length === 0) return
+    writeFeedCache({
+      items,
+      days: timeDays,
+      nextCursor,
+      hasMore,
+      topics,
+      activeFilter,
+    })
+  }, [activeFilter, hasMore, initialized, items, nextCursor, timeDays, topics])
+
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
 
   useEffect(() => {
     return () => {
       abortRef.current?.abort()
+      paginationAbortRef.current?.abort()
     }
   }, [])
 
@@ -483,13 +577,7 @@ export default function FeedPage() {
         if (!res.ok) return
         const data = await res.json()
         if (data.hasUpdates && data.items?.length > 0) {
-          const newItems: NewsItem[] = data.items.map((row: any) => ({
-            id: row.id, topic: row.topic, title: row.title, summary: row.summary,
-            sections: row.sections || [], conclusion: row.conclusion || undefined,
-            sources: row.sources, imageUrl: row.image_url, videoUrl: row.video_url,
-            publishedAt: row.published_at, cachedAt: row.cached_at,
-            displayTopic: topics.find((t: string) => (row.matched_topics ?? []).includes(t)) ?? row.topic,
-          }))
+          const newItems = data.items as FeedItem[]
           setPending(newItems)
           setUpdatesReady(true)
         }
@@ -500,14 +588,14 @@ export default function FeedPage() {
 
   useEffect(() => {
     const el = sentinelRef.current
-    if (!el) return
+    if (!el || !hasMore || loadingMore || loadMoreError) return
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setVisibleBlocks(v => v + 4) },
-      { threshold: 0.1 }
+      ([entry]) => { if (entry.isIntersecting) void loadNextPage() },
+      { root: scrollRef.current, rootMargin: '700px 0px', threshold: 0.01 },
     )
     obs.observe(el)
     return () => obs.disconnect()
-  }, [hasData])
+  }, [hasData, hasMore, loadMoreError, loadingMore, loadNextPage])
 
   const [fadingOut, setFadingOut] = useState<Set<string>>(new Set())
 
@@ -537,8 +625,6 @@ export default function FeedPage() {
     : visibleItems
   const topicsInFeed  = [...new Set(items.map(i => toTitleCase(i.displayTopic ?? i.topic)))]
   const allBlocks     = splitIntoBlocks(filteredItems)
-  const shownBlocks   = allBlocks.slice(0, visibleBlocks)
-  const hasMore       = visibleBlocks < allBlocks.length
   const showSkeleton  = !hasData && streaming
   const showStreaming = streaming && !hasData && !coldStartLoading
   const showEmpty     = initialized && !hasData && !streaming && !coldStartLoading
@@ -550,102 +636,38 @@ export default function FeedPage() {
 
 
   return (
-    <div id="feed-scroll-container" ref={scrollRef} className="flex-1 overflow-y-auto min-w-0 pb-28 md:pb-0">
+    <div id="feed-scroll-container" ref={scrollRef} className="editorial-page-scroll">
+      <header className="editorial-feed-hero">
+        <LophosLogo size={30} className="mb-5 md:hidden" />
+        <h1>Em destaque no Lophos</h1>
+        <p>O que suas fontes estão publicando agora</p>
 
-        {/* ── Sticky header ── */}
-        <div className="app-header-shell">
-          <div className="app-header-inner">
-
-          {/* Mobile: title (always visible) */}
-          <div className="app-header-pill header-blur flex items-center px-4 md:hidden gap-2">
-            <LophosLogo size={28} />
-            <h1 className="text-[15px] font-semibold text-ink-primary">Meu Feed</h1>
-          </div>
-
-          {/* Desktop: title + dropdown tabs (only if has data) */}
-          {hasData && topicsInFeed.length > 0 && (
-            <div className="app-header-pill header-blur hidden md:flex items-center px-5">
-              <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
-              <div className="flex flex-1 justify-center">
-                <button
-                  type="button"
-                  onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                  className={cn(
-                    'text-[0.875rem] px-4 h-[60px] border-b-2 transition-all font-medium',
-                    activeFilter === null
-                      ? 'border-ink-primary text-ink-primary'
-                      : 'border-transparent text-ink-tertiary hover:text-ink-secondary'
-                  )}
-                >
-                  Últimas notícias
-                </button>
-                <TopicsDropdown
-                  topics={topicsInFeed}
-                  activeFilter={activeFilter}
-                  onSelect={(t) => { setActiveFilter(t); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                />
-              </div>
-              <div style={{ width: '12rem' }} className="flex justify-end">
-                <TimeFilterDropdown days={timeDays} onChange={handleTimeDaysChange} />
-              </div>
-            </div>
-          )}
-
-          {/* Desktop: skeleton while loading, title only when no data */}
-          {(!hasData || topicsInFeed.length === 0) && (
-            <div className="app-header-pill header-blur hidden md:flex items-center px-5">
-              <h1 className="text-[15px] font-semibold text-ink-primary flex-shrink-0" style={{ width: '12rem' }}>Meu Feed</h1>
-              {streaming && (
-                <>
-                  <div className="flex flex-1 justify-center gap-2">
-                    <div className="skeleton h-4 w-28 rounded-full" />
-                    <div className="skeleton h-4 w-20 rounded-full" />
-                  </div>
-                  <div style={{ width: '12rem' }} className="flex justify-end">
-                    <div className="skeleton h-7 w-24 rounded-lg" />
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-          </div>
-        </div>
-
-        {/* Mobile: horizontal scrollable tabs — fora do sticky */}
         {hasData && topicsInFeed.length > 0 && (
-          <div className="flex md:hidden overflow-x-auto no-scrollbar gap-2 px-4 pt-3"
-            style={{ WebkitOverflowScrolling: 'touch' }}>
-            {(['Últimas notícias', ...topicsInFeed] as (string | null)[]).map((t, i) => {
-              const val = i === 0 ? null : t as string
-              const active = activeFilter === val
-              return (
-                <button
-                  key={t ?? 'top'}
-                  type="button"
-                  onClick={() => { setActiveFilter(val); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
-                  className={cn(
-                    'flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all border',
-                    active
-                      ? 'bg-ink-primary text-bg-primary border-ink-primary'
-                      : 'border-border text-ink-tertiary hover:text-ink-secondary'
-                  )}
-                >
-                  {t}
-                </button>
-              )
-            })}
+          <div className="editorial-feed-controls" aria-label="Filtros do feed">
+            <button
+              type="button"
+              onClick={() => { setActiveFilter(null); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+              className={cn('editorial-filter', activeFilter === null && 'is-active')}
+            >
+              Recentes
+            </button>
+            <TopicsDropdown
+              topics={topicsInFeed}
+              activeFilter={activeFilter}
+              onSelect={(topic) => { setActiveFilter(topic); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
+            />
+            <TimeFilterDropdown days={timeDays} onChange={handleTimeDaysChange} />
           </div>
         )}
+      </header>
 
-        {/* ── Feed + Right sidebar ── */}
-        <div className="feed-layout mx-auto px-4 md:px-8">
-          <div id="feed-main-content" className="flex gap-10 pt-0 pb-24 md:py-6 md:pb-6">
-            <div className="flex-1 min-w-0">
+      <div className="editorial-feed-layout">
+        <div id="feed-main-content" className="min-w-0 pb-28 md:pb-16">
 
               {coldStartLoading && (
                 <div className="flex flex-col items-center justify-center py-24 text-center">
                   <div className="w-24 h-24 mb-6">
-                    <Lottie animationData={blogAnimation} loop autoplay />
+                    <FeedColdStartAnimation />
                   </div>
                   <div className="max-w-md">
                     {coldStartMessages.map((msg, i) => (
@@ -658,7 +680,9 @@ export default function FeedPage() {
               )}
 
               {showSkeleton && !coldStartLoading && (
-                <><SkeletonBlock /><SkeletonBlock /><SkeletonBlock /></>
+                <div className="editorial-card-stack">
+                  <SkeletonBlock /><SkeletonBlock /><SkeletonBlock />
+                </div>
               )}
 
               {showStreaming && (
@@ -692,21 +716,32 @@ export default function FeedPage() {
                 </div>
               )}
 
-              {shownBlocks.map((block, i) => (
-                <FeedBlock key={block.items[0].id} items={block.items} blockIndex={i} reactions={reactions} fadingOut={fadingOut} onReactionChange={handleReactionChange} />
-              ))}
-
-              {hasData && (
-                <div ref={sentinelRef}>
-                  {hasMore && <SkeletonBlock />}
-                </div>
-              )}
-            </div>
-
-            <RightSidebar topics={topics} />
+          <div className="editorial-card-stack">
+            {allBlocks.map((block, i) => (
+              <FeedBlock key={block.items[0].id} items={block.items} blockIndex={i} reactions={reactions} fadingOut={fadingOut} onReactionChange={handleReactionChange} />
+            ))}
+            {hasData && hasMore && !loadMoreError && (
+              <div ref={sentinelRef} aria-live="polite" aria-busy={loadingMore}>
+                <SkeletonBlock />
+              </div>
+            )}
+            {hasData && loadMoreError && (
+              <div className="flex justify-center py-6" role="status">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (loadMoreError.toLowerCase().includes('cursor')) void fetchFeed(true)
+                    else void loadNextPage()
+                  }}
+                  className="text-sm text-accent hover:underline"
+                >
+                  Não foi possível carregar mais notícias. Tentar novamente
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+    </div>
   )
 }
-

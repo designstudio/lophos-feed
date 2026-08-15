@@ -2,8 +2,15 @@ import { NextRequest } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { isLikelyStaleLaunchArticle } from '@/lib/news-preprocessing'
-import { NewsItem } from '@/lib/types'
+import { toFeedItem } from '@/lib/feed-item'
+import { FeedItem } from '@/lib/types'
 import { loadBlockedTopics } from '@/lib/topic-signals'
+import {
+  decodeFeedCursor,
+  encodeFeedCursor,
+  FeedCursorPayload,
+} from '@/lib/feed-pagination'
+import { FEED_PAGE_QUERY_SIZE, FEED_PAGE_SIZE } from '@/lib/feed-pagination-config'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -45,7 +52,27 @@ export async function POST(req: NextRequest) {
 
     const debug = req.nextUrl.searchParams.get('debug') === '1'
     const body = await req.json()
-    const days: number = body.days ?? 2
+    const requestedDays = Number(body.days ?? 2)
+    if (!Number.isInteger(requestedDays) || requestedDays < 0 || requestedDays > 365) {
+      return jsonError(400, 'Invalid feed time window')
+    }
+
+    let cursor: FeedCursorPayload | null = null
+    if (body.cursor != null) {
+      if (typeof body.cursor !== 'string' || body.cursor.length > 16_000) {
+        return jsonError(400, 'Invalid feed cursor')
+      }
+      try {
+        cursor = decodeFeedCursor(body.cursor, userId)
+      } catch (cursorError) {
+        return jsonError(400, 'Invalid or expired feed cursor', cursorError)
+      }
+      if (cursor.days !== requestedDays) {
+        return jsonError(400, 'Feed cursor does not match the requested time window')
+      }
+    }
+
+    const days = cursor?.days ?? requestedDays
     const db = getSupabaseAdmin()
 
     const encoder = new TextEncoder()
@@ -84,7 +111,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const send = async (items: NewsItem[]) => {
+    const send = async (items: FeedItem[]) => {
       if (items.length === 0) return
       await writeChunk({ items })
     }
@@ -111,8 +138,11 @@ export async function POST(req: NextRequest) {
         // for the first byte while we load user topics and query the feed RPC.
         if (!(await writeChunk({ ready: true }))) return
 
-        let topics: string[] = body.topics ?? []
-        if (topics.length === 0) {
+        let topics: string[] = cursor?.topics ?? body.topics ?? []
+        let blockedTopics: string[] = cursor?.excludedTopics ?? []
+        const snapshotAt = cursor?.snapshotAt ?? new Date().toISOString()
+
+        if (!cursor && topics.length === 0) {
           const { data, error } = await db
             .from('user_topics')
             .select('topic')
@@ -147,38 +177,56 @@ export async function POST(req: NextRequest) {
           if (!(await writeChunk({ debug: { phase: 'start' } }))) return
         }
 
-        console.log(
-          `[feed] calling get_personalized_feed with topics=${JSON.stringify(topics)}, days=${days}`,
-        )
-        const blockedTopics = await loadBlockedTopics(db, userId, topics)
+        if (!cursor) {
+          blockedTopics = await loadBlockedTopics(db, userId, topics)
+        }
         if (requestAborted) return
+        console.log(
+          `[feed] calling get_personalized_feed_page_v2 with topics=${JSON.stringify(topics)}, days=${days}, cursor=${cursor ? 'yes' : 'no'}`,
+        )
         console.log(`[feed] blocked topics=${JSON.stringify(blockedTopics)}`)
-        const { data: allArticles, error } = await db.rpc('get_personalized_feed', {
-          p_user_id: userId,
-          p_topics: topics,
-          p_days: days,
-          p_excluded_topics: blockedTopics,
-        })
+        const queryStartedAt = performance.now()
+        const { data: allArticles, error } = await db
+          .rpc('get_personalized_feed_page_v2', {
+            p_user_id: userId,
+            p_topics: topics,
+            p_days: days,
+            p_excluded_topics: blockedTopics,
+            p_snapshot_at: snapshotAt,
+            p_cursor_rank: cursor?.rank ?? null,
+            p_cursor_sort_at: cursor?.sortAt ?? null,
+            p_cursor_id: cursor?.id ?? null,
+            p_limit: FEED_PAGE_QUERY_SIZE,
+            p_liked_keywords: cursor?.likedKeywords ?? null,
+          })
+        const queryDurationMs = performance.now() - queryStartedAt
 
         if (error) {
           console.error('[feed] RPC error:', error)
           await writeChunk({
-            error: 'RPC get_personalized_feed failed',
+            error: 'RPC get_personalized_feed_page_v2 failed',
             detail: includeErrorDetails ? serializeError(error) : undefined,
           })
           await closeWriter()
           return
         }
 
-        console.log(`[feed] RPC returned ${(allArticles ?? []).length} articles`)
-        if ((allArticles ?? []).length > 0) {
+        const articleRows = Array.isArray(allArticles)
+          ? allArticles
+          : allArticles
+            ? [allArticles]
+            : []
+
+        console.log(`[feed] RPC returned ${articleRows.length} candidate articles in ${queryDurationMs.toFixed(1)}ms`)
+        if (articleRows.length > 0) {
           console.log(
-            `[feed] first article: title="${allArticles[0].title}", matched_topics=${JSON.stringify(allArticles[0].matched_topics)}`,
+            `[feed] first article: title="${articleRows[0].title}", matched_topics=${JSON.stringify(articleRows[0].matched_topics)}`,
           )
         }
 
-        const allExisting = (allArticles ?? []).map((row: any) => rowToItem(row, topics))
-        const visibleItems = allExisting.filter((item: NewsItem) => !isLikelyStaleLaunchArticle({
+        const pageRows = articleRows.slice(0, FEED_PAGE_SIZE)
+        const allExisting = pageRows.map((row: any) => toFeedItem(row, topics))
+        const visibleItems = allExisting.filter((item: FeedItem) => !isLikelyStaleLaunchArticle({
           title: item.title,
           description: item.summary,
           sourceName: item.sources?.[0]?.name || '',
@@ -194,11 +242,36 @@ export async function POST(req: NextRequest) {
           await send(visibleItems)
         }
 
-        if (visibleItems.length === 0) {
+        const hasMore = articleRows.length > FEED_PAGE_SIZE
+        const cursorRow = hasMore ? pageRows.at(-1) : null
+        const likedKeywords = cursor?.likedKeywords
+          ?? (Array.isArray(articleRows[0]?.feed_liked_keywords)
+            ? articleRows[0].feed_liked_keywords.filter((value: unknown): value is string => typeof value === 'string')
+            : [])
+        const nextCursor = cursorRow
+          ? encodeFeedCursor({
+              userId,
+              days,
+              topics,
+              excludedTopics: blockedTopics,
+              likedKeywords,
+              snapshotAt,
+              rank: cursorRow.feed_rank,
+              sortAt: cursorRow.feed_sort_at,
+              id: cursorRow.id,
+            })
+          : null
+
+        if (visibleItems.length === 0 && !hasMore && !cursor) {
           if (!(await writeChunk({ coldStart: true }))) return
         }
 
-        await writeChunk({ refreshComplete: true })
+        await writeChunk({
+          nextCursor,
+          hasMore,
+          refreshComplete: true,
+          ...(debug ? { debug: { queryDurationMs, candidateCount: articleRows.length } } : {}),
+        })
 
         console.log(`[feed] closing writer at ${new Date().toISOString()}`)
         await closeWriter()
@@ -231,26 +304,5 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('[feed] route failed:', err)
     return jsonError(500, 'Failed to load feed', err)
-  }
-}
-
-function rowToItem(row: any, userTopics?: string[]): NewsItem {
-  const matchedTopics: string[] = row.matched_topics ?? []
-  const displayTopic = userTopics?.find((t) => matchedTopics.includes(t)) ?? row.topic
-
-  return {
-    id: row.id,
-    topic: row.topic,
-    displayTopic,
-    title: row.title,
-    summary: row.summary,
-    sections: row.sections || [],
-    conclusion: row.conclusion || undefined,
-    sources: row.sources,
-    imageUrl: row.image_url,
-    videoUrl: row.video_url,
-    publishedAt: row.published_at,
-    cachedAt: row.cached_at,
-    tavilyRaw: row.tavily_raw,
   }
 }

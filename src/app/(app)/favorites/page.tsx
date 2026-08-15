@@ -5,52 +5,19 @@ import { Heart as HeartAngle } from '@untitledui/icons'
 import { NewsCard } from '@/components/NewsCard'
 import { SkeletonBlock } from '@/components/SkeletonCard'
 import { NewsItem } from '@/lib/types'
-import { cn } from '@/lib/utils'
 
 function splitIntoBlocks(items: NewsItem[]): { items: NewsItem[] }[] {
-  const blocks: { items: NewsItem[] }[] = []
-  let i = 0
-  while (i < items.length) {
-    const pos = blocks.length % 3
-    if (pos === 1) {
-      const count = Math.min(3, items.length - i)
-      blocks.push({ items: items.slice(i, i + count) })
-      i += count
-    } else {
-      blocks.push({ items: [items[i]] })
-      i++
-    }
-  }
-  return blocks
+  return items.map((item) => ({ items: [item] }))
 }
 
-function FeedBlock({ items, blockIndex, reactions, onReactionChange }: {
+function FeedBlock({ items, reactions, onReactionChange }: {
   items: NewsItem[]
-  blockIndex: number
   reactions: Record<string, 'like' | 'dislike'>
   onReactionChange: (id: string, r: 'like' | 'dislike' | null) => void
 }) {
-  const posInCycle = blockIndex % 3
-  if (posInCycle !== 1) {
-    const variant = posInCycle === 2 ? 'full-right' : 'full-left'
-    return (
-      <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant={variant} initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
-      </div>
-    )
-  }
-  if (items.length === 1) {
-    return (
-      <div className="md:py-6 md:border-b md:border-border">
-        <NewsCard item={items[0]} variant="card" solo initialReaction={reactions[items[0].id] ?? null} onReactionChange={onReactionChange} />
-      </div>
-    )
-  }
   return (
-    <div className="md:py-6 md:border-b md:border-border">
-      <div className={cn('grid gap-0', items.length === 2 ? 'grid-cols-1 md:grid-cols-2 md:gap-8' : 'grid-cols-1 md:grid-cols-3 md:gap-4')}>
-        {items.map(item => <NewsCard key={item.id} item={item} variant="card" initialReaction={reactions[item.id] ?? null} onReactionChange={onReactionChange} />)}
-      </div>
+    <div className="editorial-card-stack">
+      {items.map(item => <NewsCard key={item.id} item={item} initialReaction={reactions[item.id] ?? null} onReactionChange={onReactionChange} />)}
     </div>
   )
 }
@@ -104,26 +71,19 @@ export default function FavoritesPage() {
   }, [loading])
 
   return (
-    <div className="flex-1 overflow-y-auto min-w-0">
+    <div className="editorial-page-scroll">
+      <header className="editorial-feed-hero">
+        <h1>Minhas curtidas</h1>
+        <p>As histórias que você guardou para voltar depois</p>
+      </header>
 
-      {/* ── Sticky header ── */}
-      <div className="app-header-shell">
-        <div className="app-header-inner">
-          <div className="app-header-pill header-blur flex items-center px-4 md:hidden gap-2">
-            <h1 className="text-[15px] font-semibold text-ink-primary">Minhas curtidas</h1>
-          </div>
-          <div className="app-header-pill header-blur hidden md:flex items-center px-5">
-            <h1 className="text-[15px] font-semibold text-ink-primary">Minhas curtidas</h1>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Content ── */}
-      <div className="article-layout mx-auto px-4 md:px-8">
-        <div className="pt-0 pb-24 md:py-6 md:pb-6">
+      <div className="editorial-feed-layout">
+        <div className="pb-24 md:pb-10">
 
           {loading && (
-            <><SkeletonBlock /><SkeletonBlock /></>
+            <div className="editorial-card-stack">
+              <SkeletonBlock /><SkeletonBlock />
+            </div>
           )}
 
           {!loading && likedItems.length === 0 && (
@@ -142,14 +102,12 @@ export default function FavoritesPage() {
           )}
 
           {!loading && likedItems.length > 0 && (
-            <>
-              {shownBlocks.map((block, i) => (
-                <FeedBlock key={block.items[0].id} items={block.items} blockIndex={i} reactions={reactions} onReactionChange={handleReactionChange} />
+            <div className="editorial-card-stack">
+              {shownBlocks.map((block) => (
+                <FeedBlock key={block.items[0].id} items={block.items} reactions={reactions} onReactionChange={handleReactionChange} />
               ))}
-              <div ref={sentinelRef}>
-                {hasMore && <SkeletonBlock />}
-              </div>
-            </>
+              {hasMore && <div ref={sentinelRef}><SkeletonBlock /></div>}
+            </div>
           )}
 
         </div>

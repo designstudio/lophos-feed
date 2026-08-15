@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { toFeedItem } from '@/lib/feed-item'
 import { loadBlockedTopics } from '@/lib/topic-signals'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
   // Check if there are articles newer than `since` matching user's topics
   const { data, error } = await db
     .from('articles')
-    .select('id, title, topic, summary, sections, conclusion, sources, image_url, video_url, published_at, cached_at, matched_topics, tavily_raw')
+    .select('id, title, topic, summary, sources, image_url, published_at, cached_at, matched_topics')
     .or(topics.map((t: string) => `matched_topics.cs.{${t}}`).join(','))
     .gt('cached_at', since)
     .order('cached_at', { ascending: false })
@@ -38,6 +39,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     hasUpdates: visibleRows.length > 0,
-    items: visibleRows,
+    items: visibleRows.map((row: any) => toFeedItem(row, topics)),
   })
 }
