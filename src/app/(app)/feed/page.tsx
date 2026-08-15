@@ -31,9 +31,10 @@ type FeedCache = {
   hasMore: boolean
   topics: string[]
   activeFilter: string | null
+  scrollTop: number
 }
 
-function readFeedCache(expectedDays: number): FeedCache | null {
+function readFeedCache(): FeedCache | null {
   const serialized = sessionStorage.getItem(FEED_CACHE_KEY)
   if (!serialized) return null
 
@@ -42,7 +43,7 @@ function readFeedCache(expectedDays: number): FeedCache | null {
     const isCurrent = cache.version === FEED_CACHE_VERSION
       && typeof cache.timestamp === 'number'
       && Date.now() - cache.timestamp < FEED_CACHE_TTL
-      && cache.days === expectedDays
+      && typeof cache.days === 'number'
       && Array.isArray(cache.items)
       && cache.items.length > 0
       && cache.items.length <= FEED_CACHE_MAX_ITEMS
@@ -51,12 +52,25 @@ function readFeedCache(expectedDays: number): FeedCache | null {
       && Array.isArray(cache.topics)
       && cache.topics.every((topic) => typeof topic === 'string')
       && (typeof cache.activeFilter === 'string' || cache.activeFilter === null)
+      && typeof cache.scrollTop === 'number'
+      && Number.isFinite(cache.scrollTop)
+      && cache.scrollTop >= 0
 
     if (isCurrent) return cache as FeedCache
   } catch {}
 
   sessionStorage.removeItem(FEED_CACHE_KEY)
   return null
+}
+
+function writeFeedScrollTop(scrollTop: number) {
+  try {
+    const serialized = sessionStorage.getItem(FEED_CACHE_KEY)
+    if (!serialized) return
+    const cache = JSON.parse(serialized) as Partial<FeedCache>
+    if (cache.version !== FEED_CACHE_VERSION) return
+    sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ ...cache, scrollTop }))
+  } catch {}
 }
 
 function writeFeedCache(cache: Omit<FeedCache, 'version' | 'timestamp'>) {
@@ -359,9 +373,15 @@ export default function FeedPage() {
   const pendingRef = useRef<FeedItem[]>([])
   const timeDaysRef = useRef(2)
   const timeDaysMountedRef = useRef(false)
+  const restoredTimeDaysRef = useRef<number | null>(null)
   const nextCursorRef = useRef<string | null>(null)
   const hasMoreRef = useRef(false)
   const loadingMoreRef = useRef(false)
+  const scrollTopRef = useRef(0)
+  const restoredScrollTopRef = useRef<number | null>(null)
+  const scrollSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const navigatingToArticleRef = useRef(false)
+  const restoringScrollRef = useRef(false)
 
   const coldStartMessages = [
     'O Lophos está preparando o seu feed!',
@@ -395,11 +415,18 @@ export default function FeedPage() {
     // Serve do cache se não forçado e o cache ainda é válido
     if (!force) {
       try {
-        const cached = readFeedCache(timeDaysRef.current)
+        const cached = readFeedCache()
         if (cached) {
+          if (cached.days !== timeDaysRef.current) {
+            restoredTimeDaysRef.current = cached.days
+            timeDaysRef.current = cached.days
+            setTimeDays(cached.days)
+          }
           setItems(cached.items)
           setTopics(cached.topics)
           setActiveFilter(cached.activeFilter)
+          restoredScrollTopRef.current = cached.scrollTop
+          restoringScrollRef.current = cached.scrollTop > 0
           setNextCursor(cached.nextCursor)
           nextCursorRef.current = cached.nextCursor
           setHasMore(cached.hasMore)
@@ -517,6 +544,26 @@ export default function FeedPage() {
   }, [fetchFeed])
 
   useEffect(() => {
+    if (!initialized || restoredScrollTopRef.current === null || !scrollRef.current) return
+    const targetScrollTop = restoredScrollTopRef.current
+    const applyScrollPosition = () => {
+      if (!scrollRef.current) return
+      scrollRef.current.scrollTop = targetScrollTop
+      scrollTopRef.current = targetScrollTop
+    }
+    const frame = requestAnimationFrame(applyScrollPosition)
+    const settleTimeout = setTimeout(() => {
+      applyScrollPosition()
+      restoredScrollTopRef.current = null
+      restoringScrollRef.current = false
+    }, 250)
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(settleTimeout)
+    }
+  }, [initialized, items.length])
+
+  useEffect(() => {
     if (!initialized || items.length === 0) return
     writeFeedCache({
       items,
@@ -525,13 +572,19 @@ export default function FeedPage() {
       hasMore,
       topics,
       activeFilter,
+      scrollTop: scrollRef.current?.scrollTop ?? scrollTopRef.current,
     })
   }, [activeFilter, hasMore, initialized, items, nextCursor, timeDays, topics])
 
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
 
   useEffect(() => {
+    navigatingToArticleRef.current = false
     return () => {
+      if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
+      if (!navigatingToArticleRef.current && !restoringScrollRef.current) {
+        writeFeedScrollTop(scrollTopRef.current)
+      }
       abortRef.current?.abort()
       paginationAbortRef.current?.abort()
     }
@@ -555,6 +608,10 @@ export default function FeedPage() {
   }, [isLoaded, isSignedIn])
   useEffect(() => {
     if (!timeDaysMountedRef.current) { timeDaysMountedRef.current = true; return }
+    if (restoredTimeDaysRef.current !== null) {
+      if (restoredTimeDaysRef.current === timeDays) restoredTimeDaysRef.current = null
+      return
+    }
     if (isLoaded && isSignedIn) fetchFeed(true)
   }, [timeDays])
 
@@ -624,6 +681,9 @@ export default function FeedPage() {
       })
     : visibleItems
   const topicsInFeed  = [...new Set(items.map(i => toTitleCase(i.displayTopic ?? i.topic)))]
+  const filterTopics  = topicsInFeed.length > 0
+    ? topicsInFeed
+    : [...new Set(topics.map(toTitleCase))]
   const allBlocks     = splitIntoBlocks(filteredItems)
   const showSkeleton  = !hasData && streaming
   const showStreaming = streaming && !hasData && !coldStartLoading
@@ -636,13 +696,34 @@ export default function FeedPage() {
 
 
   return (
-    <div id="feed-scroll-container" ref={scrollRef} className="editorial-page-scroll">
+    <div
+      id="feed-scroll-container"
+      ref={scrollRef}
+      className="editorial-page-scroll"
+      onClickCapture={(event) => {
+        const target = event.target as Element
+        if (!target.closest('a[href^="/article/"]')) return
+        navigatingToArticleRef.current = true
+        if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
+        scrollSaveTimeoutRef.current = null
+        writeFeedScrollTop(scrollTopRef.current)
+      }}
+      onScroll={(event) => {
+        if (navigatingToArticleRef.current || restoringScrollRef.current) return
+        scrollTopRef.current = event.currentTarget.scrollTop
+        if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
+        scrollSaveTimeoutRef.current = setTimeout(() => {
+          writeFeedScrollTop(scrollTopRef.current)
+          scrollSaveTimeoutRef.current = null
+        }, 150)
+      }}
+    >
       <header className="editorial-feed-hero">
         <LophosLogo size={30} className="mb-5 md:hidden" />
         <h1>Em destaque no Lophos</h1>
         <p>O que suas fontes estão publicando agora</p>
 
-        {hasData && topicsInFeed.length > 0 && (
+        {topics.length > 0 && (
           <div className="editorial-feed-controls" aria-label="Filtros do feed">
             <button
               type="button"
@@ -652,7 +733,7 @@ export default function FeedPage() {
               Recentes
             </button>
             <TopicsDropdown
-              topics={topicsInFeed}
+              topics={filterTopics}
               activeFilter={activeFilter}
               onSelect={(topic) => { setActiveFilter(topic); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }) }}
             />
