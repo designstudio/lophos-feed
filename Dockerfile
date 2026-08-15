@@ -38,6 +38,7 @@ COPY --from=builder /app/scripts ./scripts
 RUN mkdir -p /app/logs /app/.next/cache \
   && chown -R nextjs:nodejs /app \
   && printf '%s\n' \
+    'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
     '0 0,6,12,18 * * * root cd /app && node scripts/news-cron.mjs >> /app/logs/news-cron.log 2>&1' \
     > /etc/cron.d/lophos-news \
   && chmod 0644 /etc/cron.d/lophos-news

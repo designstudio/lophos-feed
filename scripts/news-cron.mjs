@@ -104,6 +104,10 @@ function runStep(label, commandArgs) {
   }
 }
 
+function isMistralStageDisabled() {
+  return process.env.NEWS_ENABLE_MISTRAL?.trim().toLowerCase() === 'false'
+}
+
 async function main() {
   ensureLogDir()
   const lockFd = acquireLock()
@@ -120,7 +124,11 @@ async function main() {
 
   runStep('news:ingest', ['npm', 'run', 'news:ingest'])
   runStep('news:process', ['npm', 'run', 'news:process'])
-  runStep('news:process-mistral', ['npm', 'run', 'news:process-mistral'])
+  if (isMistralStageDisabled()) {
+    console.log('\n[news:cron] Mistral stage disabled by NEWS_ENABLE_MISTRAL=false')
+  } else {
+    runStep('news:process-mistral', ['npm', 'run', 'news:process-mistral'])
+  }
 
   const durationMs = Date.now() - startedAt
   writeState({
