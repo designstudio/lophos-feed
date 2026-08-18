@@ -3,13 +3,42 @@ import { LegalPage } from '@/components/LegalPage'
 
 const RELEASES = [
   {
+    date: '18 ago 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'O feed ganhou modos de visualização em lista e mosaico, permitindo escolher como acompanhar as notícias sem perder a personalização.',
+          'Adicionamos paginação contínua e um aviso de novas publicações, deixando a atualização do feed mais previsível sem interromper a leitura.',
+          'Evoluímos a curadoria editorial com novas etapas de preflight, agrupamento e revisão assistida por IA para produzir artigos mais consistentes e reunir melhor as fontes relacionadas.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'Refinamos cards, sidebars, menus, tópicos, widgets e navegação mobile para melhorar hierarquia visual, responsividade e estabilidade durante o uso.',
+          'As páginas de feed, favoritos, artigos, configurações e threads agora apresentam estados de carregamento mais consistentes e transições mais suaves.',
+          'Melhoramos a restauração do cache e o carregamento incremental do feed, reduzindo telas vazias, saltos de conteúdo e trabalho desnecessário no servidor.',
+          'Reforçamos a deduplicação e o processamento em lotes para evitar falhas quando o volume de notícias ou de fontes cresce.',
+        ],
+      },
+      {
+        title: 'Confiabilidade',
+        items: [
+          'Criamos uma política de retenção que compacta itens processados após 15 dias e remove dados antigos após 60 dias, preservando o histórico necessário para evitar reingestões.',
+          'Otimizamos a imagem de produção e o processo de deploy para reduzir operações pesadas e tornar futuras publicações mais rápidas e estáveis.',
+        ],
+      },
+    ],
+  },
+  {
     date: '20 abr 2026',
     sections: [
       {
         title: 'Novidades',
         items: [
           'A sidebar ganhou um ajuste fino no bloco de Histórico, ocupando melhor o espaço disponível sem mexer no restante da navegação.',
-          'O feed passou a aprender sinais negativos a partir das reações, ajudando a reduzir repeticoes e a refinar as recomendações relacionadas.',
+          'O feed passou a aprender sinais negativos a partir das reações, ajudando a reduzir repetições e a refinar as recomendações relacionadas.',
           'A ingestão e o image proxy de RSS ficaram mais rígidos, reduzindo ruído e bloqueando imagens problemáticas com mais consistência.',
         ],
       },
