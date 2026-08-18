@@ -21,7 +21,6 @@ const config: Config = {
           tertiary:  'var(--color-ink-tertiary)',
           muted:     'var(--color-ink-muted)',
         },
-        accent: 'var(--color-accent)',
         border: {
           DEFAULT: 'var(--color-border)',
           strong:  'var(--color-border-strong)',

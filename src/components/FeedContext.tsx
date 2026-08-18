@@ -1,11 +1,14 @@
 'use client'
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useRef } from 'react'
+import type { FeedItem } from '@/lib/types'
 
 interface FeedContextType {
   refreshing: boolean
   setRefreshing: (v: boolean) => void
   updatesReady: boolean
   setUpdatesReady: (v: boolean) => void
+  pendingFeedItems: FeedItem[]
+  setPendingFeedItems: React.Dispatch<React.SetStateAction<FeedItem[]>>
   triggerRefresh: () => void
   onRefreshCallback: React.MutableRefObject<(() => void) | null>
   triggerApplyUpdates: () => void
@@ -17,8 +20,9 @@ const FeedContext = createContext<FeedContextType | null>(null)
 export function FeedProvider({ children }: { children: React.ReactNode }) {
   const [refreshing, setRefreshing] = useState(false)
   const [updatesReady, setUpdatesReady] = useState(false)
-  const onRefreshCallback = { current: null } as React.MutableRefObject<(() => void) | null>
-  const onApplyUpdatesCallback = { current: null } as React.MutableRefObject<(() => void) | null>
+  const [pendingFeedItems, setPendingFeedItems] = useState<FeedItem[]>([])
+  const onRefreshCallback = useRef<(() => void) | null>(null)
+  const onApplyUpdatesCallback = useRef<(() => void) | null>(null)
 
   const triggerRefresh = useCallback(() => {
     onRefreshCallback.current?.()
@@ -34,6 +38,8 @@ export function FeedProvider({ children }: { children: React.ReactNode }) {
       setRefreshing,
       updatesReady,
       setUpdatesReady,
+      pendingFeedItems,
+      setPendingFeedItems,
       triggerRefresh,
       onRefreshCallback,
       triggerApplyUpdates,

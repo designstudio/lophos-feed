@@ -2,16 +2,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
-import { ArticleAssistant } from '@/components/ArticleAssistant'
-import { LinkExternal02 as SquareTopDown, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ArrowNarrowLeft as ArrowLeft, Heart as HeartAngle, ThumbsDown as Dislike, Copy06 as Copy, Share07 as Share } from '@untitledui/icons'
+import { ArrowNarrowUpRight as ExternalLink, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ThumbsDown as Dislike, Copy06 as Copy, Share07 as Share } from '@untitledui/icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { IconHeartFilled } from '@/components/icons'
+import { Tooltip } from '@/components/Tooltip'
+import { useModalTransition } from '@/hooks/useModalTransition'
+import { LikeBurstIcon } from '@/components/LikeBurstIcon'
+import { TopicIcon } from '@/components/TopicIcon'
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
@@ -49,7 +50,7 @@ function VideoPlayer({ url, title }: { url: string; title: string }) {
     : `https://www.youtube.com/embed/${youtubeId}`
 
   return (
-    <div className="rounded-[1rem] overflow-hidden mb-8 bg-bg-secondary relative shadow-md aspect-video">
+    <div className="rounded-[1.5rem] overflow-hidden mb-8 bg-bg-secondary relative shadow-md aspect-video">
       <iframe
         className="w-full h-full"
         src={iframeUrl}
@@ -65,7 +66,7 @@ function VideoPlayer({ url, title }: { url: string; title: string }) {
 function SourceCard({ src }: { src: NewsSource }) {
   return (
     <a href={src.url} target="_blank" rel="noopener noreferrer"
-      className="flex flex-col gap-2 p-3 rounded-[1rem] border border-border bg-white hover:border-border-strong hover:bg-bg-secondary transition-all group"
+      className="spring-press flex flex-col gap-2 overflow-hidden rounded-[1rem] border border-border bg-white p-3 shadow-sm transition-all hover:border-border-strong group"
     >
       <div className="flex items-center">
         {src.favicon ? (
@@ -75,7 +76,7 @@ function SourceCard({ src }: { src: NewsSource }) {
           <span className="w-5 h-5 rounded-md bg-bg-tertiary flex-shrink-0" />
         )}
       </div>
-      <p className="text-[12px] font-medium text-ink-primary group-hover:text-accent transition-colors truncate leading-tight">
+      <p className="text-[12px] font-medium text-ink-primary truncate leading-tight">
         {src.name}
       </p>
     </a>
@@ -91,62 +92,40 @@ interface RelatedItem {
   publishedAt: string
 }
 
-export default function ArticlePageClient() {
-  const { id } = useParams<{ id: string }>()
+export default function ArticlePageClient({ initialItem }: { initialItem: NewsItem }) {
+  const id = initialItem.id
   const { isSignedIn } = useAuth()
-  const [item, setItem] = useState<NewsItem | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [transitioning, setTransitioning] = useState(false)
+  const item = initialItem
   const [showAllSources, setShowAllSources] = useState(false)
   const [related, setRelated] = useState<RelatedItem[]>([])
+  const [relatedLoading, setRelatedLoading] = useState(true)
   const [liked, setLiked] = useState(false)
+  const [likeBurstToken, setLikeBurstToken] = useState(0)
   const [disliked, setDisliked] = useState(false)
   const [reactionLoading, setReactionLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
+  const imageModalTransition = useModalTransition(showImageModal)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const titleRef  = useRef<HTMLHeadingElement>(null)
-  const [showTitle, setShowTitle] = useState(false)
-  const prevId = useRef<string | null>(null)
 
   useEffect(() => {
-    const isNavigation = prevId.current !== null && prevId.current !== id
-    prevId.current = id
+    const controller = new AbortController()
+    setRelated([])
+    setRelatedLoading(true)
 
-    if (isNavigation) {
-      setTransitioning(true)
-      scrollRef.current?.scrollTo({ top: 0 })
-    } else {
-      setLoading(true)
-    }
-
-    setShowAllSources(false)
-    setShowTitle(false)
-
-    fetch(`/api/article?id=${id}`)
-      .then((r) => r.json())
-      .then((data) => {
-        setItem(data.item || null)
-        setLoading(false)
-        setTransitioning(false)
+    fetch(`/api/article/related?id=${id}`, { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error('Failed to load related articles')
+        return r.json()
       })
-      .catch(() => { setLoading(false); setTransitioning(false) })
-
-    fetch(`/api/article/related?id=${id}`)
-      .then((r) => r.json())
       .then((data) => setRelated(data.items || []))
       .catch(() => {})
+      .finally(() => {
+        if (!controller.signal.aborted) setRelatedLoading(false)
+      })
+
+    return () => controller.abort()
   }, [id])
-
-  useEffect(() => {
-    if (item?.title) {
-      document.title = `${item.title} - Lophos`
-    }
-
-    return () => {
-      document.title = 'Lophos'
-    }
-  }, [item?.title])
 
   useEffect(() => {
     if (!isSignedIn) return
@@ -164,6 +143,7 @@ export default function ArticlePageClient() {
     if (!isSignedIn || reactionLoading) return
     setReactionLoading(true)
     const previousReaction = liked ? 'like' : disliked ? 'dislike' : null
+    if (nextReaction === 'like') setLikeBurstToken((token) => token + 1)
     setLiked(nextReaction === 'like')
     setDisliked(nextReaction === 'dislike')
     try {
@@ -187,15 +167,25 @@ export default function ArticlePageClient() {
     updateReaction(disliked ? null : 'dislike')
   }
 
-  const copyArticleLink = async () => {
+  const copyArticle = async () => {
     const url = `${window.location.origin}/article/${id}`
+    const sections = item?.sections
+      ?.map((section) => `${section.heading}\n${section.body}`)
+      .join('\n\n')
+    const articleText = [
+      item?.title,
+      item?.summary,
+      sections,
+      `Leia no Lophos: ${url}`,
+    ].filter(Boolean).join('\n\n')
+
     try {
-      await navigator.clipboard.writeText(url)
+      await navigator.clipboard.writeText(articleText)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
       if (navigator.share) {
-        await navigator.share({ title: item?.title, url })
+        await navigator.share({ title: item?.title, text: articleText, url })
       }
     }
   }
@@ -211,25 +201,14 @@ export default function ArticlePageClient() {
       }
     }
 
-    await copyArticleLink()
+    await navigator.clipboard.writeText(url)
   }
 
   const shownSources = item?.sources?.slice(0, 3) || []
   const extraCount = (item?.sources?.length || 0) - 3
 
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const onScroll = () => {
-      if (!titleRef.current) return
-      setShowTitle(titleRef.current.getBoundingClientRect().bottom < 56)
-    }
-    el.addEventListener('scroll', onScroll, { passive: true })
-    return () => el.removeEventListener('scroll', onScroll)
-  }, [])
-
-  useEffect(() => {
-    if (showImageModal) {
+    if (imageModalTransition.rendered) {
       document.body.style.overflow = 'hidden'
     } else {
       document.body.style.overflow = 'unset'
@@ -237,72 +216,22 @@ export default function ArticlePageClient() {
     return () => {
       document.body.style.overflow = 'unset'
     }
-  }, [showImageModal])
+  }, [imageModalTransition.rendered])
 
   return (
     <>
       <div className="flex flex-1 min-w-0 overflow-hidden">
         <div ref={scrollRef} id="article-scroll-container" className="flex-1 overflow-y-auto min-w-0 transition-all duration-300">
-          <div className="app-header-shell">
-            <div className="app-header-inner">
-              <div className="app-header-pill header-blur flex items-center gap-3 px-4 md:px-5">
-              <Link
-                href="/feed"
-                className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] border border-border hover:bg-bg-secondary text-[13px] font-medium text-ink-secondary hover:text-ink-primary transition-all flex-shrink-0"
-              >
-                <ArrowLeft size={15} className="flex-shrink-0" />
-                <span className="hidden sm:inline">Voltar para Meu feed</span>
-              </Link>
-
-              <div className="flex-1 flex justify-center overflow-hidden px-2">
-                <span
-                  className="text-[0.875rem] font-medium text-ink-primary truncate max-w-lg transition-all duration-200"
-                  style={{ opacity: showTitle ? 1 : 0, transform: showTitle ? 'translateY(0)' : 'translateY(4px)' }}
-                >
-                  {item?.title}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <button
-                  onClick={shareArticle}
-                  className="spring-press flex items-center gap-1.5 px-3 py-1.5 rounded-[1rem] text-[13px] font-medium text-white hover:opacity-80"
-                  style={{ background: 'var(--color-ui-strong)' }}
-                >
-                  <Share size={14} />
-                  <span>{copied ? 'Link copiado!' : 'Compartilhar'}</span>
-                </button>
-              </div>
-            </div>
-            </div>
-          </div>
-
           <main className="page-scroll">
             <div
-              className="article-layout mx-auto py-6 px-6 pb-24 md:pb-8 transition-opacity duration-200"
-              style={{ opacity: transitioning ? 0 : 1 }}
+              className="article-layout mx-auto mt-[10vh] px-6 pb-24 md:pb-8"
             >
-              {loading && (
-                <div className="space-y-4 animate-pulse">
-                  <div className="h-3 bg-bg-secondary rounded w-20" />
-                  <div className="h-9 bg-bg-secondary rounded w-4/5" />
-                  <div className="h-9 bg-bg-secondary rounded w-3/5" />
-                  <div className="h-3 bg-bg-secondary rounded w-32" />
-                  <div className="h-56 bg-bg-secondary rounded-[1rem]" />
-                  <div className="space-y-2">
-                    {[1, 2, 3, 4].map((i) => <div key={i} className="h-4 bg-bg-secondary rounded" style={{ width: `${100 - i * 5}%` }} />)}
-                  </div>
-                </div>
-              )}
-
-              {!loading && !item && (
-                <div className="text-center py-20 text-ink-tertiary">Artigo nÃ£o encontrado.</div>
-              )}
-
-              {!loading && item && (
-                <article className="animate-fade-in">
-                  <span className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest">{item.topic}</span>
-                  <h1 ref={titleRef} className="text-ink-primary leading-tight mt-2 mb-3" style={{ fontSize: '2.3rem', lineHeight: '1.25' }}>{item.title}</h1>
+              <article className="animate-fade-in">
+                  <span className="category-topic-pill">
+                    <TopicIcon topic={item.topic} />
+                    <span>{item.topic.charAt(0).toLocaleUpperCase('pt-BR') + item.topic.slice(1)}</span>
+                  </span>
+                  <h1 className="mt-2 mb-3 text-4xl leading-tight text-ink-primary">{item.title}</h1>
 
                   <div className="flex items-center gap-2 text-xs text-ink-muted mb-6">
                     <ClockCircle size={16} />
@@ -317,8 +246,9 @@ export default function ArticlePageClient() {
                     <button
                       onClick={() => setShowImageModal(true)}
                       className="w-full mb-8 relative transform-gpu group cursor-zoom-in"
+                      aria-label="Ampliar imagem da notícia"
                     >
-                      <div className="relative h-full overflow-hidden rounded-[1rem] shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform duration-150">
+                      <div className="relative h-full overflow-hidden rounded-[1.5rem] shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform duration-150">
                         <img
                           src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
                           alt={item.title}
@@ -348,10 +278,10 @@ export default function ArticlePageClient() {
                   ) : null}
 
                   {item.sections && item.sections.length > 0 && (
-                    <div className="space-y-6 mb-8">
+                    <div className="mb-8 space-y-10">
                       {item.sections.map((section, i) => (
                         <div key={i}>
-                          <h2 className="text-[15px] font-semibold text-ink-primary mb-2">{section.heading}</h2>
+                          <h2 className="mb-4 text-xl font-semibold text-ink-primary">{section.heading}</h2>
                           <p className="text-body text-ink-secondary leading-relaxed">{section.body}</p>
                         </div>
                       ))}
@@ -359,71 +289,78 @@ export default function ArticlePageClient() {
                   )}
 
                   <div className="flex items-center gap-1.5 mb-8">
-                    <motion.button
-                      type="button"
-                      onClick={toggleLike}
-                      disabled={!isSignedIn || reactionLoading}
-                      title={liked ? 'Descurtir' : 'Curtir'}
-                      whileTap={{ scale: 0.85 }}
-                      className={cn(
-                        'flex items-center justify-center w-8 h-8 rounded-full transition-colors',
-                        liked
-                          ? 'bg-red-50 text-red-500'
-                          : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
-                        (!isSignedIn || reactionLoading) && 'opacity-60 cursor-not-allowed',
-                      )}
-                    >
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.span
-                          key={liked ? 'filled' : 'outline'}
-                          initial={{ scale: 0.5, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          exit={{ scale: 0.5, opacity: 0 }}
-                          transition={{ duration: 0.15, ease: 'easeOut' }}
-                          style={{ display: 'flex' }}
-                        >
-                          {liked ? <IconHeartFilled size={16} /> : <HeartAngle size={16} />}
-                        </motion.span>
-                      </AnimatePresence>
-                    </motion.button>
+                    <Tooltip content={liked ? 'Descurtir' : 'Curtir'}>
+                      <motion.button
+                        type="button"
+                        onClick={toggleLike}
+                        disabled={!isSignedIn || reactionLoading}
+                        aria-label={liked ? 'Descurtir' : 'Curtir'}
+                        whileTap={{ scale: 0.85 }}
+                        className={cn(
+                          'editorial-card__reaction--like flex items-center justify-center w-8 h-8 rounded-full transition-colors',
+                          liked
+                            ? 'is-active'
+                            : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
+                          (!isSignedIn || reactionLoading) && 'opacity-60 cursor-not-allowed',
+                        )}
+                      >
+                        <LikeBurstIcon liked={liked} burstToken={likeBurstToken} size={16} />
+                      </motion.button>
+                    </Tooltip>
 
-                    <motion.button
-                      type="button"
-                      onClick={toggleDislike}
-                      disabled={!isSignedIn || reactionLoading}
-                      title={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}
-                      whileTap={{ scale: 0.85 }}
-                      className={cn(
-                        'flex items-center justify-center w-8 h-8 rounded-full transition-colors',
-                        disliked
-                          ? 'bg-zinc-100 text-zinc-600'
-                          : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
-                        (!isSignedIn || reactionLoading) && 'opacity-60 cursor-not-allowed',
-                      )}
-                    >
-                      <AnimatePresence mode="wait" initial={false}>
-                        <motion.span
-                          key={disliked ? 'filled' : 'outline'}
-                          initial={{ scale: 0.5, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          exit={{ scale: 0.5, opacity: 0 }}
-                          transition={{ duration: 0.15, ease: 'easeOut' }}
-                          style={{ display: 'flex' }}
-                        >
-                          <Dislike size={16} />
-                        </motion.span>
-                      </AnimatePresence>
-                    </motion.button>
+                    <Tooltip content={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}>
+                      <motion.button
+                        type="button"
+                        onClick={toggleDislike}
+                        disabled={!isSignedIn || reactionLoading}
+                        aria-label={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}
+                        whileTap={{ scale: 0.85 }}
+                        className={cn(
+                          'flex items-center justify-center w-8 h-8 rounded-full transition-colors',
+                          disliked
+                            ? 'bg-zinc-100 text-zinc-600'
+                            : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
+                          (!isSignedIn || reactionLoading) && 'opacity-60 cursor-not-allowed',
+                        )}
+                      >
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={disliked ? 'filled' : 'outline'}
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.5, opacity: 0 }}
+                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                            style={{ display: 'flex' }}
+                          >
+                            <Dislike size={16} />
+                          </motion.span>
+                        </AnimatePresence>
+                      </motion.button>
+                    </Tooltip>
 
-                    <motion.button
-                      type="button"
-                      onClick={copyArticleLink}
-                      title={copied ? 'Link copiado' : 'Copiar link'}
-                      whileTap={{ scale: 0.85 }}
-                      className="flex items-center justify-center w-8 h-8 rounded-full text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary transition-colors"
-                    >
-                      <Copy size={16} />
-                    </motion.button>
+                    <Tooltip content={copied ? 'Matéria copiada' : 'Copiar matéria'}>
+                      <motion.button
+                        type="button"
+                        onClick={copyArticle}
+                        aria-label={copied ? 'Matéria copiada' : 'Copiar matéria'}
+                        whileTap={{ scale: 0.85 }}
+                        className="flex items-center justify-center w-8 h-8 rounded-full text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary transition-colors"
+                      >
+                        <Copy size={16} />
+                      </motion.button>
+                    </Tooltip>
+
+                    <Tooltip content="Compartilhar">
+                      <motion.button
+                        type="button"
+                        onClick={shareArticle}
+                        aria-label="Compartilhar notícia"
+                        whileTap={{ scale: 0.85 }}
+                        className="flex items-center justify-center w-8 h-8 rounded-full text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary transition-colors"
+                      >
+                        <Share size={16} />
+                      </motion.button>
+                    </Tooltip>
 
                   </div>
 
@@ -439,7 +376,7 @@ export default function ArticlePageClient() {
                         {extraCount > 0 && (
                           <button
                             onClick={() => setShowAllSources(true)}
-                            className="flex flex-col items-center justify-center gap-2 px-4 py-3 rounded-[1rem] border border-border bg-white hover:border-border-strong hover:bg-bg-secondary transition-all min-w-[80px]"
+                            className="spring-press flex min-w-[80px] flex-col items-center justify-center gap-2 overflow-hidden rounded-[1.5rem] border border-border bg-white px-4 py-3 shadow-sm transition-all hover:border-border-strong"
                           >
                             <div className="flex items-center">
                               {item.sources.slice(3, 6).map((src, i) => (
@@ -468,30 +405,43 @@ export default function ArticlePageClient() {
                     </div>
                   )}
 
-                  {!isSignedIn && (
-                    <div className="mt-10 mb-8 rounded-[1.5rem] border border-border bg-bg-primary px-5 py-5">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-tertiary">AI Chat</p>
-                      <h2 className="text-[1.05rem] font-semibold text-ink-primary mt-1">Converse sobre este artigo</h2>
-                      <p className="text-sm text-ink-secondary mt-2 leading-relaxed">
-                        Entre na sua conta para fazer perguntas sobre o artigo e receber respostas geradas por IA com base no contexto desta pagina.
-                      </p>
-                    </div>
-                  )}
-
-                  {related.length > 0 && (
-                    <div className="mb-8">
+                  {(relatedLoading || related.length > 0) && (
+                    <div className="mt-16 mb-8">
                       <div className="flex items-center gap-2 mb-6">
                         <Documents size={24} className="text-ink-primary flex-shrink-0" />
-                        <h2 className="font-semibold text-ink-primary" style={{ fontSize: '1.125rem' }}>
+                        <h2 className="text-lg font-semibold text-ink-primary">
                           Notícias relacionadas
                         </h2>
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        {related.slice(0, 4).map((rel, i) => (
+                      <div
+                        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+                        aria-busy={relatedLoading}
+                        aria-label={relatedLoading ? 'Carregando notícias relacionadas' : undefined}
+                      >
+                        {relatedLoading
+                          ? Array.from({ length: 4 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={cn(
+                                'overflow-hidden rounded-[1.5rem] border border-border bg-bg-primary shadow-sm',
+                                i >= 2 ? 'hidden md:block' : '',
+                              )}
+                              aria-hidden="true"
+                            >
+                              <div className="aspect-video w-full animate-pulse bg-bg-tertiary motion-reduce:animate-none" />
+                              <div className="flex flex-col gap-2 p-3">
+                                <span className="h-3.5 w-full animate-pulse rounded bg-bg-tertiary motion-reduce:animate-none" />
+                                <span className="h-3.5 w-4/5 animate-pulse rounded bg-bg-tertiary motion-reduce:animate-none" />
+                                <span className="mt-1 h-3 w-full animate-pulse rounded bg-bg-secondary motion-reduce:animate-none" />
+                                <span className="h-3 w-2/3 animate-pulse rounded bg-bg-secondary motion-reduce:animate-none" />
+                              </div>
+                            </div>
+                          ))
+                          : related.slice(0, 4).map((rel, i) => (
                           <Link
                             key={rel.id}
                             href={`/article/${rel.id}`}
-                            className={cn('spring-press flex flex-col gap-0 text-left group rounded-[1rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all', i >= 2 ? 'hidden md:flex' : '')}
+                            className={cn('spring-press flex flex-col gap-0 bg-bg-primary text-left group rounded-[1.5rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all', i >= 2 ? 'hidden md:flex' : '')}
 
                           >
                             {rel.imageUrl && (
@@ -505,7 +455,7 @@ export default function ArticlePageClient() {
                               </div>
                             )}
                             <div className="p-3 flex flex-col gap-1">
-                              <p className="text-[0.875rem] font-semibold text-ink-primary leading-snug line-clamp-2 group-hover:text-accent transition-colors">
+                              <p className="text-[0.875rem] font-semibold text-ink-primary leading-snug line-clamp-2">
                                 {rel.title}
                               </p>
                               <p className="text-[12px] text-ink-tertiary leading-relaxed line-clamp-2">
@@ -513,14 +463,12 @@ export default function ArticlePageClient() {
                               </p>
                             </div>
                           </Link>
-                        ))}
+                          ))}
                       </div>
                     </div>
                   )}
 
-                  {isSignedIn && <ArticleAssistant articleId={item.id} />}
-                </article>
-              )}
+              </article>
             </div>
           </main>
         </div>
@@ -545,7 +493,7 @@ export default function ArticlePageClient() {
                     </div>
                   ))}
                 </div>
-                <h2 className="text-[15px] font-semibold text-ink-primary">Fontes</h2>
+                <h2 className="text-lg font-semibold text-ink-primary">Fontes</h2>
               </div>
               <button onClick={() => setShowAllSources(false)} className="text-ink-tertiary hover:text-ink-primary transition-colors">
                 <CloseCircle size={20} />
@@ -564,10 +512,10 @@ export default function ArticlePageClient() {
                     ? <img src={src.favicon} alt="" width={20} height={20} className="rounded-md flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                     : <span className="w-5 h-5 rounded-md bg-bg-tertiary flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-ink-primary group-hover:text-accent transition-colors truncate">{src.name}</p>
+                    <p className="text-[13px] font-medium text-ink-primary truncate">{src.name}</p>
                     <p className="text-[11px] text-ink-muted truncate">{src.url}</p>
                   </div>
-                  <SquareTopDown size={12} className="text-ink-muted flex-shrink-0" />
+                  <ExternalLink size={14} className="flex-shrink-0 text-ink-muted" />
                 </a>
               ))}
             </div>
@@ -575,27 +523,43 @@ export default function ArticlePageClient() {
         </div>
       </div>
 
-      {showImageModal && item?.imageUrl && createPortal(
+      {imageModalTransition.rendered && item?.imageUrl && createPortal(
         <div
           onClick={() => setShowImageModal(false)}
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
           style={{ backgroundColor: '#05050533', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)' }}
         >
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowImageModal(false)
-            }}
-            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+          <div
+            className={cn(
+              't-modal absolute inset-0 flex items-center justify-center p-4',
+              imageModalTransition.open && 'is-open',
+              imageModalTransition.closing && 'is-closing',
+            )}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Visualização ampliada da imagem"
+            aria-hidden={!imageModalTransition.open}
+            inert={!imageModalTransition.open}
+            onClick={() => setShowImageModal(false)}
           >
-            <CloseCircle size={24} />
-          </button>
-          <img
-            src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
-            alt={item.title}
-            className="max-w-full max-h-[90vh] rounded-[1rem] shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowImageModal(false)
+              }}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+              aria-label="Fechar imagem"
+            >
+              <CloseCircle size={24} />
+            </button>
+            <img
+              src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
+              alt={item.title}
+              className="max-w-full max-h-[90vh] rounded-[1.5rem] shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         </div>,
         document.body
       )}

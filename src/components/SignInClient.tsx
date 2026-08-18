@@ -7,9 +7,9 @@ export function SignInClient() {
       appearance={{
         elements: {
           rootBox: 'w-full max-w-sm',
-          card: 'shadow-none border border-border rounded-2xl bg-white',
+          card: 'shadow-none border border-border rounded-[1.5rem] bg-white',
           headerTitle: 'font-display text-xl',
-          formButtonPrimary: 'bg-accent hover:bg-blue-700 text-white',
+          formButtonPrimary: 'bg-ink-primary text-bg-primary hover:opacity-85',
         },
       }}
     />

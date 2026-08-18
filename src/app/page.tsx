@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowRight, LayersThree01 } from '@untitledui/icons'
+import { LayersThree01 } from '@untitledui/icons'
 import { HowItWorksRotator } from '@/components/landing/HowItWorksRotator'
+import { LandingReveal } from '@/components/landing/LandingReveal'
 import { MarketingHeader } from '@/components/landing/MarketingHeader'
 import { MarketingFooter } from '@/components/landing/MarketingFooter'
 
@@ -61,28 +62,30 @@ function pickRandomDomains(count: number) {
 function HeroBlock() {
   return (
     <section className="px-5 pb-16 pt-28 md:px-8 md:pb-24 md:pt-32">
-      <div className="mx-auto max-w-[960px] text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink-secondary shadow-[0_8px_30px_rgba(17,17,17,0.04)]">
-          <LayersThree01 size={16} />
-          +60 fontes. Uma experiência
+      <LandingReveal className="mx-auto max-w-[960px] text-center">
+        <div className="t-stagger-line t-stagger-line--1">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink-secondary shadow-[0_8px_30px_rgba(17,17,17,0.04)]">
+            <LayersThree01 size={16} />
+            +60 fontes. Uma experiência
+          </div>
         </div>
 
-        <h1 className="mt-8 text-[3.5rem] font-semibold leading-[0.94] tracking-[-0.09em] md:text-[6.1rem]">
+        <h1 className="t-stagger-line t-stagger-line--2 mt-8 text-[3.5rem] font-semibold leading-[0.94] tracking-[-0.09em] md:text-[6.1rem]">
           Você não precisa abrir mais dez abas.
         </h1>
 
-        <p className="mx-auto mt-6 max-w-[860px] text-lg leading-8 text-ink-secondary md:text-[1.5rem] md:leading-[1.45]">
+        <p className="t-stagger-line t-stagger-line--3 mx-auto mt-6 max-w-[860px] text-lg leading-8 text-ink-secondary md:text-[1.5rem] md:leading-[1.45]">
           A gente acompanha G1, TechCrunch, GameSpot e mais de 60 portais por você — junta as coberturas repetidas,
           traduz o contexto e cria um espaço pra você explorar.
         </p>
 
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="t-stagger-line t-stagger-line--4 t-stagger-line--flex mt-10 flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-85"
+            className="t-learn inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-85"
           >
             Quero experimentar
-            <ArrowRight size={16} />
+            <LearnMoreArrow />
           </Link>
           <Link
             href="#como-funciona"
@@ -91,7 +94,7 @@ function HeroBlock() {
             Ver como funciona
           </Link>
         </div>
-      </div>
+      </LandingReveal>
     </section>
   )
 }
@@ -129,7 +132,7 @@ function LibraryBlock() {
           {PORTAL_ICON_POSITIONS.map((icon, index) => (
             <div
               key={`${randomDomains[index]}-${index}`}
-              className="absolute hidden items-center justify-center md:flex"
+              className="landing-portal-icon absolute hidden items-center justify-center md:flex"
               style={{
                 ...icon,
                 width: 80,
@@ -147,14 +150,14 @@ function LibraryBlock() {
             </div>
           ))}
 
-          <div className="relative z-10 max-w-[860px] px-6 text-center">
-            <p className="text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Uma biblioteca construída com</p>
-            <div className="mt-4 space-y-1 text-[3.2rem] font-semibold leading-[0.94] tracking-[-0.09em] text-ink-primary md:text-[5.4rem]">
+          <LandingReveal className="relative z-10 max-w-[860px] px-6 text-center">
+            <p className="t-stagger-line t-stagger-line--1 text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Uma biblioteca construída com</p>
+            <div className="t-stagger-line t-stagger-line--2 mt-4 space-y-1 text-[3.2rem] font-semibold leading-[0.94] tracking-[-0.09em] text-ink-primary md:text-[5.4rem]">
               <div>+60 feeds de notícias</div>
               <div>em um único lugar.</div>
             </div>
-            <p className="mt-4 text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Sem repetição, com contexto.</p>
-          </div>
+            <p className="t-stagger-line t-stagger-line--3 mt-4 text-lg font-medium text-ink-primary md:text-[2rem] md:leading-none">Sem repetição, com contexto.</p>
+          </LandingReveal>
         </div>
       </div>
     </section>
@@ -164,25 +167,37 @@ function LibraryBlock() {
 function CtaBlock() {
   return (
     <section className="px-5 pb-24 pt-2 md:px-8 md:pb-28 md:pt-4">
-      <div className="mx-auto flex max-w-[760px] flex-col items-center rounded-[30px] bg-bg-secondary px-6 py-12 text-center md:px-10 md:py-16">
-        <h2 className="text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary">
+      <LandingReveal className="mx-auto flex max-w-[760px] flex-col items-center rounded-[30px] bg-bg-secondary px-6 py-12 text-center md:px-10 md:py-16">
+        <h2 className="t-stagger-line t-stagger-line--1 text-[2.75rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary">
           <span className="block">Pronto para</span>
           <span className="block">Customizar seu feed?</span>
         </h2>
-        <p className="mx-auto mt-5 max-w-[620px] text-lg leading-8 text-ink-secondary md:text-[1.25rem]">
+        <p className="t-stagger-line t-stagger-line--2 mx-auto mt-5 max-w-[620px] text-lg leading-8 text-ink-secondary md:text-[1.25rem]">
           Gratuito pra começar. Sem cartão de crédito.
         </p>
-        <div className="mt-8 flex justify-center">
+        <div className="t-stagger-line t-stagger-line--3 t-stagger-line--flex mt-8 justify-center">
           <Link
             href="/signup"
-            className="inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-85"
+            className="t-learn inline-flex items-center gap-2 rounded-full bg-ink-primary px-6 py-3.5 text-base font-medium text-white transition-opacity hover:opacity-85"
           >
             Criar minha conta grátis
-            <ArrowRight size={16} />
+            <LearnMoreArrow />
           </Link>
         </div>
-      </div>
+      </LandingReveal>
     </section>
+  )
+}
+
+function LearnMoreArrow() {
+  return (
+    <span className="t-learn-chevron" aria-hidden="true">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M2.5 8H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path className="t-learn-arm t-learn-arm-top" d="M6 4L10 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path className="t-learn-arm t-learn-arm-bot" d="M10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    </span>
   )
 }
 

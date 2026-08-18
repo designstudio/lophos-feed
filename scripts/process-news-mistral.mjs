@@ -1,18 +1,18 @@
 /**
- * Mistral-only news processing
+ * Editorial news processing.
  *
- * Consome um cluster run já preparado, chama o Mistral para sintetizar
- * e persiste articles/raw_items processed.
+ * Defaults to the production Mistral flow. The isolated manual wrapper sets
+ * NEWS_PROCESS_PROVIDER=gemma and reads only manual_ready cluster runs.
  */
 
 import { createClient } from '@supabase/supabase-js'
 import { buildArticleDedupProfile, buildNewsSourceFromItem, canonicalizeUrl, findBestArticleDuplicateMatch, shouldRejectPreflightItem, strongIntersection, textOverlapScore } from './news-pipeline-core.mjs'
 import { loadScriptEnvironment } from './script-env.mjs'
-import { processTopicWithMistral } from './news-mistral-core.mjs'
+import { processTopicWithGemma, processTopicWithMistral } from './news-mistral-core.mjs'
 
 const SIMILARITY_THRESHOLD = 0.30
 const MIN_STRONG_TOKENS = 3
-const DELAY_BETWEEN_TOPICS_MS = Number(process.env.MISTRAL_TOPIC_DELAY_MS || 1500)
+const RAW_ITEM_ID_BATCH_SIZE = 100
 const DEDUP_HISTORY_LIMIT = Number(process.env.MISTRAL_DEDUP_HISTORY_LIMIT || 1000)
 const DEBUG_DEDUP = process.env.DEBUG_DEDUP === '1'
 
@@ -62,6 +62,63 @@ const DEAL_SOURCE_HINTS = ['promobit', 'pelando', 'buscape', 'zoom.com', 'cupono
 
 loadScriptEnvironment()
 
+function parseCliOptions(argv) {
+  const options = {
+    provider: process.env.NEWS_PROCESS_PROVIDER || 'mistral',
+    topics: [],
+    maxClustersPerTopic: Number.POSITIVE_INFINITY,
+    dryRun: false,
+    help: false,
+  }
+
+  for (const arg of argv) {
+    if (arg === '--dry-run') options.dryRun = true
+    else if (arg === '--help' || arg === '-h') options.help = true
+    else if (arg.startsWith('--provider=')) options.provider = arg.slice('--provider='.length)
+    else if (arg.startsWith('--topics=')) {
+      options.topics = arg
+        .slice('--topics='.length)
+        .split(',')
+        .map((topic) => topic.trim())
+        .filter(Boolean)
+    } else if (arg.startsWith('--max-clusters-per-topic=')) {
+      const value = Number(arg.slice('--max-clusters-per-topic='.length))
+      if (!Number.isInteger(value) || value <= 0) {
+        throw new Error('--max-clusters-per-topic must be a positive integer')
+      }
+      options.maxClustersPerTopic = value
+    }
+  }
+
+  options.provider = options.provider.trim().toLowerCase()
+  return options
+}
+
+const CLI_OPTIONS = parseCliOptions(process.argv.slice(2))
+const PROVIDER_NAME = CLI_OPTIONS.provider === 'gemma' ? 'Gemma/Ollama' : 'Mistral'
+const PROCESS_TOPIC = CLI_OPTIONS.provider === 'gemma' ? processTopicWithGemma : processTopicWithMistral
+const CLUSTER_RUN_STATUS = process.env.NEWS_CLUSTER_RUN_STATUS || (CLI_OPTIONS.provider === 'gemma' ? 'manual_ready' : 'ready')
+const DELAY_BETWEEN_TOPICS_MS = Number(
+  CLI_OPTIONS.provider === 'gemma'
+    ? process.env.OLLAMA_TOPIC_DELAY_MS || 0
+    : process.env.MISTRAL_TOPIC_DELAY_MS || 1500,
+)
+
+function printUsage() {
+  const command = CLI_OPTIONS.provider === 'gemma'
+    ? 'npm run news:process-gemma --'
+    : 'npm run news:process-mistral --'
+  console.log(`Uso:
+  ${command} [opções]
+
+Opções:
+  --provider=mistral|gemma
+  --topics=horror,movies,tecnologia
+  --max-clusters-per-topic=3
+  --dry-run
+  --help`)
+}
+
 function assertEnv(name) {
   const value = process.env[name]
   if (!value) {
@@ -72,6 +129,27 @@ function assertEnv(name) {
 
 function uniqueIds(values) {
   return [...new Set((values || []).filter(Boolean))]
+}
+
+async function loadRawItemStates(db, ids) {
+  const rows = []
+
+  for (let offset = 0; offset < ids.length; offset += RAW_ITEM_ID_BATCH_SIZE) {
+    const batch = ids.slice(offset, offset + RAW_ITEM_ID_BATCH_SIZE)
+    const { data, error } = await db
+      .from('raw_items')
+      .select('id, processed')
+      .in('id', batch)
+
+    if (error) {
+      const batchNumber = Math.floor(offset / RAW_ITEM_ID_BATCH_SIZE) + 1
+      throw new Error(`Could not load raw item states (batch ${batchNumber}): ${error.message}`)
+    }
+
+    rows.push(...(data || []))
+  }
+
+  return rows
 }
 
 function sanitizeArticleForSave(article) {
@@ -132,11 +210,11 @@ function shouldRejectContent({ title, summary = '', sections = [], urls = [], so
   return { reject: false, reason: null }
 }
 
-async function loadLatestClusterRun(db) {
+async function loadLatestClusterRun(db, status) {
   const { data, error } = await db
     .from('news_cluster_runs')
     .select('id, payload, status, created_at')
-    .eq('status', 'ready')
+    .eq('status', status)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -149,28 +227,99 @@ async function loadLatestClusterRun(db) {
 }
 
 async function main() {
+  if (CLI_OPTIONS.help) {
+    printUsage()
+    return
+  }
+
+  if (!['mistral', 'gemma'].includes(CLI_OPTIONS.provider)) {
+    throw new Error(`Unsupported editorial provider: ${CLI_OPTIONS.provider}`)
+  }
+
   const db = createClient(
     assertEnv('NEXT_PUBLIC_SUPABASE_URL'),
     assertEnv('SUPABASE_SERVICE_ROLE_KEY'),
   )
 
-  const clusterRun = await loadLatestClusterRun(db)
+  const clusterRun = await loadLatestClusterRun(db, CLUSTER_RUN_STATUS)
   if (!clusterRun?.payload?.topics?.length) {
-    console.log('No ready cluster runs found. Run news:preflight and news:cluster first.')
+    console.log(`No ${CLUSTER_RUN_STATUS} cluster runs found. Prepare a cluster run first.`)
     return
   }
 
-  const topicPayloads = clusterRun.payload.topics || []
+  const requestedTopics = new Set(CLI_OPTIONS.topics.map((topic) => topic.toLocaleLowerCase('pt-BR')))
+  const availableTopicPayloads = clusterRun.payload.topics || []
+  const unknownTopics = [...requestedTopics].filter((requested) => (
+    !availableTopicPayloads.some((entry) => entry.topic?.toLocaleLowerCase('pt-BR') === requested)
+  ))
+
+  if (unknownTopics.length > 0) {
+    throw new Error(`Topics not found in cluster run: ${unknownTopics.join(', ')}`)
+  }
+
+  let topicPayloads = availableTopicPayloads
+    .filter((entry) => requestedTopics.size === 0 || requestedTopics.has(entry.topic?.toLocaleLowerCase('pt-BR')))
+    .map((entry) => {
+      const clusters = (entry.clusters || []).slice(0, CLI_OPTIONS.maxClustersPerTopic)
+      const selectedIds = new Set(clusters.flat())
+      return {
+        ...entry,
+        clusters,
+        acceptedItems: (entry.acceptedItems || []).filter((item) => selectedIds.has(item.id)),
+        rejectedRawIds: Number.isFinite(CLI_OPTIONS.maxClustersPerTopic) ? [] : entry.rejectedRawIds || [],
+      }
+    })
+
+  if (topicPayloads.length === 0) {
+    console.log('No topics selected for editorial processing.')
+    return
+  }
+
+  const candidateRawIds = uniqueIds(topicPayloads.flatMap((entry) => (entry.clusters || []).flat()))
+  if (candidateRawIds.length > 0) {
+    const rawStates = await loadRawItemStates(db, candidateRawIds)
+
+    const alreadyProcessedIds = new Set((rawStates || []).filter((row) => row.processed).map((row) => row.id))
+    topicPayloads = topicPayloads
+      .map((entry) => {
+        const clusters = (entry.clusters || []).filter((cluster) => (
+          cluster.some((id) => !alreadyProcessedIds.has(id))
+        ))
+        const selectedIds = new Set(clusters.flat())
+        return {
+          ...entry,
+          clusters,
+          acceptedItems: (entry.acceptedItems || []).filter((item) => selectedIds.has(item.id)),
+        }
+      })
+      .filter((entry) => entry.clusters.length > 0 || (entry.rejectedRawIds || []).length > 0)
+  }
+
+  if (topicPayloads.length === 0) {
+    console.log('All selected clusters have already been processed.')
+    return
+  }
+
   const windowHours = clusterRun.payload.windowHours || 12
   const historyHours = clusterRun.payload.historyHours || 72
-  const semanticMatches = Array.isArray(clusterRun.payload.semanticMatches) ? clusterRun.payload.semanticMatches : []
+  const selectedRawIds = new Set(topicPayloads.flatMap((entry) => (entry.clusters || []).flat()))
+  const semanticMatches = (Array.isArray(clusterRun.payload.semanticMatches) ? clusterRun.payload.semanticMatches : [])
+    .filter((match) => selectedRawIds.has(match.currentId))
   const semanticDuplicateRawIds = uniqueIds(clusterRun.payload.semanticDuplicateRawIds || [])
+    .filter((id) => selectedRawIds.has(id))
+  const isPartialRun = requestedTopics.size > 0 || Number.isFinite(CLI_OPTIONS.maxClustersPerTopic)
 
-  console.log(`\n🧪 Mistral-only processing`)
+  console.log(`\n🧪 ${PROVIDER_NAME} editorial processing`)
   console.log(`Cluster run: ${clusterRun.id} (${clusterRun.created_at})`)
+  console.log(`Status isolado: ${CLUSTER_RUN_STATUS}${isPartialRun ? ' | execução parcial' : ''}`)
   console.log(`Janela de entrada: últimas ${windowHours}h | histórico de comparação: ${historyHours}h`)
-  console.log(`Topics prontos para Mistral: ${topicPayloads.map((entry) => entry.topic).join(', ')}\n`)
+  console.log(`Topics selecionados: ${topicPayloads.map((entry) => `${entry.topic} (${entry.clusters.length} clusters)`).join(', ')}\n`)
   console.log(`Pendências semânticas: matches=${semanticMatches.length} raw_ids=${semanticDuplicateRawIds.length}\n`)
+
+  if (CLI_OPTIONS.dryRun) {
+    console.log('Dry run concluído; nenhuma chamada de IA ou escrita no banco foi realizada.')
+    return
+  }
 
   const sinceDedup = new Date(Date.now() - historyHours * 60 * 60 * 1000).toISOString()
   const { data: globalExisting } = await db
@@ -232,7 +381,7 @@ async function main() {
     }
 
     try {
-      console.log(`[${topic}] ${acceptedItems.length} items → Mistral only (${clusters.length} clusters)`)
+      console.log(`[${topic}] ${acceptedItems.length} items → ${PROVIDER_NAME} (${clusters.length} clusters)`)
 
       const rawItemsMap = new Map(acceptedItems.map((item) => [item.id, item]))
       const results = acceptedItems.map((item) => ({
@@ -247,19 +396,21 @@ async function main() {
         video: item.video_url,
       }))
 
-      const {
-        newsItems,
-        mistralError,
-        processedClusterSourceIds,
-        rejectedRawIds: localRejectedRawIds = [],
-        failedClusterSourceIds = [],
-      } = await processTopicWithMistral(
+      const providerResult = await PROCESS_TOPIC(
         topic,
         results,
         allProcessedArticles.map((a) => a.title),
         clusters,
         rawItemsMap,
       )
+
+      const {
+        newsItems,
+        providerError,
+        processedClusterSourceIds,
+        rejectedRawIds: localRejectedRawIds = [],
+        failedClusterSourceIds = [],
+      } = providerResult
 
       const dedupedItems = []
       const successfullyProcessedRawIds = new Set([
@@ -268,9 +419,9 @@ async function main() {
         ...(processedClusterSourceIds || []),
       ])
 
-      if (mistralError) {
+      if (providerError) {
         hadTopicError = true
-        console.warn(`[${topic}] ⚠️  Um ou mais clusters falharam no Mistral (${failedClusterSourceIds.length} source_ids). Continuando com os artigos já gerados.`)
+        console.warn(`[${topic}] ⚠️  Um ou mais clusters falharam no ${PROVIDER_NAME} (${failedClusterSourceIds.length} source_ids). Continuando com os artigos já gerados.`)
         if (successfullyProcessedRawIds.size > 0) {
           await db.from('raw_items')
             .update({ processed: true })
@@ -680,24 +831,28 @@ async function main() {
     }
   }
 
-  const finalStatus = hadTopicError ? 'failed' : 'processed'
-  const { error: statusUpdateError } = await db
-    .from('news_cluster_runs')
-    .update({
-      status: finalStatus,
-      processed_at: new Date().toISOString(),
-      error_message: hadTopicError ? 'One or more topics failed during Mistral processing' : null,
-    })
-    .eq('id', clusterRun.id)
-
-  if (statusUpdateError) {
-    console.warn(`Could not update cluster run status: ${statusUpdateError.message}`)
+  if (isPartialRun) {
+    console.log(`Cluster run ${clusterRun.id} preservado como ${CLUSTER_RUN_STATUS} para os tópicos restantes.`)
   } else {
-    console.log(`Cluster run ${clusterRun.id} marked as ${finalStatus}.`)
+    const finalStatus = hadTopicError ? 'failed' : 'processed'
+    const { error: statusUpdateError } = await db
+      .from('news_cluster_runs')
+      .update({
+        status: finalStatus,
+        processed_at: new Date().toISOString(),
+        error_message: hadTopicError ? `One or more topics failed during ${PROVIDER_NAME} processing` : null,
+      })
+      .eq('id', clusterRun.id)
+
+    if (statusUpdateError) {
+      console.warn(`Could not update cluster run status: ${statusUpdateError.message}`)
+    } else {
+      console.log(`Cluster run ${clusterRun.id} marked as ${finalStatus}.`)
+    }
   }
 
   const totalProcessed = totalSaved + totalMerged
-  console.log(`\n✨ FAXINA CONCLUÍDA!`)
+  console.log(`\n✨ PROCESSAMENTO ${PROVIDER_NAME.toUpperCase()} CONCLUÍDO!`)
   console.log(`Topics: ${topicPayloads.length} | Artigos gerados: ${totalGenerated} | Salvos: ${totalSaved} | Merges: ${totalMerged}`)
   console.log(`Duplicatas semânticas anexadas: ${totalSemanticAttached}`)
   console.log(`Total processado com sucesso: ${totalProcessed} notícias 🎉\n`)
@@ -707,4 +862,3 @@ main().catch((err) => {
   console.error(err)
   process.exit(1)
 })
-

@@ -1,7 +1,7 @@
 /**
  * News process orchestrator
  *
- * Runs the deterministic pipeline in order:
+ * Runs the configured preflight + clustering pipeline in order:
  * - news-preflight
  * - news-cluster
  *

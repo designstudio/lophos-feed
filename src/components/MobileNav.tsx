@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 
 export function MobileNav() {
   const pathname = usePathname()
-  const dockedLayout = pathname.startsWith('/article/') || pathname.startsWith('/threads/')
+  const dockedLayout = pathname.startsWith('/article/')
   const isFeedActive = pathname === '/feed' || pathname === '/'
   const isSettingsActive = pathname === '/settings'
 

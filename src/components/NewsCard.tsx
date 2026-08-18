@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { AnimatePresence, motion } from 'framer-motion'
-import { Heart, ThumbsDown } from '@untitledui/icons'
+import { motion, useReducedMotion } from 'framer-motion'
+import { ThumbsDown } from '@untitledui/icons'
 import { FeedItem } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { IconHeartFilled } from '@/components/icons'
 import { Tooltip } from '@/components/Tooltip'
+import { LikeBurstIcon } from '@/components/LikeBurstIcon'
+import { TopicIcon } from '@/components/TopicIcon'
 
 const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
 
@@ -48,7 +49,11 @@ function CoverageRail({ item }: { item: FeedItem }) {
   }
 
   return (
-    <div className="editorial-card__coverage" aria-hidden="true">
+    <Link
+      href={`/article/${item.id}`}
+      aria-label={`Abrir notícia: ${item.title}`}
+      className="editorial-card__coverage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-4"
+    >
       <div className={cn('editorial-card__coverage-track', coverage.length === 1 && 'is-solo')}>
         {(coverage.length > 0 ? coverage : [null]).map((image, index) => (
           <div className="editorial-card__coverage-item" key={image || `fallback-${index}`}>
@@ -66,11 +71,11 @@ function CoverageRail({ item }: { item: FeedItem }) {
           </div>
         ))}
       </div>
-    </div>
+    </Link>
   )
 }
 
-function SourceAttribution({ sources }: { sources: FeedItem['sources'] }) {
+export function NewsSourceAttribution({ sources }: { sources: FeedItem['sources'] }) {
   const shown = (sources || []).slice(0, 4)
   const total = (sources || []).length
 
@@ -107,6 +112,7 @@ interface Props {
   initialReaction?: 'like' | 'dislike' | null
   fadingOut?: boolean
   solo?: boolean
+  animationIndex?: number
   onReactionChange?: (articleId: string, reaction: 'like' | 'dislike' | null) => void
 }
 
@@ -115,10 +121,13 @@ export function NewsCard({
   className,
   initialReaction = null,
   fadingOut = false,
+  animationIndex = 0,
   onReactionChange,
 }: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
   const [reacting, setReacting] = useState(false)
+  const [likeBurstToken, setLikeBurstToken] = useState(0)
+  const reduceMotion = useReducedMotion()
   const dateLabel = publishedLabel(item.publishedAt)
 
   useEffect(() => setReaction(initialReaction), [initialReaction])
@@ -128,6 +137,7 @@ export function NewsCard({
     const previous = reaction
     const next = reaction === type ? null : type
     setReacting(true)
+    if (type === 'like' && next === 'like') setLikeBurstToken((token) => token + 1)
     setReaction(next)
     onReactionChange?.(item.id, next)
 
@@ -149,50 +159,47 @@ export function NewsCard({
     <article
       className={cn('editorial-card group', fadingOut && 'pointer-events-none opacity-0', className)}
     >
-      <Link
-        href={`/article/${item.id}`}
-        aria-label={item.title}
-        className="absolute inset-0 z-10 rounded-[inherit] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-4"
+      <motion.div
+        className="editorial-card__entrance"
+        initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: reduceMotion ? 0 : animationIndex * 0.07, ease: [0.16, 1, 0.3, 1] }}
       >
-        <span className="sr-only">{item.title}</span>
-      </Link>
+        <CoverageRail item={item} />
 
-      <CoverageRail item={item} />
+        <div className="editorial-card__body">
+          <div className="editorial-card__eyebrow">
+            <span className="editorial-card__topic">
+              <TopicIcon topic={item.displayTopic ?? item.topic} fallbackTopic={item.topic} />
+              <span>{item.displayTopic ?? item.topic}</span>
+            </span>
+            {dateLabel && <><i aria-hidden="true" /> <span className="editorial-card__date">{dateLabel}</span></>}
+          </div>
 
-      <div className="editorial-card__body">
-        <div className="editorial-card__eyebrow">
-          <span className="editorial-card__topic">{item.displayTopic ?? item.topic}</span>
-          {dateLabel && <><i aria-hidden="true" /> <span className="editorial-card__date">{dateLabel}</span></>}
-        </div>
+          <h2>
+            <Link
+              href={`/article/${item.id}`}
+              className="editorial-card__title-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-2"
+            >
+              {item.title}
+            </Link>
+          </h2>
+          <p className="editorial-card__summary">{item.summary}</p>
 
-        <h2>{item.title}</h2>
-        <p className="editorial-card__summary">{item.summary}</p>
-
-        <div className="editorial-card__footer">
-          <SourceAttribution sources={item.sources} />
-          <div className="editorial-card__reactions">
-            <Tooltip content={reaction === 'like' ? 'Remover dos favoritos' : 'Salvar nos favoritos'} side="top">
+          <div className="editorial-card__footer">
+            <NewsSourceAttribution sources={item.sources} />
+            <div className="editorial-card__reactions">
+            <Tooltip content={reaction === 'like' ? 'Remover dos favoritos' : 'Curtir'} side="top">
               <motion.button
                 type="button"
                 onClick={(event) => { event.preventDefault(); event.stopPropagation(); void react('like') }}
                 whileTap={{ scale: 0.85 }}
                 disabled={reacting}
                 className={cn('editorial-card__reaction editorial-card__reaction--like', reaction === 'like' && 'is-active')}
-                aria-label={reaction === 'like' ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+                aria-label={reaction === 'like' ? 'Remover dos favoritos' : 'Curtir'}
                 aria-pressed={reaction === 'like'}
               >
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.span
-                    key={reaction === 'like' ? 'filled' : 'outline'}
-                    initial={{ opacity: 0, scale: 0.65 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.65 }}
-                    transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="flex"
-                  >
-                    {reaction === 'like' ? <IconHeartFilled size={20} /> : <Heart size={20} />}
-                  </motion.span>
-                </AnimatePresence>
+                <LikeBurstIcon liked={reaction === 'like'} burstToken={likeBurstToken} size={20} />
               </motion.button>
             </Tooltip>
 
@@ -209,9 +216,10 @@ export function NewsCard({
                 <ThumbsDown size={20} />
               </motion.button>
             </Tooltip>
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </article>
   )
 }

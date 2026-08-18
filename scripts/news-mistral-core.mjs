@@ -1,8 +1,8 @@
 /**
- * Shared Mistral synthesis core.
+ * Shared editorial synthesis core.
  *
- * Imported by the Mistral runner. This file should contain the article
- * generation logic, but not the cron orchestration.
+ * Imported by the Mistral cron runner and the isolated local Gemma runner.
+ * This file contains article generation, but not pipeline orchestration.
  */
 
 import { randomUUID } from 'crypto'
@@ -17,8 +17,16 @@ const MISTRAL_MODEL = process.env.MISTRAL_MODEL || 'mistral-large-latest'
 const MISTRAL_TIMEOUT_MS = Number(process.env.MISTRAL_TIMEOUT_MS || 300000)
 const MISTRAL_RETRY_BASE_DELAY_MS = Number(process.env.MISTRAL_RETRY_BASE_DELAY_MS || 2000)
 const MISTRAL_CLUSTER_DELAY_MS = Number(process.env.MISTRAL_CLUSTER_DELAY_MS || 1500)
+const OLLAMA_API_URL = (process.env.OLLAMA_API_URL || 'http://127.0.0.1:11434').replace(/\/+$/, '')
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemma4:12b'
+const OLLAMA_TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS || 600000)
+const OLLAMA_CLUSTER_DELAY_MS = Number(process.env.OLLAMA_CLUSTER_DELAY_MS || 0)
+const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || '10m'
+const OLLAMA_NUM_CTX = Number(process.env.OLLAMA_NUM_CTX || 16384)
 
-const CONTENT_CHARS = 2000
+const MAX_CONTENT_CHARS_PER_SOURCE = 12000
+const TARGET_CONTENT_CHARS_PER_CLUSTER = 40000
+const MIN_CONTENT_CHARS_PER_SOURCE = 1500
 
 const HARD_BLOCK_PATTERNS = [
   /\bcasino(s)?\b/i,
@@ -187,6 +195,48 @@ function extractMessageText(content) {
   return ''
 }
 
+export function parseGeneratedArticles(text, providerName) {
+  let normalized = String(text || '').trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+
+  const firstArray = normalized.indexOf('[')
+  const lastArray = normalized.lastIndexOf(']')
+  if (firstArray >= 0 && lastArray > firstArray) {
+    normalized = normalized.slice(firstArray, lastArray + 1)
+  }
+
+  const parsedRaw = JSON.parse(normalized)
+  const parsed = Array.isArray(parsedRaw) ? parsedRaw : [parsedRaw]
+  if (parsed.length === 0) {
+    throw new Error(`${providerName} returned an empty article list.`)
+  }
+  return parsed
+}
+
+export function normalizeSourceIndexList(values, sourceCount) {
+  const original = [...new Set((values || [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value)))]
+  const zeroBased = original.includes(0)
+  const normalized = original
+    .map((value) => zeroBased ? value : value - 1)
+    .filter((value) => value >= 0 && value < sourceCount)
+  return {
+    original,
+    normalized: [...new Set(normalized)],
+    mode: zeroBased ? 'zero-based' : 'one-based',
+  }
+}
+
+export function getContentCharsPerSource(sourceCount) {
+  const safeSourceCount = Math.max(1, Number(sourceCount) || 1)
+  return Math.max(
+    MIN_CONTENT_CHARS_PER_SOURCE,
+    Math.min(MAX_CONTENT_CHARS_PER_SOURCE, Math.floor(TARGET_CONTENT_CHARS_PER_CLUSTER / safeSourceCount)),
+  )
+}
+
 async function generateWithMistral(prompt) {
   if (!MISTRAL_API_KEY) {
     throw new Error('Missing environment variable: MISTRAL_API_KEY')
@@ -264,8 +314,102 @@ async function generateWithMistral(prompt) {
   throw lastError || new Error('Mistral request failed.')
 }
 
-export async function processTopicWithMistral(topic, results, existingTitles, clusters, rawItemsMap) {
-  if (!results.length || !clusters.length) return []
+const ARTICLE_OUTPUT_SCHEMA = {
+  type: 'array',
+  minItems: 1,
+  maxItems: 1,
+  items: {
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      title: { type: 'string' },
+      summary: { type: 'string' },
+      sections: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            heading: { type: 'string' },
+            body: { type: 'string' },
+          },
+          required: ['heading', 'body'],
+        },
+      },
+      sourceIndexes: {
+        type: 'array',
+        minItems: 1,
+        items: { type: 'integer', minimum: 1 },
+      },
+      keywords: {
+        type: 'array',
+        minItems: 5,
+        maxItems: 15,
+        items: { type: 'string' },
+      },
+      relevance: { type: 'number', minimum: 0, maximum: 1 },
+    },
+    required: ['title', 'summary', 'sections', 'sourceIndexes', 'keywords', 'relevance'],
+  },
+}
+
+async function generateWithGemma(prompt) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(`${OLLAMA_API_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        stream: false,
+        think: false,
+        format: ARTICLE_OUTPUT_SCHEMA,
+        keep_alive: OLLAMA_KEEP_ALIVE,
+        options: {
+          temperature: 0.2,
+          num_ctx: OLLAMA_NUM_CTX,
+        },
+      }),
+      signal: controller.signal,
+    })
+
+    const rawText = await response.text()
+    if (!response.ok) {
+      const error = new Error(`Ollama API error (${response.status}): ${rawText}`)
+      error.status = response.status
+      throw error
+    }
+
+    const data = JSON.parse(rawText)
+    const text = data?.message?.content
+    if (typeof text !== 'string' || !text.trim()) {
+      throw new Error(`Ollama returned an empty response (done reason: ${data?.done_reason || 'unknown'}).`)
+    }
+
+    return text
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function processTopicWithProvider(topic, results, existingTitles, clusters, rawItemsMap, {
+  providerName,
+  generate,
+  clusterDelayMs,
+}) {
+  if (!results.length || !clusters.length) {
+    return {
+      newsItems: [],
+      success: true,
+      providerError: null,
+      processedClusterSourceIds: [],
+      quarantinedClusterSourceIds: [],
+      failedClusterSourceIds: [],
+    }
+  }
 
   const today = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const allParsedItems = []
@@ -287,6 +431,7 @@ export async function processTopicWithMistral(topic, results, existingTitles, cl
 
     console.log(`[${topic}] Cluster ${clusterNum}/${clusters.length}: Processando ${clusterItems.length} fontes relacionadas (source_ids: ${clusterSourceIds.join(',')})...`)
 
+    const contentCharsPerSource = getContentCharsPerSource(clusterItems.length)
     const context = clusterItems
       .map((r, i) => {
         const hostname = new URL(r.url).hostname.replace('www.', '')
@@ -296,7 +441,7 @@ export async function processTopicWithMistral(topic, results, existingTitles, cl
           r.summary ? `resumo: ${r.summary}` : null,
         ].filter(Boolean).join(' | ')
 
-        return `[${i + 1}] ${hostname} - "${r.title}"${meta ? `\n${meta}` : ''}\n${(r.content || '').slice(0, CONTENT_CHARS)}`
+        return `[${i + 1}] ${hostname} - "${r.title}"${meta ? `\n${meta}` : ''}\n${(r.content || '').slice(0, contentCharsPerSource)}`
       })
       .join('\n\n')
 
@@ -366,7 +511,7 @@ Retorne EXCLUSIVAMENTE um array JSON com UM artigo (ou [] se vazio). Sem markdow
 - Se as fontes forem lixo (cupons, promocoes vazias etc.), gere o artigo mais curto e factual possivel, sem inventar dados.
 - Caso contrario, gere o melhor artigo possivel, mesmo que a cobertura esteja enxuta.
 - Nunca adicione markdown, explicacao ou texto fora do JSON.
-- sourceIndexes: obrigatorio, so as fontes realmente usadas
+- sourceIndexes: obrigatorio, use exatamente os numeros 1-based exibidos em FONTES (a primeira fonte e 1; nunca use 0)
 - keywords: 5 a 15 termos em minusculo, separados por virgula, otimizados para SEO
 - relevance: float de 0.0 a 1.0 (seja generoso com hard news e cultura pop)
 
@@ -374,43 +519,49 @@ Retorne EXCLUSIVAMENTE um array JSON com UM artigo (ou [] se vazio). Sem markdow
 - Data: ${today}
 - Topico: "${topic}"
 - Artigos ja publicados: ${existingContext}
-- Cluster ${clusterNum}/${clusters.length}: ${clusterItems.length} fontes RELACIONADAS com ate 2000 chars cada
+- Cluster ${clusterNum}/${clusters.length}: ${clusterItems.length} fontes RELACIONADAS com ate ${contentCharsPerSource} chars cada
 
 FONTES:
 ${context}`
 
     try {
-      const text = await generateWithMistral(prompt)
-
+      const text = await generate(prompt)
+      let parsed
       try {
-        const parsedRaw = JSON.parse(text)
-        const parsed = Array.isArray(parsedRaw) ? parsedRaw : [parsedRaw]
-
-        if (parsed.length === 0) {
-          throw new Error('Mistral returned an empty article list.')
-        }
-
-        clusterSourceIds.forEach((id) => allProcessedClusterSourceIds.add(id))
-        parsed.forEach((item) => {
-          allParsedItems.push({ item, clusterSourceIds, clusterItems })
-        })
-        console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) OK`)
+        parsed = parseGeneratedArticles(text, providerName)
       } catch (parseErr) {
-        console.warn(`[${topic}] Cluster ${clusterNum}: Parse JSON falhou: ${parseErr.message}`)
-        clusterSourceIds.forEach((id) => {
-          allProcessedClusterSourceIds.add(id)
-          quarantinedClusterSourceIds.add(id)
-        })
+        console.warn(`[${topic}] Cluster ${clusterNum}: JSON invalido (${parseErr.message}). Tentando gerar novamente...`)
+        const retryPrompt = `${prompt}\n\nCORRECAO OBRIGATORIA: a resposta anterior nao formou JSON valido. Gere o artigo novamente do zero e devolva somente o array JSON sintaticamente valido, sem markdown ou texto adicional.`
+        const retryText = await generate(retryPrompt)
+        try {
+          parsed = parseGeneratedArticles(retryText, providerName)
+        } catch (retryParseErr) {
+          retryParseErr.code = 'INVALID_PROVIDER_JSON'
+          throw retryParseErr
+        }
       }
+
+      parsed.forEach((item) => {
+        allParsedItems.push({ item, clusterSourceIds, clusterItems })
+      })
+      console.log(`[${topic}] Cluster ${clusterNum}: ${parsed.length} artigo(s) gerado(s) OK`)
     } catch (err) {
       const statusCode = err.status || err.message.match(/\d{3}/)
-      console.error(`[${topic}] ERROR IA (cluster ${clusterNum}, ${statusCode}): ${err.message}. Mantendo items como nao-processados para retry.`)
+      const errorLabel = err.code === 'INVALID_PROVIDER_JSON' ? 'JSON invalido apos retry' : `ERROR IA (${statusCode || 'sem status'})`
+      console.error(`[${topic}] ${errorLabel} no cluster ${clusterNum}: ${err.message}. Mantendo items como nao-processados para retry.`)
       hadClusterError = true
       clusterSourceIds.forEach((id) => failedClusterSourceIds.add(id))
+      if (err.quotaExhausted) {
+        for (let pendingIndex = clusterIdx + 1; pendingIndex < clusters.length; pendingIndex++) {
+          clusters[pendingIndex].forEach((id) => failedClusterSourceIds.add(id))
+        }
+        console.error(`[${topic}] Cota diaria do ${providerName} esgotada; interrompendo o topico e preservando os clusters restantes.`)
+        break
+      }
       continue
     } finally {
       if (clusterIdx < clusters.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, MISTRAL_CLUSTER_DELAY_MS))
+        await new Promise((resolve) => setTimeout(resolve, clusterDelayMs))
       }
     }
   }
@@ -429,7 +580,8 @@ ${context}`
       }
     }
 
-    const sourceIndexes = item.sourceIndexes.map((n) => n - 1)
+    const sourceIndexMapping = normalizeSourceIndexList(item.sourceIndexes, clusterSourceIds.length)
+    const sourceIndexes = sourceIndexMapping.normalized
     let articleSourceIds = []
 
     if (clusterSourceIds.length === 1) {
@@ -437,18 +589,21 @@ ${context}`
       console.log(`[${topic}] 🔗 Single source: forcando ${clusterSourceIds[0]}`)
     } else {
       articleSourceIds = sourceIndexes
-        .filter((idx) => idx >= 0 && idx < clusterSourceIds.length)
         .map((idx) => clusterSourceIds[idx])
         .filter(Boolean)
 
-      if (articleSourceIds.length !== sourceIndexes.length) {
+      if (sourceIndexMapping.mode === 'zero-based') {
+        console.warn(`[${topic}] sourceIndexes 0-based detectado; normalizando automaticamente para ${clusterSourceIds.length} fontes.`)
+      }
+
+      if (articleSourceIds.length !== sourceIndexMapping.original.length) {
         const iaRetornou = item.sourceIndexes.join(', ')
         const clusterUUIDs = clusterSourceIds.map((id) => id.substring(0, 8)).join(', ')
         console.warn(`[${topic}] 🔍 DEBUG INDEX MISMATCH:`)
         console.warn(`   IA retornou sourceIndexes: [${iaRetornou}]`)
         console.warn(`   Cluster tem ${clusterSourceIds.length} fontes (UUIDs: ${clusterUUIDs}...)`)
         console.warn(`   Artigo: "${item.title?.slice(0, 50)}"`)
-        console.warn(`   Mapeados: ${articleSourceIds.length}/${sourceIndexes.length} indices validos`)
+        console.warn(`   Mapeados: ${articleSourceIds.length}/${sourceIndexMapping.original.length} indices validos`)
       }
     }
 
@@ -537,14 +692,41 @@ ${context}`
       matched_topics: keywords,
       source_ids: articleSourceIds,
     })
+    clusterSourceIds.forEach((id) => allProcessedClusterSourceIds.add(id))
   }
 
   return {
     newsItems,
     success: true,
-    mistralError: hadClusterError ? new Error('One or more clusters failed during Mistral processing') : null,
+    providerError: hadClusterError ? new Error(`One or more clusters failed during ${providerName} processing`) : null,
     processedClusterSourceIds: Array.from(allProcessedClusterSourceIds),
     quarantinedClusterSourceIds: Array.from(quarantinedClusterSourceIds),
     failedClusterSourceIds: Array.from(failedClusterSourceIds),
+  }
+}
+
+export async function processTopicWithMistral(topic, results, existingTitles, clusters, rawItemsMap) {
+  const result = await processTopicWithProvider(topic, results, existingTitles, clusters, rawItemsMap, {
+    providerName: 'Mistral',
+    generate: generateWithMistral,
+    clusterDelayMs: MISTRAL_CLUSTER_DELAY_MS,
+  })
+
+  return {
+    ...result,
+    mistralError: result.providerError,
+  }
+}
+
+export async function processTopicWithGemma(topic, results, existingTitles, clusters, rawItemsMap) {
+  const result = await processTopicWithProvider(topic, results, existingTitles, clusters, rawItemsMap, {
+    providerName: 'Gemma/Ollama',
+    generate: generateWithGemma,
+    clusterDelayMs: OLLAMA_CLUSTER_DELAY_MS,
+  })
+
+  return {
+    ...result,
+    gemmaError: result.providerError,
   }
 }

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
 import { Clock as ClockCircle, X as CloseCircle } from '@untitledui/icons'
 import { NewsCard } from './NewsCard'
+import { cn } from '@/lib/utils'
+import { useModalTransition } from '@/hooks/useModalTransition'
 
 interface SearchModalProps {
   isOpen: boolean
@@ -13,12 +15,17 @@ interface SearchModalProps {
 }
 
 export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalProps) {
+  const modalTransition = useModalTransition(isOpen)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<NewsItem[]>([])
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState<string[]>([])
   const debounceTimerRef = useRef<NodeJS.Timeout>()
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (modalTransition.open) inputRef.current?.focus()
+  }, [modalTransition.open])
 
   // Load history from localStorage on mount
   useEffect(() => {
@@ -108,7 +115,7 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
     handleSearch(searchQuery)
   }
 
-  if (!isOpen) return null
+  if (!modalTransition.rendered) return null
 
   return createPortal(
     <div
@@ -117,7 +124,16 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[80vh] bg-white rounded-[1rem] shadow-2xl flex flex-col overflow-hidden"
+        className={cn(
+          't-modal relative w-full max-w-2xl max-h-[80vh] bg-white rounded-[1.5rem] shadow-2xl flex flex-col overflow-hidden',
+          modalTransition.open && 'is-open',
+          modalTransition.closing && 'is-closing',
+        )}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Buscar notícias"
+        aria-hidden={!modalTransition.open}
+        inert={!modalTransition.open}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -140,6 +156,7 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
             type="button"
             onClick={onClose}
             className="flex-shrink-0 text-ink-tertiary hover:text-ink-primary transition-colors p-1"
+            aria-label="Fechar busca"
           >
             <CloseCircle size={18} />
           </button>
