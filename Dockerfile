@@ -12,7 +12,7 @@ ENV NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=$NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
 
 COPY package.json package-lock.json* ./
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-  npm ci --ignore-scripts --no-audit --no-fund --prefer-offline \
+  npm install --ignore-scripts --no-audit --no-fund --prefer-offline \
   && npm rebuild sharp
 
 COPY . .
