@@ -1,13 +1,16 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 
 export function FixedDropdown({
   anchorRef,
-  onClose,
+  open,
+  closing,
   children
 }: {
   anchorRef: React.RefObject<HTMLElement>
-  onClose: () => void
+  open: boolean
+  closing: boolean
   children: React.ReactNode
 }) {
   const [pos, setPos] = useState({ left: 0, bottom: 0 })
@@ -15,7 +18,7 @@ export function FixedDropdown({
   useEffect(() => {
     if (anchorRef.current) {
       const r = anchorRef.current.getBoundingClientRect()
-      const dropdownWidth = 224
+      const dropdownWidth = 192
       const viewportPadding = 12
       const left = Math.min(
         Math.max(r.left, viewportPadding),
@@ -24,15 +27,23 @@ export function FixedDropdown({
 
       setPos({ left, bottom: window.innerHeight - r.top + 4 })
     }
-  }, [anchorRef])
+  }, [anchorRef, open])
 
   return (
     <div
-      className="fixed z-[999] w-56 rounded-xl border border-border bg-white p-1 shadow-[0_18px_40px_rgba(20,20,20,0.12)]"
+      className={cn(
+        't-dropdown fixed z-[999] w-48 rounded-xl bg-[var(--color-bg-elevated)] p-1',
+        open && 'is-open',
+        closing && 'is-closing',
+      )}
+      data-origin="bottom-left"
+      aria-hidden={!open}
+      inert={!open}
       style={{
         left: pos.left,
         bottom: pos.bottom,
-        animation: 'slideUp 0.12s ease',
+        border: '1px solid var(--color-border)',
+        boxShadow: '0 4px 12px #0000000d',
       }}
     >
       {children}

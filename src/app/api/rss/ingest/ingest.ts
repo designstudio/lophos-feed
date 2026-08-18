@@ -303,6 +303,27 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
   }
 
   const db = getSupabaseAdmin()
+  let rawItemHistoryAvailable = true
+  const wasRawItemArchived = async (url: string) => {
+    if (!rawItemHistoryAvailable) return false
+
+    const { data, error } = await db
+      .from('raw_item_history')
+      .select('url')
+      .eq('url', url)
+      .maybeSingle()
+
+    if (error) {
+      if (['42P01', 'PGRST205'].includes(error.code)) {
+        rawItemHistoryAvailable = false
+        console.warn('[rss/ingest] raw_item_history is unavailable; apply the retention migration to enable archived URL checks.')
+        return false
+      }
+      throw new Error(`Could not check raw item history: ${error.message}`)
+    }
+
+    return Boolean(data)
+  }
   try {
 
   let query = db
@@ -354,6 +375,7 @@ export async function ingestAllFeeds({ topic, source, retryFailed }: IngestOptio
 
         const { data: existing } = await db.from('raw_items').select('id').eq('url', url).single()
         if (existing) { totalSkipped++; continue }
+        if (await wasRawItemArchived(url)) { totalSkipped++; continue }
 
         let image_url: string | undefined
         const isVideoUrl = (u?: string) => !u ? false : isYouTubeOrVimeo(u) || item['media:content']?.['@_type']?.includes('video')

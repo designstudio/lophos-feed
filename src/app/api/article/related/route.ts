@@ -4,6 +4,15 @@ import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { loadBlockedTopics } from '@/lib/topic-signals'
 
+function normalizeTopic(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase()
+}
+
+function normalizeTopics(values: unknown): string[] {
+  if (!Array.isArray(values)) return []
+  return [...new Set(values.map(normalizeTopic).filter(Boolean))]
+}
+
 export async function GET(req: NextRequest) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ items: [] })
@@ -20,40 +29,66 @@ export async function GET(req: NextRequest) {
     db.from('user_reactions').select('article_id').eq('user_id', userId).eq('reaction', 'dislike'),
   ])
 
-  const userTopics: string[] = (userTopicsRows ?? []).map((r: any) => r.topic)
+  const userTopics = normalizeTopics((userTopicsRows ?? []).map((row: any) => row.topic))
+  const currentTopics = normalizeTopics(current?.matched_topics)
   const hiddenIds = new Set((hiddenRows ?? []).map((r: any) => r.article_id))
   const blockedTopics = new Set(await loadBlockedTopics(db, userId, userTopics))
 
-  if (!current?.matched_topics?.length || userTopics.length === 0) {
+  if (currentTopics.length === 0 || userTopics.length === 0) {
     return NextResponse.json({ items: [] })
   }
 
-  // Intersect article's matched_topics with user's feed topics so related
-  // articles come only from the user's areas of interest
-  const intersection = current.matched_topics.filter((t: string) =>
-    userTopics.includes(t)
-  )
+  const userTopicSet = new Set(userTopics)
+  const interestAnchors = currentTopics.filter((topic) => userTopicSet.has(topic))
 
-  // Fall back to user's topics if the article has no overlap (e.g. shared link)
-  const filterTopics = intersection.length > 0 ? intersection : userTopics
-
-  const orFilter = filterTopics
-    .map((t: string) => `matched_topics.cs.{${t}}`)
-    .join(',')
-
-  const { data: rows } = await db
+  // First collect articles that overlap any matched topic from the current
+  // article. The user's topics remain an eligibility boundary below, but do
+  // not replace the article's more specific similarity signals.
+  const { data: rows, error } = await db
     .from('articles')
     .select('id, topic, title, summary, image_url, video_url, published_at, matched_topics')
-    .or(orFilter)
+    .overlaps('matched_topics', currentTopics)
     .neq('id', id)
     .order('published_at', { ascending: false })
-    .limit(12)
+    .limit(60)
+
+  if (error) {
+    console.error('[related] Failed to load candidates:', error)
+    return NextResponse.json({ items: [] })
+  }
 
   const items = (rows || [])
     .filter((row: any) => !hiddenIds.has(row.id))
-    .filter((row: any) => !(Array.isArray(row.matched_topics) && row.matched_topics.some((topic: string) => blockedTopics.has(String(topic).toLowerCase().trim()))))
+    .map((row: any) => {
+      const candidateTopics = normalizeTopics(row.matched_topics)
+      const candidateTopicSet = new Set(candidateTopics)
+      const sharedTopics = currentTopics.filter((topic) => candidateTopicSet.has(topic))
+      const sharedInterestTopics = sharedTopics.filter((topic) => userTopicSet.has(topic))
+
+      return {
+        row,
+        candidateTopics,
+        sharedTopics,
+        sharedInterestTopics,
+        similarity: sharedTopics.length / Math.sqrt(currentTopics.length * candidateTopics.length),
+      }
+    })
+    .filter(({ candidateTopics, sharedTopics, sharedInterestTopics }) => {
+      if (sharedTopics.length === 0) return false
+      if (interestAnchors.length > 0 && sharedInterestTopics.length === 0) return false
+      return !candidateTopics.some((topic) => blockedTopics.has(topic))
+    })
+    .sort((a, b) => {
+      const aSpecificMatches = a.sharedTopics.length - a.sharedInterestTopics.length
+      const bSpecificMatches = b.sharedTopics.length - b.sharedInterestTopics.length
+
+      return bSpecificMatches - aSpecificMatches
+        || b.sharedTopics.length - a.sharedTopics.length
+        || b.similarity - a.similarity
+        || new Date(b.row.published_at).getTime() - new Date(a.row.published_at).getTime()
+    })
     .slice(0, 4)
-    .map((row: any) => ({
+    .map(({ row }) => ({
       id: row.id,
       topic: row.topic,
       title: row.title,

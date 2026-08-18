@@ -114,9 +114,9 @@ export function HowItWorksRotator() {
   return (
     <div ref={sectionRef}>
       <div className="mx-auto max-w-[820px] text-center">
-        <h3 className="text-[2.7rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary md:text-[4.6rem]">
-          <span className="block">Várias fontes</span>
-          <span className="block">uma única notícia</span>
+        <h3 className={`t-stagger text-[2.7rem] font-semibold leading-[0.98] tracking-[-0.06em] text-ink-primary md:text-[4.6rem] ${isActive ? 'is-shown' : ''}`}>
+          <span className="t-stagger-line t-stagger-line--1">Várias fontes</span>
+          <span className="t-stagger-line t-stagger-line--2">uma única notícia</span>
         </h3>
       </div>
 

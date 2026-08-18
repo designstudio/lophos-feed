@@ -4,7 +4,6 @@ const HARD_BLOCK_PATTERNS = [
   /\bcasino(s)?\b/i,
   /\bcassino(s)?\b/i,
   /\bgambling\b/i,
-  /\bslots?\b/i,
   /\bpoker\b/i,
   /\broulette\b/i,
   /\broleta\b/i,
@@ -15,17 +14,10 @@ const HARD_BLOCK_PATTERNS = [
   /\bcassino online\b/i,
 ]
 
-const GAMBLING_CONTEXT_PATTERNS = [
-  /\bbet(ting)?\b/i,
-  /\bapostas?\b/i,
-  /\bjackpot\b/i,
-  /\bbonus\b/i,
-  /\bb[oô]nus\b/i,
-  /\bsports?book\b/i,
-  /\bodd(s)?\b/i,
-  /\bodds\b/i,
-  /\bprobabilidade(s)?\b/i,
-  /\blive bet\b/i,
+const GAMBLING_TITLE_PATTERNS = [
+  /\b(?:online|casino|cassino)\s+slots?\b/i,
+  /\bslot machines?\b/i,
+  /\b(?:sports?book|betting sites?|sites? de apostas?)\b/i,
 ]
 
 const DEAL_HINT_PATTERNS = [
@@ -50,6 +42,13 @@ const DEAL_HINT_PATTERNS = [
   /\b\d{1,3}%\s*(off|de desconto)\b/i,
 ]
 
+const STRONG_DEAL_TITLE_PATTERNS = [
+  /\b(?:cupom|cupons|coupon|coupons|c[oó]digo promocional)\b/i,
+  /\bblack friday\b/i,
+  /\b\d{1,3}%\s*(?:off|de desconto)\b/i,
+  /\b(?:deal|deals|promo[cç][aã]o|promo[cç][oõ]es)\b.*\b(?:preorder|pre-order|compra|comprar|pre[cç]o|desconto)\b/i,
+]
+
 const DEAL_SOURCE_HINTS = [
   'promobit',
   'pelando',
@@ -59,44 +58,10 @@ const DEAL_SOURCE_HINTS = [
   'meliuz',
 ]
 
-const ARCHIVE_HINT_PATTERNS = [
-  /\barquivos?\b/i,
-  /\barquivo(s)?\b/i,
-  /\barchive(s)?\b/i,
-  /\broundup(s)?\b/i,
-  /\bcollection\b/i,
-]
-
-const LISTICLE_HINT_PATTERNS = [
-  /\b\d+\s+(melhores|ofertas|op[çc]oes|opções|produtos|itens|motivos)\b/i,
-  /\b(top|ranking|lista|guia|sele(c|ç)(ao|ão))\b/i,
-  /\b(confira|check out|veja|clique)\b/i,
-]
-
-const LAUNCH_VERB_PATTERNS = [
-  /\blan[cç]a\b/i,
-  /\blan[cç]ou\b/i,
-  /\blan[cç]amento\b/i,
-  /\banuncia\b/i,
-  /\banunciou\b/i,
-  /\bpresenta\b/i,
-  /\bapresenta\b/i,
-  /\brevela\b/i,
-  /\brevelou\b/i,
-  /\bestreia\b/i,
-  /\bestreou\b/i,
-]
-
-const LEGACY_TECH_MARKERS = [
-  /\bm1\b/i,
-  /\bm2\b/i,
-  /\bm3\b/i,
-  /\bintel\b/i,
-  /\bmacbook air m1\b/i,
-  /\biphone 11\b/i,
-  /\biphone 12\b/i,
-  /\bps4\b/i,
-  /\bxbox one\b/i,
+const ARCHIVE_TITLE_PATTERNS = [
+  /\b(?:retrospectiva|retrospectivas|throwback|relembrando|revisitando)\b/i,
+  /\b(?:republicado|republicada|repostado|repostada|originalmente publicado|originally published)\b/i,
+  /(?:^|\s[-:|]\s)(?:arquivo|archive)(?:$|\s[-:|]\s)/i,
 ]
 
 export function extractText(value: unknown): string {
@@ -163,28 +128,13 @@ function countMatches(text: string, patterns: RegExp[]) {
 
 export function isLikelyStaleLaunchArticle({
   title = '',
-  description = '',
-  sourceName = '',
-  topic = '',
 }: {
   title?: string
   description?: string
   sourceName?: string
   topic?: string
 }) {
-  const haystack = [title, description, sourceName, topic].filter(Boolean).join(' \n ').toLowerCase()
-
-  if (!haystack.trim()) return false
-
-  const archiveSignal =
-    /\b(retrospectiva|retrospectivas|throwback|relembrando|revisitando|republicado|repostado|repost|archive|arquivo|arquivos|originalmente publicado)\b/i.test(haystack)
-
-  const launchSignal = LAUNCH_VERB_PATTERNS.some((pattern) => pattern.test(haystack))
-  const legacySignal = LEGACY_TECH_MARKERS.some((pattern) => pattern.test(haystack))
-
-  const techTopic = /\b(tecnologia|tech|gadget|mobile|hardware|apple|android)\b/i.test(haystack)
-
-  return archiveSignal || (techTopic && launchSignal && legacySignal)
+  return ARCHIVE_TITLE_PATTERNS.some((pattern) => pattern.test(title))
 }
 
 export function shouldRejectRawItem({
@@ -205,11 +155,9 @@ export function shouldRejectRawItem({
   const sectionText = Array.isArray(sections)
     ? sections.map((section) => `${section?.heading || ''} ${section?.body || ''}`).join(' \n ')
     : ''
-  const haystack = [title, description, sectionText, ...rawTexts, url, sourceName].filter(Boolean).join(' \n ').toLowerCase()
-
-  if (countMatches(haystack, ARCHIVE_HINT_PATTERNS) >= 1) {
-    return { reject: true, reason: 'blocked-archive' as const }
-  }
+  const titleText = String(title || '').toLowerCase()
+  const bodyText = [description, sectionText, ...rawTexts].filter(Boolean).join(' \n ').toLowerCase()
+  const sourceContext = [url, sourceName].filter(Boolean).join(' \n ').toLowerCase()
 
   if (
     isLikelyStaleLaunchArticle({
@@ -221,18 +169,23 @@ export function shouldRejectRawItem({
     return { reject: true, reason: 'blocked-stale-launch' as const }
   }
 
-  const gamblingSignals = countMatches(haystack, HARD_BLOCK_PATTERNS)
-  const gamblingContextSignals = countMatches(haystack, GAMBLING_CONTEXT_PATTERNS)
+  const titleForGambling = titleText.replace(/\b(?:roleta russa|russian roulette)\b/gi, '')
+  const titleGamblingSignals = countMatches(titleForGambling, HARD_BLOCK_PATTERNS) +
+    countMatches(titleForGambling, GAMBLING_TITLE_PATTERNS)
+  const bodyGamblingSignals = countMatches(bodyText, HARD_BLOCK_PATTERNS)
 
-  if (gamblingSignals >= 2 || (gamblingSignals >= 1 && gamblingContextSignals >= 1)) {
+  if (
+    titleGamblingSignals >= 1 ||
+    bodyGamblingSignals >= 2
+  ) {
     return { reject: true, reason: 'blocked-gambling' as const }
   }
 
-  const dealSignals = countMatches(haystack, DEAL_HINT_PATTERNS)
-  const listicleSignals = countMatches(haystack, LISTICLE_HINT_PATTERNS)
-  const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
+  const titleDealSignals = countMatches(titleText, DEAL_HINT_PATTERNS)
+  const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => sourceContext.includes(hint))
+  const strongDealTitle = STRONG_DEAL_TITLE_PATTERNS.some((pattern) => pattern.test(titleText))
 
-  if (dealSignals >= 2 || (dealSignals >= 1 && (sourceLooksPromo || listicleSignals >= 1))) {
+  if (strongDealTitle || titleDealSignals >= 3 || (sourceLooksPromo && titleDealSignals >= 1)) {
     return { reject: true, reason: 'blocked-deal' as const }
   }
 

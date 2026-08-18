@@ -12,6 +12,7 @@ import { XMLParser } from 'fast-xml-parser'
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
+import { shouldRejectPreflightItem as evaluateNewsPolicy } from './news-pipeline-core.mjs'
 import { loadScriptEnvironment } from './script-env.mjs'
 
 loadScriptEnvironment()
@@ -24,6 +25,29 @@ const db = createClient(
 const LOG_DIR = path.resolve(process.cwd(), 'logs')
 const INGEST_LOCK_FILE = path.join(LOG_DIR, 'rss-ingest.lock')
 const INGEST_LOCK_STALE_MS = Number(process.env.RSS_INGEST_LOCK_STALE_MS || 2 * 60 * 60 * 1000)
+const FORCE_REFRESH = process.argv.includes('--force') || process.env.RSS_FORCE_REFRESH === 'true'
+let rawItemHistoryAvailable = true
+
+async function wasRawItemArchived(url) {
+  if (!rawItemHistoryAvailable) return false
+
+  const { data, error } = await db
+    .from('raw_item_history')
+    .select('url')
+    .eq('url', url)
+    .maybeSingle()
+
+  if (error) {
+    if (['42P01', 'PGRST205'].includes(error.code)) {
+      rawItemHistoryAvailable = false
+      console.warn('[rss-ingest] raw_item_history is unavailable; apply the retention migration to enable archived URL checks.')
+      return false
+    }
+    throw new Error(`Could not check raw item history: ${error.message}`)
+  }
+
+  return Boolean(data)
+}
 
 function ensureLogDir() {
   fs.mkdirSync(LOG_DIR, { recursive: true })
@@ -82,157 +106,8 @@ function createDedupHash(title) {
   return crypto.createHash('md5').update(title.toLowerCase().trim()).digest('hex')
 }
 
-const HARD_BLOCK_PATTERNS = [
-  /\bcasino(s)?\b/i,
-  /\bcassino(s)?\b/i,
-  /\bgambling\b/i,
-  /\bbet(ting)?\b/i,
-  /\bapostas?\b/i,
-  /\bslots?\b/i,
-  /\bpoker\b/i,
-  /\broulette\b/i,
-  /\broleta\b/i,
-  /\bjackpot\b/i,
-  /\bbonus\b/i,
-  /\bb[oô]nus\b/i,
-  /\bno deposit\b/i,
-  /\bsem dep[oó]sito\b/i,
-  /\bsweepstakes?\b/i,
-  /\bbookmaker\b/i,
-  /\bcassino online\b/i,
-]
-
-const DEAL_HINT_PATTERNS = [
-  /\bdesconto\b/i,
-  /\bdescontos\b/i,
-  /\bpromo(cao|ção|coes|ções)\b/i,
-  /\boferta(s)?\b/i,
-  /\bcupom(ns)?\b/i,
-  /\bcoupon(s)?\b/i,
-  /\bblack friday\b/i,
-  /\bdeal(s)?\b/i,
-  /\bliquida(cao|ção)\b/i,
-  /\bfrete gr[aá]tis\b/i,
-  /\bgr[aá]tis\b/i,
-  /\beconomize\b/i,
-  /\bimperd[ií]vel\b/i,
-  /\bmais barato\b/i,
-  /\bmenor pre[cç]o\b/i,
-  /\bpre[cç]o baixo\b/i,
-  /\bpor r\$/i,
-  /\bpor us\$/i,
-  /\b\d{1,3}%\s*(off|de desconto)\b/i,
-]
-
-const DEAL_SOURCE_HINTS = [
-  'promobit',
-  'pelando',
-  'buscape',
-  'zoom.com',
-  'cuponomia',
-  'meliuz',
-]
-
-const LAUNCH_VERB_PATTERNS = [
-  /\blan[cç]a\b/i,
-  /\blan[cç]ou\b/i,
-  /\blan[cç]amento\b/i,
-  /\banuncia\b/i,
-  /\banunciou\b/i,
-  /\bpresenta\b/i,
-  /\bapresenta\b/i,
-  /\brevela\b/i,
-  /\brevelou\b/i,
-  /\bestreia\b/i,
-  /\bestreou\b/i,
-]
-
-const LEGACY_TECH_MARKERS = [
-  /\bm1\b/i,
-  /\bm2\b/i,
-  /\bm3\b/i,
-  /\bintel\b/i,
-  /\bmacbook air m1\b/i,
-  /\biphone 11\b/i,
-  /\biphone 12\b/i,
-  /\bps4\b/i,
-  /\bxbox one\b/i,
-]
-
-const ARCHIVE_HINT_PATTERNS = [
-  /\barquivos?\b/i,
-  /\barquivo(s)?\b/i,
-  /\barchive(s)?\b/i,
-  /\broundup(s)?\b/i,
-  /\bcollection\b/i,
-]
-
-const LISTICLE_HINT_PATTERNS = [
-  /\b\d+\s+(melhores|ofertas|op[çc]oes|opções|produtos|itens|motivos)\b/i,
-  /\b(top|ranking|lista|guia|sele(c|ç)(ao|ão))\b/i,
-  /\b(confira|check out|veja|clique)\b/i,
-]
-
-const LISTICLE_STRONG_TITLE_PATTERNS = [
-  /^(?:\d{1,3}|top|ranking)\s+(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b/i,
-  /^(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b.*\bque\b/i,
-  /^(?:os|as|um|uma|uns|umas)\s+(filmes?|atores?|personagens?|coisas?|motivos?|cenas?|vezes?|erros?|segredos?|curiosidades?|habilidades?|mecanicas?|jogos?|series?|episodios?|looks?)\b.*\bque\b/i,
-]
-
-function foldText(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function matchesAnyPattern(text, patterns) {
-  return patterns.some((pattern) => pattern.test(text))
-}
-
 function shouldRejectRawItem({ title, description, url, sourceName }) {
-  const haystack = [title, description, url, sourceName].filter(Boolean).join(' \n ').toLowerCase()
-  const foldedTitle = foldText(title)
-
-  if (ARCHIVE_HINT_PATTERNS.some((pattern) => pattern.test(haystack))) {
-    return { reject: true, reason: 'blocked-archive' }
-  }
-
-  const archiveSignal =
-    /\b(retrospectiva|retrospectivas|throwback|relembrando|revisitando|republicado|repostado|repost|archive|arquivo|arquivos|originalmente publicado)\b/i.test(haystack)
-  const launchSignal = LAUNCH_VERB_PATTERNS.some((pattern) => pattern.test(haystack))
-  const legacySignal = LEGACY_TECH_MARKERS.some((pattern) => pattern.test(haystack))
-  const techTopic = /\b(tecnologia|tech|gadget|mobile|hardware|apple|android)\b/i.test(haystack)
-
-  if (archiveSignal || (techTopic && launchSignal && legacySignal)) {
-    return { reject: true, reason: 'blocked-stale-launch' }
-  }
-
-  if (matchesAnyPattern(haystack, HARD_BLOCK_PATTERNS)) {
-    return { reject: true, reason: 'blocked-gambling' }
-  }
-
-  const strongListicleTitle = LISTICLE_STRONG_TITLE_PATTERNS.some((pattern) => pattern.test(foldedTitle))
-  const dealSignals = DEAL_HINT_PATTERNS.filter((pattern) => pattern.test(haystack)).length
-  const listicleSignals = LISTICLE_HINT_PATTERNS.filter((pattern) => pattern.test(haystack)).length
-  const sourceLooksPromo = DEAL_SOURCE_HINTS.some((hint) => haystack.includes(hint))
-  const hasListicleStructure =
-    strongListicleTitle ||
-    listicleSignals >= 2 ||
-    (listicleSignals >= 1 && /\b(10|15|20|25|30|50)\b/.test(foldedTitle))
-
-  if (hasListicleStructure) {
-    return { reject: true, reason: 'blocked-listicle' }
-  }
-
-  if (dealSignals >= 2 || (dealSignals >= 1 && (sourceLooksPromo || listicleSignals >= 1))) {
-    return { reject: true, reason: 'blocked-deal' }
-  }
-
-  return { reject: false, reason: null }
+  return evaluateNewsPolicy({ title, description, url, sourceName })
 }
 
 function extractText(val) {
@@ -387,8 +262,8 @@ async function resolveImageUrl(candidateUrl) {
 async function fetchAndParseFeed(feed) {
   try {
     const headers = { 'User-Agent': 'Mozilla/5.0 (compatible; Lophos/1.0; +http://localhost)' }
-    if (feed.last_etag) headers['If-None-Match'] = feed.last_etag
-    if (feed.last_modified) headers['If-Modified-Since'] = feed.last_modified
+    if (!FORCE_REFRESH && feed.last_etag) headers['If-None-Match'] = feed.last_etag
+    if (!FORCE_REFRESH && feed.last_modified) headers['If-Modified-Since'] = feed.last_modified
 
     const res = await fetch(feed.url, { headers, signal: AbortSignal.timeout(15000) })
 
@@ -502,6 +377,13 @@ async function main() {
 
         const { data: existing } = await db.from('raw_items').select('id').eq('url', url).single()
         if (existing) {
+          totalSkipped++
+          feedSkipped++
+          feedDuplicates++
+          continue
+        }
+
+        if (await wasRawItemArchived(url)) {
           totalSkipped++
           feedSkipped++
           feedDuplicates++

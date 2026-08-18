@@ -30,7 +30,7 @@ export default function PrivacyPage() {
           <li>Tópicos de interesse e tópicos excluídos informados por você.</li>
           <li>Artigos favoritados e reações registradas na plataforma.</li>
           <li>Threads, mensagens e sugestões de acompanhamento geradas no chat.</li>
-          <li>Preferências visuais e operacionais armazenadas localmente, como tema, cor de destaque, widgets e estado da sidebar.</li>
+          <li>Preferências visuais armazenadas localmente, como tema e cor de destaque.</li>
         </ul>
 
         <h3>1.3 Dados técnicos e operacionais</h3>

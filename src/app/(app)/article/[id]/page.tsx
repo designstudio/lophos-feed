@@ -1,26 +1,51 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { cache } from 'react'
 import ArticlePageClient from '@/components/ArticlePageClient'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import type { NewsItem } from '@/lib/types'
 
-type ArticleMetadataRow = {
+type ArticleRow = {
   id: string
+  topic: string
   title: string
   summary: string
+  sections: NewsItem['sections'] | null
+  conclusion: string | null
+  sources: NewsItem['sources'] | null
   image_url: string | null
+  video_url: string | null
   published_at: string
+  cached_at: string | null
+  matched_topics: string[] | null
 }
 
-async function getArticleForMetadata(id: string): Promise<ArticleMetadataRow | null> {
+const getArticle = cache(async (id: string): Promise<NewsItem | null> => {
   const db = getSupabaseAdmin()
   const { data } = await db
     .from('articles')
-    .select('id, title, summary, image_url, published_at')
+    .select('id, topic, title, summary, sections, conclusion, sources, image_url, video_url, published_at, cached_at, matched_topics')
     .eq('id', id)
     .maybeSingle()
 
-  return data
-}
+  if (!data) return null
+  const row = data as ArticleRow
+
+  return {
+    id: row.id,
+    topic: row.topic,
+    title: row.title,
+    summary: row.summary,
+    sections: row.sections ?? [],
+    conclusion: row.conclusion ?? undefined,
+    sources: row.sources ?? [],
+    imageUrl: row.image_url ?? undefined,
+    videoUrl: row.video_url ?? undefined,
+    publishedAt: row.published_at,
+    cachedAt: row.cached_at ?? row.published_at,
+    matchedTopics: row.matched_topics ?? undefined,
+  }
+})
 
 function getSiteUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || 'https://lophos.space'
@@ -37,7 +62,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const article = await getArticleForMetadata(id)
+  const article = await getArticle(id)
 
   if (!article) {
     return {
@@ -50,8 +75,8 @@ export async function generateMetadata({
   const url = `${siteUrl}/article/${article.id}`
   const title = `${article.title} - Lophos`
   const description = truncateDescription(article.summary || 'Leia esta noticia no Lophos.')
-  const imageUrl = article.image_url
-    ? `${siteUrl}/api/image-proxy?url=${encodeURIComponent(article.image_url)}`
+  const imageUrl = article.imageUrl
+    ? `${siteUrl}/api/image-proxy?url=${encodeURIComponent(article.imageUrl)}`
     : null
   const images = imageUrl
     ? [
@@ -75,7 +100,7 @@ export async function generateMetadata({
       locale: 'pt_BR',
       title: article.title,
       description,
-      publishedTime: article.published_at,
+      publishedTime: article.publishedAt,
       images,
     },
     twitter: {
@@ -93,11 +118,11 @@ export default async function ArticlePage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const article = await getArticleForMetadata(id)
+  const article = await getArticle(id)
 
   if (!article) {
     notFound()
   }
 
-  return <ArticlePageClient key={id} />
+  return <ArticlePageClient key={id} initialItem={article} />
 }

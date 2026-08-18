@@ -124,7 +124,7 @@ BEGIN
       )
       AND COALESCE(article.published_at, article.cached_at, '-infinity'::TIMESTAMPTZ) >= v_cutoff
       AND COALESCE(article.published_at, article.cached_at, '-infinity'::TIMESTAMPTZ) <= p_snapshot_at
-      AND COALESCE(article.created_at, article.cached_at, article.published_at, '-infinity'::TIMESTAMPTZ) <= p_snapshot_at
+      AND COALESCE(article.cached_at, article.published_at, '-infinity'::TIMESTAMPTZ) <= p_snapshot_at
       AND NOT EXISTS (
         SELECT 1
         FROM user_reactions dislike

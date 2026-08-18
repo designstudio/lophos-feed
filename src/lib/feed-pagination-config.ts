@@ -1,4 +1,4 @@
-export const FEED_PAGE_SIZE = 30
+export const FEED_PAGE_SIZE = 10
 export const FEED_PAGE_QUERY_SIZE = FEED_PAGE_SIZE + 1
-export const FEED_CACHE_MAX_ITEMS = FEED_PAGE_SIZE * 4
-export const FEED_CACHE_VERSION = 4
+export const FEED_CACHE_MAX_ITEMS = 100
+export const FEED_CACHE_VERSION = 6

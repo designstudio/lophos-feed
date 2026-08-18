@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     const debug = req.nextUrl.searchParams.get('debug') === '1'
     const body = await req.json()
-    const requestedDays = Number(body.days ?? 2)
+    const requestedDays = Number(body.days ?? 0)
     if (!Number.isInteger(requestedDays) || requestedDays < 0 || requestedDays > 365) {
       return jsonError(400, 'Invalid feed time window')
     }
@@ -138,11 +138,13 @@ export async function POST(req: NextRequest) {
         // for the first byte while we load user topics and query the feed RPC.
         if (!(await writeChunk({ ready: true }))) return
 
-        let topics: string[] = cursor?.topics ?? body.topics ?? []
+        let topics: string[] = cursor?.topics ?? (Array.isArray(body.topics)
+          ? body.topics.filter((topic: unknown): topic is string => typeof topic === 'string' && topic.trim().length > 0)
+          : [])
         let blockedTopics: string[] = cursor?.excludedTopics ?? []
         const snapshotAt = cursor?.snapshotAt ?? new Date().toISOString()
 
-        if (!cursor && topics.length === 0) {
+        if (!cursor) {
           const { data, error } = await db
             .from('user_topics')
             .select('topic')
@@ -159,9 +161,17 @@ export async function POST(req: NextRequest) {
             return
           }
 
-          topics = (data ?? []).map((r: any) => r.topic)
+          const registeredTopics = (data ?? []).map((r: any) => r.topic as string)
+          if (topics.length === 0) {
+            topics = registeredTopics
+          } else {
+            const registeredByKey = new Map(registeredTopics.map(topic => [topic.trim().toLowerCase(), topic]))
+            topics = topics
+              .map(topic => registeredByKey.get(topic.trim().toLowerCase()))
+              .filter((topic): topic is string => Boolean(topic))
+          }
           console.log(
-            `[feed] fetched ${topics.length} topics from user_topics for user ${userId}: ${JSON.stringify(topics)}`,
+            `[feed] selected ${topics.length} registered topics for user ${userId}: ${JSON.stringify(topics)}`,
           )
         }
 
