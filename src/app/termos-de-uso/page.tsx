@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { LegalPage } from '@/components/LegalPage'
 
 export const metadata: Metadata = {
@@ -8,111 +9,160 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Termos de Uso" updatedAt="7 de abril de 2026" currentPath="/termos-de-uso">
+    <LegalPage title="Termos de Uso" updatedAt="18 de agosto de 2026" currentPath="/termos-de-uso">
       <section>
         <p>
-          Estes Termos de Uso regulam o acesso e o uso do Lophos, plataforma de feed personalizado de notícias,
-          resumos editoriais assistidos por inteligência artificial e threads de conversa sobre artigos publicados.
-          Ao criar conta, acessar ou utilizar o serviço, você concorda com estes termos.
+          Estes Termos de Uso explicam as regras para acessar e utilizar o Lophos, uma plataforma de notícias
+          personalizadas, resumos editoriais assistidos por inteligência artificial e conversas relacionadas aos artigos.
+          Ao criar uma conta ou utilizar o serviço, você declara que leu e concorda com estes termos. Se não concordar,
+          não utilize o Lophos.
         </p>
       </section>
 
       <section>
         <h2>1. O que é o Lophos</h2>
         <p>
-          O Lophos organiza notícias de fontes públicas, agrupa assuntos relacionados, gera resumos editoriais,
-          permite personalização por temas de interesse e oferece uma experiência de conversa contextual sobre os artigos.
+          O Lophos reúne notícias de fontes públicas, agrupa assuntos relacionados, produz resumos editoriais, permite
+          personalizar o feed por interesses e exclusões e oferece conversas contextuais sobre os artigos.
         </p>
         <p>
-          O serviço pode utilizar modelos de inteligência artificial para síntese, organização, sugestões de perguntas
-          e apoio à navegação editorial. Embora busquemos qualidade e consistência, respostas e resumos automatizados
-          podem conter limitações, simplificações ou imprecisões.
+          O serviço não substitui as publicações originais. Sempre que possível, disponibilizamos links para que você
+          consulte as fontes e obtenha o contexto completo da informação.
         </p>
       </section>
 
       <section>
         <h2>2. Conta e acesso</h2>
         <ul>
-          <li>Para usar recursos personalizados, você precisa manter uma conta válida e informações de acesso corretas.</li>
-          <li>Você é responsável por proteger suas credenciais e pelo uso realizado a partir da sua conta.</li>
-          <li>Podemos restringir, suspender ou encerrar acesso em caso de uso abusivo, fraudulento ou contrário a estes termos.</li>
+          <li>Alguns recursos exigem uma conta válida e informações corretas e atualizadas.</li>
+          <li>Sua conta é pessoal. Não compartilhe credenciais nem permita o uso por terceiros.</li>
+          <li>Você é responsável por manter suas credenciais seguras e por nos informar caso suspeite de acesso indevido.</li>
+          <li>Você pode deixar de usar o serviço ou solicitar a exclusão da conta nas configurações da plataforma.</li>
         </ul>
       </section>
 
       <section>
-        <h2>3. Uso permitido</h2>
-        <p>Você concorda em utilizar o Lophos de forma lícita e compatível com a finalidade da plataforma.</p>
+        <h2>3. Regras de uso e condutas proibidas</h2>
+        <p>
+          Você deve utilizar o Lophos de forma lícita, respeitosa e compatível com a finalidade da plataforma.
+          Ao utilizar o serviço, você não pode:
+        </p>
         <ul>
           <li>Tentar violar segurança, disponibilidade ou integridade do serviço.</li>
-          <li>Automatizar acessos de maneira abusiva ou usar o serviço para scraping não autorizado.</li>
-          <li>Inserir conteúdo ilegal, ofensivo, fraudulento ou que viole direitos de terceiros nas interações com o sistema.</li>
-          <li>Usar o Lophos para produzir ou disseminar spam, malware ou engenharia social.</li>
+          <li>Contornar limites técnicos, controles de acesso ou mecanismos de proteção da plataforma.</li>
+          <li>Automatizar acessos de forma abusiva ou coletar dados por scraping sem autorização.</li>
+          <li>Enviar conteúdo ilegal, fraudulento, ameaçador ou que viole privacidade, propriedade intelectual ou outros direitos de terceiros.</li>
+          <li>Usar o Lophos para criar ou disseminar spam, malware, phishing, fraude ou engenharia social.</li>
+          <li>Fingir ser outra pessoa, interferir no uso de outros usuários ou utilizar o serviço para finalidade ilícita.</li>
         </ul>
       </section>
 
       <section>
-        <h2>4. Conteúdo, fontes e propriedade intelectual</h2>
+        <h2>4. Notícias, fontes e conteúdo de terceiros</h2>
         <p>
-          O Lophos exibe e referencia conteúdos jornalísticos e páginas de terceiros por meio de links, títulos, imagens,
-          resumos e metadados. Os direitos sobre o conteúdo original permanecem com seus respectivos titulares.
+          O Lophos referencia conteúdos jornalísticos e páginas de terceiros por meio de links, títulos, imagens, trechos,
+          resumos e metadados. Os direitos sobre as publicações originais permanecem com seus respectivos titulares.
         </p>
         <p>
-          O design da plataforma, a curadoria, a organização do feed, os textos institucionais e os elementos próprios do
-          Lophos são protegidos pela legislação aplicável. Você não adquire qualquer direito de propriedade sobre o serviço
-          além do direito limitado de uso pessoal conforme estes termos.
-        </p>
-      </section>
-
-      <section>
-        <h2>5. Respostas em threads e limitações</h2>
-        <p>
-          As threads podem combinar o conteúdo editorial do artigo com conhecimento geral fornecido por modelos de IA.
-          Essas respostas têm caráter informativo e não substituem consulta profissional, jurídica, médica, financeira
-          ou técnica especializada.
-        </p>
-        <p>O usuário é responsável por avaliar criticamente qualquer resposta antes de tomar decisões com base nela.</p>
-      </section>
-
-      <section>
-        <h2>6. Disponibilidade e mudanças</h2>
-        <p>
-          O Lophos pode alterar funcionalidades, layout, integrações, critérios de recomendação, regras de agrupamento,
-          recursos de IA e fluxos de autenticação a qualquer momento, com ou sem aviso prévio, para evolução do produto,
-          segurança, conformidade ou manutenção operacional.
-        </p>
-        <p>Não garantimos disponibilidade ininterrupta, ausência de erros ou manutenção de funcionalidades específicas.</p>
-      </section>
-
-      <section>
-        <h2>7. Suspensão, encerramento e remoção</h2>
-        <p>
-          Podemos suspender ou encerrar contas, remover conteúdo gerado dentro da plataforma ou limitar funcionalidades
-          quando necessário para cumprir a lei, proteger a plataforma, prevenir abuso ou fazer valer estes termos.
+          Sites externos possuem seus próprios termos, políticas e práticas. A exibição de uma fonte ou de um link não
+          significa que o Lophos endossa todas as informações, opiniões, produtos ou práticas daquele terceiro.
         </p>
       </section>
 
       <section>
-        <h2>8. Limitação de responsabilidade</h2>
+        <h2>5. Conteúdo enviado por você</h2>
         <p>
-          Na máxima extensão permitida pela legislação aplicável, o Lophos não se responsabiliza por perdas indiretas,
-          lucros cessantes, indisponibilidade temporária, decisões tomadas com base em conteúdo automatizado ou por
-          conteúdos, políticas e práticas de sites de terceiros acessados por links exibidos na plataforma.
+          Você continua responsável pelas mensagens, perguntas e demais informações que enviar ao Lophos. Ao enviar esse
+          conteúdo, você autoriza seu processamento e armazenamento somente na medida necessária para operar, proteger e
+          melhorar os recursos utilizados, conforme a Política de Privacidade.
+        </p>
+        <p>
+          Não envie informações confidenciais, dados pessoais de terceiros sem autorização ou conteúdo que você não tenha
+          o direito de utilizar. Podemos remover conteúdo ou limitar interações que violem estes termos ou a legislação aplicável.
         </p>
       </section>
 
       <section>
-        <h2>9. Privacidade e tratamento de dados</h2>
+        <h2>6. Inteligência artificial e caráter informativo</h2>
         <p>
-          O tratamento de dados pessoais relacionado ao uso da plataforma é descrito na nossa Política de Privacidade,
-          que integra estes Termos de Uso para fins de interpretação e aplicação.
+          O Lophos pode utilizar inteligência artificial para síntese, organização, personalização, sugestões e respostas
+          em conversas. Esses resultados podem conter erros, simplificações, informações desatualizadas ou interpretações
+          incompletas, mesmo quando apresentados de forma convincente.
+        </p>
+        <p>
+          O conteúdo tem finalidade informativa e não substitui orientação profissional jurídica, médica, financeira ou
+          técnica. Verifique informações importantes nas fontes originais e com profissionais qualificados antes de tomar decisões.
         </p>
       </section>
 
       <section>
-        <h2>10. Atualizações destes termos</h2>
+        <h2>7. Propriedade intelectual do Lophos</h2>
         <p>
-          Estes termos podem ser revisados periodicamente para refletir mudanças no serviço, na operação ou nas exigências
-          legais. A versão mais recente publicada no Lophos será a versão aplicável a partir da data de atualização.
+          A marca, o design, o software, a curadoria, a organização do feed, os textos institucionais e os demais elementos
+          próprios do Lophos são protegidos pela legislação aplicável. Estes termos concedem apenas uma licença limitada,
+          pessoal, não exclusiva e revogável para utilizar a plataforma conforme suas funcionalidades.
+        </p>
+      </section>
+
+      <section>
+        <h2>8. Privacidade e dados pessoais</h2>
+        <p>
+          O tratamento de dados pessoais relacionado ao serviço está descrito na nossa{' '}
+          <Link href="/politica-de-privacidade">Política de Privacidade</Link>, que complementa estes termos. Nela você
+          encontra informações sobre dados tratados, finalidades, fornecedores, retenção, segurança e direitos dos titulares.
+        </p>
+      </section>
+
+      <section>
+        <h2>9. Disponibilidade e mudanças no serviço</h2>
+        <p>
+          Podemos corrigir, atualizar, substituir ou descontinuar funcionalidades para evoluir o produto, manter a segurança,
+          cumprir obrigações legais ou preservar a operação. O serviço também pode ficar temporariamente indisponível por
+          manutenção, falhas técnicas ou eventos fora do nosso controle.
+        </p>
+        <p>Não garantimos funcionamento ininterrupto, ausência total de erros ou permanência indefinida de uma funcionalidade específica.</p>
+      </section>
+
+      <section>
+        <h2>10. Suspensão e encerramento</h2>
+        <p>
+          Podemos restringir funcionalidades, remover conteúdo, suspender ou encerrar uma conta quando houver violação destes
+          termos, risco à segurança, fraude, abuso, obrigação legal ou necessidade de proteger usuários e terceiros. Sempre que
+          a situação permitir, consideraremos a gravidade e a possibilidade de correção antes de adotar uma medida definitiva.
+        </p>
+      </section>
+
+      <section>
+        <h2>11. Responsabilidade</h2>
+        <p>
+          Dentro dos limites permitidos pela legislação, o Lophos não responde por informações incorretas ou incompletas
+          provenientes de terceiros, por decisões tomadas exclusivamente com base em conteúdo automatizado nem por serviços,
+          políticas ou práticas de sites externos acessados por links da plataforma.
+        </p>
+        <p>
+          Nada nestes termos exclui ou limita responsabilidades e direitos que não possam ser afastados pela legislação aplicável,
+          inclusive os direitos assegurados ao consumidor quando houver relação de consumo.
+        </p>
+      </section>
+
+      <section>
+        <h2>12. Atualizações destes termos</h2>
+        <p>
+          Podemos atualizar estes termos para refletir mudanças no serviço, na operação ou na legislação. A data da revisão
+          ficará indicada no início da página e, quando uma alteração for relevante, buscaremos comunicá-la de forma compatível
+          com seu impacto. O uso do serviço após a entrada em vigor da nova versão representa concordância com o texto atualizado,
+          nos limites permitidos pela legislação.
+        </p>
+      </section>
+
+      <section>
+        <h2>13. Legislação aplicável</h2>
+        <p>
+          Estes termos são regidos pela legislação brasileira. Eventuais conflitos serão tratados pelo foro competente definido
+          pela legislação aplicável, sem prejuízo dos direitos do consumidor e de outras normas obrigatórias.
+        </p>
+        <p>
+          Se alguma disposição for considerada inválida ou inexequível, as demais continuarão em vigor na maior extensão possível.
         </p>
       </section>
     </LegalPage>

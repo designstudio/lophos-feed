@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { LophosLogo } from '@/components/LophosLogo'
+import { LophosWordmark } from '@/components/LophosWordmark'
 import { cn } from '@/lib/utils'
 
 type LegalPath = '/termos-de-uso' | '/politica-de-privacidade' | '/notas-de-versao'
@@ -48,7 +49,7 @@ export function MarketingHeader({ currentPath }: { currentPath?: LegalPath }) {
       >
         <Link href="/" className="flex shrink-0 items-center gap-3 text-ink-primary">
           <LophosLogo size={30} />
-          <span className="text-[1.05rem] font-semibold tracking-[-0.04em]">Lophos</span>
+          <LophosWordmark className="h-[18px] w-[60px]" />
         </Link>
 
         <div className="flex min-w-0 flex-1 items-center justify-end gap-4 md:gap-6">

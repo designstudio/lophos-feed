@@ -127,10 +127,14 @@ export function SignupForm() {
 
       <div className="mt-5 text-center text-[0.75rem] leading-5 text-ink-tertiary">
         Ao continuar, você concorda com os{' '}
-        <Link href="/politica-de-privacidade" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
-          Termos e Políticas
+        <Link href="/termos-de-uso" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
+          Termos de Uso
         </Link>{' '}
-        da Lophos.
+        e com a{' '}
+        <Link href="/politica-de-privacidade" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
+          Política de Privacidade
+        </Link>{' '}
+        do Lophos.
       </div>
 
       <div className="mt-7 text-center text-[0.95rem] text-ink-secondary">
