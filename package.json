@@ -21,6 +21,7 @@
     "news:process-mistral": "node scripts/process-news-mistral.mjs",
     "news:process-gemma": "node scripts/process-news-gemma.mjs",
     "news:manual-gemma": "node scripts/news-manual-gemma.mjs",
+    "news:feed-health": "node scripts/report-rss-feed-health.mjs",
     "news:cleanup-retention": "node scripts/cleanup-raw-item-retention.mjs",
     "news:cleanup-today": "node scripts/cleanup-today.mjs",
     "news:cleanup-mislabeled": "node scripts/cleanup-mislabeled-articles.mjs",

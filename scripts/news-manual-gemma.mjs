@@ -17,7 +17,13 @@ const forceIngest = args.includes('--force-ingest')
 const skipPrepare = args.includes('--skip-prepare')
 const dryRun = args.includes('--dry-run')
 const help = args.includes('--help') || args.includes('-h')
-const forwardedArgs = args.filter((arg) => !['--skip-ingest', '--force-ingest', '--skip-prepare'].includes(arg))
+const source = args.find((arg) => arg.startsWith('--source='))?.slice('--source='.length).trim() || ''
+const lookbackArg = args.find((arg) => arg.startsWith('--lookback-hours='))?.slice('--lookback-hours='.length)
+const lookbackHours = lookbackArg === undefined ? (source ? 72 : null) : Number(lookbackArg)
+const forwardedArgs = args.filter((arg) => (
+  !['--skip-ingest', '--force-ingest', '--skip-prepare'].includes(arg)
+  && !arg.startsWith('--lookback-hours=')
+))
 
 function printUsage() {
   console.log(`Uso:
@@ -25,6 +31,8 @@ function printUsage() {
 
 Opcoes:
   --topics=topico1,topico2
+  --source=Destructoid
+  --lookback-hours=72  janela de raw_items (padrão: 72 com --source; 12 sem filtro)
   --max-clusters-per-topic=3
   --skip-ingest     reutiliza os raw_items ja coletados
   --force-ingest    ignora ETag/cache dos feeds e busca os itens novamente
@@ -42,6 +50,8 @@ function runStep(label, scriptPath, scriptArgs = []) {
       NEWS_PROCESS_PROVIDER: 'gemma',
       NEWS_CLUSTER_RUN_STATUS: 'manual_ready',
       NEWS_CLUSTER_ALGORITHM: process.env.NEWS_CLUSTER_ALGORITHM || 'semantic-v2',
+      NEWS_SOURCE_FILTER: source,
+      ...(lookbackHours ? { NEWS_PROCESS_LOOKBACK_HOURS: String(lookbackHours) } : {}),
     },
   })
 
@@ -77,6 +87,12 @@ async function main() {
 
   if (skipIngest && forceIngest) {
     throw new Error('--skip-ingest and --force-ingest cannot be used together')
+  }
+  if (args.some((arg) => arg.startsWith('--source=')) && !source) {
+    throw new Error('--source must not be empty')
+  }
+  if (lookbackHours !== null && (!Number.isInteger(lookbackHours) || lookbackHours < 1 || lookbackHours > 720)) {
+    throw new Error('--lookback-hours must be an integer between 1 and 720')
   }
 
   if (!dryRun) await validateOllamaAccess()

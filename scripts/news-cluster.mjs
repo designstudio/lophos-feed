@@ -25,6 +25,7 @@ const CLUSTER_RUN_STATUS = process.env.NEWS_CLUSTER_RUN_STATUS || 'ready'
 const CLUSTER_ALGORITHM = String(process.env.NEWS_CLUSTER_ALGORITHM || 'deterministic').trim().toLowerCase()
 const CLUSTER_V2_MODEL = process.env.EMBEDDING_MODEL || DEFAULT_V2_OPTIONS.modelId
 const CLUSTER_V2_THRESHOLD = Number(process.env.EMBEDDING_MERGE_THRESHOLD || DEFAULT_V2_OPTIONS.semanticThreshold)
+const SOURCE_FILTER = String(process.env.NEWS_SOURCE_FILTER || '').trim()
 
 function assertEnv(name) {
   const value = process.env[name]
@@ -154,6 +155,10 @@ async function main() {
     return
   }
 
+  if (SOURCE_FILTER && latestPreflight.payload.sourceFilter?.toLocaleLowerCase('pt-BR') !== SOURCE_FILTER.toLocaleLowerCase('pt-BR')) {
+    throw new Error(`Latest preflight run is not scoped to source: ${SOURCE_FILTER}`)
+  }
+
   const { data: latestClusterRun } = await db
     .from('news_cluster_runs')
     .select('id, preflight_run_id, status, created_at')
@@ -257,6 +262,7 @@ async function main() {
     windowHours: latestPreflight.window_hours,
     historyHours: latestPreflight.payload.historyHours || 72,
     batchSize: latestPreflight.batch_size,
+    sourceFilter: latestPreflight.payload.sourceFilter || null,
     rejectedRawIds,
     semanticDuplicateRawIds,
     semanticMatches: latestPreflight.payload.semanticMatches || [],

@@ -26,6 +26,12 @@ const LOG_DIR = path.resolve(process.cwd(), 'logs')
 const INGEST_LOCK_FILE = path.join(LOG_DIR, 'rss-ingest.lock')
 const INGEST_LOCK_STALE_MS = Number(process.env.RSS_INGEST_LOCK_STALE_MS || 2 * 60 * 60 * 1000)
 const FORCE_REFRESH = process.argv.includes('--force') || process.env.RSS_FORCE_REFRESH === 'true'
+const FEED_FILTER = (
+  process.argv.find((arg) => arg.startsWith('--feed='))?.slice('--feed='.length)
+  || process.env.RSS_FEED_FILTER
+  || process.env.NEWS_SOURCE_FILTER
+  || ''
+).trim()
 let rawItemHistoryAvailable = true
 
 async function wasRawItemArchived(url) {
@@ -261,11 +267,24 @@ async function resolveImageUrl(candidateUrl) {
 
 async function fetchAndParseFeed(feed) {
   try {
-    const headers = { 'User-Agent': 'Mozilla/5.0 (compatible; Lophos/1.0; +http://localhost)' }
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+      'Accept': 'application/rss+xml,application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+    }
     if (!FORCE_REFRESH && feed.last_etag) headers['If-None-Match'] = feed.last_etag
     if (!FORCE_REFRESH && feed.last_modified) headers['If-Modified-Since'] = feed.last_modified
 
-    const res = await fetch(feed.url, { headers, signal: AbortSignal.timeout(15000) })
+    let res = await fetch(feed.url, { headers, redirect: 'follow', signal: AbortSignal.timeout(15000) })
+
+    if ([403, 429, 502, 503, 504].includes(res.status)) {
+      await res.body?.cancel()
+      await new Promise((resolve) => setTimeout(resolve, 750))
+      const retryHeaders = { ...headers, 'Cache-Control': 'no-cache' }
+      delete retryHeaders['If-None-Match']
+      delete retryHeaders['If-Modified-Since']
+      res = await fetch(feed.url, { headers: retryHeaders, redirect: 'follow', signal: AbortSignal.timeout(15000) })
+    }
 
     if (res.status === 304) return { items: [] }
     if (!res.ok) return { items: [], error: `HTTP ${res.status}` }
@@ -314,18 +333,31 @@ async function main() {
 
   process.on('exit', () => releaseIngestLock(lock.fd))
 
-  const { data: feeds, error: feedError } = await db
+  const { data: allFeeds, error: feedError } = await db
     .from('rss_feeds')
     .select('id, url, name, topics, language, last_etag, last_modified')
     .eq('active', true)
 
   if (feedError) throw new Error('Database error: ' + feedError.message)
-  if (!feeds?.length) {
+  if (!allFeeds?.length) {
     console.log('No active feeds found.')
     return
   }
 
-  console.log(`Processing ${feeds.length} feeds...`)
+  const normalizedFilter = FEED_FILTER.toLocaleLowerCase('pt-BR')
+  const feeds = FEED_FILTER
+    ? allFeeds.filter((feed) => (
+      feed.name?.toLocaleLowerCase('pt-BR') === normalizedFilter
+      || feed.id === FEED_FILTER
+      || feed.url === FEED_FILTER
+    ))
+    : allFeeds
+
+  if (FEED_FILTER && feeds.length === 0) {
+    throw new Error(`Active feed not found: ${FEED_FILTER}`)
+  }
+
+  console.log(`Processing ${feeds.length} feed(s)${FEED_FILTER ? ` filtered by "${FEED_FILTER}"` : ''}...`)
 
   let totalAdded = 0
   let totalSkipped = 0

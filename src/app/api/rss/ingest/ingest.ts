@@ -243,13 +243,24 @@ interface RSSItem {
 async function fetchAndParseFeed(feed: RSSFeed): Promise<{ items: RSSItem[]; etag?: string; modified?: string; error?: string }> {
   try {
     const headers: Record<string, string> = {
-      'User-Agent': 'Mozilla/5.0 (compatible; Lophos/1.0; +http://localhost)',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+      'Accept': 'application/rss+xml,application/atom+xml,application/xml,text/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
     }
 
     if (feed.last_etag) headers['If-None-Match'] = feed.last_etag
     if (feed.last_modified) headers['If-Modified-Since'] = feed.last_modified
 
-    const res = await fetch(feed.url, { headers, signal: AbortSignal.timeout(15000) })
+    let res = await fetch(feed.url, { headers, redirect: 'follow', signal: AbortSignal.timeout(15000) })
+
+    if ([403, 429, 502, 503, 504].includes(res.status)) {
+      await res.body?.cancel()
+      await new Promise((resolve) => setTimeout(resolve, 750))
+      const retryHeaders: Record<string, string> = { ...headers, 'Cache-Control': 'no-cache' }
+      delete retryHeaders['If-None-Match']
+      delete retryHeaders['If-Modified-Since']
+      res = await fetch(feed.url, { headers: retryHeaders, redirect: 'follow', signal: AbortSignal.timeout(15000) })
+    }
 
     if (res.status === 304) return { items: [] }
     if (!res.ok) return { items: [], error: `HTTP ${res.status}` }

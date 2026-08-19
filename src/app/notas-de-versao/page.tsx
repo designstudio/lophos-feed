@@ -3,6 +3,26 @@ import { LegalPage } from '@/components/LegalPage'
 
 const RELEASES = [
   {
+    date: '19 ago 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'Esports agora aparece entre os tópicos sugeridos, com ícone próprio e suporte às notícias dos novos feeds especializados.',
+          'Adicionamos um diagnóstico de saúde dos feeds para identificar fontes inativas, erros de leitura, itens pendentes e a contribuição mais recente de cada publicação.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'O processamento manual de notícias agora pode ser limitado a uma única fonte, facilitando testes, correções e reprocessamentos pontuais.',
+          'Reforçamos a leitura de RSS com novas tentativas automáticas e cabeçalhos mais compatíveis para fontes que bloqueiam acessos de forma intermitente.',
+          'Atualizamos o feed de ciência do G1, ampliamos a cobertura de esports e removemos fontes que deixaram de contribuir com notícias.',
+        ],
+      },
+    ],
+  },
+  {
     date: '18 ago 2026',
     sections: [
       {

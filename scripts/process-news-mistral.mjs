@@ -66,6 +66,7 @@ function parseCliOptions(argv) {
   const options = {
     provider: process.env.NEWS_PROCESS_PROVIDER || 'mistral',
     topics: [],
+    source: '',
     maxClustersPerTopic: Number.POSITIVE_INFINITY,
     dryRun: false,
     help: false,
@@ -75,6 +76,7 @@ function parseCliOptions(argv) {
     if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--help' || arg === '-h') options.help = true
     else if (arg.startsWith('--provider=')) options.provider = arg.slice('--provider='.length)
+    else if (arg.startsWith('--source=')) options.source = arg.slice('--source='.length).trim()
     else if (arg.startsWith('--topics=')) {
       options.topics = arg
         .slice('--topics='.length)
@@ -114,6 +116,7 @@ function printUsage() {
 Opções:
   --provider=mistral|gemma
   --topics=horror,movies,tecnologia
+  --source=Destructoid
   --max-clusters-per-topic=3
   --dry-run
   --help`)
@@ -247,6 +250,11 @@ async function main() {
     return
   }
 
+  const normalizedSource = CLI_OPTIONS.source.toLocaleLowerCase('pt-BR')
+  if (normalizedSource && clusterRun.payload.sourceFilter?.toLocaleLowerCase('pt-BR') !== normalizedSource) {
+    throw new Error(`Latest ${CLUSTER_RUN_STATUS} cluster run is not scoped to source: ${CLI_OPTIONS.source}`)
+  }
+
   const requestedTopics = new Set(CLI_OPTIONS.topics.map((topic) => topic.toLocaleLowerCase('pt-BR')))
   const availableTopicPayloads = clusterRun.payload.topics || []
   const unknownTopics = [...requestedTopics].filter((requested) => (
@@ -260,7 +268,17 @@ async function main() {
   let topicPayloads = availableTopicPayloads
     .filter((entry) => requestedTopics.size === 0 || requestedTopics.has(entry.topic?.toLocaleLowerCase('pt-BR')))
     .map((entry) => {
-      const clusters = (entry.clusters || []).slice(0, CLI_OPTIONS.maxClustersPerTopic)
+      const matchingSourceIds = normalizedSource
+        ? new Set((entry.acceptedItems || [])
+          .filter((item) => item.source_name?.toLocaleLowerCase('pt-BR') === normalizedSource)
+          .map((item) => item.id))
+        : null
+      const sourceClusters = matchingSourceIds
+        ? (entry.clusters || [])
+          .map((cluster) => cluster.filter((id) => matchingSourceIds.has(id)))
+          .filter((cluster) => cluster.length > 0)
+        : entry.clusters || []
+      const clusters = sourceClusters.slice(0, CLI_OPTIONS.maxClustersPerTopic)
       const selectedIds = new Set(clusters.flat())
       return {
         ...entry,
@@ -312,6 +330,7 @@ async function main() {
   console.log(`\n🧪 ${PROVIDER_NAME} editorial processing`)
   console.log(`Cluster run: ${clusterRun.id} (${clusterRun.created_at})`)
   console.log(`Status isolado: ${CLUSTER_RUN_STATUS}${isPartialRun ? ' | execução parcial' : ''}`)
+  if (CLI_OPTIONS.source) console.log(`Fonte selecionada: ${CLI_OPTIONS.source}`)
   console.log(`Janela de entrada: últimas ${windowHours}h | histórico de comparação: ${historyHours}h`)
   console.log(`Topics selecionados: ${topicPayloads.map((entry) => `${entry.topic} (${entry.clusters.length} clusters)`).join(', ')}\n`)
   console.log(`Pendências semânticas: matches=${semanticMatches.length} raw_ids=${semanticDuplicateRawIds.length}\n`)

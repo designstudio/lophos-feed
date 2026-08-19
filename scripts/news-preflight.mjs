@@ -12,11 +12,12 @@ import { createClient } from '@supabase/supabase-js'
 import { buildHistoryKey, findSemanticDuplicateMatches, summarizePreflightByTopicWithHistory } from './news-pipeline-core.mjs'
 import { loadScriptEnvironment } from './script-env.mjs'
 
-const PROCESS_LOOKBACK_HOURS = 12
+loadScriptEnvironment()
+
+const PROCESS_LOOKBACK_HOURS = Number(process.env.NEWS_PROCESS_LOOKBACK_HOURS || 12)
 const HISTORY_LOOKBACK_HOURS = 72
 const BATCH_SIZE = 100
-
-loadScriptEnvironment()
+const SOURCE_FILTER = String(process.env.NEWS_SOURCE_FILTER || '').trim()
 
 function assertEnv(name) {
   const value = process.env[name]
@@ -49,6 +50,10 @@ function printTopicReport(report) {
 }
 
 async function main() {
+  if (!Number.isInteger(PROCESS_LOOKBACK_HOURS) || PROCESS_LOOKBACK_HOURS < 1 || PROCESS_LOOKBACK_HOURS > 720) {
+    throw new Error('NEWS_PROCESS_LOOKBACK_HOURS must be an integer between 1 and 720')
+  }
+
   const db = createClient(
     assertEnv('NEXT_PUBLIC_SUPABASE_URL'),
     assertEnv('SUPABASE_SERVICE_ROLE_KEY'),
@@ -56,11 +61,13 @@ async function main() {
 
   const rawLookbackSince = new Date(Date.now() - PROCESS_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString()
 
-  const { data: topicRows, error: topicError } = await db
+  let topicQuery = db
     .from('raw_items')
     .select('topic')
     .eq('processed', false)
     .gte('pub_date', rawLookbackSince)
+  if (SOURCE_FILTER) topicQuery = topicQuery.ilike('source_name', SOURCE_FILTER)
+  const { data: topicRows, error: topicError } = await topicQuery
 
   if (topicError) throw new Error('DB error: ' + topicError.message)
   if (!topicRows?.length) {
@@ -71,6 +78,7 @@ async function main() {
   const topics = [...new Set(topicRows.map((row) => row.topic).filter(Boolean))]
   console.log(`\n🧪 News preflight`)
   console.log(`Janela de processamento: últimas ${PROCESS_LOOKBACK_HOURS}h (${rawLookbackSince})`)
+  if (SOURCE_FILTER) console.log(`Fonte selecionada: ${SOURCE_FILTER}`)
   console.log(`Topics encontrados: ${topics.join(', ')}\n`)
 
   const historyKeys = new Set()
@@ -115,7 +123,7 @@ async function main() {
   let totalSemanticDuplicates = 0
 
   for (const topic of topics) {
-    const { data: rawItems, error } = await db
+    let rawItemsQuery = db
       .from('raw_items')
       .select('id, url, title, content, summary, image_url, video_url, topic, source_name, source_url, pub_date, fetched_at')
       .eq('topic', topic)
@@ -123,6 +131,8 @@ async function main() {
       .gte('pub_date', rawLookbackSince)
       .order('pub_date', { ascending: false })
       .limit(BATCH_SIZE)
+    if (SOURCE_FILTER) rawItemsQuery = rawItemsQuery.ilike('source_name', SOURCE_FILTER)
+    const { data: rawItems, error } = await rawItemsQuery
 
     if (error) {
       console.error(`[${topic}] DB error: ${error.message}`)
@@ -214,6 +224,7 @@ async function main() {
     windowHours: PROCESS_LOOKBACK_HOURS,
     historyHours: HISTORY_LOOKBACK_HOURS,
     batchSize: BATCH_SIZE,
+    sourceFilter: SOURCE_FILTER || null,
     totalFetched,
     totalAccepted,
     totalRejected,
