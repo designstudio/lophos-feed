@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useUser, useClerk } from '@clerk/nextjs'
-import { AlertCircle, Check, CheckCircle, Sun, MoonStar, Monitor02, Upload01 } from '@untitledui/icons'
+import { AlertCircle, Check, CheckCircle, Sun, MoonStar, Monitor02, RefreshCw05, Upload01 } from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 import { TransitionText } from '@/components/TransitionText'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -130,6 +130,10 @@ export function SettingsPageContent() {
   const [savedExcludedTopics, setSavedExcludedTopics] = useState<string[]>([])
   const [excludedTopicsLoaded, setExcludedTopicsLoaded] = useState(false)
   const [excludedCustom, setExcludedCustom] = useState('')
+  const [excludedTopicSuggestions, setExcludedTopicSuggestions] = useState<string[]>([])
+  const [excludedTopicSuggestionsLoading, setExcludedTopicSuggestionsLoading] = useState(false)
+  const [excludedTopicSuggestionsOpen, setExcludedTopicSuggestionsOpen] = useState(false)
+  const [activeExcludedTopicSuggestion, setActiveExcludedTopicSuggestion] = useState(-1)
   const [savingExcluded, setSavingExcluded] = useState(false)
   const [excludedSaved, setExcludedSaved] = useState(false)
 
@@ -191,6 +195,39 @@ export function SettingsPageContent() {
       controller.abort()
     }
   }, [custom])
+
+  useEffect(() => {
+    const query = excludedCustom.trim()
+    if (query.length < 2) {
+      setExcludedTopicSuggestions([])
+      setExcludedTopicSuggestionsLoading(false)
+      setActiveExcludedTopicSuggestion(-1)
+      return
+    }
+
+    const controller = new AbortController()
+    setExcludedTopicSuggestionsLoading(true)
+    const timeout = window.setTimeout(() => {
+      fetch(`/api/topics/autocomplete?q=${encodeURIComponent(query)}&includeDefaults=true`, { signal: controller.signal })
+        .then((response) => response.ok ? response.json() : { suggestions: [] })
+        .then((data) => {
+          setExcludedTopicSuggestions(Array.isArray(data.suggestions) ? data.suggestions : [])
+          setActiveExcludedTopicSuggestion(-1)
+        })
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === 'AbortError') return
+          setExcludedTopicSuggestions([])
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setExcludedTopicSuggestionsLoading(false)
+        })
+    }, 220)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [excludedCustom])
 
   const handleTheme = (t: string) => { setTheme(t); applyTheme(t) }
 
@@ -338,6 +375,23 @@ export function SettingsPageContent() {
     setTopicsSaved(false)
   }
 
+  const addExcludedTopic = (topic: string) => {
+    const trimmedTopic = topic.trim()
+    if (!trimmedTopic) return
+
+    const excludedTopic = getInterestTopicLabel(trimmedTopic)
+    const topicKey = normalizeTopicKey(excludedTopic)
+    setExcludedTopics((current) => {
+      if (current.some((item) => normalizeTopicKey(getInterestTopicLabel(item)) === topicKey)) return current
+      return [...current, excludedTopic]
+    })
+    setExcludedCustom('')
+    setExcludedTopicSuggestions([])
+    setExcludedTopicSuggestionsOpen(false)
+    setActiveExcludedTopicSuggestion(-1)
+    setExcludedSaved(false)
+  }
+
   const saveExcludedTopics = async () => {
     setSavingExcluded(true)
     try {
@@ -408,6 +462,10 @@ export function SettingsPageContent() {
   const availableTopicSuggestions = topicSuggestions.filter((topic) => {
     const topicKey = normalizeTopicKey(getInterestTopicLabel(topic))
     return !selectedTopicKeys.has(topicKey) && !excludedInterestTopicKeys.has(topicKey)
+  })
+  const availableExcludedTopicSuggestions = excludedTopicSuggestions.filter((topic) => {
+    const topicKey = normalizeTopicKey(getInterestTopicLabel(topic))
+    return !excludedInterestTopicKeys.has(topicKey)
   })
   return (
     <>
@@ -621,7 +679,10 @@ export function SettingsPageContent() {
               {topicSuggestionsOpen && custom.trim().length >= 2 && (
                 <div id="settings-topic-autocomplete-list" className="settings-topic-autocomplete__menu" role="listbox">
                   {topicSuggestionsLoading ? (
-                    <p className="settings-topic-autocomplete__status" role="status">Buscando tópicos…</p>
+                    <p className="settings-topic-autocomplete__status settings-topic-autocomplete__status--loading" role="status">
+                      <RefreshCw05 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
+                      <span>Buscando tópicos…</span>
+                    </p>
                   ) : availableTopicSuggestions.length > 0 ? (
                     availableTopicSuggestions.map((topic, index) => (
                       <button
@@ -692,27 +753,71 @@ export function SettingsPageContent() {
               ))}
               {excludedTopics.length === 0 && <p className="text-sm italic text-ink-tertiary">Nenhum tópico excluído</p>}
             </div>
-            <div className="settings-inline-form">
+            <div className="settings-topic-autocomplete">
               <input
                 value={excludedCustom}
-                onChange={(event) => setExcludedCustom(event.target.value)}
+                onChange={(event) => {
+                  setExcludedCustom(event.target.value)
+                  setExcludedTopicSuggestionsOpen(true)
+                }}
+                onFocus={() => { if (excludedCustom.trim().length >= 2) setExcludedTopicSuggestionsOpen(true) }}
+                onBlur={() => setExcludedTopicSuggestionsOpen(false)}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' && excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) {
-                    setExcludedTopics((current) => [...current, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false)
+                  if (event.key === 'ArrowDown' && availableExcludedTopicSuggestions.length > 0) {
+                    event.preventDefault()
+                    setExcludedTopicSuggestionsOpen(true)
+                    setActiveExcludedTopicSuggestion((current) => (current + 1) % availableExcludedTopicSuggestions.length)
+                  } else if (event.key === 'ArrowUp' && availableExcludedTopicSuggestions.length > 0) {
+                    event.preventDefault()
+                    setExcludedTopicSuggestionsOpen(true)
+                    setActiveExcludedTopicSuggestion((current) => current <= 0 ? availableExcludedTopicSuggestions.length - 1 : current - 1)
+                  } else if (event.key === 'Enter') {
+                    event.preventDefault()
+                    const suggestion = availableExcludedTopicSuggestions[
+                      activeExcludedTopicSuggestion >= 0 ? activeExcludedTopicSuggestion : 0
+                    ]
+                    if (suggestion) addExcludedTopic(suggestion)
+                  } else if (event.key === 'Escape') {
+                    setExcludedTopicSuggestionsOpen(false)
                   }
                 }}
-                aria-label="Novo tópico excluído"
-                placeholder="Ex: anime, k-pop..."
+                role="combobox"
+                aria-label="Buscar tópico para excluir"
+                aria-autocomplete="list"
+                aria-expanded={excludedTopicSuggestionsOpen && excludedCustom.trim().length >= 2}
+                aria-controls="settings-excluded-topic-autocomplete-list"
+                aria-activedescendant={activeExcludedTopicSuggestion >= 0 ? `settings-excluded-topic-option-${activeExcludedTopicSuggestion}` : undefined}
+                autoComplete="off"
+                placeholder="Buscar tópico para excluir..."
               />
-              <button
-                type="button"
-                className="settings-button settings-button--secondary settings-control-shadow"
-                onClick={() => {
-                  if (excludedCustom.trim() && !excludedTopics.includes(excludedCustom.trim())) {
-                    setExcludedTopics((current) => [...current, excludedCustom.trim()]); setExcludedCustom(''); setExcludedSaved(false)
-                  }
-                }}
-              >Adicionar</button>
+              {excludedTopicSuggestionsOpen && excludedCustom.trim().length >= 2 && (
+                <div id="settings-excluded-topic-autocomplete-list" className="settings-topic-autocomplete__menu" role="listbox">
+                  {excludedTopicSuggestionsLoading ? (
+                    <p className="settings-topic-autocomplete__status settings-topic-autocomplete__status--loading" role="status">
+                      <RefreshCw05 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
+                      <span>Buscando tópicos…</span>
+                    </p>
+                  ) : availableExcludedTopicSuggestions.length > 0 ? (
+                    availableExcludedTopicSuggestions.map((topic, index) => (
+                      <button
+                        key={topic}
+                        id={`settings-excluded-topic-option-${index}`}
+                        type="button"
+                        role="option"
+                        aria-selected={index === activeExcludedTopicSuggestion}
+                        className={cn('settings-topic-autocomplete__option', index === activeExcludedTopicSuggestion && 'is-active')}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => addExcludedTopic(topic)}
+                      >
+                        <TopicIcon topic={topic} size={13} />
+                        <span>{formatInterestTopicLabel(topic)}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="settings-topic-autocomplete__status" role="status">Nenhum tópico encontrado.</p>
+                  )}
+                </div>
+              )}
             </div>
             <button type="button" onClick={saveExcludedTopics} disabled={!excludedTopicsChanged || savingExcluded} className="settings-button settings-button--primary mt-4">
               <TransitionText stateKey={excludedSaved ? 'saved' : savingExcluded ? 'saving' : 'idle'}>

@@ -262,14 +262,14 @@ function MosaicStory({
     <div className="mosaic-story__footer">
       <NewsSourceAttribution sources={item.sources} />
       <div className="editorial-card__reactions">
-        <Tooltip content={reaction === 'like' ? 'Remover dos favoritos' : 'Curtir'} side="top">
+        <Tooltip content={reaction === 'like' ? 'Descurtir' : 'Curtir'} side="top">
           <motion.button
             type="button"
             onClick={() => { void react('like') }}
             whileTap={{ scale: 0.85 }}
             disabled={reacting}
             className={cn('editorial-card__reaction editorial-card__reaction--like', reaction === 'like' && 'is-active')}
-            aria-label={reaction === 'like' ? 'Remover dos favoritos' : 'Curtir'}
+            aria-label={reaction === 'like' ? 'Descurtir' : 'Curtir'}
             aria-pressed={reaction === 'like'}
           >
             <LikeBurstIcon liked={reaction === 'like'} burstToken={likeBurstToken} size={20} />

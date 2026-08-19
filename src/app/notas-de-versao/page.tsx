@@ -11,6 +11,7 @@ const RELEASES = [
           'O feed ganhou modos de visualização em lista e mosaico, permitindo escolher como acompanhar as notícias sem perder a personalização.',
           'Adicionamos paginação contínua e um aviso de novas publicações, deixando a atualização do feed mais previsível sem interromper a leitura.',
           'Os tópicos ganharam ícones próprios para franquias, premiações e jogos — como Oscar, Harry Potter, Valorant, League of Legends, Counter-Strike, Fortnite e outros — facilitando a identificação visual no feed.',
+          'As configurações agora oferecem tópicos sugeridos com ícones e autocomplete para adicionar interesses ou exclusões com mais segurança.',
           'Evoluímos a curadoria editorial com novas etapas de preflight, agrupamento e revisão assistida por IA para produzir artigos mais consistentes e reunir melhor as fontes relacionadas.',
         ],
       },
@@ -19,6 +20,9 @@ const RELEASES = [
         items: [
           'Refinamos cards, sidebars, menus, tópicos, widgets e navegação mobile para melhorar hierarquia visual, responsividade e estabilidade durante o uso.',
           'As páginas de feed, favoritos, artigos, configurações e threads agora apresentam estados de carregamento mais consistentes e transições mais suaves.',
+          'Padronizamos a aparência dos campos, a capitalização dos tópicos e os textos das ações de curtir em todo o produto.',
+          'Curtir e descurtir dentro de uma notícia agora responde imediatamente, mantendo a sincronização em segundo plano sem bloquear os botões.',
+          'Ajustamos a personalização para que categorias padrão consultem o tópico editorial e interesses personalizados consultem os tópicos relacionados de cada artigo.',
           'Melhoramos a restauração do cache e o carregamento incremental do feed, reduzindo telas vazias, saltos de conteúdo e trabalho desnecessário no servidor.',
           'Reforçamos a deduplicação e o processamento em lotes para evitar falhas quando o volume de notícias ou de fontes cresce.',
         ],

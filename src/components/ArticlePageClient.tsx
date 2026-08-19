@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
@@ -92,6 +92,8 @@ interface RelatedItem {
   publishedAt: string
 }
 
+type ArticleReaction = 'like' | 'dislike' | null
+
 export default function ArticlePageClient({ initialItem }: { initialItem: NewsItem }) {
   const id = initialItem.id
   const { isSignedIn } = useAuth()
@@ -102,11 +104,48 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
   const [liked, setLiked] = useState(false)
   const [likeBurstToken, setLikeBurstToken] = useState(0)
   const [disliked, setDisliked] = useState(false)
-  const [reactionLoading, setReactionLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
   const imageModalTransition = useModalTransition(showImageModal)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const desiredReactionRef = useRef<ArticleReaction>(null)
+  const persistedReactionRef = useRef<ArticleReaction>(null)
+  const reactionSavingRef = useRef(false)
+  const reactionReadyRef = useRef(false)
+  const reactionChangedRef = useRef(false)
+
+  const applyReactionState = useCallback((reaction: ArticleReaction) => {
+    setLiked(reaction === 'like')
+    setDisliked(reaction === 'dislike')
+  }, [])
+
+  const flushReactionQueue = useCallback(async () => {
+    if (!reactionReadyRef.current || reactionSavingRef.current) return
+
+    reactionSavingRef.current = true
+    try {
+      while (persistedReactionRef.current !== desiredReactionRef.current) {
+        const reaction = desiredReactionRef.current
+        const response = await fetch('/api/reactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ articleId: id, topic: item?.topic ?? '', reaction }),
+        })
+
+        if (!response.ok) throw new Error('Failed to update reaction')
+        persistedReactionRef.current = reaction
+      }
+    } catch {
+      desiredReactionRef.current = persistedReactionRef.current
+      applyReactionState(persistedReactionRef.current)
+    } finally {
+      reactionSavingRef.current = false
+
+      if (persistedReactionRef.current !== desiredReactionRef.current) {
+        void flushReactionQueue()
+      }
+    }
+  }, [applyReactionState, id, item?.topic])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -128,43 +167,56 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
   }, [id])
 
   useEffect(() => {
-    if (!isSignedIn) return
-    fetch('/api/reactions')
-      .then((r) => r.json())
-      .then((data) => {
-        const reaction = (data.reactions ?? {})[id]
-        setLiked(reaction === 'like')
-        setDisliked(reaction === 'dislike')
-      })
-      .catch(() => {})
-  }, [id, isSignedIn])
+    desiredReactionRef.current = null
+    persistedReactionRef.current = null
+    reactionReadyRef.current = false
+    reactionChangedRef.current = false
+    applyReactionState(null)
 
-  const updateReaction = async (nextReaction: 'like' | 'dislike' | null) => {
-    if (!isSignedIn || reactionLoading) return
-    setReactionLoading(true)
-    const previousReaction = liked ? 'like' : disliked ? 'dislike' : null
-    if (nextReaction === 'like') setLikeBurstToken((token) => token + 1)
-    setLiked(nextReaction === 'like')
-    setDisliked(nextReaction === 'dislike')
-    try {
-      await fetch('/api/reactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId: id, topic: item?.topic ?? '', reaction: nextReaction }),
+    if (!isSignedIn) return
+
+    const controller = new AbortController()
+    fetch('/api/reactions', { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error('Failed to load reactions')
+        return response.json()
       })
-    } catch {
-      setLiked(previousReaction === 'like')
-      setDisliked(previousReaction === 'dislike')
-    }
-    setReactionLoading(false)
+      .then((data) => {
+        const reaction = ((data.reactions ?? {})[id] ?? null) as ArticleReaction
+        persistedReactionRef.current = reaction
+        reactionReadyRef.current = true
+
+        if (reactionChangedRef.current) {
+          void flushReactionQueue()
+        } else {
+          desiredReactionRef.current = reaction
+          applyReactionState(reaction)
+        }
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return
+        reactionReadyRef.current = true
+        if (reactionChangedRef.current) void flushReactionQueue()
+      })
+
+    return () => controller.abort()
+  }, [applyReactionState, flushReactionQueue, id, isSignedIn])
+
+  const updateReaction = (nextReaction: ArticleReaction) => {
+    if (!isSignedIn) return
+    reactionChangedRef.current = true
+    desiredReactionRef.current = nextReaction
+    if (nextReaction === 'like') setLikeBurstToken((token) => token + 1)
+    applyReactionState(nextReaction)
+    void flushReactionQueue()
   }
 
   const toggleLike = () => {
-    updateReaction(liked ? null : 'like')
+    updateReaction(desiredReactionRef.current === 'like' ? null : 'like')
   }
 
   const toggleDislike = () => {
-    updateReaction(disliked ? null : 'dislike')
+    updateReaction(desiredReactionRef.current === 'dislike' ? null : 'dislike')
   }
 
   const copyArticle = async () => {
@@ -293,15 +345,16 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                       <motion.button
                         type="button"
                         onClick={toggleLike}
-                        disabled={!isSignedIn || reactionLoading}
+                        disabled={!isSignedIn}
                         aria-label={liked ? 'Descurtir' : 'Curtir'}
+                        aria-pressed={liked}
                         whileTap={{ scale: 0.85 }}
                         className={cn(
                           'editorial-card__reaction--like flex items-center justify-center w-8 h-8 rounded-full transition-colors',
                           liked
                             ? 'is-active'
                             : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
-                          (!isSignedIn || reactionLoading) && 'opacity-60 cursor-not-allowed',
+                          !isSignedIn && 'opacity-60 cursor-not-allowed',
                         )}
                       >
                         <LikeBurstIcon liked={liked} burstToken={likeBurstToken} size={16} />
@@ -312,15 +365,16 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                       <motion.button
                         type="button"
                         onClick={toggleDislike}
-                        disabled={!isSignedIn || reactionLoading}
+                        disabled={!isSignedIn}
                         aria-label={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}
+                        aria-pressed={disliked}
                         whileTap={{ scale: 0.85 }}
                         className={cn(
                           'flex items-center justify-center w-8 h-8 rounded-full transition-colors',
                           disliked
                             ? 'bg-zinc-100 text-zinc-600'
                             : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
-                          (!isSignedIn || reactionLoading) && 'opacity-60 cursor-not-allowed',
+                          !isSignedIn && 'opacity-60 cursor-not-allowed',
                         )}
                       >
                         <AnimatePresence mode="wait" initial={false}>

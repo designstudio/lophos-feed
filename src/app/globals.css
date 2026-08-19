@@ -1956,6 +1956,16 @@ html, body {
   font-size: 0.82rem;
 }
 
+.settings-topic-autocomplete__status--loading {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.settings-topic-autocomplete__status--loading svg {
+  flex: 0 0 auto;
+}
+
 .settings-topic-defaults {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
