@@ -81,7 +81,7 @@ export function toFeedItem(row: FeedArticleRow, userTopics: string[] = []): Feed
   const matchedTopics = Array.isArray(row.matched_topics)
     ? row.matched_topics.filter((topic): topic is string => typeof topic === 'string')
     : []
-  const displayTopic = getMatchingInterestTopicLabel([row.topic, ...matchedTopics], userTopics) ?? row.topic
+  const displayTopic = getMatchingInterestTopicLabel(row.topic, matchedTopics, userTopics) ?? row.topic
   const coverageImages = extractCoverageImages(row)
 
   return {

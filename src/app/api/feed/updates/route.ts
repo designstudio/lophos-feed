@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { toFeedItem } from '@/lib/feed-item'
 import { loadBlockedTopics } from '@/lib/topic-signals'
-import { expandInterestTopics } from '@/lib/default-interest-topics'
+import { getInterestTopicFilters } from '@/lib/default-interest-topics'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,8 +19,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ hasUpdates: false })
 
   const db = getSupabaseAdmin()
-  const queryTopics = expandInterestTopics(topics)
-  const blockedTopics = await loadBlockedTopics(db, userId, queryTopics)
+  const topicFilters = getInterestTopicFilters(topics)
+  const blockedTopics = await loadBlockedTopics(
+    db,
+    userId,
+    [...topicFilters.articleTopics, ...topicFilters.matchedTopics],
+  )
   const blockedSet = new Set(blockedTopics)
 
   // Check if there are articles newer than `since` matching user's topics
@@ -31,15 +35,20 @@ export async function POST(req: NextRequest) {
     .order('cached_at', { ascending: false })
     .limit(50)
 
-  const [matchedResult, primaryResult] = await Promise.all([
-    buildUpdatesQuery().overlaps('matched_topics', queryTopics),
-    buildUpdatesQuery().in('topic', queryTopics),
-  ])
+  const queries = [
+    ...(topicFilters.matchedTopics.length > 0
+      ? [buildUpdatesQuery().overlaps('matched_topics', topicFilters.matchedTopics)]
+      : []),
+    ...(topicFilters.articleTopics.length > 0
+      ? [buildUpdatesQuery().in('topic', topicFilters.articleTopics)]
+      : []),
+  ]
+  const results = await Promise.all(queries)
 
-  if (matchedResult.error || primaryResult.error) return NextResponse.json({ hasUpdates: false })
+  if (results.some((result) => result.error)) return NextResponse.json({ hasUpdates: false })
 
   const rowsById = new Map(
-    [...(matchedResult.data ?? []), ...(primaryResult.data ?? [])]
+    results.flatMap((result) => result.data ?? [])
       .map((row: any) => [row.id, row] as const),
   )
   const visibleRows = [...rowsById.values()].filter((row: any) => {

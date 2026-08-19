@@ -1,12 +1,13 @@
 -- Cursor-paginated, feed-only projection.
 -- This is intentionally versioned: get_personalized_feed remains untouched.
 -- Rollback: DROP FUNCTION IF EXISTS public.get_personalized_feed_page_v2(
---   text, text[], integer, text[], timestamptz, integer, timestamptz, uuid, integer, text[]
+--   text, text[], text[], integer, text[], timestamptz, integer, timestamptz, uuid, integer, text[]
 -- );
 
 CREATE OR REPLACE FUNCTION public.get_personalized_feed_page_v2(
   p_user_id          TEXT,
   p_topics           TEXT[],
+  p_custom_topics    TEXT[] DEFAULT '{}',
   p_days             INTEGER DEFAULT 2,
   p_excluded_topics  TEXT[] DEFAULT '{}',
   p_snapshot_at      TIMESTAMPTZ DEFAULT NOW(),
@@ -39,7 +40,8 @@ AS $$
 DECLARE
   v_liked_keywords     TEXT[];
   v_cutoff             TIMESTAMPTZ;
-  v_normalized_topics  TEXT[];
+  v_article_topics     TEXT[];
+  v_matched_topics     TEXT[];
   v_normalized_excluded TEXT[];
 BEGIN
   IF p_limit < 1 OR p_limit > 100 THEN
@@ -56,7 +58,7 @@ BEGIN
   END IF;
 
   SELECT ARRAY_AGG(DISTINCT expanded.topic)
-  INTO v_normalized_topics
+  INTO v_article_topics
   FROM (
     SELECT TRIM(value) AS topic
     FROM UNNEST(p_topics) AS value
@@ -68,9 +70,18 @@ BEGIN
   ) expanded
   WHERE expanded.topic <> '';
 
-  IF v_normalized_topics IS NULL OR ARRAY_LENGTH(v_normalized_topics, 1) = 0 THEN
-    v_normalized_topics := p_topics;
-  END IF;
+  SELECT ARRAY_AGG(DISTINCT expanded.topic)
+  INTO v_matched_topics
+  FROM (
+    SELECT TRIM(value) AS topic
+    FROM UNNEST(p_custom_topics) AS value
+    WHERE value IS NOT NULL AND TRIM(value) <> ''
+    UNION
+    SELECT normalize_topic(TRIM(value)) AS topic
+    FROM UNNEST(p_custom_topics) AS value
+    WHERE value IS NOT NULL AND TRIM(value) <> ''
+  ) expanded
+  WHERE expanded.topic <> '';
 
   SELECT ARRAY_AGG(DISTINCT expanded.topic)
   INTO v_normalized_excluded
@@ -131,11 +142,15 @@ BEGIN
       COALESCE(article.published_at, article.cached_at, '-infinity'::TIMESTAMPTZ) AS sort_value
     FROM articles article
     WHERE (
-        article.topic = ANY(v_normalized_topics)
+        (
+          CARDINALITY(COALESCE(v_article_topics, '{}'::TEXT[])) > 0
+          AND article.topic = ANY(v_article_topics)
+        )
         OR (
-          article.matched_topics IS NOT NULL
+          CARDINALITY(COALESCE(v_matched_topics, '{}'::TEXT[])) > 0
+          AND article.matched_topics IS NOT NULL
           AND ARRAY_LENGTH(article.matched_topics, 1) > 0
-          AND article.matched_topics && v_normalized_topics
+          AND article.matched_topics && v_matched_topics
         )
       )
       AND (
@@ -226,7 +241,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.get_personalized_feed_page_v2(
-  TEXT, TEXT[], INTEGER, TEXT[], TIMESTAMPTZ, INTEGER, TIMESTAMPTZ, UUID, INTEGER, TEXT[]
+  TEXT, TEXT[], TEXT[], INTEGER, TEXT[], TIMESTAMPTZ, INTEGER, TIMESTAMPTZ, UUID, INTEGER, TEXT[]
 ) IS 'Stable cursor-paginated FeedItem projection; leaves get_personalized_feed unchanged.';
 
 NOTIFY pgrst, 'reload schema';

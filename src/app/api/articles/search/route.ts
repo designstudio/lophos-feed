@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { NewsItem } from '@/lib/types'
-import { expandInterestTopics } from '@/lib/default-interest-topics'
+import { getInterestTopicFilters } from '@/lib/default-interest-topics'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
   const searchQuery = `%${q}%`
-  const queryTopics = expandInterestTopics(userTopics)
+  const topicFilters = getInterestTopicFilters(userTopics)
 
   const { data: hiddenRows, error: hiddenError } = await db
     .from('user_reactions')
@@ -52,19 +52,24 @@ export async function GET(req: NextRequest) {
     .order('cached_at', { ascending: false })
     .limit(fetchLimit)
 
-  const [matchedResult, primaryResult] = await Promise.all([
-    buildSearchQuery().overlaps('matched_topics', queryTopics),
-    buildSearchQuery().in('topic', queryTopics),
-  ])
+  const queries = [
+    ...(topicFilters.matchedTopics.length > 0
+      ? [buildSearchQuery().overlaps('matched_topics', topicFilters.matchedTopics)]
+      : []),
+    ...(topicFilters.articleTopics.length > 0
+      ? [buildSearchQuery().in('topic', topicFilters.articleTopics)]
+      : []),
+  ]
+  const results = await Promise.all(queries)
 
-  const queryError = matchedResult.error ?? primaryResult.error
+  const queryError = results.find((result) => result.error)?.error
   if (queryError) {
     console.error('[articles/search] Error:', queryError)
     return NextResponse.json({ error: queryError.message }, { status: 500 })
   }
 
   const rowsById = new Map(
-    [...(matchedResult.data ?? []), ...(primaryResult.data ?? [])]
+    results.flatMap((result) => result.data ?? [])
       .map((row: any) => [row.id, row] as const),
   )
   const visibleRows = [...rowsById.values()]

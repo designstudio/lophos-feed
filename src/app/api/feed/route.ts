@@ -5,7 +5,7 @@ import { isLikelyStaleLaunchArticle } from '@/lib/news-preprocessing'
 import { toFeedItem } from '@/lib/feed-item'
 import { FeedItem } from '@/lib/types'
 import { loadBlockedTopics } from '@/lib/topic-signals'
-import { expandInterestTopics, toInterestTopicLabels } from '@/lib/default-interest-topics'
+import { getInterestTopicFilters, toInterestTopicLabels } from '@/lib/default-interest-topics'
 import {
   decodeFeedCursor,
   encodeFeedCursor,
@@ -188,21 +188,26 @@ export async function POST(req: NextRequest) {
           if (!(await writeChunk({ debug: { phase: 'start' } }))) return
         }
 
-        const queryTopics = expandInterestTopics(topics)
+        const topicFilters = getInterestTopicFilters(topics)
 
         if (!cursor) {
-          blockedTopics = await loadBlockedTopics(db, userId, queryTopics)
+          blockedTopics = await loadBlockedTopics(
+            db,
+            userId,
+            [...topicFilters.articleTopics, ...topicFilters.matchedTopics],
+          )
         }
         if (requestAborted) return
         console.log(
-          `[feed] calling get_personalized_feed_page_v2 with topics=${JSON.stringify(queryTopics)}, days=${days}, cursor=${cursor ? 'yes' : 'no'}`,
+          `[feed] calling get_personalized_feed_page_v2 with article_topics=${JSON.stringify(topicFilters.articleTopics)}, matched_topics=${JSON.stringify(topicFilters.matchedTopics)}, days=${days}, cursor=${cursor ? 'yes' : 'no'}`,
         )
         console.log(`[feed] blocked topics=${JSON.stringify(blockedTopics)}`)
         const queryStartedAt = performance.now()
         const { data: allArticles, error } = await db
           .rpc('get_personalized_feed_page_v2', {
             p_user_id: userId,
-            p_topics: queryTopics,
+            p_topics: topicFilters.articleTopics,
+            p_custom_topics: topicFilters.matchedTopics,
             p_days: days,
             p_excluded_topics: blockedTopics,
             p_snapshot_at: snapshotAt,

@@ -3,7 +3,11 @@ export const dynamic = 'force-dynamic'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { loadBlockedTopics } from '@/lib/topic-signals'
-import { expandInterestTopics } from '@/lib/default-interest-topics'
+import {
+  getInterestTopicFilters,
+  getMatchingInterestTopicLabel,
+  toInterestTopicLabels,
+} from '@/lib/default-interest-topics'
 
 function normalizeTopic(value: unknown): string {
   return String(value ?? '').trim().toLowerCase()
@@ -30,17 +34,25 @@ export async function GET(req: NextRequest) {
     db.from('user_reactions').select('article_id').eq('user_id', userId).eq('reaction', 'dislike'),
   ])
 
-  const userTopics = normalizeTopics(expandInterestTopics((userTopicsRows ?? []).map((row: any) => row.topic)))
-  const currentTopics = normalizeTopics([current?.topic, ...(current?.matched_topics ?? [])])
+  const selectedTopics = toInterestTopicLabels((userTopicsRows ?? []).map((row: any) => row.topic))
+  const topicFilters = getInterestTopicFilters(selectedTopics)
+  const currentMatchedTopics = normalizeTopics(current?.matched_topics)
+  const currentTopics = normalizeTopics([current?.topic, ...currentMatchedTopics])
+  const currentInterestTopic = getMatchingInterestTopicLabel(
+    String(current?.topic ?? ''),
+    currentMatchedTopics,
+    selectedTopics,
+  )
   const hiddenIds = new Set((hiddenRows ?? []).map((r: any) => r.article_id))
-  const blockedTopics = new Set(await loadBlockedTopics(db, userId, userTopics))
+  const blockedTopics = new Set(await loadBlockedTopics(
+    db,
+    userId,
+    [...topicFilters.articleTopics, ...topicFilters.matchedTopics],
+  ))
 
-  if (currentTopics.length === 0 || userTopics.length === 0) {
+  if (currentTopics.length === 0 || selectedTopics.length === 0) {
     return NextResponse.json({ items: [] })
   }
-
-  const userTopicSet = new Set(userTopics)
-  const interestAnchors = currentTopics.filter((topic) => userTopicSet.has(topic))
 
   // First collect articles that overlap any matched topic from the current
   // article. The user's topics remain an eligibility boundary below, but do
@@ -71,22 +83,31 @@ export async function GET(req: NextRequest) {
   const items = rows
     .filter((row: any) => !hiddenIds.has(row.id))
     .map((row: any) => {
-      const candidateTopics = normalizeTopics([row.topic, ...(row.matched_topics ?? [])])
+      const candidateMatchedTopics = normalizeTopics(row.matched_topics)
+      const candidateTopics = normalizeTopics([row.topic, ...candidateMatchedTopics])
       const candidateTopicSet = new Set(candidateTopics)
       const sharedTopics = currentTopics.filter((topic) => candidateTopicSet.has(topic))
-      const sharedInterestTopics = sharedTopics.filter((topic) => userTopicSet.has(topic))
+      const candidateInterestTopic = getMatchingInterestTopicLabel(
+        String(row.topic ?? ''),
+        candidateMatchedTopics,
+        selectedTopics,
+      )
+      const sharedInterestTopics = currentInterestTopic && candidateInterestTopic === currentInterestTopic
+        ? [currentInterestTopic]
+        : []
 
       return {
         row,
         candidateTopics,
+        candidateInterestTopic,
         sharedTopics,
         sharedInterestTopics,
         similarity: sharedTopics.length / Math.sqrt(currentTopics.length * candidateTopics.length),
       }
     })
-    .filter(({ candidateTopics, sharedTopics, sharedInterestTopics }) => {
+    .filter(({ candidateTopics, candidateInterestTopic, sharedTopics }) => {
       if (sharedTopics.length === 0) return false
-      if (interestAnchors.length > 0 && sharedInterestTopics.length === 0) return false
+      if (currentInterestTopic && !candidateInterestTopic) return false
       return !candidateTopics.some((topic) => blockedTopics.has(topic))
     })
     .sort((a, b) => {

@@ -56,8 +56,14 @@ export function toInterestTopicLabels(values: string[]): string[] {
   return [...new Set(labels)]
 }
 
-export function expandInterestTopics(values: string[]): string[] {
-  const expanded: string[] = []
+export type InterestTopicFilters = {
+  articleTopics: string[]
+  matchedTopics: string[]
+}
+
+export function getInterestTopicFilters(values: string[]): InterestTopicFilters {
+  const articleTopics: string[] = []
+  const matchedTopics: string[] = []
 
   for (const value of values) {
     const trimmedValue = value.trim()
@@ -65,21 +71,32 @@ export function expandInterestTopics(values: string[]): string[] {
 
     const category = categoryByTopicKey.get(normalizeTopicLookupKey(trimmedValue))
     if (category) {
-      expanded.push(category.label, ...category.aliases)
+      articleTopics.push(category.label, ...category.aliases)
     } else {
-      expanded.push(trimmedValue, trimmedValue.toLocaleLowerCase('pt-BR'))
+      matchedTopics.push(trimmedValue, trimmedValue.toLocaleLowerCase('pt-BR'))
     }
   }
 
-  return [...new Set(expanded)]
+  return {
+    articleTopics: [...new Set(articleTopics)],
+    matchedTopics: [...new Set(matchedTopics)],
+  }
 }
 
-export function getMatchingInterestTopicLabel(articleTopics: string[], selectedTopics: string[]): string | undefined {
-  const articleTopicKeys = new Set(articleTopics.map(normalizeTopicLookupKey).filter(Boolean))
+export function getMatchingInterestTopicLabel(
+  articleTopic: string,
+  matchedTopics: string[],
+  selectedTopics: string[],
+): string | undefined {
+  const articleTopicKey = normalizeTopicLookupKey(articleTopic)
+  const matchedTopicKeys = new Set(matchedTopics.map(normalizeTopicLookupKey).filter(Boolean))
 
   return selectedTopics.find((selectedTopic) => {
     const category = categoryByTopicKey.get(normalizeTopicLookupKey(selectedTopic))
-    const candidates = category ? [category.label, ...category.aliases] : [selectedTopic]
-    return candidates.some((candidate) => articleTopicKeys.has(normalizeTopicLookupKey(candidate)))
+    if (category) {
+      return [category.label, ...category.aliases]
+        .some((candidate) => articleTopicKey === normalizeTopicLookupKey(candidate))
+    }
+    return matchedTopicKeys.has(normalizeTopicLookupKey(selectedTopic))
   })
 }
