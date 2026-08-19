@@ -1907,6 +1907,51 @@ html, body {
   gap: 0.6rem;
 }
 
+.settings-topic-autocomplete {
+  position: relative;
+}
+
+.settings-topic-autocomplete__menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  left: 0;
+  max-height: 15rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  background: var(--color-bg-primary);
+  box-shadow: 0 12px 28px #0000001a;
+}
+
+.settings-topic-autocomplete__option {
+  display: flex;
+  width: 100%;
+  min-height: 2.5rem;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.65rem;
+  color: var(--color-ink-secondary);
+  font-size: 0.85rem;
+  text-align: left;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.settings-topic-autocomplete__option:hover,
+.settings-topic-autocomplete__option.is-active {
+  color: var(--color-ink-primary);
+  background: var(--color-bg-secondary);
+}
+
+.settings-topic-autocomplete__status {
+  padding: 0.7rem;
+  color: var(--color-ink-tertiary);
+  font-size: 0.82rem;
+}
+
 .settings-topic-defaults {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
@@ -1966,6 +2011,7 @@ html, body {
 }
 
 .settings-inline-form input,
+.settings-topic-autocomplete input,
 .settings-field input {
   width: 100%;
   min-width: 0;
@@ -1984,7 +2030,12 @@ html, body {
   flex: 1;
 }
 
+.settings-topic-autocomplete input {
+  display: block;
+}
+
 .settings-inline-form input:focus,
+.settings-topic-autocomplete input:focus,
 .settings-field input:focus {
   border-color: var(--color-border-strong);
   background: var(--color-bg-primary);

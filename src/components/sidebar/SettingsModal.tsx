@@ -114,6 +114,10 @@ export function SettingsPageContent() {
   const [savedTopics, setSavedTopics] = useState<string[]>([])
   const [topicsLoaded, setTopicsLoaded] = useState(false)
   const [custom, setCustom] = useState('')
+  const [topicSuggestions, setTopicSuggestions] = useState<string[]>([])
+  const [topicSuggestionsLoading, setTopicSuggestionsLoading] = useState(false)
+  const [topicSuggestionsOpen, setTopicSuggestionsOpen] = useState(false)
+  const [activeTopicSuggestion, setActiveTopicSuggestion] = useState(-1)
   const [savingTopics, setSavingTopics] = useState(false)
   const [topicsSaved, setTopicsSaved] = useState(false)
 
@@ -150,6 +154,39 @@ export function SettingsPageContent() {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const query = custom.trim()
+    if (query.length < 2) {
+      setTopicSuggestions([])
+      setTopicSuggestionsLoading(false)
+      setActiveTopicSuggestion(-1)
+      return
+    }
+
+    const controller = new AbortController()
+    setTopicSuggestionsLoading(true)
+    const timeout = window.setTimeout(() => {
+      fetch(`/api/topics/autocomplete?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+        .then((response) => response.ok ? response.json() : { suggestions: [] })
+        .then((data) => {
+          setTopicSuggestions(Array.isArray(data.suggestions) ? data.suggestions : [])
+          setActiveTopicSuggestion(-1)
+        })
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === 'AbortError') return
+          setTopicSuggestions([])
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setTopicSuggestionsLoading(false)
+        })
+    }, 220)
+
+    return () => {
+      window.clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [custom])
 
   const handleTheme = (t: string) => { setTheme(t); applyTheme(t) }
 
@@ -291,6 +328,9 @@ export function SettingsPageContent() {
       return [...current, interestTopic]
     })
     setCustom('')
+    setTopicSuggestions([])
+    setTopicSuggestionsOpen(false)
+    setActiveTopicSuggestion(-1)
     setTopicsSaved(false)
   }
 
@@ -361,10 +401,10 @@ export function SettingsPageContent() {
       return !selectedTopicKeys.has(topicKey) && !excludedInterestTopicKeys.has(topicKey)
     },
   )
-  const customTopicKey = normalizeTopicKey(getInterestTopicLabel(custom))
-  const canAddCustomTopic = Boolean(custom.trim())
-    && !selectedTopicKeys.has(customTopicKey)
-    && !excludedInterestTopicKeys.has(customTopicKey)
+  const availableTopicSuggestions = topicSuggestions.filter((topic) => {
+    const topicKey = normalizeTopicKey(getInterestTopicLabel(topic))
+    return !selectedTopicKeys.has(topicKey) && !excludedInterestTopicKeys.has(topicKey)
+  })
   return (
     <>
       <div className="settings-page-scroll">
@@ -539,25 +579,66 @@ export function SettingsPageContent() {
                 </span>
               ))}
             </div>
-            <div className="settings-inline-form">
+            <div className="settings-topic-autocomplete">
               <input
                 value={custom}
-                onChange={(event) => setCustom(event.target.value)}
+                onChange={(event) => {
+                  setCustom(event.target.value)
+                  setTopicSuggestionsOpen(true)
+                }}
+                onFocus={() => { if (custom.trim().length >= 2) setTopicSuggestionsOpen(true) }}
+                onBlur={() => setTopicSuggestionsOpen(false)}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
+                  if (event.key === 'ArrowDown' && availableTopicSuggestions.length > 0) {
                     event.preventDefault()
-                    if (canAddCustomTopic) addInterestTopic(custom)
+                    setTopicSuggestionsOpen(true)
+                    setActiveTopicSuggestion((current) => (current + 1) % availableTopicSuggestions.length)
+                  } else if (event.key === 'ArrowUp' && availableTopicSuggestions.length > 0) {
+                    event.preventDefault()
+                    setTopicSuggestionsOpen(true)
+                    setActiveTopicSuggestion((current) => current <= 0 ? availableTopicSuggestions.length - 1 : current - 1)
+                  } else if (event.key === 'Enter') {
+                    event.preventDefault()
+                    const suggestion = availableTopicSuggestions[activeTopicSuggestion >= 0 ? activeTopicSuggestion : 0]
+                    if (suggestion) addInterestTopic(suggestion)
+                  } else if (event.key === 'Escape') {
+                    setTopicSuggestionsOpen(false)
                   }
                 }}
-                aria-label="Novo tópico de interesse"
-                placeholder="Adicionar tópico..."
+                role="combobox"
+                aria-label="Buscar tópico de interesse"
+                aria-autocomplete="list"
+                aria-expanded={topicSuggestionsOpen && custom.trim().length >= 2}
+                aria-controls="settings-topic-autocomplete-list"
+                aria-activedescendant={activeTopicSuggestion >= 0 ? `settings-topic-option-${activeTopicSuggestion}` : undefined}
+                autoComplete="off"
+                placeholder="Buscar tópico para adicionar..."
               />
-              <button
-                type="button"
-                className="settings-button settings-button--secondary settings-control-shadow"
-                onClick={() => addInterestTopic(custom)}
-                disabled={!canAddCustomTopic}
-              >Adicionar</button>
+              {topicSuggestionsOpen && custom.trim().length >= 2 && (
+                <div id="settings-topic-autocomplete-list" className="settings-topic-autocomplete__menu" role="listbox">
+                  {topicSuggestionsLoading ? (
+                    <p className="settings-topic-autocomplete__status" role="status">Buscando tópicos…</p>
+                  ) : availableTopicSuggestions.length > 0 ? (
+                    availableTopicSuggestions.map((topic, index) => (
+                      <button
+                        key={topic}
+                        id={`settings-topic-option-${index}`}
+                        type="button"
+                        role="option"
+                        aria-selected={index === activeTopicSuggestion}
+                        className={cn('settings-topic-autocomplete__option', index === activeTopicSuggestion && 'is-active')}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => addInterestTopic(topic)}
+                      >
+                        <TopicIcon topic={topic} size={13} />
+                        <span>{topic}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="settings-topic-autocomplete__status" role="status">Nenhum tópico encontrado.</p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="settings-topic-defaults" aria-labelledby="settings-default-topics">
               <p id="settings-default-topics" className="settings-topic-defaults__label">Tópicos sugeridos</p>
