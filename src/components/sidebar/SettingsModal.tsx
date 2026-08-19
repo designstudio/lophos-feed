@@ -5,10 +5,22 @@ import { AlertCircle, Check, CheckCircle, Sun, MoonStar, Monitor02, Upload01 } f
 import { cn } from '@/lib/utils'
 import { TransitionText } from '@/components/TransitionText'
 import { UserAvatar } from '@/components/UserAvatar'
+import { IconPlus } from '@/components/icons'
+import { DEFAULT_INTEREST_TOPICS } from '@/lib/default-interest-topics'
 import { applyTheme } from './utils'
 
+function normalizeTopicKey(value: string): string {
+  return value
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .replace(/[-_/]+/g, ' ')
+    .replace(/\s+/g, ' ')
+}
+
 function normalizedValues(values: string[]): string[] {
-  return [...new Set(values.map((value) => value.trim().toLowerCase()).filter(Boolean))].sort()
+  return [...new Set(values.map(normalizeTopicKey).filter(Boolean))].sort()
 }
 
 function stringListsEqual(left: string[], right: string[]): boolean {
@@ -101,7 +113,6 @@ export function SettingsPageContent() {
   const [topics, setTopics] = useState<string[]>([])
   const [savedTopics, setSavedTopics] = useState<string[]>([])
   const [topicsLoaded, setTopicsLoaded] = useState(false)
-  const [suggestions, setSuggestions] = useState<string[]>([])
   const [custom, setCustom] = useState('')
   const [savingTopics, setSavingTopics] = useState(false)
   const [topicsSaved, setTopicsSaved] = useState(false)
@@ -127,7 +138,7 @@ export function SettingsPageContent() {
       .catch(() => {})
   }, [])
 
-  // Carrega tópicos de interesse e sugestões
+  // Carrega tópicos de interesse
   useEffect(() => {
     fetch('/api/topics')
       .then(r => r.json())
@@ -136,35 +147,6 @@ export function SettingsPageContent() {
         setTopics(t)
         setSavedTopics(t)
         setTopicsLoaded(true)
-        return t
-      })
-      .then(t => {
-        // Verifica cache localStorage — válido por 7 dias
-        try {
-          const cached = localStorage.getItem('lophos_suggestions')
-          if (cached) {
-            const { suggestions: s, fetchedAt } = JSON.parse(cached)
-            const sevenDays = 7 * 24 * 60 * 60 * 1000
-            if (Date.now() - fetchedAt < sevenDays && s?.length > 0) {
-              setSuggestions(s)
-              return
-            }
-          }
-        } catch {}
-        // Busca sugestões frescas
-        fetch('/api/suggestions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topics: t }),
-        })
-          .then(r => r.json())
-          .then(d => {
-            const s = d.suggestions || []
-            setSuggestions(s)
-            try {
-              localStorage.setItem('lophos_suggestions', JSON.stringify({ suggestions: s, fetchedAt: Date.now() }))
-            } catch {}
-          })
       })
       .catch(() => {})
   }, [])
@@ -293,6 +275,19 @@ export function SettingsPageContent() {
     }
   }
 
+  const addInterestTopic = (topic: string) => {
+    const trimmedTopic = topic.trim()
+    if (!trimmedTopic) return
+
+    setTopics((current) => {
+      const topicKey = normalizeTopicKey(trimmedTopic)
+      if (current.some((item) => normalizeTopicKey(item) === topicKey)) return current
+      return [...current, trimmedTopic]
+    })
+    setCustom('')
+    setTopicsSaved(false)
+  }
+
   const saveExcludedTopics = async () => {
     setSavingExcluded(true)
     try {
@@ -348,6 +343,12 @@ export function SettingsPageContent() {
   const passwordChanged = Boolean(currentPassword || newPassword || confirmPassword)
   const topicsChanged = topicsLoaded && !stringListsEqual(topics, savedTopics)
   const excludedTopicsChanged = excludedTopicsLoaded && !stringListsEqual(excludedTopics, savedExcludedTopics)
+  const selectedTopicKeys = new Set(topics.map(normalizeTopicKey))
+  const availableDefaultTopics = DEFAULT_INTEREST_TOPICS.filter(
+    (topic) => !selectedTopicKeys.has(normalizeTopicKey(topic)),
+  )
+  const canAddCustomTopic = Boolean(custom.trim())
+    && !selectedTopicKeys.has(normalizeTopicKey(custom))
   return (
     <>
       <div className="settings-page-scroll">
@@ -526,8 +527,9 @@ export function SettingsPageContent() {
                 value={custom}
                 onChange={(event) => setCustom(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === 'Enter' && custom.trim() && !topics.includes(custom.trim())) {
-                    setTopics((current) => [...current, custom.trim()]); setCustom(''); setTopicsSaved(false)
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    if (canAddCustomTopic) addInterestTopic(custom)
                   }
                 }}
                 aria-label="Novo tópico de interesse"
@@ -536,12 +538,31 @@ export function SettingsPageContent() {
               <button
                 type="button"
                 className="settings-button settings-button--secondary settings-control-shadow"
-                onClick={() => {
-                  if (custom.trim() && !topics.includes(custom.trim())) {
-                    setTopics((current) => [...current, custom.trim()]); setCustom(''); setTopicsSaved(false)
-                  }
-                }}
+                onClick={() => addInterestTopic(custom)}
+                disabled={!canAddCustomTopic}
               >Adicionar</button>
+            </div>
+            <div className="settings-topic-defaults" aria-labelledby="settings-default-topics">
+              <p id="settings-default-topics" className="settings-topic-defaults__label">Tópicos sugeridos</p>
+              {availableDefaultTopics.length > 0 ? (
+                <ul className="settings-topic-defaults__list">
+                  {availableDefaultTopics.map((topic) => (
+                    <li key={topic}>
+                      <button
+                        type="button"
+                        className="settings-topic-suggestion"
+                        onClick={() => addInterestTopic(topic)}
+                        aria-label={`Adicionar ${topic}`}
+                      >
+                        <span aria-hidden="true"><IconPlus size={11} /></span>
+                        <span>{topic}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="settings-topic-defaults__empty" role="status">Todos os tópicos sugeridos foram adicionados.</p>
+              )}
             </div>
             <button type="button" onClick={saveTopics} disabled={!topicsChanged || topics.length === 0 || savingTopics} className="settings-button settings-button--primary mt-4">
               <TransitionText stateKey={topicsSaved ? 'saved' : savingTopics ? 'saving' : 'idle'}>
