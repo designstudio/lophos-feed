@@ -2040,14 +2040,6 @@ html, body {
   display: block;
 }
 
-.app-input:hover:not(:disabled),
-.settings-inline-form input:hover:not(:disabled),
-.settings-topic-autocomplete input:hover:not(:disabled),
-.settings-field input:hover:not(:disabled) {
-  border-color: var(--color-border-strong);
-  box-shadow: 0 0 0 3px var(--input-halo);
-}
-
 .app-input:focus,
 .settings-inline-form input:focus,
 .settings-topic-autocomplete input:focus,
