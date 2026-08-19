@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { TransitionText } from '@/components/TransitionText'
 import { UserAvatar } from '@/components/UserAvatar'
 import { TopicIcon } from '@/components/TopicIcon'
-import { DEFAULT_INTEREST_TOPICS } from '@/lib/default-interest-topics'
+import { DEFAULT_INTEREST_TOPICS, getInterestTopicLabel } from '@/lib/default-interest-topics'
 import { applyTheme } from './utils'
 
 function normalizeTopicKey(value: string): string {
@@ -279,10 +279,16 @@ export function SettingsPageContent() {
     const trimmedTopic = topic.trim()
     if (!trimmedTopic) return
 
+    const interestTopic = getInterestTopicLabel(trimmedTopic)
+    const topicKey = normalizeTopicKey(interestTopic)
+    const isExcluded = excludedTopics.some(
+      (excludedTopic) => normalizeTopicKey(getInterestTopicLabel(excludedTopic)) === topicKey,
+    )
+    if (isExcluded) return
+
     setTopics((current) => {
-      const topicKey = normalizeTopicKey(trimmedTopic)
-      if (current.some((item) => normalizeTopicKey(item) === topicKey)) return current
-      return [...current, trimmedTopic]
+      if (current.some((item) => normalizeTopicKey(getInterestTopicLabel(item)) === topicKey)) return current
+      return [...current, interestTopic]
     })
     setCustom('')
     setTopicsSaved(false)
@@ -343,12 +349,22 @@ export function SettingsPageContent() {
   const passwordChanged = Boolean(currentPassword || newPassword || confirmPassword)
   const topicsChanged = topicsLoaded && !stringListsEqual(topics, savedTopics)
   const excludedTopicsChanged = excludedTopicsLoaded && !stringListsEqual(excludedTopics, savedExcludedTopics)
-  const selectedTopicKeys = new Set(topics.map(normalizeTopicKey))
-  const availableDefaultTopics = DEFAULT_INTEREST_TOPICS.filter(
-    (topic) => !selectedTopicKeys.has(normalizeTopicKey(topic)),
+  const selectedTopicKeys = new Set(
+    topics.map((topic) => normalizeTopicKey(getInterestTopicLabel(topic))),
   )
+  const excludedInterestTopicKeys = new Set(
+    excludedTopics.map((topic) => normalizeTopicKey(getInterestTopicLabel(topic))),
+  )
+  const availableDefaultTopics = DEFAULT_INTEREST_TOPICS.filter(
+    (topic) => {
+      const topicKey = normalizeTopicKey(topic)
+      return !selectedTopicKeys.has(topicKey) && !excludedInterestTopicKeys.has(topicKey)
+    },
+  )
+  const customTopicKey = normalizeTopicKey(getInterestTopicLabel(custom))
   const canAddCustomTopic = Boolean(custom.trim())
-    && !selectedTopicKeys.has(normalizeTopicKey(custom))
+    && !selectedTopicKeys.has(customTopicKey)
+    && !excludedInterestTopicKeys.has(customTopicKey)
   return (
     <>
       <div className="settings-page-scroll">
