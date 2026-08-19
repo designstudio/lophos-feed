@@ -23,7 +23,7 @@ async function normalizeTopics(db: any, topics: string[]): Promise<string[]> {
   return [...new Set(normalized.filter(Boolean))]
 }
 
-export async function loadBlockedTopics(db: any, userId: string, userTopics: string[] = []) {
+export async function loadTopicBlockSignals(db: any, userId: string, userTopics: string[] = []) {
   const normalizedUserTopics = new Set(userTopics.map((topic) => normalizeTopic(topic)).filter(Boolean))
 
   const [excludedResult, negativeResult] = await Promise.all([
@@ -38,19 +38,28 @@ export async function loadBlockedTopics(db: any, userId: string, userTopics: str
       .gte('dislike_count', NEGATIVE_TOPIC_THRESHOLD),
   ])
 
-  const blocked = new Set<string>()
+  const excludedTopics = new Set<string>()
+  const negativeTopics = new Set<string>()
 
   for (const row of excludedResult.data ?? []) {
     const topic = normalizeTopic(String(row.topic ?? ''))
-    if (topic && !normalizedUserTopics.has(topic)) blocked.add(topic)
+    if (topic && !normalizedUserTopics.has(topic)) excludedTopics.add(topic)
   }
 
   for (const row of negativeResult.data ?? []) {
     const topic = normalizeTopic(String(row.topic ?? ''))
-    if (topic && !normalizedUserTopics.has(topic)) blocked.add(topic)
+    if (topic && !normalizedUserTopics.has(topic)) negativeTopics.add(topic)
   }
 
-  return [...blocked]
+  return {
+    excludedTopics: [...excludedTopics],
+    negativeTopics: [...negativeTopics],
+  }
+}
+
+export async function loadBlockedTopics(db: any, userId: string, userTopics: string[] = []) {
+  const signals = await loadTopicBlockSignals(db, userId, userTopics)
+  return [...new Set([...signals.excludedTopics, ...signals.negativeTopics])]
 }
 
 export async function syncNegativeTopicsForReaction(

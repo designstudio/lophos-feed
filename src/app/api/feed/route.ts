@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 import { isLikelyStaleLaunchArticle } from '@/lib/news-preprocessing'
 import { toFeedItem } from '@/lib/feed-item'
 import { FeedItem } from '@/lib/types'
-import { loadBlockedTopics } from '@/lib/topic-signals'
+import { loadTopicBlockSignals } from '@/lib/topic-signals'
 import { getInterestTopicFilters, toInterestTopicLabels } from '@/lib/default-interest-topics'
 import {
   decodeFeedCursor,
@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
 
     const debug = req.nextUrl.searchParams.get('debug') === '1'
     const body = await req.json()
+    const hasExplicitTopicFilter = Array.isArray(body.topics)
+      && body.topics.some((topic: unknown) => typeof topic === 'string' && topic.trim().length > 0)
     const requestedDays = Number(body.days ?? 0)
     if (!Number.isInteger(requestedDays) || requestedDays < 0 || requestedDays > 365) {
       return jsonError(400, 'Invalid feed time window')
@@ -191,11 +193,16 @@ export async function POST(req: NextRequest) {
         const topicFilters = getInterestTopicFilters(topics)
 
         if (!cursor) {
-          blockedTopics = await loadBlockedTopics(
+          const blockSignals = await loadTopicBlockSignals(
             db,
             userId,
             [...topicFilters.articleTopics, ...topicFilters.matchedTopics],
           )
+          const customTopicIsExplicitlySelected = hasExplicitTopicFilter
+            && topicFilters.matchedTopics.length > 0
+          blockedTopics = customTopicIsExplicitlySelected
+            ? blockSignals.excludedTopics
+            : [...new Set([...blockSignals.excludedTopics, ...blockSignals.negativeTopics])]
         }
         if (requestAborted) return
         console.log(
