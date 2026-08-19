@@ -5,7 +5,7 @@ import { AlertCircle, Check, CheckCircle, Sun, MoonStar, Monitor02, Upload01 } f
 import { cn } from '@/lib/utils'
 import { TransitionText } from '@/components/TransitionText'
 import { UserAvatar } from '@/components/UserAvatar'
-import { IconPlus } from '@/components/icons'
+import { TopicIcon } from '@/components/TopicIcon'
 import { DEFAULT_INTEREST_TOPICS } from '@/lib/default-interest-topics'
 import { applyTheme } from './utils'
 
@@ -554,7 +554,7 @@ export function SettingsPageContent() {
                         onClick={() => addInterestTopic(topic)}
                         aria-label={`Adicionar ${topic}`}
                       >
-                        <span aria-hidden="true"><IconPlus size={11} /></span>
+                        <TopicIcon topic={topic} size={13} className="settings-topic-suggestion__icon" />
                         <span>{topic}</span>
                       </button>
                     </li>

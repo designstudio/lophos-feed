@@ -12,7 +12,6 @@ export const INTEREST_TOPIC_CATEGORIES = [
   { label: 'Economia', aliases: ['economia'] },
   { label: 'Games', aliases: ['games', 'valorant', 'Games'] },
   { label: 'Filmes e Séries', aliases: ['movies', 'cinema', 'Cinema'] },
-  { label: 'Entretenimento', aliases: ['entretenimento'] },
   { label: 'Educação', aliases: ['educacao'] },
   { label: 'Brasil', aliases: ['brasil', 'Brasil'] },
   { label: 'Mundo', aliases: ['mundo'] },

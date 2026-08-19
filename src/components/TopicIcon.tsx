@@ -94,6 +94,26 @@ const WORLD: TopicGlyph = {
   path: 'M12 2c5.5228 0 10 4.47715 10 10 0 5.5228 -4.4772 10 -10 10 -5.52285 0 -10 -4.4772 -10 -10C2 6.47715 6.47715 2 12 2m4 4c0 1.10457 -0.8954 2 -2 2h-1v1c0 1.1046 -0.8954 2 -2 2v3h-0.9297c-0.66867 0 -1.29313 -0.3342 -1.66405 -0.8906L7 11H6v1c0 1.0205 -0.76457 1.8601 -1.75195 1.9824C5.13005 17.4417 8.26604 20 12 20v-2c0 -1.1046 0.8954 -2 2 -2h1.5c0 -1.1046 0.8954 -2 2 -2h2.248c0.1646 -0.6392 0.252 -1.3094 0.252 -2 0 -2.96077 -1.6093 -5.54437 -4 -6.92773zm1.9141 4.75L15.5 13.1641 14.0859 11.75 16.5 9.33594z',
 }
 
+const EDUCATION: TopicGlyph = {
+  viewBox: '0 0 24 24',
+  path: 'M12 3 1 9l11 6 9 -4.909V17h2V9L12 3ZM5 12.182V17l7 4 7 -4v-4.818L12 16z',
+}
+
+const CARS: TopicGlyph = {
+  viewBox: '0 0 24 24',
+  path: 'M5 11 6.5 6.5A2.25 2.25 0 0 1 8.635 5h6.73A2.25 2.25 0 0 1 17.5 6.5L19 11h1a2 2 0 0 1 2 2v5h-2v2h-3v-2H7v2H4v-2H2v-5a2 2 0 0 1 2 -2zm3.5 -4L7.167 11h9.666L15.5 7zM6 13.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0 -3m12 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0 -3',
+}
+
+const CULTURE: TopicGlyph = {
+  viewBox: '0 0 24 24',
+  path: 'M12 2 1 7v2h22V7zM3 10v8H1v3h22v-3h-2v-8h-3v8h-4v-8h-4v8H6v-8z',
+}
+
+const ENTREPRENEURSHIP: TopicGlyph = {
+  viewBox: '0 0 24 24',
+  path: 'M14.5 3.5c2.2 -1.1 4.65 -1.45 6.5 -1.5 -0.05 1.85 -0.4 4.3 -1.5 6.5l-3.25 3.25 -4 -4zM11.2 8.8 5.5 14.5 9 15l0.5 3.5 5.7 -5.7zM8 9 4.5 9.5 1 13l5.25 0.75zm7.25 8.75L16 23l3.5 -3.5L20 16zM6.5 17.5c-1.75 0.15 -3.35 0.85 -4.5 2 1.15 1.15 1.85 2.75 2 4.5 1.15 -1.15 1.85 -2.75 2.5 -6.5',
+}
+
 const CARNIVAL: TopicGlyph = {
   viewBox: '0 0 24 24',
   path: 'M7.8 18c-0.85 0 -1.6625 -0.15 -2.4375 -0.45 -0.775 -0.3 -1.470835 -0.74165 -2.0875 -1.325 -0.8 -0.75 -1.379165 -1.6375 -1.7375 -2.6625C1.179165 12.5375 1 11.475 1 10.375c0 -1.3 0.316665 -2.35415 0.95 -3.1625C2.583335 6.40415 3.508335 6 4.725 6c0.233335 0 0.45415 0.02085 0.6625 0.0625 0.20835 0.04165 0.42085 0.10415 0.6375 0.1875L12 8.475l5.975 -2.225c0.21665 -0.08335 0.42915 -0.14585 0.6375 -0.1875 0.20835 -0.04165 0.42915 -0.0625 0.6625 -0.0625 1.21665 0 2.14165 0.40415 2.775 1.2125 0.63335 0.80835 0.95 1.8625 0.95 3.1625 0 1.1 -0.17915 2.1625 -0.5375 3.1875 -0.35835 1.025 -0.9375 1.9125 -1.7375 2.6625 -0.61665 0.58335 -1.3125 1.025 -2.0875 1.325 -0.775 0.3 -1.5875 0.45 -2.4375 0.45 -1.1 0 -2.03335 -0.25 -2.8 -0.75L12.25 16.5h-0.5l-1.15 0.75c-0.76665 0.5 -1.7 0.75 -2.8 0.75Zm0.925 -4c0.48335 0 0.86665 -0.1125 1.15 -0.3375 0.28335 -0.225 0.425 -0.52915 0.425 -0.9125 0 -0.65 -0.43335 -1.27085 -1.3 -1.8625S7.225 10 6.275 10c-0.48335 0 -0.86665 0.1125 -1.15 0.3375 -0.283335 0.225 -0.425 0.52915 -0.425 0.9125 0 0.65 0.43335 1.27085 1.3 1.8625S7.775 14 8.725 14Zm6.55 0c0.95 0 1.85835 -0.29585 2.725 -0.8875 0.86665 -0.59165 1.3 -1.2125 1.3 -1.8625 0 -0.4 -0.1375 -0.70835 -0.4125 -0.925 -0.275 -0.21665 -0.6625 -0.325 -1.1625 -0.325 -0.95 0 -1.85835 0.29585 -2.725 0.8875 -0.86665 0.59165 -1.3 1.2125 -1.3 1.8625 0 0.38335 0.1375 0.6875 0.4125 0.9125 0.275 0.225 0.6625 0.3375 1.1625 0.3375Z',
@@ -124,6 +144,7 @@ const TOPIC_ICON_CONFIG: TopicIconConfig[] = [
   { aliases: ['música', 'musica', 'music', 'songs'], glyph: MUSIC },
   { aliases: ['ia', 'ai', 'inteligência artificial', 'inteligencia artificial', 'artificial intelligence', 'machine learning', 'deep learning'], glyph: AI },
   { aliases: ['cinema', 'filmes', 'filme', 'movies', 'movie', 'films', 'film'], glyph: POPCORN },
+  { aliases: ['filmes e séries', 'filmes e series'], glyph: POPCORN },
   { aliases: ['anime', 'animê', 'mangá', 'manga', 'japanese animation'], glyph: POPCORN },
   { aliases: ['ciência', 'ciencia', 'science', 'pesquisa', 'científica', 'cientifica', 'descobertas científicas', 'descobertas cientificas'], glyph: SCIENCE },
   { aliases: ['e-sports', 'esports', 'e-sport', 'esport', 'esportes eletrônicos', 'esportes eletronicos'], glyph: ESPORTS },
@@ -131,6 +152,11 @@ const TOPIC_ICON_CONFIG: TopicIconConfig[] = [
   { aliases: ['séries', 'series', 'série', 'serie', 'tv shows', 'televisão', 'televisao'], glyph: POPCORN },
   { aliases: ['agro', 'agricultura', 'agropecuária', 'agropecuaria', 'farming', 'rural', 'agronegócio', 'agronegocio'], glyph: AGRO },
   { aliases: ['mundo', 'world', 'internacional', 'global', 'notícias mundiais', 'noticias mundiais'], glyph: WORLD },
+  { aliases: ['brasil', 'brazil'], glyph: WORLD },
+  { aliases: ['educação', 'educacao', 'education', 'ensino'], glyph: EDUCATION },
+  { aliases: ['carros', 'carro', 'cars', 'automóveis', 'automoveis'], glyph: CARS },
+  { aliases: ['cultura', 'culture', 'arte', 'artes'], glyph: CULTURE },
+  { aliases: ['empreendedorismo', 'entrepreneurship', 'empreendedores', 'startups'], glyph: ENTREPRENEURSHIP },
   { aliases: ['turismo', 'tourism', 'turístico', 'turistico', 'destinos turísticos', 'destinos turisticos'], glyph: LUGGAGE },
 ]
 

@@ -1951,6 +1951,10 @@ html, body {
   outline-offset: 2px;
 }
 
+.settings-topic-suggestion__icon {
+  flex: 0 0 auto;
+}
+
 .settings-topic-defaults__empty {
   color: var(--color-ink-tertiary);
   font-size: 0.8rem;
