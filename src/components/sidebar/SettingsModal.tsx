@@ -513,6 +513,7 @@ export function SettingsPageContent() {
             <div className="mb-4 flex min-h-8 flex-wrap gap-2">
               {topics.map((topic) => (
                 <span key={topic} className="settings-topic-chip">
+                  <TopicIcon topic={topic} size={12} className="settings-topic-chip__icon" />
                   {topic}
                   <button
                     type="button"

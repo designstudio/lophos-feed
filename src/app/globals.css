@@ -1892,6 +1892,10 @@ html, body {
   color: var(--color-ink-primary);
 }
 
+.settings-topic-chip__icon {
+  flex: 0 0 auto;
+}
+
 .settings-topic-chip--excluded {
   color: #c73f45;
   border: 1px solid color-mix(in srgb, #e5484d 20%, transparent);
