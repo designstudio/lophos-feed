@@ -22,14 +22,30 @@ type ArticleRow = {
 
 const getArticle = cache(async (id: string): Promise<NewsItem | null> => {
   const db = getSupabaseAdmin()
-  const { data } = await db
-    .from('articles')
-    .select('id, topic, title, summary, sections, conclusion, sources, image_url, video_url, published_at, cached_at, matched_topics')
-    .eq('id', id)
-    .maybeSingle()
+  let data: ArticleRow | null = null
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const result = await db
+      .from('articles')
+      .select('id, topic, title, summary, sections, conclusion, sources, image_url, video_url, published_at, cached_at, matched_topics')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (!result.error) {
+      data = result.data as ArticleRow | null
+      break
+    }
+
+    console.error(`[article] lookup failed for ${id} (attempt ${attempt + 1}):`, result.error)
+    if (attempt === 1) {
+      throw new Error('Não foi possível carregar a matéria agora.')
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 150))
+  }
 
   if (!data) return null
-  const row = data as ArticleRow
+  const row = data
 
   return {
     id: row.id,

@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 interface TooltipProps {
@@ -20,10 +21,12 @@ const ANIMATION_BY_SIDE = {
 } as const
 
 export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
+  const pathname = usePathname()
   const [visible, setVisible] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [anchor, setAnchor] = useState<React.CSSProperties | null>(null)
   const triggerRef = React.useRef<HTMLDivElement>(null)
+  const hideTooltip = useCallback(() => setVisible(false), [])
 
   const getAnchor = useCallback((): React.CSSProperties | null => {
     const rect = triggerRef.current?.getBoundingClientRect()
@@ -67,6 +70,8 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
   }, [side])
 
   const showTooltip = useCallback(() => {
+    if (document.visibilityState !== 'visible' || !document.hasFocus()) return
+
     const nextAnchor = getAnchor()
     if (!nextAnchor) return
 
@@ -77,8 +82,24 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
   }, [getAnchor])
 
   useEffect(() => {
-    setVisible(false)
-  }, [disabled])
+    hideTooltip()
+  }, [disabled, hideTooltip, pathname])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') hideTooltip()
+    }
+
+    window.addEventListener('blur', hideTooltip)
+    window.addEventListener('pagehide', hideTooltip)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('blur', hideTooltip)
+      window.removeEventListener('pagehide', hideTooltip)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [hideTooltip])
 
   useEffect(() => {
     setMounted(true)
@@ -111,9 +132,10 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
       ref={triggerRef}
       className={cn('relative inline-flex', className)}
       onMouseEnter={showTooltip}
-      onMouseLeave={() => setVisible(false)}
+      onMouseLeave={hideTooltip}
       onFocus={showTooltip}
-      onBlur={() => setVisible(false)}
+      onBlur={hideTooltip}
+      onPointerDown={hideTooltip}
     >
       {children}
 

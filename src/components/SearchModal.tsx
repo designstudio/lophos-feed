@@ -218,6 +218,7 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
                 <Link
                   key={item.id}
                   href={`/article/${item.id}`}
+                  prefetch={false}
                   onClick={() => {
                     handleResultClick(query)
                     onClose()

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 import { NewsItem, NewsSource } from '@/lib/types'
-import { ArrowNarrowUpRight as ExternalLink, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ThumbsDown as Dislike, Copy06 as Copy, Share07 as Share } from '@untitledui/icons'
+import { ArrowNarrowUpRight as ExternalLink, Clock as ClockCircle, X as CloseCircle, BookOpen01 as Documents, ThumbsDown as Dislike, Copy06 as Copy, Share07 as Share, Flag06 as ReportFlag } from '@untitledui/icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -13,6 +13,7 @@ import { Tooltip } from '@/components/Tooltip'
 import { useModalTransition } from '@/hooks/useModalTransition'
 import { LikeBurstIcon } from '@/components/LikeBurstIcon'
 import { TopicIcon } from '@/components/TopicIcon'
+import { ArticleReportModal } from '@/components/ArticleReportModal'
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
@@ -106,6 +107,7 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
   const [disliked, setDisliked] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
   const imageModalTransition = useModalTransition(showImageModal)
   const scrollRef = useRef<HTMLDivElement>(null)
   const desiredReactionRef = useRef<ArticleReaction>(null)
@@ -416,6 +418,22 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                       </motion.button>
                     </Tooltip>
 
+                    <Tooltip content="Reportar um problema">
+                      <motion.button
+                        type="button"
+                        onClick={() => setShowReportModal(true)}
+                        disabled={!isSignedIn}
+                        aria-label="Reportar um problema nesta matéria"
+                        whileTap={{ scale: 0.85 }}
+                        className={cn(
+                          'flex items-center justify-center w-8 h-8 rounded-full text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary transition-colors',
+                          !isSignedIn && 'opacity-60 cursor-not-allowed',
+                        )}
+                      >
+                        <ReportFlag size={16} />
+                      </motion.button>
+                    </Tooltip>
+
                   </div>
 
                   {item.sources && item.sources.length > 0 && (
@@ -495,6 +513,7 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                           <Link
                             key={rel.id}
                             href={`/article/${rel.id}`}
+                            prefetch={false}
                             className={cn('spring-press flex flex-col gap-0 bg-bg-primary text-left group rounded-[1.5rem] border border-border shadow-sm overflow-hidden hover:border-border-strong transition-all', i >= 2 ? 'hidden md:flex' : '')}
 
                           >
@@ -617,6 +636,13 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
         </div>,
         document.body
       )}
+
+      <ArticleReportModal
+        articleId={id}
+        articleTitle={item.title}
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+      />
     </>
   )
 }

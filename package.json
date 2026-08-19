@@ -27,6 +27,7 @@
     "news:cleanup-mislabeled": "node scripts/cleanup-mislabeled-articles.mjs",
     "news:cron": "node scripts/news-cron.mjs",
     "news:dedupe": "node scripts/cleanup-duplicate-articles.mjs",
+    "news:dedupe-test": "node scripts/article-dedupe-test.mjs",
     "news:dedupe-signals": "node scripts/cleanup-duplicate-articles-signals.mjs",
     "news:dedupe-insidious-godzilla": "node scripts/cleanup-duplicate-articles-insidious-godzilla.mjs"
   },

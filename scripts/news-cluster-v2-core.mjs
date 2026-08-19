@@ -9,6 +9,8 @@ export const DEFAULT_V2_OPTIONS = Object.freeze({
   maxPairHours: 18,
   topK: 20,
   enableRecallSignals: true,
+  protectSameSource: true,
+  skipOutsideTimeWindowPairs: false,
 })
 
 export const SOURCE_ROLES = Object.freeze({
@@ -236,7 +238,7 @@ function pairDecision(left, right, leftVector, rightVector, leftTitleVector, rig
   const rightTime = itemTime(right)
   const hoursApart = leftTime === null || rightTime === null ? null : Math.abs(leftTime - rightTime) / 3_600_000
   const outsideTimeWindow = hoursApart !== null && hoursApart > options.maxPairHours
-  const sameSource = sourceKey(left) && sourceKey(left) === sourceKey(right)
+  const sameSource = options.protectSameSource !== false && sourceKey(left) && sourceKey(left) === sourceKey(right)
   const lexicalConfirmation = lexicalScore >= 0.22 && strong.length >= 2
   const rareConfirmation = rareTokens.length >= 2
   const factualConfirmation = rareTokens.length >= 3 && (
@@ -328,9 +330,18 @@ export function clusterItemsV2(items, vectors, overrides = {}) {
     for (const token of tokens) documentFrequency.set(token, (documentFrequency.get(token) || 0) + 1)
   }
   const rareCutoff = Math.max(2, Math.ceil(items.length * 0.03))
+  const times = options.skipOutsideTimeWindowPairs ? items.map(itemTime) : null
 
   for (let left = 0; left < items.length; left += 1) {
     for (let right = left + 1; right < items.length; right += 1) {
+      if (
+        times &&
+        times[left] !== null &&
+        times[right] !== null &&
+        Math.abs(times[left] - times[right]) / 3_600_000 > options.maxPairHours
+      ) {
+        continue
+      }
       const rareTokens = [...tokensByItem[left]].filter((token) =>
         tokensByItem[right].has(token) && (documentFrequency.get(token) || 0) <= rareCutoff,
       )

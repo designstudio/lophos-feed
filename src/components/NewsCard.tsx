@@ -51,6 +51,7 @@ function CoverageRail({ item }: { item: FeedItem }) {
   return (
     <Link
       href={`/article/${item.id}`}
+      prefetch={false}
       aria-label={`Abrir notícia: ${item.title}`}
       className="editorial-card__coverage focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-4"
     >
@@ -179,6 +180,7 @@ export function NewsCard({
           <h2>
             <Link
               href={`/article/${item.id}`}
+              prefetch={false}
               className="editorial-card__title-link focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-primary focus-visible:ring-offset-2"
             >
               {item.title}

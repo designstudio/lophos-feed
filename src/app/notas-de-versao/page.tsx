@@ -8,6 +8,7 @@ const RELEASES = [
       {
         title: 'Novidades',
         items: [
+          'Agora é possível reportar informações incorretas, problemas em títulos, fontes, mídias ou matérias duplicadas diretamente pela página da notícia; o relato chega por e-mail à equipe editorial.',
           'Esports agora aparece entre os tópicos sugeridos, com ícone próprio e suporte às notícias dos novos feeds especializados.',
           'Adicionamos um diagnóstico de saúde dos feeds para identificar fontes inativas, erros de leitura, itens pendentes e a contribuição mais recente de cada publicação.',
         ],
@@ -15,6 +16,9 @@ const RELEASES = [
       {
         title: 'Melhorias e correções',
         items: [
+          'Corrigimos a abertura de matérias com novas tentativas em falhas temporárias e feedback visual imediato durante a navegação.',
+          'Eliminamos trocas entre skeletons de lista e mosaico no carregamento do feed, bloqueamos interações com cards invisíveis e ajustamos tooltips que permaneciam abertos após trocar de aba.',
+          'Reforçamos a deduplicação retroativa com proteções semânticas e editoriais para revisar artigos repetidos sem remover análises, críticas ou compilações legítimas.',
           'O processamento manual de notícias agora pode ser limitado a uma única fonte, facilitando testes, correções e reprocessamentos pontuais.',
           'Reforçamos a leitura de RSS com novas tentativas automáticas e cabeçalhos mais compatíveis para fontes que bloqueiam acessos de forma intermitente.',
           'Atualizamos o feed de ciência do G1, ampliamos a cobertura de esports e removemos fontes que deixaram de contribuir com notícias.',

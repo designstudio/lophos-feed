@@ -309,7 +309,11 @@ function MosaicStory({
         <TopicIcon topic={item.displayTopic || item.topic} fallbackTopic={item.topic} />
         <span>{capitalizeFirst(item.displayTopic || item.topic)}</span>
       </div>
-      <Link href={`/article/${item.id}`} className="mosaic-story__link">
+      <Link
+        href={`/article/${item.id}`}
+        prefetch={false}
+        className="mosaic-story__link"
+      >
         {variant === 'feature' && <h2>{item.title}</h2>}
         {showImage && (
           <div className="mosaic-story__image">

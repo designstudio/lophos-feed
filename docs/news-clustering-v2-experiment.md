@@ -11,6 +11,13 @@ It never writes to Supabase and does not change `raw_items.processed`.
 - Optional benchmark flags: `--hours`, `--limit`, `--threshold`, `--max-pair-hours`, `--top-k`,
   `--near-miss-limit`, `--singleton-limit`, and `--focus=term1,term2`.
 
+The manual retroactive article dedupe now reuses the calibrated V2 embeddings, pair protections,
+source-role classification, and complete-link grouping. It remains outside the automatic news
+pipeline and adds stricter destructive gates: title semantic score >= 0.93, at least two shared
+title anchors, and lexical score >= 0.12. Reviews, analysis, and roundups are not semantically
+deleted; exact normalized-title duplicates remain eligible. Run `npm run news:dedupe` for a dry run
+and add `-- --apply` only after reviewing the reported evidence.
+
 The real-data benchmark queries `raw_items` directly instead of consuming the latest
 `news_preflight_runs` payload. This avoids inheriting its per-topic limits and semantic exclusions.
 Both V1 and V2 receive the exact same locally accepted set after the existing deterministic policy
@@ -32,7 +39,8 @@ filters are reapplied.
 ## Primary and supporting source roles
 
 The experimental role-aware pass runs after embeddings and pair decisions are cached. It does not
-replace or connect to any production command.
+replace or connect to the automated ingest/cluster/process commands; the manual dedupe only reuses
+its classifier as an additional deletion safeguard.
 
 1. Titles with structured roundup/liveblog/recap framing, multi-announcement event framing, review
    framing, or explicit analysis/opinion framing are marked as supporting candidates. A lone word
