@@ -18,6 +18,7 @@ const RELEASES = [
         items: [
           'Corrigimos a abertura de matérias com novas tentativas em falhas temporárias e feedback visual imediato durante a navegação.',
           'Eliminamos trocas entre skeletons de lista e mosaico no carregamento do feed, bloqueamos interações com cards invisíveis e ajustamos tooltips que permaneciam abertos após trocar de aba.',
+          'A visualização em mosaico agora recupera o ponto de leitura ao voltar de uma matéria, mantendo sua posição separada da visualização em lista.',
           'Reforçamos a deduplicação retroativa com proteções semânticas e editoriais para revisar artigos repetidos sem remover análises, críticas ou compilações legítimas.',
           'O processamento manual de notícias agora pode ser limitado a uma única fonte, facilitando testes, correções e reprocessamentos pontuais.',
           'Reforçamos a leitura de RSS com novas tentativas automáticas e cabeçalhos mais compatíveis para fontes que bloqueiam acessos de forma intermitente.',
