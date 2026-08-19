@@ -10,6 +10,7 @@ const RELEASES = [
         items: [
           'O feed ganhou modos de visualização em lista e mosaico, permitindo escolher como acompanhar as notícias sem perder a personalização.',
           'Adicionamos paginação contínua e um aviso de novas publicações, deixando a atualização do feed mais previsível sem interromper a leitura.',
+          'Os tópicos ganharam ícones próprios para franquias, premiações e jogos — como Oscar, Harry Potter, Valorant, League of Legends, Counter-Strike, Fortnite e outros — facilitando a identificação visual no feed.',
           'Evoluímos a curadoria editorial com novas etapas de preflight, agrupamento e revisão assistida por IA para produzir artigos mais consistentes e reunir melhor as fontes relacionadas.',
         ],
       },
