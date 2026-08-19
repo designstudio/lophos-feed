@@ -32,6 +32,8 @@
 
   --color-border:        rgba(18, 18, 16, 0.10);
   --color-border-strong: rgba(18, 18, 16, 0.18);
+  --input-bg:            #ffffff;
+  --input-halo:          rgba(18, 18, 16, 0.09);
 
   /* Like interaction */
   --like-color: #f40051;
@@ -149,6 +151,8 @@ html, body {
   --color-tooltip-ink:   #ffffff;
   --color-border:        rgba(255,255,255,0.08);
   --color-border-strong: rgba(255,255,255,0.15);
+  --input-bg:            #1a1a1a;
+  --input-halo:          rgba(255,255,255,0.09);
   --tabs-text-muted: var(--color-ink-secondary);
   --tabs-text-active: var(--color-ink-primary);
   --tabs-bar-bg: var(--color-bg-secondary);
@@ -177,7 +181,7 @@ html, body {
 .dark .hover\:bg-gray-50:hover  { background-color: var(--color-bg-tertiary) !important; }
 .dark .hover\:bg-gray-100:hover { background-color: var(--color-bg-tertiary) !important; }
 .dark input, .dark select, .dark textarea {
-  background-color: var(--color-bg-tertiary) !important;
+  background-color: var(--input-bg) !important;
   color: var(--color-ink-primary) !important;
   border-color: var(--color-border) !important;
 }
@@ -2010,6 +2014,7 @@ html, body {
   font-style: italic;
 }
 
+.app-input,
 .settings-inline-form input,
 .settings-topic-autocomplete input,
 .settings-field input {
@@ -2021,9 +2026,10 @@ html, body {
   border-radius: 0.8rem;
   outline: none;
   color: var(--color-ink-primary);
-  background: color-mix(in srgb, var(--color-bg-secondary) 28%, var(--color-bg-primary));
+  background: var(--input-bg);
+  box-shadow: 0 0 0 0 transparent;
   font-size: 0.9rem;
-  transition: border-color 160ms ease, background-color 160ms ease;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .settings-inline-form input {
@@ -2034,11 +2040,21 @@ html, body {
   display: block;
 }
 
+.app-input:hover:not(:disabled),
+.settings-inline-form input:hover:not(:disabled),
+.settings-topic-autocomplete input:hover:not(:disabled),
+.settings-field input:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  box-shadow: 0 0 0 3px var(--input-halo);
+}
+
+.app-input:focus,
 .settings-inline-form input:focus,
 .settings-topic-autocomplete input:focus,
 .settings-field input:focus {
   border-color: var(--color-border-strong);
-  background: var(--color-bg-primary);
+  background: var(--input-bg);
+  box-shadow: 0 0 0 4px var(--input-halo);
 }
 
 .settings-field {

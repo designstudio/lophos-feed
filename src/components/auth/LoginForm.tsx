@@ -119,7 +119,7 @@ export function LoginForm() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="Insira seu endereço de e-mail"
-            className="h-12 w-full rounded-2xl border border-border bg-white px-4 text-[1rem] text-ink-primary outline-none placeholder:text-ink-tertiary focus:border-ink-primary"
+            className="app-input h-12 w-full rounded-2xl border border-border bg-white px-4 text-[1rem] text-ink-primary outline-none placeholder:text-ink-tertiary"
             required
           />
         ) : (
@@ -134,7 +134,7 @@ export function LoginForm() {
               value={code}
               onChange={(event) => setCode(event.target.value)}
               placeholder="Insira o código de verificação"
-              className="h-12 w-full rounded-2xl border border-border bg-white px-4 text-[1rem] text-ink-primary outline-none placeholder:text-ink-tertiary focus:border-ink-primary"
+              className="app-input h-12 w-full rounded-2xl border border-border bg-white px-4 text-[1rem] text-ink-primary outline-none placeholder:text-ink-tertiary"
               required
             />
           </div>

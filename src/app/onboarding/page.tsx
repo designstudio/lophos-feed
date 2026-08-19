@@ -114,7 +114,7 @@ export default function OnboardingPage() {
             onChange={(e) => setCustom(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addCustom()}
             placeholder="Adicionar tópico personalizado…"
-            className="flex-1 px-4 py-2.5 rounded-full border border-border bg-white text-sm text-ink-primary placeholder:text-ink-muted outline-none focus:border-border-strong transition-colors"
+            className="app-input flex-1 px-4 py-2.5 rounded-full border border-border bg-white text-sm text-ink-primary placeholder:text-ink-muted outline-none"
           />
           <button
             onClick={addCustom}
