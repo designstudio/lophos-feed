@@ -1,13 +1,15 @@
 import type { SVGProps } from 'react'
+import { BRAND_TOPIC_ICON_CONFIG } from '@/components/topic-brand-glyphs'
 
 type TopicGlyph = {
   viewBox: string
-  path: string
+  path?: string
+  paths?: readonly string[]
   fillRule?: 'evenodd'
 }
 
 type TopicIconConfig = {
-  aliases: string[]
+  aliases: readonly string[]
   glyph: TopicGlyph
 }
 
@@ -110,6 +112,7 @@ const REVIEWS: TopicGlyph = {
 }
 
 const TOPIC_ICON_CONFIG: TopicIconConfig[] = [
+  ...BRAND_TOPIC_ICON_CONFIG,
   { aliases: ['carnaval', 'carnival', 'samba', 'desfiles de carnaval'], glyph: CARNIVAL },
   { aliases: ['tecnologia', 'technology', 'tech', 'tech news', 'inovação', 'inovacao'], glyph: TECHNOLOGY },
   { aliases: ['reviews', 'review', 'análises', 'analises', 'críticas', 'criticas', 'avaliações', 'avaliacoes'], glyph: REVIEWS },
@@ -154,6 +157,8 @@ export function TopicIcon({
 
   if (!glyph) return null
 
+  const paths = glyph.paths ?? (glyph.path ? [glyph.path] : [])
+
   return (
     <svg
       {...svgProps}
@@ -165,12 +170,15 @@ export function TopicIcon({
       aria-hidden="true"
       focusable="false"
     >
-      <path
-        d={glyph.path}
-        fill="currentColor"
-        fillRule={glyph.fillRule}
-        clipRule={glyph.fillRule}
-      />
+      {paths.map((path) => (
+        <path
+          key={path}
+          d={path}
+          fill="currentColor"
+          fillRule={glyph.fillRule}
+          clipRule={glyph.fillRule}
+        />
+      ))}
     </svg>
   )
 }
