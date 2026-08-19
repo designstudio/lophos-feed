@@ -1,6 +1,6 @@
 'use client'
 import React, { useCallback, useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -23,10 +23,19 @@ const ANIMATION_BY_SIDE = {
 export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
   const pathname = usePathname()
   const [visible, setVisible] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [portalEnabled, setPortalEnabled] = useState(false)
   const [anchor, setAnchor] = useState<React.CSSProperties | null>(null)
   const triggerRef = React.useRef<HTMLDivElement>(null)
+  const ignoreShowUntilRef = React.useRef(0)
   const hideTooltip = useCallback(() => setVisible(false), [])
+
+  const dismissImmediately = useCallback(() => {
+    ignoreShowUntilRef.current = performance.now() + 300
+    flushSync(() => {
+      setVisible(false)
+      setPortalEnabled(false)
+    })
+  }, [])
 
   const getAnchor = useCallback((): React.CSSProperties | null => {
     const rect = triggerRef.current?.getBoundingClientRect()
@@ -70,7 +79,12 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
   }, [side])
 
   const showTooltip = useCallback(() => {
-    if (document.visibilityState !== 'visible' || !document.hasFocus()) return
+    if (
+      !portalEnabled
+      || document.visibilityState !== 'visible'
+      || !document.hasFocus()
+      || performance.now() < ignoreShowUntilRef.current
+    ) return
 
     const nextAnchor = getAnchor()
     if (!nextAnchor) return
@@ -79,7 +93,7 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
     // tooltip in normal body flow for even one frame changes the scrollbars.
     setAnchor(nextAnchor)
     setVisible(true)
-  }, [getAnchor])
+  }, [getAnchor, portalEnabled])
 
   useEffect(() => {
     hideTooltip()
@@ -87,22 +101,36 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState !== 'visible') hideTooltip()
+      if (document.visibilityState !== 'visible') {
+        dismissImmediately()
+        return
+      }
+
+      ignoreShowUntilRef.current = performance.now() + 300
+      setPortalEnabled(true)
     }
 
-    window.addEventListener('blur', hideTooltip)
-    window.addEventListener('pagehide', hideTooltip)
+    const handleWindowFocus = () => {
+      if (document.visibilityState !== 'visible') return
+      ignoreShowUntilRef.current = performance.now() + 300
+      setPortalEnabled(true)
+    }
+
+    window.addEventListener('blur', dismissImmediately)
+    window.addEventListener('focus', handleWindowFocus)
+    window.addEventListener('pagehide', dismissImmediately)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      window.removeEventListener('blur', hideTooltip)
-      window.removeEventListener('pagehide', hideTooltip)
+      window.removeEventListener('blur', dismissImmediately)
+      window.removeEventListener('focus', handleWindowFocus)
+      window.removeEventListener('pagehide', dismissImmediately)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [hideTooltip])
+  }, [dismissImmediately])
 
   useEffect(() => {
-    setMounted(true)
+    setPortalEnabled(true)
   }, [])
 
   useEffect(() => {
@@ -139,7 +167,7 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
     >
       {children}
 
-      {mounted && createPortal(
+      {portalEnabled && createPortal(
         <AnimatePresence>
           {visible && anchor && (
             <div style={anchor} className="z-[9999] pointer-events-none">
