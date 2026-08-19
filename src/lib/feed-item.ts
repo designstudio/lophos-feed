@@ -1,4 +1,5 @@
 import { FeedItem, NewsSource } from '@/lib/types'
+import { getMatchingInterestTopicLabel } from '@/lib/default-interest-topics'
 
 const LAZY_IMAGE_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
 
@@ -80,7 +81,7 @@ export function toFeedItem(row: FeedArticleRow, userTopics: string[] = []): Feed
   const matchedTopics = Array.isArray(row.matched_topics)
     ? row.matched_topics.filter((topic): topic is string => typeof topic === 'string')
     : []
-  const displayTopic = userTopics.find((topic) => matchedTopics.includes(topic)) ?? row.topic
+  const displayTopic = getMatchingInterestTopicLabel([row.topic, ...matchedTopics], userTopics) ?? row.topic
   const coverageImages = extractCoverageImages(row)
 
   return {

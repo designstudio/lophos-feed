@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { getInterestTopicLabel, toInterestTopicLabels } from '@/lib/default-interest-topics'
 
 const includeErrorDetails = process.env.NODE_ENV !== 'production'
 
@@ -33,7 +34,15 @@ export async function GET() {
       return jsonError(500, 'Failed to load topics', error)
     }
 
-    return NextResponse.json({ topics: data })
+    const seenTopics = new Set<string>()
+    const topics = (data ?? []).flatMap((row: any) => {
+      const topic = getInterestTopicLabel(String(row.topic ?? ''))
+      if (!topic || seenTopics.has(topic)) return []
+      seenTopics.add(topic)
+      return [{ ...row, topic }]
+    })
+
+    return NextResponse.json({ topics })
   } catch (err) {
     console.error('[topics] GET failed:', err)
     return jsonError(500, 'Failed to load topics', err)
@@ -85,7 +94,7 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[topics] Success: saved ${uniqueTopics.length} topics for user ${userId}`)
-    return NextResponse.json({ ok: true, topicsSaved: uniqueTopics })
+    return NextResponse.json({ ok: true, topicsSaved: toInterestTopicLabels(uniqueTopics) })
   } catch (err) {
     console.error('[topics] POST failed:', err)
     return jsonError(500, 'Failed to save topics', err)

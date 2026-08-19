@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { NewsItem } from '@/lib/types'
+import { expandInterestTopics } from '@/lib/default-interest-topics'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
   const searchQuery = `%${q}%`
+  const queryTopics = expandInterestTopics(userTopics)
 
   const { data: hiddenRows, error: hiddenError } = await db
     .from('user_reactions')
@@ -43,20 +45,32 @@ export async function GET(req: NextRequest) {
   const fetchLimit = Math.min(limit + hiddenIds.size, 60)
 
   // Filtra por texto E por interseção com os tópicos do usuário (matched_topics overlap)
-  const { data: rows, error, count } = await db
+  const buildSearchQuery = () => db
     .from('articles')
-    .select('*', { count: 'exact' })
+    .select('*')
     .or(`title.ilike.${searchQuery},summary.ilike.${searchQuery}`)
-    .filter('matched_topics', 'ov', `{${userTopics.join(',')}}`)
     .order('cached_at', { ascending: false })
     .limit(fetchLimit)
 
-  if (error) {
-    console.error('[articles/search] Error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  const [matchedResult, primaryResult] = await Promise.all([
+    buildSearchQuery().overlaps('matched_topics', queryTopics),
+    buildSearchQuery().in('topic', queryTopics),
+  ])
+
+  const queryError = matchedResult.error ?? primaryResult.error
+  if (queryError) {
+    console.error('[articles/search] Error:', queryError)
+    return NextResponse.json({ error: queryError.message }, { status: 500 })
   }
 
-  const visibleRows = (rows || []).filter(row => !hiddenIds.has(row.id)).slice(0, limit)
+  const rowsById = new Map(
+    [...(matchedResult.data ?? []), ...(primaryResult.data ?? [])]
+      .map((row: any) => [row.id, row] as const),
+  )
+  const visibleRows = [...rowsById.values()]
+    .filter(row => !hiddenIds.has(row.id))
+    .sort((left, right) => new Date(right.cached_at).getTime() - new Date(left.cached_at).getTime())
+    .slice(0, limit)
 
   const items: NewsItem[] = visibleRows.map(row => ({
     id: row.id,
@@ -75,7 +89,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     items,
-    totalResults: Math.min(count ?? items.length, visibleRows.length),
+    totalResults: visibleRows.length,
     query: q,
   })
 }

@@ -55,19 +55,35 @@ BEGIN
     RAISE EXCEPTION 'p_cursor_rank must be 0 or 1';
   END IF;
 
-  SELECT ARRAY_AGG(DISTINCT normalize_topic(TRIM(value)))
+  SELECT ARRAY_AGG(DISTINCT expanded.topic)
   INTO v_normalized_topics
-  FROM UNNEST(p_topics) AS value
-  WHERE value IS NOT NULL AND TRIM(value) <> '';
+  FROM (
+    SELECT TRIM(value) AS topic
+    FROM UNNEST(p_topics) AS value
+    WHERE value IS NOT NULL AND TRIM(value) <> ''
+    UNION
+    SELECT normalize_topic(TRIM(value)) AS topic
+    FROM UNNEST(p_topics) AS value
+    WHERE value IS NOT NULL AND TRIM(value) <> ''
+  ) expanded
+  WHERE expanded.topic <> '';
 
   IF v_normalized_topics IS NULL OR ARRAY_LENGTH(v_normalized_topics, 1) = 0 THEN
     v_normalized_topics := p_topics;
   END IF;
 
-  SELECT ARRAY_AGG(DISTINCT normalize_topic(TRIM(value)))
+  SELECT ARRAY_AGG(DISTINCT expanded.topic)
   INTO v_normalized_excluded
-  FROM UNNEST(p_excluded_topics) AS value
-  WHERE value IS NOT NULL AND TRIM(value) <> '';
+  FROM (
+    SELECT TRIM(value) AS topic
+    FROM UNNEST(p_excluded_topics) AS value
+    WHERE value IS NOT NULL AND TRIM(value) <> ''
+    UNION
+    SELECT normalize_topic(TRIM(value)) AS topic
+    FROM UNNEST(p_excluded_topics) AS value
+    WHERE value IS NOT NULL AND TRIM(value) <> ''
+  ) expanded
+  WHERE expanded.topic <> '';
 
   -- The first page captures the ranking inputs. Later pages replay the encrypted
   -- snapshot supplied by the server, so likes added while scrolling do not reorder it.
@@ -114,13 +130,21 @@ BEGIN
       END AS rank_value,
       COALESCE(article.published_at, article.cached_at, '-infinity'::TIMESTAMPTZ) AS sort_value
     FROM articles article
-    WHERE article.matched_topics IS NOT NULL
-      AND ARRAY_LENGTH(article.matched_topics, 1) > 0
-      AND article.matched_topics && v_normalized_topics
+    WHERE (
+        article.topic = ANY(v_normalized_topics)
+        OR (
+          article.matched_topics IS NOT NULL
+          AND ARRAY_LENGTH(article.matched_topics, 1) > 0
+          AND article.matched_topics && v_normalized_topics
+        )
+      )
       AND (
         v_normalized_excluded IS NULL
         OR ARRAY_LENGTH(v_normalized_excluded, 1) = 0
-        OR NOT (article.matched_topics && v_normalized_excluded)
+        OR NOT (
+          COALESCE(article.topic = ANY(v_normalized_excluded), FALSE)
+          OR COALESCE(article.matched_topics && v_normalized_excluded, FALSE)
+        )
       )
       AND COALESCE(article.published_at, article.cached_at, '-infinity'::TIMESTAMPTZ) >= v_cutoff
       AND COALESCE(article.published_at, article.cached_at, '-infinity'::TIMESTAMPTZ) <= p_snapshot_at
