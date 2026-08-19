@@ -50,6 +50,45 @@ export function getInterestTopicLabel(value: string): string {
   return categoryByTopicKey.get(normalizeTopicLookupKey(trimmedValue))?.label ?? trimmedValue
 }
 
+const TOPIC_LOWERCASE_WORDS = new Set([
+  'a', 'as', 'com', 'da', 'das', 'de', 'do', 'dos', 'e', 'em', 'o', 'of', 'os', 'para', 'the', 'and',
+])
+
+const TOPIC_WORD_CAPITALIZATION: Record<string, string> = {
+  ai: 'AI',
+  ia: 'IA',
+  ios: 'iOS',
+  ipad: 'iPad',
+  iphone: 'iPhone',
+  macbook: 'MacBook',
+  nba: 'NBA',
+  pc: 'PC',
+  ps5: 'PS5',
+  rpg: 'RPG',
+  tft: 'TFT',
+  xbox: 'Xbox',
+}
+
+function capitalizeTopicWord(word: string): string {
+  const normalizedWord = word.toLocaleLowerCase('pt-BR')
+  const brandedWord = TOPIC_WORD_CAPITALIZATION[normalizedWord]
+  if (brandedWord) return brandedWord
+  return normalizedWord.charAt(0).toLocaleUpperCase('pt-BR') + normalizedWord.slice(1)
+}
+
+export function formatInterestTopicLabel(value: string): string {
+  const label = getInterestTopicLabel(value)
+  const words = label.split(/\s+/).filter(Boolean)
+
+  return words.map((word, index) => {
+    const normalizedWord = word.toLocaleLowerCase('pt-BR')
+    if (index > 0 && index < words.length - 1 && TOPIC_LOWERCASE_WORDS.has(normalizedWord)) {
+      return normalizedWord
+    }
+    return word.split('-').map(capitalizeTopicWord).join('-')
+  }).join(' ')
+}
+
 export function toInterestTopicLabels(values: string[]): string[] {
   const labels = values.map(getInterestTopicLabel).filter(Boolean)
   return [...new Set(labels)]

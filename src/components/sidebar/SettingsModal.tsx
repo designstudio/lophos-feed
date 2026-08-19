@@ -6,7 +6,11 @@ import { cn } from '@/lib/utils'
 import { TransitionText } from '@/components/TransitionText'
 import { UserAvatar } from '@/components/UserAvatar'
 import { TopicIcon } from '@/components/TopicIcon'
-import { DEFAULT_INTEREST_TOPICS, getInterestTopicLabel } from '@/lib/default-interest-topics'
+import {
+  DEFAULT_INTEREST_TOPICS,
+  formatInterestTopicLabel,
+  getInterestTopicLabel,
+} from '@/lib/default-interest-topics'
 import { applyTheme } from './utils'
 
 function normalizeTopicKey(value: string): string {
@@ -570,7 +574,7 @@ export function SettingsPageContent() {
               {topics.map((topic) => (
                 <span key={topic} className="settings-topic-chip">
                   <TopicIcon topic={topic} size={12} className="settings-topic-chip__icon" />
-                  {topic}
+                  {formatInterestTopicLabel(topic)}
                   <button
                     type="button"
                     onClick={() => { setTopics((current) => current.filter((item) => item !== topic)); setTopicsSaved(false) }}
@@ -631,7 +635,7 @@ export function SettingsPageContent() {
                         onClick={() => addInterestTopic(topic)}
                       >
                         <TopicIcon topic={topic} size={13} />
-                        <span>{topic}</span>
+                        <span>{formatInterestTopicLabel(topic)}</span>
                       </button>
                     ))
                   ) : (
@@ -653,7 +657,7 @@ export function SettingsPageContent() {
                         aria-label={`Adicionar ${topic}`}
                       >
                         <TopicIcon topic={topic} size={13} className="settings-topic-suggestion__icon" />
-                        <span>{topic}</span>
+                        <span>{formatInterestTopicLabel(topic)}</span>
                       </button>
                     </li>
                   ))}
@@ -678,7 +682,7 @@ export function SettingsPageContent() {
               {excludedTopics.map((topic) => (
                 <span key={topic} className="settings-topic-chip settings-topic-chip--excluded">
                   <TopicIcon topic={topic} size={12} className="settings-topic-chip__icon" />
-                  {topic}
+                  {formatInterestTopicLabel(topic)}
                   <button
                     type="button"
                     onClick={() => { setExcludedTopics((current) => current.filter((item) => item !== topic)); setExcludedSaved(false) }}
