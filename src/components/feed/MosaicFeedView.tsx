@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { useFeedUpdates } from '@/hooks/useFeedUpdates'
 
 const FEED_CACHE_KEY = 'lophos_feed_cache'
+const MOSAIC_SCROLL_KEY = 'lophos_mosaic_feed_scroll'
 const FEED_CACHE_TTL = 5 * 60 * 1000
 const TOPIC_COLLATOR = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
 
@@ -37,6 +38,11 @@ type FeedPageResponse = {
   nextCursor: string | null
   hasMore: boolean
   topics: string[]
+}
+
+type MosaicScrollState = {
+  scrollTop: number
+  activeFilter: string | null
 }
 
 function toTitleCase(value: string) {
@@ -81,6 +87,32 @@ function readCachedFeed(): CachedFeed | null {
   } catch {
     return null
   }
+}
+
+function readMosaicScrollTop(activeFilter: string | null) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(MOSAIC_SCROLL_KEY) || 'null') as Partial<MosaicScrollState> | null
+    if (
+      saved
+      && saved.activeFilter === activeFilter
+      && typeof saved.scrollTop === 'number'
+      && Number.isFinite(saved.scrollTop)
+      && saved.scrollTop >= 0
+    ) return saved.scrollTop
+  } catch {}
+  return 0
+}
+
+function writeMosaicScrollTop(scrollTop: number, activeFilter: string | null) {
+  try {
+    sessionStorage.setItem(MOSAIC_SCROLL_KEY, JSON.stringify({ scrollTop, activeFilter } satisfies MosaicScrollState))
+  } catch {}
+}
+
+function clearMosaicScrollTop() {
+  try {
+    sessionStorage.removeItem(MOSAIC_SCROLL_KEY)
+  } catch {}
 }
 
 function mergeItems(current: FeedItem[], incoming: FeedItem[], prepend = false) {
@@ -410,6 +442,12 @@ export default function MosaicFeedView() {
   const nextCursorRef = useRef<string | null>(null)
   const hasMoreRef = useRef(false)
   const loadingMoreRef = useRef(false)
+  const activeFilterRef = useRef<string | null>(null)
+  const scrollTopRef = useRef(0)
+  const restoredScrollTopRef = useRef<number | null>(null)
+  const scrollSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const navigatingToArticleRef = useRef(false)
+  const restoringScrollRef = useRef(false)
 
   useEffect(() => {
     const cached = readCachedFeed()
@@ -421,9 +459,15 @@ export default function MosaicFeedView() {
       hasMoreRef.current = cached.hasMore
       setTopics(cached.topics)
       setActiveFilter(cached.activeFilter)
+      activeFilterRef.current = cached.activeFilter
+      const cachedScrollTop = readMosaicScrollTop(cached.activeFilter)
+      restoredScrollTopRef.current = cachedScrollTop
+      restoringScrollRef.current = cachedScrollTop > 0
       setLoading(false)
       return
     }
+
+    clearMosaicScrollTop()
 
     const controller = new AbortController()
 
@@ -508,6 +552,36 @@ export default function MosaicFeedView() {
   }, [activeFilter, hasMore, items, nextCursor, topics])
 
   useEffect(() => {
+    if (loading || items.length === 0 || restoredScrollTopRef.current === null || !scrollRef.current) return
+    const targetScrollTop = restoredScrollTopRef.current
+    const applyScrollPosition = () => {
+      if (!scrollRef.current) return
+      scrollRef.current.scrollTop = targetScrollTop
+      scrollTopRef.current = targetScrollTop
+    }
+    const frame = requestAnimationFrame(applyScrollPosition)
+    const settleTimeout = setTimeout(() => {
+      applyScrollPosition()
+      restoredScrollTopRef.current = null
+      restoringScrollRef.current = false
+    }, 250)
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(settleTimeout)
+    }
+  }, [items.length, loading])
+
+  useEffect(() => {
+    navigatingToArticleRef.current = false
+    return () => {
+      if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
+      if (!navigatingToArticleRef.current && !restoringScrollRef.current) {
+        writeMosaicScrollTop(scrollTopRef.current, activeFilterRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
     if (!paginationSentinel || !hasMore || loadingMore || loadMoreError) return
     const observer = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting) void loadNextPage() },
@@ -524,7 +598,10 @@ export default function MosaicFeedView() {
     paginationAbortRef.current = controller
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     sessionStorage.removeItem(FEED_CACHE_KEY)
+    clearMosaicScrollTop()
+    scrollTopRef.current = 0
     setActiveFilter(topic)
+    activeFilterRef.current = topic
     setDeferredStoryIds(new Set())
     setItems([])
     setLoading(true)
@@ -572,6 +649,8 @@ export default function MosaicFeedView() {
   const applyFeedUpdates = useCallback((newItems: FeedItem[]) => {
     setItems((current) => mergeItems(current, newItems, true))
     setDeferredStoryIds(new Set())
+    clearMosaicScrollTop()
+    scrollTopRef.current = 0
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
@@ -638,8 +717,25 @@ export default function MosaicFeedView() {
     <div
       ref={scrollRef}
       className="mosaic-feed-scroll"
+      onClickCapture={(event) => {
+        const target = event.target as Element
+        if (!target.closest('a[href^="/article/"]')) return
+        navigatingToArticleRef.current = true
+        if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
+        scrollSaveTimeoutRef.current = null
+        const currentScrollTop = event.currentTarget.scrollTop
+        scrollTopRef.current = currentScrollTop
+        writeMosaicScrollTop(currentScrollTop, activeFilterRef.current)
+      }}
       onScroll={(event) => {
+        if (navigatingToArticleRef.current || restoringScrollRef.current) return
         const container = event.currentTarget
+        scrollTopRef.current = container.scrollTop
+        if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
+        scrollSaveTimeoutRef.current = setTimeout(() => {
+          writeMosaicScrollTop(scrollTopRef.current, activeFilterRef.current)
+          scrollSaveTimeoutRef.current = null
+        }, 150)
         const remaining = container.scrollHeight - container.scrollTop - container.clientHeight
         if (remaining <= container.clientHeight * 2) void loadNextPage()
       }}
