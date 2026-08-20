@@ -49,19 +49,22 @@ begin
     select 1 from pg_policies
     where schemaname = 'public' and tablename = 'user_topics' and policyname = 'service role all'
   ) then
-    create policy "service role all" on user_topics for all using (true);
+    create policy "service role all" on user_topics for all
+      to service_role using (true) with check (true);
   end if;
   if not exists (
     select 1 from pg_policies
     where schemaname = 'public' and tablename = 'user_reactions' and policyname = 'service role all'
   ) then
-    create policy "service role all" on user_reactions for all using (true);
+    create policy "service role all" on user_reactions for all
+      to service_role using (true) with check (true);
   end if;
   if not exists (
     select 1 from pg_policies
     where schemaname = 'public' and tablename = 'user_negative_topics' and policyname = 'service role all'
   ) then
-    create policy "service role all" on user_negative_topics for all using (true);
+    create policy "service role all" on user_negative_topics for all
+      to service_role using (true) with check (true);
   end if;
 end
 $$;
@@ -91,7 +94,8 @@ begin
     select 1 from pg_policies
     where schemaname = 'public' and tablename = 'articles' and policyname = 'service role all'
   ) then
-    create policy "service role all" on articles for all using (true);
+    create policy "service role all" on articles for all
+      to service_role using (true) with check (true);
   end if;
 end
 $$;
