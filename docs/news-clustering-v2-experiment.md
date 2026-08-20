@@ -1,7 +1,14 @@
-# News Clustering V2 (experimental)
+# News Clustering V2
 
-This experiment is intentionally disconnected from `news:process`, `news:cluster`, and `news:cron`.
-It never writes to Supabase and does not change `raw_items.processed`.
+Semantic V2 is the production clustering path used by `news:cluster`, `news:process`, and
+`news:cron`. It writes the resulting `semantic-v2-role-aware` payload to `news_cluster_runs`; the
+editorial stage consumes that run and updates `raw_items.processed` after successful processing.
+Set `NEWS_CLUSTER_ALGORITHM=deterministic-v1` only when an explicit V1 rollback is required.
+When a preflight already has a pending V1 run, creating its V2 replacement preserves the historical
+row and marks the pending V1 run as `superseded`, so the editorial stage cannot consume it later.
+
+The benchmark, fixture evaluation, synthetic suite, and shadow commands remain read-only tools and
+do not change production data.
 
 ## Commands
 
@@ -38,9 +45,8 @@ filters are reapplied.
 
 ## Primary and supporting source roles
 
-The experimental role-aware pass runs after embeddings and pair decisions are cached. It does not
-replace or connect to the automated ingest/cluster/process commands; the manual dedupe only reuses
-its classifier as an additional deletion safeguard.
+The production role-aware pass runs after embeddings and pair decisions are cached. The manual
+dedupe also reuses its classifier as an additional deletion safeguard.
 
 1. Titles with structured roundup/liveblog/recap framing, multi-announcement event framing, review
    framing, or explicit analysis/opinion framing are marked as supporting candidates. A lone word
@@ -75,8 +81,8 @@ headline conflicts such as trailer versus box office remain blocked.
   attached after the IGN/TheWrap primary pair formed.
 - Avengers: Doomsday remained a primary singleton. The roundup did not create a two-source event.
 - No new primary or supporting false positive was observed in manual review of this focused batch.
-  Confirmed false negatives remain among additional X-Men hard-news sources (G1 and Dread Central),
-  so rollout is still not recommended.
+  Confirmed false negatives remain among additional X-Men hard-news sources (G1 and Dread Central);
+  this is a known recall limitation accepted for the production rollout.
 
 Measured on the Windows development host for this fixed batch: 7.78-8.44 s total, 0.80-0.82 s
 model load, 5.22-5.84 s embeddings, 1.74-1.79 s clustering, 61.96-69.40 vectors/s, and approximately
@@ -86,7 +92,7 @@ and memory cost is included in the clustering figure and is small relative to em
 For a few hundred items the implementation deliberately computes the pairwise cosine matrix in
 memory. At 418 items this was 87,153 pair checks and 5,893 retained candidate pairs. This is simple
 and currently fast enough, but the measured resident-memory increase (~712 MB on the development
-machine) should be verified on the CPU-only VPS before any rollout.
+machine) should continue to be monitored on the CPU-only VPS.
 
 ## Calibration snapshot (2026-08-14, 12-hour window)
 
@@ -99,9 +105,9 @@ machine) should be verified on the CPU-only VPS before any rollout.
 
 An earlier permissive V2 calibration produced obvious false positives in the same real batch. The
 current rules removed those observed errors, including unrelated Apple/AI stories, unrelated crimes,
-different games, and same-publisher D23 headlines. This remains experimental: the much higher V2
-singleton count than the product target shows that precision protection is now stronger than recall.
-No production rollout is recommended until more real batches are manually labeled and evaluated.
+different games, and same-publisher D23 headlines. The higher V2 singleton count than the product
+target is an accepted precision-over-recall tradeoff and should continue to be monitored with the
+fixture and optional shadow audit.
 
 ## Recall calibration round 2
 
@@ -170,15 +176,16 @@ Latest Windows development measurement for 410 items with event + title embeddin
 - throughput: 79.53 vectors/s (two vectors per item);
 - RSS: 100.9 MB before, 897.0 MB after, +796.1 MB.
 
-## Optional cron shadow mode
+## Optional cron comparison mode
 
-Set `NEWS_ENABLE_CLUSTER_V2_SHADOW=true` to run the role-aware V2 audit after `news:process` and
-before the independently configured Mistral stage. Missing values, `false`, and every value other
-than an explicit case-insensitive `true` leave the cron behavior unchanged.
+Set `NEWS_ENABLE_CLUSTER_V2_SHADOW=true` to run the historical V1/V2 comparison audit after the
+production V2 `news:process` and before the independently configured Mistral stage. Missing values,
+`false`, and every value other than an explicit case-insensitive `true` leave the cron behavior
+unchanged.
 
 The shadow subprocess only issues `SELECT` queries against recent `raw_items`. It does not consume
 or write `news_cluster_runs`, update `raw_items.processed`, create articles, invoke an editorial
-model, or change the V1 output. A non-zero shadow exit is logged by `news:cron` and deliberately does
+model, or change the production V2 output. A non-zero shadow exit is logged by `news:cron` and deliberately does
 not fail or stop the normal pipeline. `NEWS_ENABLE_MISTRAL=false` remains independent.
 
 Every invocation appends exactly one compact JSON object followed by a newline to:

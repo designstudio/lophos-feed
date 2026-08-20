@@ -1,9 +1,9 @@
 /**
  * News process orchestrator
  *
- * Runs the configured preflight + clustering pipeline in order:
+ * Runs the preflight + semantic V2 clustering pipeline in order:
  * - news-preflight
- * - news-cluster
+ * - news-cluster (semantic V2 by default; V1 only via explicit rollback env)
  *
  * Mistral processing stays separate in news:process-mistral.
  */

@@ -3,8 +3,8 @@
  *
  * Order:
  * 1. news:ingest
- * 2. news:process
- * 3. news:cluster-v2-shadow (optional, isolated)
+ * 2. news:process (preflight + production semantic V2 cluster)
+ * 3. news:cluster-v2-shadow (optional, isolated V1/V2 audit)
  * 4. news:process-mistral
  */
 

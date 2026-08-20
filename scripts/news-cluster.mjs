@@ -22,10 +22,18 @@ const DEFAULT_SIMILARITY_THRESHOLD = 0.3
 const DEFAULT_MIN_STRONG_TOKENS = 3
 const RAW_ITEMS_BATCH_SIZE = 100
 const CLUSTER_RUN_STATUS = process.env.NEWS_CLUSTER_RUN_STATUS || 'ready'
-const CLUSTER_ALGORITHM = String(process.env.NEWS_CLUSTER_ALGORITHM || 'deterministic').trim().toLowerCase()
+const CLUSTER_ALGORITHM = String(process.env.NEWS_CLUSTER_ALGORITHM || 'semantic-v2').trim().toLowerCase()
 const CLUSTER_V2_MODEL = process.env.EMBEDDING_MODEL || DEFAULT_V2_OPTIONS.modelId
 const CLUSTER_V2_THRESHOLD = Number(process.env.EMBEDDING_MERGE_THRESHOLD || DEFAULT_V2_OPTIONS.semanticThreshold)
 const SOURCE_FILTER = String(process.env.NEWS_SOURCE_FILTER || '').trim()
+
+const semanticV2Enabled = ['v2', 'semantic', 'semantic-v2'].includes(CLUSTER_ALGORITHM)
+const deterministicV1Enabled = ['deterministic', 'v1', 'deterministic-v1'].includes(CLUSTER_ALGORITHM)
+const requestedAlgorithmName = semanticV2Enabled ? 'semantic-v2-role-aware' : 'deterministic-v1'
+
+if (!semanticV2Enabled && !deterministicV1Enabled) {
+  throw new Error(`Unsupported NEWS_CLUSTER_ALGORITHM: ${CLUSTER_ALGORITHM}`)
+}
 
 function assertEnv(name) {
   const value = process.env[name]
@@ -134,6 +142,8 @@ async function fetchItemsByIds(db, ids) {
 }
 
 async function main() {
+  console.log(`[cluster] Algorithm: ${requestedAlgorithmName}`)
+
   const db = createClient(
     assertEnv('NEXT_PUBLIC_SUPABASE_URL'),
     assertEnv('SUPABASE_SERVICE_ROLE_KEY'),
@@ -159,18 +169,40 @@ async function main() {
     throw new Error(`Latest preflight run is not scoped to source: ${SOURCE_FILTER}`)
   }
 
-  const { data: latestClusterRun } = await db
+  const { data: latestClusterRun, error: clusterRunError } = await db
     .from('news_cluster_runs')
-    .select('id, preflight_run_id, status, created_at')
+    .select('id, preflight_run_id, status, payload, created_at')
     .eq('preflight_run_id', latestPreflight.id)
     .order('created_at', { ascending: false })
-    .limit(1)
+    .limit(10)
 
-  if (latestClusterRun?.length > 0) {
-    const existing = latestClusterRun[0]
-    console.log(`Cluster run already exists for preflight ${latestPreflight.id}: ${existing.id} (${existing.status})`)
+  if (clusterRunError) {
+    throw new Error(`Could not inspect existing cluster runs: ${clusterRunError.message}`)
+  }
+
+  const matchingClusterRun = latestClusterRun?.find(
+    (run) => run.payload?.clustering?.algorithm === requestedAlgorithmName,
+  )
+  if (matchingClusterRun) {
+    console.log(
+      `Cluster run ${requestedAlgorithmName} already exists for preflight ${latestPreflight.id}: ${matchingClusterRun.id} (${matchingClusterRun.status})`,
+    )
     return
   }
+  if (latestClusterRun?.length > 0) {
+    const previousAlgorithms = unique(
+      latestClusterRun.map((run) => run.payload?.clustering?.algorithm || 'unknown'),
+    )
+    console.log(
+      `[cluster] Existing run(s) use ${previousAlgorithms.join(', ')}; creating ${requestedAlgorithmName} for the same preflight.`,
+    )
+  }
+  const supersededRunIds = (latestClusterRun || [])
+    .filter((run) => (
+      run.status === CLUSTER_RUN_STATUS
+      && run.payload?.clustering?.algorithm !== requestedAlgorithmName
+    ))
+    .map((run) => run.id)
 
   const topics = latestPreflight.payload.topics || []
   const acceptedIds = flattenTopicIds(topics, 'acceptedIds')
@@ -194,11 +226,6 @@ async function main() {
     const bucket = acceptedItemsByTopic.get(item.topic) || []
     bucket.push(item)
     acceptedItemsByTopic.set(item.topic, bucket)
-  }
-
-  const semanticV2Enabled = ['v2', 'semantic', 'semantic-v2'].includes(CLUSTER_ALGORITHM)
-  if (!semanticV2Enabled && CLUSTER_ALGORITHM !== 'deterministic' && CLUSTER_ALGORITHM !== 'v1') {
-    throw new Error(`Unsupported NEWS_CLUSTER_ALGORITHM: ${CLUSTER_ALGORITHM}`)
   }
 
   let semanticResult = null
@@ -266,11 +293,21 @@ async function main() {
     rejectedRawIds,
     semanticDuplicateRawIds,
     semanticMatches: latestPreflight.payload.semanticMatches || [],
-    clustering: semanticResult?.stats || {
-      algorithm: 'deterministic-v1',
-      similarityThreshold: DEFAULT_SIMILARITY_THRESHOLD,
-      minStrongTokens: DEFAULT_MIN_STRONG_TOKENS,
-    },
+    clustering: semanticResult?.stats || (semanticV2Enabled
+      ? {
+          algorithm: 'semantic-v2-role-aware',
+          model: CLUSTER_V2_MODEL,
+          threshold: CLUSTER_V2_THRESHOLD,
+          primaryEvents: 0,
+          supportingAttachments: 0,
+          pairChecks: 0,
+          durationMs: 0,
+        }
+      : {
+          algorithm: 'deterministic-v1',
+          similarityThreshold: DEFAULT_SIMILARITY_THRESHOLD,
+          minStrongTokens: DEFAULT_MIN_STRONG_TOKENS,
+        }),
     topics: topicPayloads,
   }
 
@@ -293,6 +330,19 @@ async function main() {
 
   if (insertError) {
     throw new Error(`Failed to save cluster run: ${insertError.message}`)
+  }
+
+  if (supersededRunIds.length > 0) {
+    const { error: supersedeError } = await db
+      .from('news_cluster_runs')
+      .update({ status: 'superseded' })
+      .in('id', supersededRunIds)
+
+    if (supersedeError) {
+      console.warn(`[cluster] Could not supersede previous ${CLUSTER_RUN_STATUS} run(s): ${supersedeError.message}`)
+    } else {
+      console.log(`[cluster] Superseded ${supersededRunIds.length} previous ${CLUSTER_RUN_STATUS} run(s).`)
+    }
   }
 
   console.log(`\nCluster run salvo em news_cluster_runs: ${insertedRow.id} (${insertedRow.created_at}) [${CLUSTER_RUN_STATUS}]`)
