@@ -3,6 +3,29 @@ import { LegalPage } from '@/components/LegalPage'
 
 const RELEASES = [
   {
+    date: '20 ago 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'Lançamos as listas editoriais, com catálogo próprio, páginas públicas e uma experiência de leitura consistente com os artigos do Lophos.',
+          'O novo editor de listas permite criar, pré-visualizar, salvar rascunhos e publicar conteúdos com imagens, créditos, texto alternativo, tópicos e informações de SEO.',
+          'As listas agora podem aparecer em destaque entre as notícias do feed quando combinam com os interesses do usuário, usando um carrossel de imagens e identificação editorial própria.',
+          'Listas curtidas também passam a aparecer nos favoritos, junto aos artigos salvos.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'Adicionamos ao painel administrativo uma listagem de listas em mosaico ou lista, com acesso protegido para a equipe editorial.',
+          'Padronizamos tipografia, espaçamentos, ações, créditos de imagens, zoom e compartilhamento das listas com a experiência já usada nas páginas de artigos.',
+          'O agrupamento de notícias v2 passou a ser o padrão do preflight, clustering e processamento, com fluxo manual pelo Gemma e suporte à exclusão de tópicos.',
+          'A distribuição das listas no feed prioriza conteúdos recentes e relevantes, mantendo intervalos entre artigos e permitindo que uma lista volte a aparecer quando continuar alinhada aos interesses do usuário.',
+        ],
+      },
+    ],
+  },
+  {
     date: '19 ago 2026',
     sections: [
       {
