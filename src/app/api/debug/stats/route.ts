@@ -51,22 +51,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Get last fetch times
-    const { data: fetchTimes } = await db
-      .from('topic_fetches')
-      .select('topic, last_fetched')
-      .in('topic', topics)
-
-    const lastFetchByTopic = new Map<string, string>()
-    if (fetchTimes) {
-      for (const row of fetchTimes) {
-        lastFetchByTopic.set(row.topic, row.last_fetched)
-      }
-    }
-
     const result = topics.map(topic => {
       const stat = stats.get(topic)
-      const lastFetched = lastFetchByTopic.get(topic)
       return {
         topic,
         count: stat?.count ?? 0,
@@ -74,7 +60,6 @@ export async function GET(req: NextRequest) {
         withoutImage: (stat?.count ?? 0) - (stat?.withImage ?? 0),
         newest: stat?.newest ?? null,
         oldest: stat?.oldest ?? null,
-        lastFetched: lastFetched ?? null,
       }
     })
 

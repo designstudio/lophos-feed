@@ -13,3 +13,6 @@ out/
 # clerk configuration (can include secrets)
 /.clerk/
 .claude/
+
+# Temporary local credentials and dumps used during the Supabase migration
+.supabase-migration/

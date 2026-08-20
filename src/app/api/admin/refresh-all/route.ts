@@ -36,23 +36,12 @@ async function handleRefresh(req: NextRequest) {
       .delete()
       .in('topic', topics)
 
-    await db
-      .from('raw_articles')
-      .delete()
-      .in('topic', topics)
-
-    // 3. Clear topic_fetches to force refetch on next request
-    await db
-      .from('topic_fetches')
-      .delete()
-      .in('topic', topics)
-
-    // Done! Next feed request will force refetch with new queries
+    // Done! The next ingestion cycle will repopulate these topics.
     return new Response(JSON.stringify({
       success: true,
-      message: `Cleared ${topics.length} topics. Next feed request will refetch with updated queries.`,
+      message: `Cleared ${topics.length} topics. The next ingestion cycle will fetch updated articles.`,
       topics,
-      nextStep: 'Open the feed page and click "Atualizar" to fetch fresh news',
+      nextStep: 'Wait for the next ingestion cycle to fetch fresh news',
     }, null, 2), {
       headers: { 'Content-Type': 'application/json' },
     })

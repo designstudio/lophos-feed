@@ -118,12 +118,10 @@ async function main() {
   }
 
   const deletedArticles = await deleteMatchingRows('articles', matches)
-  const deletedCacheRows = await deleteMatchingRows('news_cache', matches)
   const resetRawItems = await resetSourceItems(matches)
 
   console.log('\n✅ Limpeza aplicada com sucesso.')
   console.log(`Artigos removidos: ${deletedArticles}`)
-  console.log(`Cache removido: ${deletedCacheRows}`)
   console.log(`raw_items reabertos: ${resetRawItems}`)
 }
 
