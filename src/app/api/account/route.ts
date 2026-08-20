@@ -5,9 +5,6 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 
 const USER_DATA_TABLES = [
-  'chat_messages',
-  'chat_threads',
-  'user_favorites',
   'user_reactions',
   'user_negative_topics',
   'user_excluded_topics',

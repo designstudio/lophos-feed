@@ -9,18 +9,6 @@ create table if not exists user_topics (
   unique(user_id, topic)
 );
 
--- News cache table
-create table if not exists news_cache (
-  id uuid default gen_random_uuid() primary key,
-  topic text not null,
-  title text not null,
-  summary text not null,
-  sources jsonb not null default '[]',
-  image_url text,
-  published_at timestamptz default now(),
-  cached_at timestamptz default now()
-);
-
 -- User reactions (like/dislike)
 create table if not exists user_reactions (
   id uuid default gen_random_uuid() primary key,
@@ -45,8 +33,6 @@ create table if not exists user_negative_topics (
 );
 
 -- Indexes
-create index if not exists news_cache_topic_idx on news_cache(topic);
-create index if not exists news_cache_cached_at_idx on news_cache(cached_at desc);
 create index if not exists user_topics_user_id_idx on user_topics(user_id);
 create index if not exists user_reactions_user_id_idx on user_reactions(user_id);
 create index if not exists user_negative_topics_user_id_idx on user_negative_topics(user_id);
@@ -54,7 +40,6 @@ create index if not exists user_negative_topics_topic_idx on user_negative_topic
 
 -- RLS
 alter table user_topics enable row level security;
-alter table news_cache enable row level security;
 alter table user_reactions enable row level security;
 alter table user_negative_topics enable row level security;
 
@@ -65,12 +50,6 @@ begin
     where schemaname = 'public' and tablename = 'user_topics' and policyname = 'service role all'
   ) then
     create policy "service role all" on user_topics for all using (true);
-  end if;
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'news_cache' and policyname = 'service role all'
-  ) then
-    create policy "service role all" on news_cache for all using (true);
   end if;
   if not exists (
     select 1 from pg_policies
@@ -101,6 +80,10 @@ create table if not exists articles (
 );
 
 create index if not exists articles_topic_idx on articles(topic);
+create index if not exists articles_feed_sort_idx on articles (
+  (coalesce(published_at, cached_at, '-infinity'::timestamptz)) desc,
+  id desc
+);
 alter table articles enable row level security;
 do $$
 begin
@@ -113,46 +96,9 @@ begin
 end
 $$;
 
--- Add sections and conclusion columns to news_cache and articles
-alter table news_cache add column if not exists sections jsonb default '[]';
-alter table news_cache add column if not exists conclusion text;
+-- Add sections and conclusion columns to articles
 alter table articles add column if not exists sections jsonb default '[]';
 alter table articles add column if not exists conclusion text;
 
 -- Add tavily_raw to preserve original Tavily response data
-alter table news_cache add column if not exists tavily_raw jsonb;
 alter table articles add column if not exists tavily_raw jsonb;
-
--- Tracks last fetch time per topic — separate from articles themselves
-create table if not exists topic_fetches (
-  topic        text primary key,
-  last_fetched timestamptz not null default now(),
-  updated_at   timestamptz not null default now()
-);
-
--- Phase 2: Raw articles staging — stores Tavily raw results before Mistral processing
-create table if not exists raw_articles (
-  id             uuid default gen_random_uuid() primary key,
-  topic          text not null,
-  tavily_results jsonb not null,  -- filtered Tavily results [{url, title, content, image}]
-  query          text,            -- query sent to Tavily
-  fetched_at     timestamptz default now(),
-  status         text default 'raw' check (status in ('raw', 'processed', 'dedup', 'low_quality')),
-  created_at     timestamptz default now()
-);
-
-create index if not exists raw_articles_topic_idx      on raw_articles(topic);
-create index if not exists raw_articles_fetched_at_idx on raw_articles(fetched_at desc);
-create index if not exists raw_articles_status_idx     on raw_articles(status);
-
-alter table raw_articles enable row level security;
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-    where schemaname = 'public' and tablename = 'raw_articles' and policyname = 'service role all'
-  ) then
-    create policy "service role all" on raw_articles for all using (true);
-  end if;
-end
-$$;
