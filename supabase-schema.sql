@@ -80,6 +80,10 @@ create table if not exists articles (
 );
 
 create index if not exists articles_topic_idx on articles(topic);
+create index if not exists articles_feed_sort_idx on articles (
+  (coalesce(published_at, cached_at, '-infinity'::timestamptz)) desc,
+  id desc
+);
 alter table articles enable row level security;
 do $$
 begin
