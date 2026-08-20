@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -10,7 +11,7 @@ import {
 } from '@untitledui/icons'
 import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
-import { IconFeed } from '@/components/icons'
+import { IconFeed, IconLists } from '@/components/icons'
 import { LophosLogo } from '@/components/LophosLogo'
 import { SearchModal } from '@/components/SearchModal'
 import { Tooltip } from '@/components/Tooltip'
@@ -26,7 +27,10 @@ interface Props {
 
 export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: Props) {
   const path = usePathname()
+  const { sessionClaims } = useAuth()
+  const isAdmin = sessionClaims?.metadata?.role === 'admin'
   const isFeedActive = path === '/feed'
+  const isListsActive = path === '/lists' || path.startsWith('/lists/')
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
@@ -70,6 +74,20 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             </Link>
           </Tooltip>
 
+          <Tooltip content="Listas" side="right" className="w-full">
+            <Link
+              href="/lists"
+              aria-label="Listas"
+              aria-current={isListsActive ? 'page' : undefined}
+              className={cn(
+                'flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
+                isListsActive ? 'bg-bg-secondary text-ink-primary font-medium' : 'text-ink-secondary hover:text-ink-primary hover:bg-bg-secondary'
+              )}
+            >
+              <IconLists size={20} className="flex-shrink-0" />
+            </Link>
+          </Tooltip>
+
           <Tooltip content="Minhas curtidas" side="right" className="w-full">
             <Link
               href="/favorites"
@@ -109,7 +127,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         </nav>
 
         <div className="flex-shrink-0 px-3 pt-3 pb-5">
-          <CollapsedUserMenu onOpenSettings={() => {
+          <CollapsedUserMenu isAdmin={isAdmin} onOpenSettings={() => {
             startNavigationFeedback()
             router.push('/settings')
           }} />

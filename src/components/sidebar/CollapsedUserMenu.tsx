@@ -1,5 +1,6 @@
 'use client'
 import { useRef, useEffect } from 'react'
+import Link from 'next/link'
 import { useUser, useClerk } from '@clerk/nextjs'
 import {
   Settings01 as Settings,
@@ -7,13 +8,14 @@ import {
   File06,
   ArrowNarrowUpRight,
   Announcement02,
+  Key01,
 } from '@untitledui/icons'
 import { Tooltip } from '@/components/Tooltip'
 import { UserAvatar } from '@/components/UserAvatar'
 import { FixedDropdown } from './FixedDropdown'
 import { useDropdownTransition } from '@/hooks/useDropdownTransition'
 
-export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenSettings: () => void; isAdmin?: boolean }) {
   const { user } = useUser()
   const { signOut } = useClerk()
   const { open, closing, closeDropdown, toggleDropdown } = useDropdownTransition()
@@ -56,6 +58,17 @@ export function CollapsedUserMenu({ onOpenSettings }: { onOpenSettings: () => vo
               <Settings size={14} />
               <span>Configurações</span>
             </button>
+
+            {isAdmin ? (
+              <Link
+                href="/admin/lists"
+                onClick={closeDropdown}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-ink-secondary transition-colors hover:bg-[var(--color-hover-elevated)] hover:text-ink-primary"
+              >
+                <Key01 size={14} />
+                <span>Admin</span>
+              </Link>
+            ) : null}
 
             <a
               href="/notas-de-versao"

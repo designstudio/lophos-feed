@@ -22,9 +22,10 @@ interface ArticleReportModalProps {
   articleTitle: string
   isOpen: boolean
   onClose: () => void
+  contentType?: 'article' | 'list'
 }
 
-export function ArticleReportModal({ articleId, articleTitle, isOpen, onClose }: ArticleReportModalProps) {
+export function ArticleReportModal({ articleId, articleTitle, isOpen, onClose, contentType = 'article' }: ArticleReportModalProps) {
   const transition = useModalTransition(isOpen)
   const titleId = useId()
   const descriptionId = useId()
@@ -100,10 +101,11 @@ export function ArticleReportModal({ articleId, articleTitle, isOpen, onClose }:
     setStatus('sending')
     setErrorMessage('')
     try {
-      const response = await fetch('/api/article-reports', {
+      const isList = contentType === 'list'
+      const response = await fetch(isList ? '/api/list-reports' : '/api/article-reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleId, category, description: description.trim() }),
+        body: JSON.stringify({ [isList ? 'listId' : 'articleId']: articleId, category, description: description.trim() }),
       })
       const body = await response.json().catch(() => null)
       if (!response.ok) throw new Error(body?.error || 'Não foi possível enviar o reporte.')
@@ -136,7 +138,7 @@ export function ArticleReportModal({ articleId, articleTitle, isOpen, onClose }:
           <div className="article-report-success" role="status">
             <span className="article-report-success__icon"><CheckCircle size={24} /></span>
             <h2 id={titleId}>Reporte recebido</h2>
-            <p>Obrigado por ajudar a manter as matérias do Lophos precisas. Nossa equipe vai revisar este conteúdo.</p>
+            <p>Obrigado por ajudar a manter o conteúdo do Lophos preciso. Nossa equipe vai revisar esta publicação.</p>
             <button type="button" className="article-report-primary" onClick={close}>Concluir</button>
           </div>
         ) : (
@@ -165,7 +167,11 @@ export function ArticleReportModal({ articleId, articleTitle, isOpen, onClose }:
                       disabled={status === 'sending'}
                     />
                     <span aria-hidden="true" />
-                    {option.label}
+                    {contentType === 'list' && option.value === 'title_or_summary'
+                      ? 'Título ou conteúdo'
+                      : contentType === 'list' && option.value === 'duplicate'
+                        ? 'Lista duplicada'
+                        : option.label}
                   </label>
                 ))}
               </div>
@@ -192,7 +198,7 @@ export function ArticleReportModal({ articleId, articleTitle, isOpen, onClose }:
             )}
 
             <footer className="article-report-footer">
-              <p>Seu reporte fica vinculado a esta matéria.</p>
+              <p>Seu reporte fica vinculado a esta {contentType === 'list' ? 'lista' : 'matéria'}.</p>
               <button
                 type="submit"
                 className="article-report-primary"

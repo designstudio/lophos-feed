@@ -34,6 +34,12 @@
   "dependencies": {
     "@clerk/nextjs": "^6",
     "@supabase/supabase-js": "^2",
+    "@tiptap/core": "^3.30.2",
+    "@tiptap/extension-link": "^3.30.2",
+    "@tiptap/extension-placeholder": "^3.30.2",
+    "@tiptap/pm": "^3.30.2",
+    "@tiptap/react": "^3.30.2",
+    "@tiptap/starter-kit": "^3.30.2",
     "@untitledui/icons": "^0.0.22",
     "@xenova/transformers": "^2.17.2",
     "clsx": "^2.1.1",

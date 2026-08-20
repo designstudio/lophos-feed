@@ -14,6 +14,9 @@ import { useAuth } from '@clerk/nextjs'
 import { FEED_CACHE_MAX_ITEMS, FEED_CACHE_VERSION } from '@/lib/feed-pagination-config'
 import { useDropdownTransition } from '@/hooks/useDropdownTransition'
 import { useFeedUpdates } from '@/hooks/useFeedUpdates'
+import { useRelevantEditorialLists } from '@/hooks/useRelevantEditorialLists'
+import { interleaveEditorialLists } from '@/lib/mixed-feed'
+import { EditorialListShowcaseCard } from '@/components/editorial/EditorialListShowcaseCard'
 
 const toTitleCase = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 const TOPIC_COLLATOR = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
@@ -203,10 +206,6 @@ function FeedBlock({ items, blockIndex, reactions, fadingOut, onReactionChange }
   )
 }
 
-function splitIntoBlocks(items: FeedItem[]): { items: FeedItem[]; isFull: boolean }[] {
-  return items.map((item) => ({ items: [item], isFull: true }))
-}
-
 function TopicsDropdown({ topics, activeFilter, onSelect }: {
   topics: string[]
   activeFilter: string | null
@@ -359,6 +358,7 @@ export default function ListFeedView() {
   const [coldStartLoading, setColdStartLoading] = useState(false)
   const [reactions, setReactions] = useState<Record<string, 'like' | 'dislike'>>({})
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+  const editorialLists = useRelevantEditorialLists(activeFilter)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -629,7 +629,7 @@ export default function ListFeedView() {
   const visibleItems = items.filter(i => reactions[i.id] !== 'dislike')
   const filteredItems = visibleItems
   const filterTopics  = [...new Set(topics.map(toTitleCase))].sort(TOPIC_COLLATOR.compare)
-  const allBlocks     = splitIntoBlocks(filteredItems)
+  const mixedFeedItems = interleaveEditorialLists(filteredItems, editorialLists.items)
   const showSkeleton  = !hasData && streaming
   const showFeedSkeleton = showSkeleton && !coldStartLoading
   const showStreaming = streaming && !hasData && !coldStartLoading
@@ -753,8 +753,25 @@ export default function ListFeedView() {
 
               <div className="t-skel-content" aria-hidden={!hasData} inert={!hasData}>
                 <div className="editorial-card-stack">
-                  {allBlocks.map((block, i) => (
-                    <FeedBlock key={block.items[0].id} items={block.items} blockIndex={i} reactions={reactions} fadingOut={fadingOut} onReactionChange={handleReactionChange} />
+                  {mixedFeedItems.map((entry, index) => entry.kind === 'article' ? (
+                    <FeedBlock
+                      key={entry.item.id}
+                      items={[entry.item]}
+                      blockIndex={index}
+                      reactions={reactions}
+                      fadingOut={fadingOut}
+                      onReactionChange={handleReactionChange}
+                    />
+                  ) : (
+                    <EditorialListShowcaseCard
+                      key={`list-${entry.item.id}`}
+                      list={entry.item}
+                      animationIndex={index}
+                      variant="feature"
+                      label="editorial-list"
+                      initialReaction={editorialLists.reactions[entry.item.id] ?? null}
+                      onReactionChange={editorialLists.onReactionChange}
+                    />
                   ))}
                   {hasData && hasMore && !loadMoreError && (
                     <div ref={sentinelRef} aria-live="polite" aria-busy={loadingMore}>

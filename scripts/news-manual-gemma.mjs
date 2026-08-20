@@ -31,6 +31,7 @@ function printUsage() {
 
 Opcoes:
   --topics=topico1,topico2
+  --exclude-topics=topico1,topico2  nao envia estes topicos ao Gemma
   --source=Destructoid
   --lookback-hours=72  janela de raw_items (padrão: 72 com --source; 12 sem filtro)
   --max-clusters-per-topic=3

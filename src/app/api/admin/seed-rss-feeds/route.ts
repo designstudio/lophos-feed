@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 /**
  * Admin endpoint to seed RSS feeds into the database
  * Call once to populate initial Tech feeds
- * Requires Clerk authentication (admin)
+ * Requires Clerk admin authentication or the dedicated seed token.
  */
 
 const TECH_FEEDS = [
@@ -20,12 +21,13 @@ const TECH_FEEDS = [
 
 export async function POST(req: NextRequest) {
   try {
-    // Simple auth check — you should use Clerk or stronger auth in production
     const adminToken = req.headers.get('x-admin-token')
     const expectedToken = process.env.ADMIN_SEED_TOKEN
+    const hasValidSeedToken = Boolean(expectedToken && adminToken === expectedToken)
 
-    if (expectedToken && adminToken !== expectedToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!hasValidSeedToken) {
+      const access = await authorizeAdmin()
+      if (!access.ok) return access.response
     }
 
     const db = getSupabaseAdmin()

@@ -3,13 +3,15 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Settings01 as Settings } from '@untitledui/icons'
 import { IconFeed as Feed } from '@/components/icons'
+import { IconLists } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 export function MobileNav() {
   const pathname = usePathname()
-  const dockedLayout = pathname.startsWith('/article/')
+  const dockedLayout = pathname.startsWith('/article/') || pathname.startsWith('/lists/')
   const isFeedActive = pathname === '/feed' || pathname === '/'
   const isSettingsActive = pathname === '/settings'
+  const isListsActive = pathname === '/lists'
 
   return (
     <nav
@@ -50,9 +52,23 @@ export function MobileNav() {
 
         {!dockedLayout && (
           <Link
+            href="/lists"
+            className={cn(
+              'flex flex-col items-center gap-0.5 px-4 py-1.5 text-[10px] font-semibold transition-colors rounded-full whitespace-nowrap',
+              isListsActive ? 'text-ink-primary' : 'text-ink-tertiary'
+            )}
+            style={isListsActive ? { backgroundColor: 'var(--color-bg-secondary)' } : undefined}
+          >
+            <IconLists size={20} />
+            Listas
+          </Link>
+        )}
+
+        {!dockedLayout && (
+          <Link
             href="/settings"
             className={cn(
-              'flex flex-col items-center gap-0.5 px-6 py-1.5 text-[10px] font-semibold transition-colors rounded-full whitespace-nowrap',
+              'flex flex-col items-center gap-0.5 px-4 py-1.5 text-[10px] font-semibold transition-colors rounded-full whitespace-nowrap',
               isSettingsActive ? 'text-ink-primary' : 'text-ink-tertiary'
             )}
             style={

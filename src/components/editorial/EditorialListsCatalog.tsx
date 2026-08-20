@@ -1,0 +1,131 @@
+'use client'
+
+import Link from 'next/link'
+import { motion, useReducedMotion } from 'framer-motion'
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { FeedViewSwitcher, usePreferredFeedView } from '@/components/FeedViewSwitcher'
+import { IconLists } from '@/components/icons'
+import { TopicIcon } from '@/components/TopicIcon'
+import { EditorialListShowcaseCard } from './EditorialListShowcaseCard'
+import type { EditorialListCardItem } from '@/lib/editorial-list-card'
+
+export type EditorialListCatalogItem = EditorialListCardItem
+
+function capitalize(value: string) {
+  const normalized = value.trim()
+  return normalized ? normalized.charAt(0).toLocaleUpperCase('pt-BR') + normalized.slice(1) : normalized
+}
+
+function PublicationMeta({ list }: { list: EditorialListCatalogItem }) {
+  return (
+    <div className="lists-catalog-meta">
+      {list.author_image_url
+        // eslint-disable-next-line @next/next/no-img-element
+        ? <img src={list.author_image_url} alt="" />
+        : <span className="lists-catalog-meta__avatar" aria-hidden="true" />}
+      <span>{list.author_name}</span>
+      <span aria-hidden="true">·</span>
+      <time dateTime={list.published_at}>{formatDistanceToNow(new Date(list.published_at), { addSuffix: true, locale: ptBR })}</time>
+    </div>
+  )
+}
+
+function MosaicLists({ lists }: { lists: EditorialListCatalogItem[] }) {
+  const blocks: Array<{ columns: EditorialListCatalogItem[][]; reversed: boolean }> = []
+
+  for (let index = 0; index < lists.length; index += 5) {
+    const block = lists.slice(index, index + 5)
+    const reversed = blocks.length % 2 === 1
+    blocks.push({
+      reversed,
+      columns: reversed
+        ? [[block[0], block[1]], [block[2], block[3]], [block[4]]]
+        : [[block[0]], [block[1], block[2]], [block[3], block[4]]],
+    })
+  }
+
+  return (
+    <div className="editorial-list-showcase-blocks">
+      {blocks.map(({ columns, reversed }, blockIndex) => (
+        <div
+          className={`editorial-list-showcase-grid${reversed ? ' editorial-list-showcase-grid--reversed' : ''}`}
+          key={columns.flat()[0]?.id || blockIndex}
+        >
+          {columns.map((column, columnIndex) => (
+            <div className="editorial-list-showcase-column" key={columnIndex}>
+              {column.filter(Boolean).map((list, cardIndex) => (
+                <EditorialListShowcaseCard
+                  key={list.id}
+                  list={list}
+                  animationIndex={blockIndex * 5 + columnIndex * 2 + cardIndex}
+                  variant={((!reversed && columnIndex === 0) || (reversed && columnIndex === 2)) && cardIndex === 0 ? 'feature' : 'media'}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ListCard({ list, animationIndex }: { list: EditorialListCatalogItem; animationIndex: number }) {
+  const reduceMotion = useReducedMotion()
+  return (
+    <motion.article
+      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: reduceMotion ? 0 : animationIndex * 0.05, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Link href={`/lists/${list.slug}`} className="lists-catalog-row">
+        {list.cover_image_url ? (
+          <div className="lists-catalog-row__image">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/image-proxy?url=${encodeURIComponent(list.cover_image_url)}`} alt={list.cover_image_alt || ''} />
+          </div>
+        ) : <div className="lists-catalog-row__image lists-catalog-row__image--empty"><IconLists size={24} /></div>}
+        <div className="lists-catalog-row__content">
+          <div className="category-topic-pill">
+            <TopicIcon topic={list.topic} />
+            <span>{capitalize(list.topic)}</span>
+          </div>
+          <h2>{list.title}</h2>
+          {list.seo_description ? <p>{list.seo_description}</p> : null}
+          <PublicationMeta list={list} />
+        </div>
+      </Link>
+    </motion.article>
+  )
+}
+
+export function EditorialListsCatalog({ lists }: { lists: EditorialListCatalogItem[] }) {
+  const view = usePreferredFeedView()
+
+  return (
+    <div className="editorial-page-scroll">
+      <header className="favorites-view-header">
+        <div className="favorites-view-header__title"><h1>Listas</h1></div>
+        <FeedViewSwitcher current={view} ariaLabel="Visualização das listas" />
+      </header>
+
+      <main className={view === 'mosaic' ? 'mosaic-feed-page' : 'editorial-feed-layout'}>
+        {lists.length === 0 ? (
+          <div className="mosaic-feed-message" role="status">
+            <IconLists size={40} className="opacity-40" />
+            <div>
+              <p className="text-[15px] font-medium">Nenhuma lista publicada ainda</p>
+              <p className="mt-1 text-[13px] text-ink-tertiary">As listas editoriais aparecerão aqui quando forem publicadas.</p>
+            </div>
+          </div>
+        ) : view === 'mosaic' ? (
+          <MosaicLists lists={lists} />
+        ) : (
+          <div className="lists-catalog-list">
+            {lists.map((list, index) => <ListCard key={list.id} list={list} animationIndex={index} />)}
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}

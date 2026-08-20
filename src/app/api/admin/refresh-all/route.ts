@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { authorizeAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 async function handleRefresh(req: NextRequest) {
-  const { userId } = await auth()
-  if (!userId) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+  const access = await authorizeAdmin()
+  if (!access.ok) return access.response
+  const { userId } = access
 
   const db = getSupabaseAdmin()
 

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authorizeAdmin } from '@/lib/admin-auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 // GET — listar todas as aliases
 export async function GET() {
+  const access = await authorizeAdmin()
+  if (!access.ok) return access.response
+
   const db = getSupabaseAdmin()
   const { data, error } = await db
     .from('topic_aliases')
@@ -15,6 +19,9 @@ export async function GET() {
 
 // POST — adicionar ou atualizar um alias
 export async function POST(req: NextRequest) {
+  const access = await authorizeAdmin()
+  if (!access.ok) return access.response
+
   const db = getSupabaseAdmin()
   const { canonical_topic, aliases } = await req.json()
 
@@ -43,6 +50,9 @@ export async function POST(req: NextRequest) {
 
 // DELETE — remover um alias (manter o canônico)
 export async function DELETE(req: NextRequest) {
+  const access = await authorizeAdmin()
+  if (!access.ok) return access.response
+
   const db = getSupabaseAdmin()
   const { canonical_topic } = await req.json()
 

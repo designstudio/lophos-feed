@@ -66,6 +66,7 @@ function parseCliOptions(argv) {
   const options = {
     provider: process.env.NEWS_PROCESS_PROVIDER || 'mistral',
     topics: [],
+    excludeTopics: [],
     source: '',
     maxClustersPerTopic: Number.POSITIVE_INFINITY,
     dryRun: false,
@@ -80,6 +81,12 @@ function parseCliOptions(argv) {
     else if (arg.startsWith('--topics=')) {
       options.topics = arg
         .slice('--topics='.length)
+        .split(',')
+        .map((topic) => topic.trim())
+        .filter(Boolean)
+    } else if (arg.startsWith('--exclude-topics=')) {
+      options.excludeTopics = arg
+        .slice('--exclude-topics='.length)
         .split(',')
         .map((topic) => topic.trim())
         .filter(Boolean)
@@ -116,6 +123,7 @@ function printUsage() {
 Opções:
   --provider=mistral|gemma
   --topics=horror,movies,tecnologia
+  --exclude-topics=brasil,politica
   --source=Destructoid
   --max-clusters-per-topic=3
   --dry-run
@@ -256,6 +264,7 @@ async function main() {
   }
 
   const requestedTopics = new Set(CLI_OPTIONS.topics.map((topic) => topic.toLocaleLowerCase('pt-BR')))
+  const excludedTopics = new Set(CLI_OPTIONS.excludeTopics.map((topic) => topic.toLocaleLowerCase('pt-BR')))
   const availableTopicPayloads = clusterRun.payload.topics || []
   const unknownTopics = [...requestedTopics].filter((requested) => (
     !availableTopicPayloads.some((entry) => entry.topic?.toLocaleLowerCase('pt-BR') === requested)
@@ -266,7 +275,13 @@ async function main() {
   }
 
   let topicPayloads = availableTopicPayloads
-    .filter((entry) => requestedTopics.size === 0 || requestedTopics.has(entry.topic?.toLocaleLowerCase('pt-BR')))
+    .filter((entry) => {
+      const normalizedTopic = entry.topic?.toLocaleLowerCase('pt-BR')
+      return (
+        (requestedTopics.size === 0 || requestedTopics.has(normalizedTopic))
+        && !excludedTopics.has(normalizedTopic)
+      )
+    })
     .map((entry) => {
       const matchingSourceIds = normalizedSource
         ? new Set((entry.acceptedItems || [])
@@ -325,12 +340,17 @@ async function main() {
     .filter((match) => selectedRawIds.has(match.currentId))
   const semanticDuplicateRawIds = uniqueIds(clusterRun.payload.semanticDuplicateRawIds || [])
     .filter((id) => selectedRawIds.has(id))
-  const isPartialRun = requestedTopics.size > 0 || Number.isFinite(CLI_OPTIONS.maxClustersPerTopic)
+  const isPartialRun = (
+    requestedTopics.size > 0
+    || excludedTopics.size > 0
+    || Number.isFinite(CLI_OPTIONS.maxClustersPerTopic)
+  )
 
   console.log(`\n🧪 ${PROVIDER_NAME} editorial processing`)
   console.log(`Cluster run: ${clusterRun.id} (${clusterRun.created_at})`)
   console.log(`Status isolado: ${CLUSTER_RUN_STATUS}${isPartialRun ? ' | execução parcial' : ''}`)
   if (CLI_OPTIONS.source) console.log(`Fonte selecionada: ${CLI_OPTIONS.source}`)
+  if (excludedTopics.size > 0) console.log(`Topics excluídos: ${[...excludedTopics].join(', ')}`)
   console.log(`Janela de entrada: últimas ${windowHours}h | histórico de comparação: ${historyHours}h`)
   console.log(`Topics selecionados: ${topicPayloads.map((entry) => `${entry.topic} (${entry.clusters.length} clusters)`).join(', ')}\n`)
   console.log(`Pendências semânticas: matches=${semanticMatches.length} raw_ids=${semanticDuplicateRawIds.length}\n`)

@@ -16,6 +16,10 @@ import { FeedItem } from '@/lib/types'
 import { FEED_CACHE_MAX_ITEMS, FEED_CACHE_VERSION } from '@/lib/feed-pagination-config'
 import { cn } from '@/lib/utils'
 import { useFeedUpdates } from '@/hooks/useFeedUpdates'
+import { useRelevantEditorialLists } from '@/hooks/useRelevantEditorialLists'
+import { EditorialListShowcaseCard } from '@/components/editorial/EditorialListShowcaseCard'
+import type { EditorialListCardItem } from '@/lib/editorial-list-card'
+import { interleaveEditorialLists, type MosaicContentItem } from '@/lib/mixed-feed'
 
 const FEED_CACHE_KEY = 'lophos_feed_cache'
 const MOSAIC_SCROLL_KEY = 'lophos_mosaic_feed_scroll'
@@ -23,7 +27,7 @@ const FEED_CACHE_TTL = 5 * 60 * 1000
 const TOPIC_COLLATOR = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true })
 
 type MosaicVariant = 'feature' | 'media' | 'text'
-type MosaicEntry = { item: FeedItem; variant: MosaicVariant }
+type MosaicEntry = MosaicContentItem & { variant: MosaicVariant }
 type MosaicBlock = { columns: MosaicEntry[][]; reversed: boolean }
 type CachedFeed = {
   items: FeedItem[]
@@ -124,7 +128,12 @@ function mergeItems(current: FeedItem[], incoming: FeedItem[], prepend = false) 
   return Array.from(byId.values()).slice(0, FEED_CACHE_MAX_ITEMS)
 }
 
-function buildMosaicBlocks(items: FeedItem[], deferredStoryIds: Set<string>): MosaicBlock[] {
+function asMosaicEntry(content: MosaicContentItem | undefined, variant: MosaicVariant): MosaicEntry | null {
+  if (!content) return null
+  return { ...content, variant: content.kind === 'editorial-list' && variant === 'text' ? 'media' : variant }
+}
+
+function buildMosaicBlocks(items: MosaicContentItem[], deferredStoryIds: Set<string>): MosaicBlock[] {
   const queue = [...items]
   const blocks: MosaicBlock[] = []
 
@@ -136,39 +145,39 @@ function buildMosaicBlocks(items: FeedItem[], deferredStoryIds: Set<string>): Mo
       blocks.push({
         reversed,
         columns: [
-          [block[0] && { item: block[0], variant: 'feature' }].filter(Boolean) as MosaicEntry[],
+          [asMosaicEntry(block[0], 'feature')].filter(Boolean) as MosaicEntry[],
           [
-            block[1] && { item: block[1], variant: 'text' },
-            block[2] && { item: block[2], variant: 'media' },
+            asMosaicEntry(block[1], 'text'),
+            asMosaicEntry(block[2], 'media'),
           ].filter(Boolean) as MosaicEntry[],
           [
-            block[3] && { item: block[3], variant: 'media' },
-            block[4] && { item: block[4], variant: 'text' },
+            asMosaicEntry(block[3], 'media'),
+            asMosaicEntry(block[4], 'text'),
           ].filter(Boolean) as MosaicEntry[],
         ],
       })
       continue
     }
 
-    const candidates = [block[1], block[3]].filter((item): item is FeedItem => Boolean(item))
+    const candidates = [block[1], block[3]].filter((content): content is Extract<MosaicContentItem, { kind: 'article' }> => content?.kind === 'article')
     const deferredItem = Array.from(deferredStoryIds)
-      .map((id) => candidates.find((item) => item.id === id))
-      .find((item): item is FeedItem => Boolean(item))
-    const deferredId = deferredItem?.id
+      .map((id) => candidates.find((content) => content.item.id === id))
+      .find((content): content is Extract<MosaicContentItem, { kind: 'article' }> => Boolean(content))
+    const deferredId = deferredItem?.item.id
     if (deferredItem) queue.unshift(deferredItem)
 
     blocks.push({
       reversed,
       columns: [
         [
-          block[0] && { item: block[0], variant: 'media' },
-          block[1] && block[1].id !== deferredId && { item: block[1], variant: 'text' },
+          asMosaicEntry(block[0], 'media'),
+          block[1]?.item.id !== deferredId ? asMosaicEntry(block[1], 'text') : null,
         ].filter(Boolean) as MosaicEntry[],
         [
-          block[2] && { item: block[2], variant: 'text' },
-          block[3] && block[3].id !== deferredId && { item: block[3], variant: 'media' },
+          asMosaicEntry(block[2], 'text'),
+          block[3]?.item.id !== deferredId ? asMosaicEntry(block[3], 'media') : null,
         ].filter(Boolean) as MosaicEntry[],
-        [block[4] && { item: block[4], variant: 'feature' }].filter(Boolean) as MosaicEntry[],
+        [asMosaicEntry(block[4], 'feature')].filter(Boolean) as MosaicEntry[],
       ],
     })
   }
@@ -365,13 +374,21 @@ export function MosaicArticleGrid({
   reactions,
   onReactionChange,
   deferredStoryIds = new Set<string>(),
+  editorialLists = [],
+  listReactions = {},
+  onListReactionChange,
+  contentItems,
 }: {
   items: FeedItem[]
   reactions: Record<string, 'like' | 'dislike'>
   onReactionChange: (articleId: string, reaction: 'like' | 'dislike' | null) => void
   deferredStoryIds?: Set<string>
+  editorialLists?: EditorialListCardItem[]
+  listReactions?: Record<string, 'like' | 'dislike'>
+  onListReactionChange?: (id: string, reaction: 'like' | 'dislike' | null) => void
+  contentItems?: MosaicContentItem[]
 }) {
-  const blocks = buildMosaicBlocks(items, deferredStoryIds)
+  const blocks = buildMosaicBlocks(contentItems ?? interleaveEditorialLists(items, editorialLists), deferredStoryIds)
 
   return (
     <div className="mosaic-feed-blocks">
@@ -382,14 +399,24 @@ export function MosaicArticleGrid({
         >
           {columns.map((column, columnIndex) => (
             <div key={columnIndex} className="mosaic-feed-column">
-              {column.map(({ item, variant }, storyIndex) => (
+              {column.map((entry, storyIndex) => entry.kind === 'article' ? (
                 <MosaicStory
-                  key={item.id}
-                  item={item}
-                  variant={variant}
-                  initialReaction={reactions[item.id] ?? null}
+                  key={entry.item.id}
+                  item={entry.item}
+                  variant={entry.variant}
+                  initialReaction={reactions[entry.item.id] ?? null}
                   onReactionChange={onReactionChange}
                   animationIndex={columnIndex * 2 + storyIndex}
+                />
+              ) : (
+                <EditorialListShowcaseCard
+                  key={`list-${entry.item.id}`}
+                  list={entry.item}
+                  variant={entry.variant === 'feature' ? 'feature' : 'media'}
+                  animationIndex={columnIndex * 2 + storyIndex}
+                  label="editorial-list"
+                  initialReaction={listReactions[entry.item.id] ?? null}
+                  onReactionChange={onListReactionChange}
                 />
               ))}
             </div>
@@ -436,6 +463,7 @@ export default function MosaicFeedView() {
   const [paginationSentinel, setPaginationSentinel] = useState<HTMLDivElement | null>(null)
   const [topics, setTopics] = useState<string[]>([])
   const [activeFilter, setActiveFilter] = useState<string | null>(null)
+  const editorialLists = useRelevantEditorialLists(activeFilter)
   const [deferredStoryIds, setDeferredStoryIds] = useState<Set<string>>(() => new Set())
   const scrollRef = useRef<HTMLDivElement>(null)
   const paginationAbortRef = useRef<AbortController | null>(null)
@@ -808,6 +836,9 @@ export default function MosaicFeedView() {
                   reactions={reactions}
                   onReactionChange={handleReactionChange}
                   deferredStoryIds={deferredStoryIds}
+                  editorialLists={editorialLists.items}
+                  listReactions={editorialLists.reactions}
+                  onListReactionChange={editorialLists.onReactionChange}
                 />
                 {hasMore && !loadMoreError && (
                   <div

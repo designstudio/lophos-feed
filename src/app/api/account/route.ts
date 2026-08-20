@@ -9,6 +9,7 @@ const USER_DATA_TABLES = [
   'user_negative_topics',
   'user_excluded_topics',
   'user_topics',
+  'editorial_list_reactions',
 ] as const
 
 export async function DELETE(req: NextRequest) {
