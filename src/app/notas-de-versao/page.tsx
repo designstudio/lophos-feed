@@ -3,6 +3,26 @@ import { LegalPage } from '@/components/LegalPage'
 
 const RELEASES = [
   {
+    date: '21 ago 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'O editor de listas ganhou mais opções de formatação, incluindo sublinhado, tachado, listas com marcadores, listas numeradas e citações.',
+          'A edição de links agora acontece na sidebar do editor, com validação do endereço, inclusão automática de HTTPS e ações para atualizar ou remover o link.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'Reorganizamos a barra de formatação com ícones mais claros, grupos de ações, controles circulares e o mesmo acabamento visual usado no restante do Lophos.',
+          'A barra de formatação permanece acessível durante a rolagem e usa uma transição discreta ao fixar ou retornar à posição original, respeitando a preferência por movimento reduzido.',
+          'Simplificamos o cabeçalho do editor para manter o fundo branco e preservar uma leitura mais limpa, sem efeitos visuais sobre o conteúdo.',
+        ],
+      },
+    ],
+  },
+  {
     date: '20 ago 2026',
     sections: [
       {

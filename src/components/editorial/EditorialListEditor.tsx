@@ -12,6 +12,7 @@ import {
   EMPTY_EDITORIAL_DOCUMENT,
   type EditorialDraft,
   type EditorialImageAttributes,
+  type EditorialLinkAttributes,
   type EditorialListRecord,
 } from './editorial-types'
 
@@ -88,6 +89,7 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
   const [toast, setToast] = useState<AppToastMessage | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<EditorialImageAttributes | null>(null)
+  const [selectedLink, setSelectedLink] = useState<EditorialLinkAttributes | null>(null)
 
   useEffect(() => {
     try {
@@ -212,7 +214,14 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
               content={draft.contentJson}
               onChange={(contentJson) => updateDraft({ contentJson })}
               onUploadImage={uploadImage}
-              onImageSelectionChange={setSelectedImage}
+              onImageSelectionChange={(image) => {
+                setSelectedImage(image)
+                if (image) setSelectedLink(null)
+              }}
+              onLinkSelectionChange={(link) => {
+                setSelectedLink(link)
+                if (link) setSelectedImage(null)
+              }}
             />
           </div>
         </section>
@@ -220,11 +229,15 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
           draft={draft}
           slugLocked={Boolean(record?.published_at) || record?.status === 'published'}
           selectedImage={selectedImage}
+          selectedLink={selectedLink}
           onChange={updateDraft}
           onUploadImage={uploadImage}
           onUpdateSelectedImage={(patch) => richTextEditorRef.current?.updateSelectedImage(patch)}
           onDeleteSelectedImage={() => richTextEditorRef.current?.deleteSelectedImage()}
           onCloseImageInspector={() => richTextEditorRef.current?.clearImageSelection()}
+          onApplySelectedLink={(href) => richTextEditorRef.current?.applySelectedLink(href)}
+          onRemoveSelectedLink={() => richTextEditorRef.current?.removeSelectedLink()}
+          onCloseLinkInspector={() => richTextEditorRef.current?.clearLinkSelection()}
         />
       </div>
 

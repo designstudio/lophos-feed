@@ -1,11 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ImagePlus, Trash01, Upload01 } from '@untitledui/icons'
-import type { EditorialDraft, EditorialImageAttributes, EditorialStatus } from './editorial-types'
+import { ArrowLeft, ImagePlus, Link01, LinkBroken01, Trash01, Upload01 } from '@untitledui/icons'
+import type { EditorialDraft, EditorialImageAttributes, EditorialLinkAttributes, EditorialStatus } from './editorial-types'
 import { EditorialTopicSelect } from './EditorialTopicSelect'
 
 const fieldClass = 'w-full rounded-lg border border-border bg-[var(--input-bg)] px-3 py-2.5 text-sm text-ink-primary outline-none transition-shadow placeholder:text-ink-muted focus:border-border-strong focus:shadow-[0_0_0_3px_var(--input-halo)]'
+
+function normalizeLinkHref(value: string): string | null {
+  const href = value.trim()
+  if (!href) return null
+  if (/^(https?:\/\/|mailto:|tel:|\/|#)/i.test(href)) return href
+  if (/^[a-z][a-z\d+.-]*:/i.test(href)) return null
+  return `https://${href}`
+}
 
 function TagInput({ label, value, helper, placeholder = 'Separe com vírgulas', onChange }: {
   label: string
@@ -53,44 +61,70 @@ export function EditorialInspector({
   draft,
   slugLocked,
   selectedImage,
+  selectedLink,
   onChange,
   onUploadImage,
   onUpdateSelectedImage,
   onDeleteSelectedImage,
   onCloseImageInspector,
+  onApplySelectedLink,
+  onRemoveSelectedLink,
+  onCloseLinkInspector,
 }: {
   draft: EditorialDraft
   slugLocked: boolean
   selectedImage: EditorialImageAttributes | null
+  selectedLink: EditorialLinkAttributes | null
   onChange: (patch: Partial<EditorialDraft>) => void
   onUploadImage: (file: File) => Promise<string>
   onUpdateSelectedImage: (patch: Partial<EditorialImageAttributes>) => void
   onDeleteSelectedImage: () => void
   onCloseImageInspector: () => void
+  onApplySelectedLink: (href: string) => void
+  onRemoveSelectedLink: () => void
+  onCloseLinkInspector: () => void
 }) {
   const coverInputRef = useRef<HTMLInputElement>(null)
   const listPageRef = useRef<HTMLDivElement>(null)
-  const imagePageRef = useRef<HTMLDivElement>(null)
+  const detailPageRef = useRef<HTMLDivElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [scrollState, setScrollState] = useState({ canScrollUp: false, canScrollDown: false })
   const [inspectedImage, setInspectedImage] = useState<EditorialImageAttributes | null>(selectedImage)
+  const [inspectedLink, setInspectedLink] = useState<EditorialLinkAttributes | null>(selectedLink)
+  const [inspectedDetail, setInspectedDetail] = useState<'image' | 'link' | null>(selectedImage ? 'image' : selectedLink ? 'link' : null)
+  const [linkHref, setLinkHref] = useState(selectedLink?.href || '')
+  const [linkError, setLinkError] = useState('')
   const showingImageInspector = Boolean(selectedImage)
-  const activeImage = selectedImage || inspectedImage
+  const showingLinkInspector = Boolean(selectedLink)
+  const showingDetailInspector = showingImageInspector || showingLinkInspector
+  const activeDetail = showingImageInspector ? 'image' : showingLinkInspector ? 'link' : inspectedDetail
+  const activeImage = activeDetail === 'image' ? selectedImage || inspectedImage : null
+  const activeLink = activeDetail === 'link' ? selectedLink || inspectedLink : null
 
   const updateScrollState = useCallback(() => {
-    const inspector = showingImageInspector ? imagePageRef.current : listPageRef.current
+    const inspector = showingDetailInspector ? detailPageRef.current : listPageRef.current
     if (!inspector) return
     const overflowing = inspector.scrollHeight > inspector.clientHeight + 1
     setScrollState({
       canScrollUp: overflowing && inspector.scrollTop > 1,
       canScrollDown: overflowing && inspector.scrollTop + inspector.clientHeight < inspector.scrollHeight - 1,
     })
-  }, [showingImageInspector])
+  }, [showingDetailInspector])
 
   useEffect(() => {
-    if (selectedImage) setInspectedImage(selectedImage)
+    if (!selectedImage) return
+    setInspectedImage(selectedImage)
+    setInspectedDetail('image')
   }, [selectedImage])
+
+  useEffect(() => {
+    if (!selectedLink) return
+    setInspectedLink(selectedLink)
+    setInspectedDetail('link')
+    setLinkHref(selectedLink.href)
+    setLinkError('')
+  }, [selectedLink])
 
   useEffect(() => {
     const frame = requestAnimationFrame(updateScrollState)
@@ -99,13 +133,13 @@ export function EditorialInspector({
       cancelAnimationFrame(frame)
       window.removeEventListener('resize', updateScrollState)
     }
-  }, [draft, selectedImage, updateScrollState])
+  }, [draft, selectedImage, selectedLink, updateScrollState])
 
   useEffect(() => {
-    if (showingImageInspector && imagePageRef.current) imagePageRef.current.scrollTop = 0
+    if (showingDetailInspector && detailPageRef.current) detailPageRef.current.scrollTop = 0
     const frame = requestAnimationFrame(updateScrollState)
     return () => cancelAnimationFrame(frame)
-  }, [showingImageInspector, updateScrollState])
+  }, [showingDetailInspector, updateScrollState])
 
   const uploadCover = async (file: File) => {
     setUploading(true)
@@ -123,13 +157,13 @@ export function EditorialInspector({
 
   return (
     <div className="editorial-inspector-shell">
-    <aside className="editorial-inspector t-page-slide" data-page={showingImageInspector ? '2' : '1'}>
+    <aside className="editorial-inspector t-page-slide" data-page={showingDetailInspector ? '2' : '1'}>
       <div
-        ref={imagePageRef}
+        ref={detailPageRef}
         className="t-page editorial-inspector-page"
         data-page-id="2"
-        aria-hidden={!showingImageInspector}
-        inert={!showingImageInspector}
+        aria-hidden={!showingDetailInspector}
+        inert={!showingDetailInspector}
         onScroll={updateScrollState}
       >
       {activeImage ? (
@@ -189,6 +223,85 @@ export function EditorialInspector({
             </button>
           </section>
         </>
+      ) : activeLink ? (
+        <>
+          <section className="editorial-inspector-section">
+            <button
+              type="button"
+              onClick={() => {
+                setLinkError('')
+                onCloseLinkInspector()
+                requestAnimationFrame(() => listPageRef.current?.querySelector<HTMLElement>('button, input, textarea, select')?.focus())
+              }}
+              className="mb-5 flex items-center gap-2 text-sm text-ink-secondary hover:text-ink-primary"
+            >
+              <ArrowLeft size={16} />
+              Configurações da lista
+            </button>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-bg-secondary text-ink-secondary">
+              <Link01 size={18} />
+            </div>
+            <h2 className="mt-4 text-base font-semibold text-ink-primary">Link do conteúdo</h2>
+            <p className="mt-1 text-xs leading-relaxed text-ink-muted">Defina o endereço associado ao texto selecionado.</p>
+          </section>
+
+          <form
+            className="editorial-inspector-section space-y-5"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const normalizedHref = normalizeLinkHref(linkHref)
+              if (!normalizedHref) {
+                setLinkError('Digite um endereço válido usando HTTP, HTTPS, e-mail, telefone ou um caminho interno.')
+                return
+              }
+              setLinkHref(normalizedHref)
+              setLinkError('')
+              onApplySelectedLink(normalizedHref)
+            }}
+          >
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-ink-primary">Endereço</span>
+              <input
+                autoFocus
+                className={fieldClass}
+                value={linkHref}
+                placeholder="https://exemplo.com"
+                inputMode="url"
+                aria-invalid={Boolean(linkError)}
+                aria-describedby={linkError ? 'editorial-link-error' : 'editorial-link-helper'}
+                onChange={(event) => {
+                  setLinkHref(event.target.value)
+                  if (linkError) setLinkError('')
+                }}
+              />
+              {linkError ? (
+                <span id="editorial-link-error" className="mt-1.5 block text-xs leading-relaxed text-[var(--color-danger)]">{linkError}</span>
+              ) : (
+                <span id="editorial-link-helper" className="mt-1.5 block text-xs leading-relaxed text-ink-muted">Endereços sem protocolo recebem HTTPS automaticamente.</span>
+              )}
+            </label>
+            <button type="submit" className="editorial-primary-button w-full justify-center">
+              <Link01 size={16} />
+              {activeLink.href ? 'Atualizar link' : 'Adicionar link'}
+            </button>
+          </form>
+
+          {activeLink.href ? (
+            <section className="editorial-inspector-section">
+              <button
+                type="button"
+                onClick={() => {
+                  setLinkError('')
+                  onRemoveSelectedLink()
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--color-danger)] hover:bg-[var(--color-danger-hover)]"
+              >
+                <LinkBroken01 size={16} />
+                Remover link
+              </button>
+            </section>
+          ) : null}
+        </>
       ) : null}
       </div>
 
@@ -196,8 +309,8 @@ export function EditorialInspector({
         ref={listPageRef}
         className="t-page editorial-inspector-page"
         data-page-id="1"
-        aria-hidden={showingImageInspector}
-        inert={showingImageInspector}
+        aria-hidden={showingDetailInspector}
+        inert={showingDetailInspector}
         onScroll={updateScrollState}
       >
       <section className="editorial-inspector-section">

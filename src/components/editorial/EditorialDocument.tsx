@@ -7,6 +7,7 @@ function withMarks(content: ReactNode, marks: EditorialMark[] | undefined, key: 
     const markKey = `${key}-mark-${index}`
     if (mark.type === 'bold') return <strong key={markKey}>{child}</strong>
     if (mark.type === 'italic') return <em key={markKey}>{child}</em>
+    if (mark.type === 'underline') return <u key={markKey}>{child}</u>
     if (mark.type === 'strike') return <s key={markKey}>{child}</s>
     if (mark.type === 'link') {
       const href = typeof mark.attrs?.href === 'string' ? mark.attrs.href : '#'

@@ -60,6 +60,10 @@ export type EditorialImageAttributes = {
   credit: string
 }
 
+export type EditorialLinkAttributes = {
+  href: string
+}
+
 export const EMPTY_EDITORIAL_DOCUMENT: EditorialDocument = {
   type: 'doc',
   content: [{ type: 'paragraph' }],
