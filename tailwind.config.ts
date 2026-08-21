@@ -27,7 +27,7 @@ const config: Config = {
         },
       },
       animation: {
-        'fade-in': 'fadeIn 0.3s ease forwards',
+        'fade-in': 'fadeIn 250ms cubic-bezier(0.22, 1, 0.36, 1) forwards',
         'slide-up': 'slideUp 0.4s ease forwards',
         shimmer: 'shimmer 1.6s ease-in-out infinite',
       },

@@ -385,7 +385,7 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                             initial={{ scale: 0.5, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.5, opacity: 0 }}
-                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                            transition={{ duration: 0.25, ease: 'easeInOut' }}
                             style={{ display: 'flex' }}
                           >
                             <Dislike size={16} />
@@ -547,7 +547,10 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
         </div>
 
         <div
-          className="flex-shrink-0 border-l border-border overflow-hidden transition-all duration-300 ease-in-out"
+          className={cn(
+            'flex-shrink-0 overflow-hidden border-l border-border transition-[width,opacity] [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none',
+            showAllSources ? 'duration-[400ms]' : 'duration-[350ms]',
+          )}
           style={{ width: showAllSources ? '20rem' : '0', opacity: showAllSources ? 1 : 0 }}
         >
           <div className="w-80 h-full flex flex-col">

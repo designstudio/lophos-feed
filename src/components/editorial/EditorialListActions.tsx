@@ -155,7 +155,7 @@ export function EditorialListActions({ listId, slug, title, text }: EditorialLis
             className={cn(reactionClass, disliked ? 'bg-zinc-100 text-zinc-600' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary', !isSignedIn && 'cursor-not-allowed opacity-60')}
           >
             <AnimatePresence mode="wait" initial={false}>
-              <motion.span key={disliked ? 'filled' : 'outline'} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={{ duration: 0.15, ease: 'easeOut' }} className="flex">
+              <motion.span key={disliked ? 'filled' : 'outline'} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={{ duration: 0.25, ease: 'easeInOut' }} className="flex">
                 <Dislike size={16} />
               </motion.span>
             </AnimatePresence>

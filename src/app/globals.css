@@ -72,7 +72,7 @@
   --text-swap-blur: 2px;
   --text-swap-ease: ease-in-out;
   --toast-open: 350ms;
-  --toast-close: 250ms;
+  --toast-close: 350ms;
   --toast-distance: 16px;
   --toast-blur: 2px;
   --toast-scale: 0.97;
@@ -84,9 +84,10 @@
   --stagger-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --learn-shift: 2px;
   --learn-spread: 8deg;
-  --learn-in: 350ms;
+  --learn-in: 250ms;
   --learn-out: 350ms;
-  --learn-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --learn-in-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --learn-out-ease: cubic-bezier(0.34, 3.85, 0.64, 1);
 
   /* Inspector page navigation */
   --page-slide-dur: 250ms;
@@ -909,9 +910,13 @@ html, body {
   background-size: 400px 100%;
 }
 
-.animate-fade-in  { animation: fadeIn  0.3s ease forwards; }
+.animate-fade-in  { animation: fadeIn 250ms cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 .animate-slide-up { animation: slideUp 0.4s ease forwards; }
 .animate-slide-in-right { animation: slideInRight 0.25s ease forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in { animation: none !important; }
+}
 
 .t-dropdown {
   transform-origin: top left;
@@ -1376,7 +1381,7 @@ html, body {
   transform: translateY(0);
   filter: blur(0);
   transition:
-    opacity 200ms ease,
+    opacity 150ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 0s linear,
     filter 0s linear;
   transition-delay: 0s;
@@ -1389,16 +1394,23 @@ html, body {
 .t-learn-chevron {
   display: inline-flex;
   transform: translateX(0);
-  transition: transform var(--learn-out) var(--learn-ease);
+  transition: transform var(--learn-out) var(--learn-out-ease);
 }
 .t-learn-arm {
   transform-box: view-box;
   transform-origin: 10px 8px;
   vector-effect: non-scaling-stroke;
-  transition: transform var(--learn-out) var(--learn-ease);
+  transition: transform var(--learn-out) var(--learn-out-ease);
 }
-.t-learn:hover .t-learn-chevron { transform: translateX(var(--learn-shift)); transition-duration: var(--learn-in); }
-.t-learn:hover .t-learn-arm { transition-duration: var(--learn-in); }
+.t-learn:hover .t-learn-chevron {
+  transform: translateX(var(--learn-shift));
+  transition-duration: var(--learn-in);
+  transition-timing-function: var(--learn-in-ease);
+}
+.t-learn:hover .t-learn-arm {
+  transition-duration: var(--learn-in);
+  transition-timing-function: var(--learn-in-ease);
+}
 .t-learn:hover .t-learn-arm-top { transform: rotate(var(--learn-spread)); }
 .t-learn:hover .t-learn-arm-bot { transform: rotate(calc(var(--learn-spread) * -1)); }
 

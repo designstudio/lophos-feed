@@ -76,7 +76,11 @@ function ListCard({ list, animationIndex }: { list: EditorialListCatalogItem; an
     <motion.article
       initial={reduceMotion ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: reduceMotion ? 0 : animationIndex * 0.05, ease: [0.16, 1, 0.3, 1] }}
+      transition={{
+        duration: 0.4,
+        delay: reduceMotion ? 0 : Math.min(animationIndex, 7) * 0.04,
+        ease: [0.22, 1, 0.36, 1],
+      }}
     >
       <Link href={`/lists/${list.slug}`} className="lists-catalog-row">
         {list.cover_image_url ? (

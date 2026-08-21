@@ -99,7 +99,7 @@ export function SettingsPageContent() {
       setToastOpen(false)
       const closeDuration = Number.parseFloat(
         getComputedStyle(document.documentElement).getPropertyValue('--toast-close'),
-      ) || 250
+      ) || 350
       timeout = window.setTimeout(() => setRenderedToastMessage(null), closeDuration)
     }
 

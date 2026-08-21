@@ -338,12 +338,12 @@ function MosaicStory({
     <motion.article
       className={cn('mosaic-story', `mosaic-story--${variant}`)}
       data-story-id={item.id}
-      initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: 0.5,
-        delay: reduceMotion ? 0 : animationIndex * 0.07,
-        ease: [0.16, 1, 0.3, 1],
+        duration: 0.4,
+        delay: reduceMotion ? 0 : Math.min(animationIndex, 7) * 0.04,
+        ease: [0.22, 1, 0.36, 1],
       }}
     >
       <div className="category-topic-pill mosaic-story__category">

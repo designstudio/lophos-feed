@@ -1,7 +1,7 @@
 'use client'
 import React, { useCallback, useEffect, useState } from 'react'
 import { createPortal, flushSync } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,7 @@ const ANIMATION_BY_SIDE = {
 
 export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
   const pathname = usePathname()
+  const reduceMotion = useReducedMotion()
   const [visible, setVisible] = useState(false)
   const [portalEnabled, setPortalEnabled] = useState(false)
   const [anchor, setAnchor] = useState<React.CSSProperties | null>(null)
@@ -174,8 +175,15 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
               <motion.div
                 initial={motionConfig.initial}
                 animate={motionConfig.animate}
-                exit={motionConfig.initial}
-                transition={{ duration: 0.12, ease: 'easeOut' }}
+                exit={{
+                  ...motionConfig.initial,
+                  transition: { duration: reduceMotion ? 0 : 0.15, delay: 0, ease: 'easeOut' },
+                }}
+                transition={{
+                  duration: reduceMotion ? 0 : 0.15,
+                  delay: reduceMotion ? 0 : 0.08,
+                  ease: 'easeOut',
+                }}
               >
                 <span
                   role="tooltip"

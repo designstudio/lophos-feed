@@ -17,8 +17,11 @@ const RELEASES = [
       {
         title: 'Melhorias e correções',
         items: [
-          'Adicionamos ao painel administrativo uma listagem de listas em mosaico ou lista, com acesso protegido para a equipe editorial.',
+          'Refinamos o painel administrativo de listas com carregamento unificado, títulos dinâmicos, filtros, ícones de categoria, notificações e exclusão permanente com confirmação.',
           'Padronizamos tipografia, espaçamentos, ações, créditos de imagens, zoom e compartilhamento das listas com a experiência já usada nas páginas de artigos.',
+          'O endereço de uma lista agora se torna permanente após a primeira publicação, preservando links compartilhados e o histórico de indexação mesmo quando o título é alterado.',
+          'Corrigimos o carregamento contínuo do feed quando o cache local atinge seu limite, evitando espaços vazios e indicadores de carregamento que não terminavam em produção.',
+          'Revisamos as transições do feed, das listas, dos tooltips, dos avisos e dos painéis para limitar atrasos, tornar entradas e saídas mais naturais e respeitar a preferência por movimento reduzido.',
           'O agrupamento de notícias v2 passou a ser o padrão do preflight, clustering e processamento, com fluxo manual pelo Gemma e suporte à exclusão de tópicos.',
           'A distribuição das listas no feed prioriza conteúdos recentes e relevantes, mantendo intervalos entre artigos e permitindo que uma lista volte a aparecer quando continuar alinhada aos interesses do usuário.',
         ],

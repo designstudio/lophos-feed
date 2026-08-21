@@ -30,7 +30,7 @@ export function AppToast({ message, onDismiss }: {
       frame = window.requestAnimationFrame(() => setOpen(true))
     } else {
       setOpen(false)
-      const closeDuration = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toast-close')) || 250
+      const closeDuration = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toast-close')) || 350
       timeout = window.setTimeout(() => setRenderedMessage(null), closeDuration)
     }
     return () => {
