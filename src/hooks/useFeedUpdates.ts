@@ -10,6 +10,7 @@ type UseFeedUpdatesOptions = {
   items: FeedItem[]
   topics: string[]
   onApplyUpdates: (items: FeedItem[]) => void
+  enabled?: boolean
 }
 
 function mergeUpdates(current: FeedItem[], incoming: FeedItem[]) {
@@ -18,7 +19,7 @@ function mergeUpdates(current: FeedItem[], incoming: FeedItem[]) {
   return Array.from(byId.values())
 }
 
-export function useFeedUpdates({ items, topics, onApplyUpdates }: UseFeedUpdatesOptions) {
+export function useFeedUpdates({ items, topics, onApplyUpdates, enabled = true }: UseFeedUpdatesOptions) {
   const {
     setUpdatesReady,
     pendingFeedItems,
@@ -46,7 +47,7 @@ export function useFeedUpdates({ items, topics, onApplyUpdates }: UseFeedUpdates
   }, [setPendingFeedItems, setUpdatesReady, topicsKey])
 
   const checkForUpdates = useCallback(async () => {
-    if (checkingRef.current || document.visibilityState === 'hidden') return
+    if (!enabled || checkingRef.current || document.visibilityState === 'hidden') return
     const currentItems = itemsRef.current
     const currentTopics = topicsRef.current
     if (currentItems.length === 0 || currentTopics.length === 0) return
@@ -85,7 +86,7 @@ export function useFeedUpdates({ items, topics, onApplyUpdates }: UseFeedUpdates
     } finally {
       checkingRef.current = false
     }
-  }, [setPendingFeedItems, setUpdatesReady])
+  }, [enabled, setPendingFeedItems, setUpdatesReady])
 
   useEffect(() => {
     onApplyUpdatesCallback.current = () => {
@@ -102,6 +103,7 @@ export function useFeedUpdates({ items, topics, onApplyUpdates }: UseFeedUpdates
   }, [onApplyUpdatesCallback, setPendingFeedItems, setUpdatesReady])
 
   useEffect(() => {
+    if (!enabled) return
     const initialCheck = window.setTimeout(() => { void checkForUpdates() }, 1500)
     const interval = window.setInterval(() => { void checkForUpdates() }, FEED_UPDATES_POLL_MS)
     const checkWhenActive = () => {
@@ -116,7 +118,7 @@ export function useFeedUpdates({ items, topics, onApplyUpdates }: UseFeedUpdates
       window.removeEventListener('focus', checkWhenActive)
       document.removeEventListener('visibilitychange', checkWhenActive)
     }
-  }, [checkForUpdates])
+  }, [checkForUpdates, enabled])
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') return

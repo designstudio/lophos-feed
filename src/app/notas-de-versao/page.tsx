@@ -8,6 +8,8 @@ const RELEASES = [
       {
         title: 'Novidades',
         items: [
+          'A página inicial agora abre diretamente o feed público, permitindo acompanhar todas as notícias e listas editoriais mesmo sem uma conta ou personalização ativa.',
+          'Visitantes podem explorar o conteúdo livremente e recebem um convite de login ou cadastro apenas ao tentar curtir ou personalizar o feed.',
           'O editor de listas ganhou mais opções de formatação, incluindo sublinhado, tachado, listas com marcadores, listas numeradas e citações.',
           'A edição de links agora acontece na sidebar do editor, com validação do endereço, inclusão automática de HTTPS e ações para atualizar ou remover o link.',
         ],
@@ -15,6 +17,8 @@ const RELEASES = [
       {
         title: 'Melhorias e correções',
         items: [
+          'Redesenhamos as experiências de login e cadastro com textos consistentes, formulário responsivo, campo de e-mail com efeito líquido, autenticação pelo Google e mensagens de erro no padrão de notificações do Lophos.',
+          'A navegação para visitantes agora apresenta os atalhos institucionais e a ação de login, oculta áreas exclusivas da conta e usa um ícone de usuário consistente quando não há perfil identificado.',
           'Reorganizamos a barra de formatação com ícones mais claros, grupos de ações, controles circulares e o mesmo acabamento visual usado no restante do Lophos.',
           'A barra de formatação permanece acessível durante a rolagem e usa uma transição discreta ao fixar ou retornar à posição original, respeitando a preferência por movimento reduzido.',
           'Simplificamos o cabeçalho do editor para manter o fundo branco e preservar uma leitura mais limpa, sem efeitos visuais sobre o conteúdo.',

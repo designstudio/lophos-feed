@@ -12,15 +12,30 @@ function normalize(value: string) {
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth()
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const db = getSupabaseAdmin()
   const explicitTopic = request.nextUrl.searchParams.get('topic')?.trim()
+  if (!userId && !explicitTopic) {
+    const { data, error } = await db
+      .from('editorial_lists')
+      .select(EDITORIAL_LIST_CARD_SELECT)
+      .eq('status', 'published')
+      .not('published_at', 'is', null)
+      .order('published_at', { ascending: false })
+      .limit(8)
+    if (error) {
+      console.error('[editorial-lists/feed] public lists failed:', error)
+      return NextResponse.json({ error: 'Failed to load editorial lists' }, { status: 500 })
+    }
+    return NextResponse.json({ items: (data ?? []).map(toEditorialListCardItem), reactions: {} })
+  }
+
   const [{ data: topicRows, error: topicsError }, { data: reactionRows, error: reactionsError }] = await Promise.all([
     explicitTopic
       ? Promise.resolve({ data: [{ topic: explicitTopic }], error: null })
       : db.from('user_topics').select('topic').eq('user_id', userId),
-    db.from('editorial_list_reactions').select('list_id, reaction').eq('user_id', userId),
+    userId
+      ? db.from('editorial_list_reactions').select('list_id, reaction').eq('user_id', userId)
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   if (topicsError || reactionsError) {

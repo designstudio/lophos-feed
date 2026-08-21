@@ -20,6 +20,8 @@ import { useRelevantEditorialLists } from '@/hooks/useRelevantEditorialLists'
 import { EditorialListShowcaseCard } from '@/components/editorial/EditorialListShowcaseCard'
 import type { EditorialListCardItem } from '@/lib/editorial-list-card'
 import { interleaveEditorialLists, type MosaicContentItem } from '@/lib/mixed-feed'
+import { useAuth } from '@clerk/nextjs'
+import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 
 const FEED_CACHE_KEY = 'lophos_feed_cache'
 const MOSAIC_SCROLL_KEY = 'lophos_mosaic_feed_scroll'
@@ -35,6 +37,7 @@ type CachedFeed = {
   hasMore: boolean
   topics: string[]
   activeFilter: string | null
+  audience: 'public' | 'personalized'
 }
 
 type FeedPageResponse = {
@@ -57,7 +60,7 @@ function proxyImage(url?: string) {
   return url ? `/api/image-proxy?url=${encodeURIComponent(url)}` : undefined
 }
 
-function readCachedFeed(): CachedFeed | null {
+function readCachedFeed(audience: CachedFeed['audience']): CachedFeed | null {
   try {
     const serialized = sessionStorage.getItem(FEED_CACHE_KEY)
     if (!serialized) return null
@@ -69,6 +72,7 @@ function readCachedFeed(): CachedFeed | null {
       hasMore?: boolean
       topics?: string[]
       activeFilter?: string | null
+      audience?: CachedFeed['audience']
     }
     if (
       cache.version !== FEED_CACHE_VERSION
@@ -80,6 +84,7 @@ function readCachedFeed(): CachedFeed | null {
       || typeof cache.hasMore !== 'boolean'
       || !Array.isArray(cache.topics)
       || (typeof cache.activeFilter !== 'string' && cache.activeFilter !== null)
+      || cache.audience !== audience
     ) return null
     return {
       items: cache.items,
@@ -87,6 +92,7 @@ function readCachedFeed(): CachedFeed | null {
       hasMore: cache.hasMore && cache.items.length < FEED_CACHE_MAX_ITEMS,
       topics: cache.topics.filter((topic): topic is string => typeof topic === 'string'),
       activeFilter: cache.activeFilter,
+      audience,
     }
   } catch {
     return null
@@ -191,6 +197,7 @@ function writeMosaicFeedCache(
   hasMore: boolean,
   topics: string[],
   activeFilter: string | null,
+  audience: CachedFeed['audience'],
 ) {
   if (items.length === 0 || items.length > FEED_CACHE_MAX_ITEMS) return
   try {
@@ -204,6 +211,7 @@ function writeMosaicFeedCache(
       hasMore: hasMore && items.length < FEED_CACHE_MAX_ITEMS,
       topics,
       activeFilter,
+      audience,
       scrollTop: typeof existing.scrollTop === 'number' ? existing.scrollTop : 0,
     }))
   } catch {}
@@ -272,11 +280,18 @@ function MosaicStory({
   const [reacting, setReacting] = useState(false)
   const [likeBurstToken, setLikeBurstToken] = useState(0)
   const reduceMotion = useReducedMotion()
+  const { isLoaded, isSignedIn } = useAuth()
+  const { openAuthPrompt } = useAuthPrompt()
+  const authGated = isLoaded && !isSignedIn
 
   useEffect(() => setReaction(initialReaction), [initialReaction])
   useEffect(() => setImageFailed(false), [image])
 
   const react = async (type: 'like' | 'dislike') => {
+    if (authGated) {
+      openAuthPrompt('login')
+      return
+    }
     if (reacting) return
     const previous = reaction
     const next = reaction === type ? null : type
@@ -303,28 +318,28 @@ function MosaicStory({
     <div className="mosaic-story__footer">
       <NewsSourceAttribution sources={item.sources} />
       <div className="editorial-card__reactions">
-        <Tooltip content={reaction === 'like' ? 'Descurtir' : 'Curtir'} side="top">
+        <Tooltip content={authGated ? 'Entre para curtir' : reaction === 'like' ? 'Descurtir' : 'Curtir'} side="top">
           <motion.button
             type="button"
             onClick={() => { void react('like') }}
             whileTap={{ scale: 0.85 }}
             disabled={reacting}
-            className={cn('editorial-card__reaction editorial-card__reaction--like', reaction === 'like' && 'is-active')}
-            aria-label={reaction === 'like' ? 'Descurtir' : 'Curtir'}
+            className={cn('editorial-card__reaction editorial-card__reaction--like', reaction === 'like' && 'is-active', authGated && 'opacity-45 grayscale')}
+            aria-label={authGated ? 'Entrar para curtir' : reaction === 'like' ? 'Descurtir' : 'Curtir'}
             aria-pressed={reaction === 'like'}
           >
             <LikeBurstIcon liked={reaction === 'like'} burstToken={likeBurstToken} size={20} />
           </motion.button>
         </Tooltip>
 
-        <Tooltip content="Não tenho interesse" side="top">
+        <Tooltip content={authGated ? 'Entre para personalizar' : 'Não tenho interesse'} side="top">
           <motion.button
             type="button"
             onClick={() => { void react('dislike') }}
             whileTap={{ scale: 0.85 }}
             disabled={reacting}
-            className={cn('editorial-card__reaction editorial-card__reaction--dislike', reaction === 'dislike' && 'is-active')}
-            aria-label="Não tenho interesse"
+            className={cn('editorial-card__reaction editorial-card__reaction--dislike', reaction === 'dislike' && 'is-active', authGated && 'opacity-45 grayscale')}
+            aria-label={authGated ? 'Entrar para personalizar o feed' : 'Não tenho interesse'}
             aria-pressed={reaction === 'dislike'}
           >
             <ThumbsDown size={20} />
@@ -451,6 +466,8 @@ export function MosaicSkeleton() {
 }
 
 export default function MosaicFeedView() {
+  const { isLoaded, isSignedIn } = useAuth()
+  const feedAudience: CachedFeed['audience'] = isSignedIn ? 'personalized' : 'public'
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -478,7 +495,8 @@ export default function MosaicFeedView() {
   const restoringScrollRef = useRef(false)
 
   useEffect(() => {
-    const cached = readCachedFeed()
+    if (!isLoaded) return
+    const cached = readCachedFeed(feedAudience)
     if (cached && cached.items.length > 0) {
       setItems(cached.items)
       setNextCursor(cached.nextCursor)
@@ -530,7 +548,7 @@ export default function MosaicFeedView() {
       controller.abort()
       paginationAbortRef.current?.abort()
     }
-  }, [initialLoadAttempt])
+  }, [feedAudience, initialLoadAttempt, isLoaded])
 
   const loadNextPage = useCallback(async () => {
     if (items.length >= FEED_CACHE_MAX_ITEMS) {
@@ -583,8 +601,8 @@ export default function MosaicFeedView() {
 
   useEffect(() => {
     if (items.length === 0) return
-    writeMosaicFeedCache(items, nextCursor, hasMore, topics, activeFilter)
-  }, [activeFilter, hasMore, items, nextCursor, topics])
+    writeMosaicFeedCache(items, nextCursor, hasMore, topics, activeFilter, feedAudience)
+  }, [activeFilter, feedAudience, hasMore, items, nextCursor, topics])
 
   useEffect(() => {
     if (items.length < FEED_CACHE_MAX_ITEMS) return
@@ -674,11 +692,12 @@ export default function MosaicFeedView() {
   }, [activeFilter])
 
   useEffect(() => {
+    if (!isSignedIn) return
     fetch('/api/reactions')
       .then((response) => response.ok ? response.json() : null)
       .then((data) => { if (data?.reactions) setReactions(data.reactions) })
       .catch(() => undefined)
-  }, [])
+  }, [isSignedIn])
 
   const handleReactionChange = (articleId: string, reaction: 'like' | 'dislike' | null) => {
     setReactions((current) => {
@@ -701,6 +720,7 @@ export default function MosaicFeedView() {
     items,
     topics: activeFilter ? [activeFilter] : topics,
     onApplyUpdates: applyFeedUpdates,
+    enabled: Boolean(isSignedIn),
   })
 
   const visibleItems = items.filter((item) => reactions[item.id] !== 'dislike')

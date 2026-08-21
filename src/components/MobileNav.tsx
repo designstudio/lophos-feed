@@ -2,12 +2,17 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Settings01 as Settings } from '@untitledui/icons'
+import { LogIn01 } from '@untitledui/icons'
+import { useAuth } from '@clerk/nextjs'
+import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 import { IconFeed as Feed } from '@/components/icons'
 import { IconLists } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
 export function MobileNav() {
   const pathname = usePathname()
+  const { isSignedIn } = useAuth()
+  const { openAuthPrompt } = useAuthPrompt()
   const dockedLayout = pathname.startsWith('/article/') || pathname.startsWith('/lists/')
   const isFeedActive = pathname === '/feed' || pathname === '/'
   const isSettingsActive = pathname === '/settings'
@@ -33,7 +38,7 @@ export function MobileNav() {
         style={dockedLayout ? undefined : { paddingLeft: '0.2rem', paddingRight: '0.2rem' }}
       >
         <Link
-          href="/feed"
+          href="/"
           className={cn(
             dockedLayout
               ? 'flex h-14 w-14 items-center justify-center rounded-full transition-colors'
@@ -47,7 +52,7 @@ export function MobileNav() {
           }
         >
           <Feed size={20} />
-          {!dockedLayout && 'Meu feed'}
+          {!dockedLayout && (isSignedIn ? 'Meu feed' : 'Feed')}
         </Link>
 
         {!dockedLayout && (
@@ -65,7 +70,7 @@ export function MobileNav() {
         )}
 
         {!dockedLayout && (
-          <Link
+          isSignedIn ? <Link
             href="/settings"
             className={cn(
               'flex flex-col items-center gap-0.5 px-4 py-1.5 text-[10px] font-semibold transition-colors rounded-full whitespace-nowrap',
@@ -79,7 +84,14 @@ export function MobileNav() {
           >
             <Settings size={20} />
             Configurações
-          </Link>
+          </Link> : <button
+            type="button"
+            onClick={() => openAuthPrompt('login')}
+            className="flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 text-[10px] font-semibold text-ink-tertiary transition-colors whitespace-nowrap"
+          >
+            <LogIn01 size={20} />
+            Login
+          </button>
         )}
       </div>
     </nav>

@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils'
 import { Tooltip } from '@/components/Tooltip'
 import { LikeBurstIcon } from '@/components/LikeBurstIcon'
 import { TopicIcon } from '@/components/TopicIcon'
+import { useAuth } from '@clerk/nextjs'
+import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 
 const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
 
@@ -129,11 +131,18 @@ export function NewsCard({
   const [reacting, setReacting] = useState(false)
   const [likeBurstToken, setLikeBurstToken] = useState(0)
   const reduceMotion = useReducedMotion()
+  const { isLoaded, isSignedIn } = useAuth()
+  const { openAuthPrompt } = useAuthPrompt()
+  const authGated = isLoaded && !isSignedIn
   const dateLabel = publishedLabel(item.publishedAt)
 
   useEffect(() => setReaction(initialReaction), [initialReaction])
 
   const react = async (type: 'like' | 'dislike') => {
+    if (authGated) {
+      openAuthPrompt('login')
+      return
+    }
     if (reacting) return
     const previous = reaction
     const next = reaction === type ? null : type
@@ -195,28 +204,28 @@ export function NewsCard({
           <div className="editorial-card__footer">
             <NewsSourceAttribution sources={item.sources} />
             <div className="editorial-card__reactions">
-            <Tooltip content={reaction === 'like' ? 'Descurtir' : 'Curtir'} side="top">
+            <Tooltip content={authGated ? 'Entre para curtir' : reaction === 'like' ? 'Descurtir' : 'Curtir'} side="top">
               <motion.button
                 type="button"
                 onClick={(event) => { event.preventDefault(); event.stopPropagation(); void react('like') }}
                 whileTap={{ scale: 0.85 }}
                 disabled={reacting}
-                className={cn('editorial-card__reaction editorial-card__reaction--like', reaction === 'like' && 'is-active')}
-                aria-label={reaction === 'like' ? 'Descurtir' : 'Curtir'}
+                className={cn('editorial-card__reaction editorial-card__reaction--like', reaction === 'like' && 'is-active', authGated && 'opacity-45 grayscale')}
+                aria-label={authGated ? 'Entrar para curtir' : reaction === 'like' ? 'Descurtir' : 'Curtir'}
                 aria-pressed={reaction === 'like'}
               >
                 <LikeBurstIcon liked={reaction === 'like'} burstToken={likeBurstToken} size={20} />
               </motion.button>
             </Tooltip>
 
-            <Tooltip content="Não tenho interesse" side="top">
+            <Tooltip content={authGated ? 'Entre para personalizar' : 'Não tenho interesse'} side="top">
               <motion.button
                 type="button"
                 onClick={(event) => { event.preventDefault(); event.stopPropagation(); void react('dislike') }}
                 whileTap={{ scale: 0.85 }}
                 disabled={reacting}
-                className={cn('editorial-card__reaction editorial-card__reaction--dislike', reaction === 'dislike' && 'is-active')}
-                aria-label="Não tenho interesse"
+                className={cn('editorial-card__reaction editorial-card__reaction--dislike', reaction === 'dislike' && 'is-active', authGated && 'opacity-45 grayscale')}
+                aria-label={authGated ? 'Entrar para personalizar o feed' : 'Não tenho interesse'}
                 aria-pressed={reaction === 'dislike'}
               >
                 <ThumbsDown size={20} />

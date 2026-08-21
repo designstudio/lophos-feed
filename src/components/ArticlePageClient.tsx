@@ -12,6 +12,7 @@ import { ptBR } from 'date-fns/locale'
 import { Tooltip } from '@/components/Tooltip'
 import { useModalTransition } from '@/hooks/useModalTransition'
 import { LikeBurstIcon } from '@/components/LikeBurstIcon'
+import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 import { TopicIcon } from '@/components/TopicIcon'
 import { ArticleReportModal } from '@/components/ArticleReportModal'
 
@@ -98,6 +99,7 @@ type ArticleReaction = 'like' | 'dislike' | null
 export default function ArticlePageClient({ initialItem }: { initialItem: NewsItem }) {
   const id = initialItem.id
   const { isSignedIn } = useAuth()
+  const { openAuthPrompt } = useAuthPrompt()
   const item = initialItem
   const [showAllSources, setShowAllSources] = useState(false)
   const [related, setRelated] = useState<RelatedItem[]>([])
@@ -343,12 +345,11 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                   )}
 
                   <div className="flex items-center gap-1.5 mb-8">
-                    <Tooltip content={liked ? 'Descurtir' : 'Curtir'}>
+                    <Tooltip content={!isSignedIn ? 'Entre para curtir' : liked ? 'Descurtir' : 'Curtir'}>
                       <motion.button
                         type="button"
-                        onClick={toggleLike}
-                        disabled={!isSignedIn}
-                        aria-label={liked ? 'Descurtir' : 'Curtir'}
+                        onClick={() => isSignedIn ? toggleLike() : openAuthPrompt('login')}
+                        aria-label={!isSignedIn ? 'Entrar para curtir' : liked ? 'Descurtir' : 'Curtir'}
                         aria-pressed={liked}
                         whileTap={{ scale: 0.85 }}
                         className={cn(
@@ -356,19 +357,18 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                           liked
                             ? 'is-active'
                             : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
-                          !isSignedIn && 'opacity-60 cursor-not-allowed',
+                          !isSignedIn && 'opacity-45 grayscale',
                         )}
                       >
                         <LikeBurstIcon liked={liked} burstToken={likeBurstToken} size={16} />
                       </motion.button>
                     </Tooltip>
 
-                    <Tooltip content={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}>
+                    <Tooltip content={!isSignedIn ? 'Entre para personalizar' : disliked ? 'Remover desinteresse' : 'Não tenho interesse'}>
                       <motion.button
                         type="button"
-                        onClick={toggleDislike}
-                        disabled={!isSignedIn}
-                        aria-label={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}
+                        onClick={() => isSignedIn ? toggleDislike() : openAuthPrompt('login')}
+                        aria-label={!isSignedIn ? 'Entrar para personalizar o feed' : disliked ? 'Remover desinteresse' : 'Não tenho interesse'}
                         aria-pressed={disliked}
                         whileTap={{ scale: 0.85 }}
                         className={cn(
@@ -376,7 +376,7 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                           disliked
                             ? 'bg-zinc-100 text-zinc-600'
                             : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary',
-                          !isSignedIn && 'opacity-60 cursor-not-allowed',
+                          !isSignedIn && 'opacity-45 grayscale',
                         )}
                       >
                         <AnimatePresence mode="wait" initial={false}>

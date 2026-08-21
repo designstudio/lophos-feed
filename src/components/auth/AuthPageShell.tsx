@@ -25,7 +25,7 @@ export function AuthPageShell({ mode }: { mode: AuthMode }) {
 
             {!isLogin ? (
               <p className="mt-4 max-w-[390px] text-[1rem] leading-7 text-ink-secondary">
-                Crie sua conta gratuita para ter seu feed personalizado. Não é necessário cartão de crédito.
+                Crie sua conta gratuita para ter seu feed personalizado.
               </p>
             ) : null}
           </div>

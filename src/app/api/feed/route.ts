@@ -12,6 +12,7 @@ import {
   FeedCursorPayload,
 } from '@/lib/feed-pagination'
 import { FEED_PAGE_QUERY_SIZE, FEED_PAGE_SIZE } from '@/lib/feed-pagination-config'
+import { POST as publicFeedPost } from '@/app/api/feed/public/route'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const { userId } = await auth()
-    if (!userId) return jsonError(401, 'Unauthorized')
+    if (!userId) return publicFeedPost(req)
 
     const debug = req.nextUrl.searchParams.get('debug') === '1'
     const body = await req.json()

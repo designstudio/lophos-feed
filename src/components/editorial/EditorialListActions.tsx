@@ -8,6 +8,7 @@ import { ArticleReportModal } from '@/components/ArticleReportModal'
 import { LikeBurstIcon } from '@/components/LikeBurstIcon'
 import { Tooltip } from '@/components/Tooltip'
 import { cn } from '@/lib/utils'
+import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 
 type ListReaction = 'like' | 'dislike' | null
 
@@ -20,6 +21,7 @@ interface EditorialListActionsProps {
 
 export function EditorialListActions({ listId, slug, title, text }: EditorialListActionsProps) {
   const { isSignedIn } = useAuth()
+  const { openAuthPrompt } = useAuthPrompt()
   const [liked, setLiked] = useState(false)
   const [disliked, setDisliked] = useState(false)
   const [likeBurstToken, setLikeBurstToken] = useState(0)
@@ -92,7 +94,10 @@ export function EditorialListActions({ listId, slug, title, text }: EditorialLis
   }, [applyReactionState, flushReactionQueue, isSignedIn, listId])
 
   const updateReaction = (reaction: ListReaction) => {
-    if (!isSignedIn) return
+    if (!isSignedIn) {
+      openAuthPrompt('login')
+      return
+    }
     reactionChangedRef.current = true
     desiredReactionRef.current = reaction
     if (reaction === 'like') setLikeBurstToken((token) => token + 1)
@@ -130,29 +135,27 @@ export function EditorialListActions({ listId, slug, title, text }: EditorialLis
   return (
     <>
       <div className="mb-8 flex items-center gap-1.5" aria-label="Ações da lista">
-        <Tooltip content={liked ? 'Descurtir' : 'Curtir'}>
+        <Tooltip content={!isSignedIn ? 'Entre para curtir' : liked ? 'Descurtir' : 'Curtir'}>
           <motion.button
             type="button"
             onClick={() => updateReaction(liked ? null : 'like')}
-            disabled={!isSignedIn}
-            aria-label={liked ? 'Descurtir' : 'Curtir'}
+            aria-label={!isSignedIn ? 'Entrar para curtir' : liked ? 'Descurtir' : 'Curtir'}
             aria-pressed={liked}
             whileTap={{ scale: 0.85 }}
-            className={cn('editorial-card__reaction--like', reactionClass, liked ? 'is-active' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary', !isSignedIn && 'cursor-not-allowed opacity-60')}
+            className={cn('editorial-card__reaction--like', reactionClass, liked ? 'is-active' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary', !isSignedIn && 'opacity-45 grayscale')}
           >
             <LikeBurstIcon liked={liked} burstToken={likeBurstToken} size={16} />
           </motion.button>
         </Tooltip>
 
-        <Tooltip content={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}>
+        <Tooltip content={!isSignedIn ? 'Entre para personalizar' : disliked ? 'Remover desinteresse' : 'Não tenho interesse'}>
           <motion.button
             type="button"
             onClick={() => updateReaction(disliked ? null : 'dislike')}
-            disabled={!isSignedIn}
-            aria-label={disliked ? 'Remover desinteresse' : 'Não tenho interesse'}
+            aria-label={!isSignedIn ? 'Entrar para personalizar o feed' : disliked ? 'Remover desinteresse' : 'Não tenho interesse'}
             aria-pressed={disliked}
             whileTap={{ scale: 0.85 }}
-            className={cn(reactionClass, disliked ? 'bg-zinc-100 text-zinc-600' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary', !isSignedIn && 'cursor-not-allowed opacity-60')}
+            className={cn(reactionClass, disliked ? 'bg-zinc-100 text-zinc-600' : 'text-ink-secondary hover:bg-bg-secondary hover:text-ink-primary', !isSignedIn && 'opacity-45 grayscale')}
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.span key={disliked ? 'filled' : 'outline'} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={{ duration: 0.25, ease: 'easeInOut' }} className="flex">

@@ -38,9 +38,10 @@ type FeedCache = {
   topics: string[]
   activeFilter: string | null
   scrollTop: number
+  audience: 'public' | 'personalized'
 }
 
-function readFeedCache(): FeedCache | null {
+function readFeedCache(audience: FeedCache['audience']): FeedCache | null {
   const serialized = sessionStorage.getItem(FEED_CACHE_KEY)
   if (!serialized) return null
 
@@ -60,6 +61,7 @@ function readFeedCache(): FeedCache | null {
       && typeof cache.scrollTop === 'number'
       && Number.isFinite(cache.scrollTop)
       && cache.scrollTop >= 0
+      && cache.audience === audience
 
     if (isCurrent) {
       const currentCache = cache as FeedCache
@@ -75,12 +77,12 @@ function readFeedCache(): FeedCache | null {
   return null
 }
 
-function writeFeedScrollTop(scrollTop: number) {
+function writeFeedScrollTop(scrollTop: number, audience: FeedCache['audience']) {
   try {
     const serialized = sessionStorage.getItem(FEED_CACHE_KEY)
     if (!serialized) return
     const cache = JSON.parse(serialized) as Partial<FeedCache>
-    if (cache.version !== FEED_CACHE_VERSION) return
+    if (cache.version !== FEED_CACHE_VERSION || cache.audience !== audience) return
     sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({ ...cache, scrollTop }))
   } catch {}
 }
@@ -356,6 +358,7 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
 
 export default function ListFeedView() {
   const { isLoaded, isSignedIn } = useAuth()
+  const feedAudience: FeedCache['audience'] = isSignedIn ? 'personalized' : 'public'
   const { setRefreshing, onRefreshCallback, setUpdatesReady, setPendingFeedItems } = useFeedContext()
   const [items, setItems]         = useState<FeedItem[]>([])
   const [topics, setTopics]       = useState<string[]>([])
@@ -399,7 +402,7 @@ export default function ListFeedView() {
     // Serve do cache se não forçado e o cache ainda é válido
     if (!force) {
       try {
-        const cached = readFeedCache()
+        const cached = readFeedCache(feedAudience)
         if (cached) {
           setItems(cached.items)
           setTopics(cached.topics)
@@ -479,7 +482,7 @@ export default function ListFeedView() {
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [feedAudience])
 
   const loadNextPage = useCallback(async () => {
     if (items.length >= FEED_CACHE_MAX_ITEMS) {
@@ -568,8 +571,9 @@ export default function ListFeedView() {
       topics,
       activeFilter,
       scrollTop: scrollRef.current?.scrollTop ?? scrollTopRef.current,
+      audience: feedAudience,
     })
-  }, [activeFilter, hasMore, initialized, items, nextCursor, topics])
+  }, [activeFilter, feedAudience, hasMore, initialized, items, nextCursor, topics])
 
   useEffect(() => {
     if (items.length < FEED_CACHE_MAX_ITEMS) return
@@ -579,19 +583,19 @@ export default function ListFeedView() {
     nextCursorRef.current = null
   }, [items.length])
 
-  useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
+  useEffect(() => { if (isLoaded) fetchFeed() }, [fetchFeed, isLoaded])
 
   useEffect(() => {
     navigatingToArticleRef.current = false
     return () => {
       if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
       if (!navigatingToArticleRef.current && !restoringScrollRef.current) {
-        writeFeedScrollTop(scrollTopRef.current)
+        writeFeedScrollTop(scrollTopRef.current, feedAudience)
       }
       abortRef.current?.abort()
       paginationAbortRef.current?.abort()
     }
-  }, [])
+  }, [feedAudience])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
@@ -619,6 +623,7 @@ export default function ListFeedView() {
     items,
     topics: activeFilter ? [activeFilter] : topics,
     onApplyUpdates: applyFeedUpdates,
+    enabled: Boolean(isSignedIn),
   })
 
   useEffect(() => {
@@ -686,7 +691,7 @@ export default function ListFeedView() {
         navigatingToArticleRef.current = true
         if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
         scrollSaveTimeoutRef.current = null
-        writeFeedScrollTop(scrollTopRef.current)
+        writeFeedScrollTop(scrollTopRef.current, feedAudience)
       }}
       onScroll={(event) => {
         if (navigatingToArticleRef.current || restoringScrollRef.current) return
@@ -695,7 +700,7 @@ export default function ListFeedView() {
         if (remaining <= event.currentTarget.clientHeight * 2) void loadNextPage()
         if (scrollSaveTimeoutRef.current) clearTimeout(scrollSaveTimeoutRef.current)
         scrollSaveTimeoutRef.current = setTimeout(() => {
-          writeFeedScrollTop(scrollTopRef.current)
+          writeFeedScrollTop(scrollTopRef.current, feedAudience)
           scrollSaveTimeoutRef.current = null
         }, 150)
       }}

@@ -4,6 +4,8 @@ import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSignIn } from '@clerk/nextjs'
+import { AppToast, type AppToastMessage } from '@/components/AppToast'
+import { LiquidEmailField } from '@/components/auth/LiquidEmailField'
 
 export function GoogleIcon() {
   return (
@@ -18,31 +20,31 @@ export function GoogleIcon() {
 
 type Step = 'email' | 'code'
 
-export function LoginForm() {
+export function LoginForm({ redirectUrlComplete = '/', onRequestSignup }: { redirectUrlComplete?: string; onRequestSignup?: () => void } = {}) {
   const router = useRouter()
   const { isLoaded, signIn, setActive } = useSignIn()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<Step>('email')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [toast, setToast] = useState<AppToastMessage | null>(null)
 
   const buttonLabel = useMemo(() => (step === 'email' ? 'Continuar' : 'Verificar código'), [step])
 
   const handleGoogle = async () => {
     if (!isLoaded || !signIn) return
 
-    setError(null)
+    setToast(null)
     setIsSubmitting(true)
 
     try {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: '/login/sso-callback',
-        redirectUrlComplete: '/feed',
+        redirectUrlComplete,
       })
     } catch (err: any) {
-      setError(err?.errors?.[0]?.longMessage || 'Não foi possível iniciar o login com Google.')
+      setToast({ type: 'error', text: err?.errors?.[0]?.longMessage || 'Não foi possível iniciar o login com Google.' })
       setIsSubmitting(false)
     }
   }
@@ -51,7 +53,7 @@ export function LoginForm() {
     event.preventDefault()
     if (!isLoaded || !signIn || !setActive) return
 
-    setError(null)
+    setToast(null)
     setIsSubmitting(true)
 
     try {
@@ -83,10 +85,10 @@ export function LoginForm() {
         }
 
         await setActive({ session: result.createdSessionId })
-        router.push('/feed')
+        router.push(redirectUrlComplete)
       }
     } catch (err: any) {
-      setError(err?.errors?.[0]?.longMessage || err?.message || 'Algo deu errado. Tente novamente.')
+      setToast({ type: 'error', text: err?.errors?.[0]?.longMessage || err?.message || 'Algo deu errado. Tente novamente.' })
     } finally {
       setIsSubmitting(false)
     }
@@ -98,7 +100,7 @@ export function LoginForm() {
         type="button"
         onClick={handleGoogle}
         disabled={isSubmitting}
-        className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-white px-5 text-[1rem] font-medium text-ink-primary shadow-none transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+        className="auth-google-button flex h-12 items-center justify-center gap-3 rounded-full bg-[var(--input-bg)] px-5 text-[1rem] font-medium text-ink-primary transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <GoogleIcon />
         Continuar com o Google
@@ -112,15 +114,10 @@ export function LoginForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {step === 'email' ? (
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="email"
+          <LiquidEmailField
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="Insira seu endereço de e-mail"
-            className="app-input h-12 w-full rounded-2xl border border-border bg-white px-4 text-[1rem] text-ink-primary outline-none placeholder:text-ink-tertiary"
-            required
+            onChange={setEmail}
+            disabled={isSubmitting || !isLoaded}
           />
         ) : (
           <div className="space-y-3">
@@ -140,34 +137,42 @@ export function LoginForm() {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting || !isLoaded}
-          className="h-12 w-full rounded-full bg-ink-primary text-[1rem] font-medium text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSubmitting ? 'Carregando...' : buttonLabel}
-        </button>
+        {step === 'code' ? (
+          <button
+            type="submit"
+            disabled={isSubmitting || !isLoaded}
+            className="h-12 w-full rounded-full bg-ink-primary text-[1rem] font-medium text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? 'Carregando...' : buttonLabel}
+          </button>
+        ) : null}
       </form>
 
-      {error ? <p className="mt-4 text-center text-sm leading-6 text-red-500">{error}</p> : null}
+      <AppToast message={toast} onDismiss={() => setToast(null)} />
 
       <div className="mt-5 text-center text-[0.75rem] leading-5 text-ink-tertiary">
-        Ao continuar, você concorda com os{' '}
-        <Link href="/termos-de-uso" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
-          Termos de Uso
-        </Link>{' '}
-        e com a{' '}
-        <Link href="/politica-de-privacidade" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
-          Política de Privacidade
-        </Link>{' '}
-        do Lophos.
+        <span className="block">
+          Ao continuar, você concorda com os{' '}
+          <Link href="/termos-de-uso" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
+            Termos de Uso
+          </Link>
+        </span>
+        <span className="block">
+          e com a{' '}
+          <Link href="/politica-de-privacidade" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
+            Política de Privacidade
+          </Link>{' '}
+          do Lophos.
+        </span>
       </div>
 
       <div className="mt-7 text-center text-[0.95rem] text-ink-secondary">
         Ainda não tem conta?{' '}
-        <Link href="/signup" className="font-medium text-ink-primary transition-opacity hover:opacity-70">
-          Criar conta grátis
-        </Link>
+        {onRequestSignup ? (
+          <button type="button" onClick={onRequestSignup} className="font-medium text-ink-primary transition-opacity hover:opacity-70">Criar conta grátis</button>
+        ) : (
+          <Link href="/signup" className="font-medium text-ink-primary transition-opacity hover:opacity-70">Criar conta grátis</Link>
+        )}
       </div>
     </div>
   )

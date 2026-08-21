@@ -4,25 +4,27 @@ import { FormEvent, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSignUp } from '@clerk/nextjs'
+import { AppToast, type AppToastMessage } from '@/components/AppToast'
 import { GoogleIcon } from '@/components/auth/LoginForm'
+import { LiquidEmailField } from '@/components/auth/LiquidEmailField'
 
 type Step = 'email' | 'code'
 
-export function SignupForm() {
+export function SignupForm({ onRequestLogin }: { onRequestLogin?: () => void } = {}) {
   const router = useRouter()
   const { isLoaded, signUp, setActive } = useSignUp()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<Step>('email')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [toast, setToast] = useState<AppToastMessage | null>(null)
 
   const buttonLabel = useMemo(() => (step === 'email' ? 'Continuar' : 'Verificar código'), [step])
 
   const handleGoogle = async () => {
     if (!isLoaded || !signUp) return
 
-    setError(null)
+    setToast(null)
     setIsSubmitting(true)
 
     try {
@@ -32,7 +34,7 @@ export function SignupForm() {
         redirectUrlComplete: '/onboarding',
       })
     } catch (err: any) {
-      setError(err?.errors?.[0]?.longMessage || 'Não foi possível iniciar o cadastro com Google.')
+      setToast({ type: 'error', text: err?.errors?.[0]?.longMessage || 'Não foi possível iniciar o cadastro com Google.' })
       setIsSubmitting(false)
     }
   }
@@ -41,7 +43,7 @@ export function SignupForm() {
     event.preventDefault()
     if (!isLoaded || !signUp || !setActive) return
 
-    setError(null)
+    setToast(null)
     setIsSubmitting(true)
 
     try {
@@ -60,7 +62,7 @@ export function SignupForm() {
         router.push('/onboarding')
       }
     } catch (err: any) {
-      setError(err?.errors?.[0]?.longMessage || err?.message || 'Algo deu errado. Tente novamente.')
+      setToast({ type: 'error', text: err?.errors?.[0]?.longMessage || err?.message || 'Algo deu errado. Tente novamente.' })
     } finally {
       setIsSubmitting(false)
     }
@@ -72,7 +74,7 @@ export function SignupForm() {
         type="button"
         onClick={handleGoogle}
         disabled={isSubmitting}
-        className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-white px-5 text-[1rem] font-medium text-ink-primary shadow-none transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+        className="auth-google-button flex h-12 items-center justify-center gap-3 rounded-full bg-[var(--input-bg)] px-5 text-[1rem] font-medium text-ink-primary transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <GoogleIcon />
         Continuar com o Google
@@ -86,15 +88,10 @@ export function SignupForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {step === 'email' ? (
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="email"
+          <LiquidEmailField
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="Insira seu endereço de e-mail"
-            className="app-input h-12 w-full rounded-2xl border border-border bg-white px-4 text-[1rem] text-ink-primary outline-none placeholder:text-ink-tertiary"
-            required
+            onChange={setEmail}
+            disabled={isSubmitting || !isLoaded}
           />
         ) : (
           <div className="space-y-3">
@@ -114,34 +111,42 @@ export function SignupForm() {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isSubmitting || !isLoaded}
-          className="h-12 w-full rounded-full bg-ink-primary text-[1rem] font-medium text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isSubmitting ? 'Carregando...' : buttonLabel}
-        </button>
+        {step === 'code' ? (
+          <button
+            type="submit"
+            disabled={isSubmitting || !isLoaded}
+            className="h-12 w-full rounded-full bg-ink-primary text-[1rem] font-medium text-white transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? 'Carregando...' : buttonLabel}
+          </button>
+        ) : null}
       </form>
 
-      {error ? <p className="mt-4 text-center text-sm leading-6 text-red-500">{error}</p> : null}
+      <AppToast message={toast} onDismiss={() => setToast(null)} />
 
       <div className="mt-5 text-center text-[0.75rem] leading-5 text-ink-tertiary">
-        Ao continuar, você concorda com os{' '}
-        <Link href="/termos-de-uso" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
-          Termos de Uso
-        </Link>{' '}
-        e com a{' '}
-        <Link href="/politica-de-privacidade" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
-          Política de Privacidade
-        </Link>{' '}
-        do Lophos.
+        <span className="block">
+          Ao continuar, você concorda com os{' '}
+          <Link href="/termos-de-uso" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
+            Termos de Uso
+          </Link>
+        </span>
+        <span className="block">
+          e com a{' '}
+          <Link href="/politica-de-privacidade" className="text-ink-secondary underline underline-offset-2 transition-opacity hover:opacity-70">
+            Política de Privacidade
+          </Link>{' '}
+          do Lophos.
+        </span>
       </div>
 
       <div className="mt-7 text-center text-[0.95rem] text-ink-secondary">
         Já tem uma conta?{' '}
-        <Link href="/login" className="font-medium text-ink-primary transition-opacity hover:opacity-70">
-          Iniciar sessão
-        </Link>
+        {onRequestLogin ? (
+          <button type="button" onClick={onRequestLogin} className="font-medium text-ink-primary transition-opacity hover:opacity-70">Iniciar sessão</button>
+        ) : (
+          <Link href="/login" className="font-medium text-ink-primary transition-opacity hover:opacity-70">Iniciar sessão</Link>
+        )}
         .
       </div>
     </div>

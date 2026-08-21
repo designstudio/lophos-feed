@@ -9,15 +9,18 @@ import {
   ArrowNarrowUpRight,
   Announcement02,
   Key01,
+  LogIn01,
 } from '@untitledui/icons'
 import { Tooltip } from '@/components/Tooltip'
 import { UserAvatar } from '@/components/UserAvatar'
 import { FixedDropdown } from './FixedDropdown'
 import { useDropdownTransition } from '@/hooks/useDropdownTransition'
+import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 
 export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenSettings: () => void; isAdmin?: boolean }) {
-  const { user } = useUser()
+  const { user, isSignedIn } = useUser()
   const { signOut } = useClerk()
+  const { openAuthPrompt } = useAuthPrompt()
   const { open, closing, closeDropdown, toggleDropdown } = useDropdownTransition()
   const ref = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -48,7 +51,7 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
 
       <FixedDropdown anchorRef={triggerRef} open={open} closing={closing}>
           <div>
-            <button
+            {isSignedIn ? <button
               onClick={() => {
                 closeDropdown()
                 onOpenSettings()
@@ -57,9 +60,9 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
             >
               <Settings size={14} />
               <span>Configurações</span>
-            </button>
+            </button> : null}
 
-            {isAdmin ? (
+            {isSignedIn && isAdmin ? (
               <Link
                 href="/admin/lists"
                 onClick={closeDropdown}
@@ -96,13 +99,23 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
 
             <div role="separator" className="my-1 border-t border-border" />
 
-            <button
-              onClick={() => { closeDropdown(); void signOut() }}
-              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-hover)]"
-            >
-              <Logout size={14} />
-              <span>Sair</span>
-            </button>
+            {isSignedIn ? (
+              <button
+                onClick={() => { closeDropdown(); void signOut() }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-hover)]"
+              >
+                <Logout size={14} />
+                <span>Sair</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => { closeDropdown(); openAuthPrompt('login') }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-primary transition-colors hover:bg-[var(--color-hover-elevated)]"
+              >
+                <LogIn01 size={14} />
+                <span>Login</span>
+              </button>
+            )}
           </div>
       </FixedDropdown>
     </div>

@@ -3,9 +3,11 @@ import { FeedProvider } from '@/components/FeedContext'
 import { SidebarWithRefresh } from '@/components/Sidebar'
 import { MobileNav } from '@/components/MobileNav'
 import { NavigationFeedback } from '@/components/NavigationFeedback'
+import { AuthPromptProvider } from '@/components/auth/AuthPrompt'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
+    <AuthPromptProvider>
     <FeedProvider>
       <NavigationFeedback />
       <div className="page-shell">
@@ -16,5 +18,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <MobileNav />
       </div>
     </FeedProvider>
+    </AuthPromptProvider>
   )
 }

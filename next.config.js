@@ -14,6 +14,11 @@ const nextConfig = {
         destination: 'https://lophos.space/:path*',
         permanent: true,
       },
+      {
+        source: '/feed',
+        destination: '/',
+        permanent: true,
+      },
     ]
   },
   images: {
@@ -24,7 +29,7 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_CLERK_SIGN_IN_URL: '/login',
     NEXT_PUBLIC_CLERK_SIGN_UP_URL: '/login',
-    NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL: '/feed',
+    NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL: '/',
     NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL: '/onboarding',
   },
 }
