@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Eye, Save01 } from '@untitledui/icons'
 import { AppToast, type AppToastMessage } from '@/components/AppToast'
+import { TransitionText } from '@/components/TransitionText'
 import { EditorialInspector } from './EditorialInspector'
 import { EditorialPreview } from './EditorialPreview'
 import { EditorialRichTextEditor, type EditorialRichTextEditorHandle } from './EditorialRichTextEditor'
@@ -30,6 +31,8 @@ const EMPTY_DRAFT: EditorialDraft = {
   seoDescription: '',
   status: 'draft',
 }
+
+type SaveAction = 'save' | 'publish' | 'update'
 
 function EditorialTitleField({ value, onChange }: {
   value: string
@@ -82,9 +85,12 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
 }) {
   const router = useRouter()
   const richTextEditorRef = useRef<EditorialRichTextEditorHandle>(null)
+  const saveFeedbackTimerRef = useRef<number | null>(null)
   const [draft, setDraft] = useState<EditorialDraft>(() => initialRecord ? recordToDraft(initialRecord) : EMPTY_DRAFT)
   const [record, setRecord] = useState<EditorialListRecord | null>(initialRecord ?? null)
   const [saving, setSaving] = useState(false)
+  const [savingAction, setSavingAction] = useState<SaveAction | null>(null)
+  const [completedAction, setCompletedAction] = useState<SaveAction | null>(null)
   const [dirty, setDirty] = useState(false)
   const [toast, setToast] = useState<AppToastMessage | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -100,7 +106,14 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
     } catch {}
   }, [])
 
+  useEffect(() => () => {
+    if (saveFeedbackTimerRef.current !== null) window.clearTimeout(saveFeedbackTimerRef.current)
+  }, [])
+
   const updateDraft = useCallback((patch: Partial<EditorialDraft>) => {
+    if (saveFeedbackTimerRef.current !== null) window.clearTimeout(saveFeedbackTimerRef.current)
+    saveFeedbackTimerRef.current = null
+    setCompletedAction(null)
     setDraft((current) => ({ ...current, ...patch }))
     setDirty(true)
   }, [])
@@ -120,6 +133,13 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
   }, [])
 
   const save = async () => {
+    const action: SaveAction = draft.status === 'published'
+      ? record?.status === 'published' ? 'update' : 'publish'
+      : 'save'
+    if (saveFeedbackTimerRef.current !== null) window.clearTimeout(saveFeedbackTimerRef.current)
+    saveFeedbackTimerRef.current = null
+    setCompletedAction(null)
+    setSavingAction(action)
     setSaving(true)
     try {
       const payload = draft.slug ? draft : { ...draft, slug: undefined }
@@ -134,6 +154,11 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
       setRecord(saved)
       setDraft(recordToDraft(saved))
       setDirty(false)
+      setCompletedAction(action)
+      saveFeedbackTimerRef.current = window.setTimeout(() => {
+        setCompletedAction(null)
+        saveFeedbackTimerRef.current = null
+      }, 2000)
       const successMessage: AppToastMessage = {
         type: 'success',
         text: saved.status === 'published'
@@ -147,17 +172,21 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
         setToast(successMessage)
       }
     } catch (saveError) {
+      setCompletedAction(null)
       setToast({ type: 'error', text: saveError instanceof Error ? saveError.message : 'Não foi possível salvar a lista.' })
     } finally {
       setSaving(false)
+      setSavingAction(null)
     }
   }
 
   const authorName = record?.author_name || currentAuthor.name
   const authorImageUrl = record?.author_image_url || currentAuthor.imageUrl
   const isPublished = record?.status === 'published'
-  const primaryActionLabel = saving
-    ? 'Salvando…'
+  const primaryActionLabel = completedAction
+    ? completedAction === 'update' ? 'Atualizado' : completedAction === 'publish' ? 'Publicado' : 'Salvo'
+    : saving
+    ? savingAction === 'update' ? 'Atualizando…' : savingAction === 'publish' ? 'Publicando…' : 'Salvando…'
     : draft.status === 'draft'
       ? 'Salvar'
       : draft.status === 'published'
@@ -187,7 +216,12 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
         </div>
         <div className="flex items-center gap-2">
           <button type="button" aria-label="Preview" onClick={() => setPreviewOpen(true)} className="editorial-secondary-button"><Eye size={17} /><span className="hidden sm:inline">Preview</span></button>
-          <button type="button" disabled={saving} onClick={() => void save()} className="editorial-primary-button"><Save01 size={17} />{primaryActionLabel}</button>
+          <button type="button" disabled={saving} onClick={() => void save()} className="editorial-primary-button">
+            <Save01 size={17} />
+            <TransitionText stateKey={completedAction ? `completed-${completedAction}` : saving ? `saving-${savingAction}` : `idle-${primaryActionLabel}`}>
+              {primaryActionLabel}
+            </TransitionText>
+          </button>
         </div>
       </header>
 
