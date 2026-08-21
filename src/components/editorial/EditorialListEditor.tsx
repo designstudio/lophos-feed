@@ -218,6 +218,7 @@ export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
         </section>
         <EditorialInspector
           draft={draft}
+          slugLocked={Boolean(record?.published_at) || record?.status === 'published'}
           selectedImage={selectedImage}
           onChange={updateDraft}
           onUploadImage={uploadImage}

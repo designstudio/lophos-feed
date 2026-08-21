@@ -57,7 +57,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   const db = getSupabaseAdmin()
   const { data: existing, error: existingError } = await db
     .from('editorial_lists')
-    .select('id, published_at')
+    .select('id, slug, status, published_at')
     .eq('id', id)
     .maybeSingle()
 
@@ -68,6 +68,10 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   if (!existing) return NextResponse.json({ error: 'Lista não encontrada.' }, { status: 404 })
 
   const updates: Record<string, unknown> = { ...validation.value }
+  const slugIsLocked = Boolean(existing.published_at) || existing.status === 'published'
+  if (slugIsLocked && updates.slug !== undefined) {
+    updates.slug = existing.slug
+  }
   if (updates.status === 'published' && !existing.published_at) {
     updates.published_at = new Date().toISOString()
   }

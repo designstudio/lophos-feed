@@ -51,6 +51,7 @@ function TagInput({ label, value, helper, placeholder = 'Separe com vírgulas', 
 
 export function EditorialInspector({
   draft,
+  slugLocked,
   selectedImage,
   onChange,
   onUploadImage,
@@ -59,6 +60,7 @@ export function EditorialInspector({
   onCloseImageInspector,
 }: {
   draft: EditorialDraft
+  slugLocked: boolean
   selectedImage: EditorialImageAttributes | null
   onChange: (patch: Partial<EditorialDraft>) => void
   onUploadImage: (file: File) => Promise<string>
@@ -253,10 +255,20 @@ export function EditorialInspector({
         <TagInput label="Tags de SEO" value={draft.seoTags} helper="Termos usados para descrever o conteúdo." onChange={(seoTags) => onChange({ seoTags })} />
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-ink-primary">Endereço</span>
-          <div className="flex rounded-lg border border-border bg-[var(--input-bg)] focus-within:border-border-strong focus-within:shadow-[0_0_0_3px_var(--input-halo)]">
+          <div className="flex rounded-lg border border-border bg-[var(--input-bg)] focus-within:border-border-strong focus-within:shadow-[0_0_0_3px_var(--input-halo)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
             <span className="py-2.5 pl-3 text-sm text-ink-muted">/lists/</span>
-            <input className="min-w-0 flex-1 bg-transparent py-2.5 pr-3 text-sm text-ink-primary outline-none" value={draft.slug} placeholder="slug-da-lista" onChange={(event) => onChange({ slug: event.target.value })} />
+            <input
+              className="min-w-0 flex-1 bg-transparent py-2.5 pr-3 text-sm text-ink-primary outline-none disabled:cursor-not-allowed"
+              value={draft.slug}
+              placeholder="slug-da-lista"
+              disabled={slugLocked}
+              aria-describedby="editorial-list-slug-helper"
+              onChange={(event) => onChange({ slug: event.target.value })}
+            />
           </div>
+          <span id="editorial-list-slug-helper" className="mt-1.5 block text-xs leading-relaxed text-ink-muted">
+            {slugLocked ? 'Endereço permanente desde a primeira publicação.' : 'O endereço será permanente depois da primeira publicação.'}
+          </span>
         </label>
       </section>
 
