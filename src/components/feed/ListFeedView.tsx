@@ -61,7 +61,14 @@ function readFeedCache(): FeedCache | null {
       && Number.isFinite(cache.scrollTop)
       && cache.scrollTop >= 0
 
-    if (isCurrent) return cache as FeedCache
+    if (isCurrent) {
+      const currentCache = cache as FeedCache
+      return {
+        ...currentCache,
+        nextCursor: currentCache.items.length < FEED_CACHE_MAX_ITEMS ? currentCache.nextCursor : null,
+        hasMore: currentCache.hasMore && currentCache.items.length < FEED_CACHE_MAX_ITEMS,
+      }
+    }
   } catch {}
 
   sessionStorage.removeItem(FEED_CACHE_KEY)
@@ -84,6 +91,8 @@ function writeFeedCache(cache: Omit<FeedCache, 'version' | 'timestamp'>) {
   try {
     sessionStorage.setItem(FEED_CACHE_KEY, JSON.stringify({
       ...cache,
+      nextCursor: cache.items.length < FEED_CACHE_MAX_ITEMS ? cache.nextCursor : null,
+      hasMore: cache.hasMore && cache.items.length < FEED_CACHE_MAX_ITEMS,
       version: FEED_CACHE_VERSION,
       timestamp: Date.now(),
     } satisfies FeedCache))
@@ -473,7 +482,15 @@ export default function ListFeedView() {
   }, [])
 
   const loadNextPage = useCallback(async () => {
-    if (loadingMoreRef.current || !hasMoreRef.current || !nextCursorRef.current || items.length >= FEED_CACHE_MAX_ITEMS) return
+    if (items.length >= FEED_CACHE_MAX_ITEMS) {
+      setHasMore(false)
+      hasMoreRef.current = false
+      setNextCursor(null)
+      nextCursorRef.current = null
+      return
+    }
+
+    if (loadingMoreRef.current || !hasMoreRef.current || !nextCursorRef.current) return
 
     loadingMoreRef.current = true
     setLoadingMore(true)
@@ -553,6 +570,14 @@ export default function ListFeedView() {
       scrollTop: scrollRef.current?.scrollTop ?? scrollTopRef.current,
     })
   }, [activeFilter, hasMore, initialized, items, nextCursor, topics])
+
+  useEffect(() => {
+    if (items.length < FEED_CACHE_MAX_ITEMS) return
+    setHasMore(false)
+    hasMoreRef.current = false
+    setNextCursor(null)
+    nextCursorRef.current = null
+  }, [items.length])
 
   useEffect(() => { if (isLoaded && isSignedIn) fetchFeed() }, [isLoaded, isSignedIn])
 
@@ -773,7 +798,7 @@ export default function ListFeedView() {
                       onReactionChange={editorialLists.onReactionChange}
                     />
                   ))}
-                  {hasData && hasMore && !loadMoreError && (
+                  {hasData && hasMore && items.length < FEED_CACHE_MAX_ITEMS && !loadMoreError && (
                     <div ref={sentinelRef} aria-live="polite" aria-busy={loadingMore}>
                       <SkeletonBlock />
                     </div>

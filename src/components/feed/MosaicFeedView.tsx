@@ -83,8 +83,8 @@ function readCachedFeed(): CachedFeed | null {
     ) return null
     return {
       items: cache.items,
-      nextCursor: cache.nextCursor,
-      hasMore: cache.hasMore,
+      nextCursor: cache.items.length < FEED_CACHE_MAX_ITEMS ? cache.nextCursor : null,
+      hasMore: cache.hasMore && cache.items.length < FEED_CACHE_MAX_ITEMS,
       topics: cache.topics.filter((topic): topic is string => typeof topic === 'string'),
       activeFilter: cache.activeFilter,
     }
@@ -200,8 +200,8 @@ function writeMosaicFeedCache(
       version: FEED_CACHE_VERSION,
       timestamp: Date.now(),
       items,
-      nextCursor,
-      hasMore,
+      nextCursor: items.length < FEED_CACHE_MAX_ITEMS ? nextCursor : null,
+      hasMore: hasMore && items.length < FEED_CACHE_MAX_ITEMS,
       topics,
       activeFilter,
       scrollTop: typeof existing.scrollTop === 'number' ? existing.scrollTop : 0,
@@ -533,11 +533,18 @@ export default function MosaicFeedView() {
   }, [initialLoadAttempt])
 
   const loadNextPage = useCallback(async () => {
+    if (items.length >= FEED_CACHE_MAX_ITEMS) {
+      setHasMore(false)
+      hasMoreRef.current = false
+      setNextCursor(null)
+      nextCursorRef.current = null
+      return
+    }
+
     if (
       loadingMoreRef.current
       || !hasMoreRef.current
       || !nextCursorRef.current
-      || items.length >= FEED_CACHE_MAX_ITEMS
     ) return
 
     loadingMoreRef.current = true
@@ -578,6 +585,14 @@ export default function MosaicFeedView() {
     if (items.length === 0) return
     writeMosaicFeedCache(items, nextCursor, hasMore, topics, activeFilter)
   }, [activeFilter, hasMore, items, nextCursor, topics])
+
+  useEffect(() => {
+    if (items.length < FEED_CACHE_MAX_ITEMS) return
+    setHasMore(false)
+    hasMoreRef.current = false
+    setNextCursor(null)
+    nextCursorRef.current = null
+  }, [items.length])
 
   useEffect(() => {
     if (loading || items.length === 0 || restoredScrollTopRef.current === null || !scrollRef.current) return
@@ -840,7 +855,7 @@ export default function MosaicFeedView() {
                   listReactions={editorialLists.reactions}
                   onListReactionChange={editorialLists.onReactionChange}
                 />
-                {hasMore && !loadMoreError && (
+                {hasMore && items.length < FEED_CACHE_MAX_ITEMS && !loadMoreError && (
                   <div
                     ref={setPaginationSentinel}
                     className="mosaic-feed-pagination-skeleton"
