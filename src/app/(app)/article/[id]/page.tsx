@@ -64,12 +64,18 @@ const getArticle = cache(async (id: string): Promise<NewsItem | null> => {
 })
 
 function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || 'https://lophos.space'
+  return (process.env.NEXT_PUBLIC_APP_URL || 'https://lophos.space').replace(/\/$/, '')
 }
 
 function truncateDescription(text: string, maxLength = 180) {
   if (text.length <= maxLength) return text
   return `${text.slice(0, maxLength - 3).trimEnd()}...`
+}
+
+function getArticleImageUrl(article: NewsItem, siteUrl: string) {
+  return article.imageUrl
+    ? `${siteUrl}/api/image-proxy?url=${encodeURIComponent(article.imageUrl)}`
+    : null
 }
 
 export async function generateMetadata({
@@ -91,9 +97,7 @@ export async function generateMetadata({
   const url = `${siteUrl}/article/${article.id}`
   const title = `${article.title} - Lophos`
   const description = truncateDescription(article.summary || 'Leia esta noticia no Lophos.')
-  const imageUrl = article.imageUrl
-    ? `${siteUrl}/api/image-proxy?url=${encodeURIComponent(article.imageUrl)}`
-    : null
+  const imageUrl = getArticleImageUrl(article, siteUrl)
   const images = imageUrl
     ? [
         {
@@ -140,5 +144,53 @@ export default async function ArticlePage({
     notFound()
   }
 
-  return <ArticlePageClient key={id} initialItem={article} />
+  const siteUrl = getSiteUrl()
+  const url = `${siteUrl}/article/${article.id}`
+  const imageUrl = getArticleImageUrl(article, siteUrl)
+  const citations = (article.sources || []).map((source) => source.url).filter(Boolean)
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    '@id': `${url}#newsarticle`,
+    headline: article.title,
+    description: truncateDescription(article.summary || 'Leia esta noticia no Lophos.'),
+    url,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': url,
+    },
+    image: imageUrl ? [imageUrl] : undefined,
+    datePublished: article.publishedAt,
+    author: {
+      '@type': 'Organization',
+      name: 'Lophos',
+      url: siteUrl,
+    },
+    publisher: {
+      '@type': 'Organization',
+      '@id': `${siteUrl}/#organization`,
+      name: 'Lophos',
+      url: siteUrl,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${siteUrl}/android-chrome-512x512.png`,
+        width: 512,
+        height: 512,
+      },
+    },
+    inLanguage: 'pt-BR',
+    articleSection: article.topic,
+    keywords: article.matchedTopics?.length ? article.matchedTopics.join(', ') : undefined,
+    citation: citations.length ? citations : undefined,
+  }
+
+  return (
+    <>
+      <ArticlePageClient key={id} initialItem={article} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }}
+      />
+    </>
+  )
 }
