@@ -74,18 +74,17 @@ function recordToDraft(record: EditorialListRecord): EditorialDraft {
   }
 }
 
-export function EditorialListEditor({ listId, currentAuthor }: {
+export function EditorialListEditor({ listId, initialRecord, currentAuthor }: {
   listId?: string
+  initialRecord?: EditorialListRecord
   currentAuthor: { name: string; imageUrl: string | null }
 }) {
   const router = useRouter()
   const richTextEditorRef = useRef<EditorialRichTextEditorHandle>(null)
-  const [draft, setDraft] = useState<EditorialDraft>(EMPTY_DRAFT)
-  const [record, setRecord] = useState<EditorialListRecord | null>(null)
-  const [loading, setLoading] = useState(Boolean(listId))
+  const [draft, setDraft] = useState<EditorialDraft>(() => initialRecord ? recordToDraft(initialRecord) : EMPTY_DRAFT)
+  const [record, setRecord] = useState<EditorialListRecord | null>(initialRecord ?? null)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
-  const [loadError, setLoadError] = useState('')
   const [toast, setToast] = useState<AppToastMessage | null>(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<EditorialImageAttributes | null>(null)
@@ -98,22 +97,6 @@ export function EditorialListEditor({ listId, currentAuthor }: {
       setToast(JSON.parse(pendingToast) as AppToastMessage)
     } catch {}
   }, [])
-
-  useEffect(() => {
-    if (!listId) return
-    fetch(`/api/admin/lists/${listId}`)
-      .then(async (response) => {
-        const data = await response.json()
-        if (!response.ok) throw new Error(data.error || 'Não foi possível carregar a lista.')
-        return data.list as EditorialListRecord
-      })
-      .then((list) => {
-        setRecord(list)
-        setDraft(recordToDraft(list))
-      })
-      .catch((loadError) => setLoadError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar a lista.'))
-      .finally(() => setLoading(false))
-  }, [listId])
 
   const updateDraft = useCallback((patch: Partial<EditorialDraft>) => {
     setDraft((current) => ({ ...current, ...patch }))
@@ -168,10 +151,6 @@ export function EditorialListEditor({ listId, currentAuthor }: {
     }
   }
 
-  if (loading) {
-    return <main className="flex flex-1 items-center justify-center text-sm text-ink-muted">Carregando editor…</main>
-  }
-
   const authorName = record?.author_name || currentAuthor.name
   const authorImageUrl = record?.author_image_url || currentAuthor.imageUrl
   const isPublished = record?.status === 'published'
@@ -191,6 +170,7 @@ export function EditorialListEditor({ listId, currentAuthor }: {
         : draft.status === 'archived'
           ? 'Arquivado'
           : 'Rascunho'
+  const headerTitle = draft.title.trim() || record?.title || 'Nova lista'
 
   return (
     <main className="editorial-cms-shell">
@@ -198,7 +178,7 @@ export function EditorialListEditor({ listId, currentAuthor }: {
         <div className="flex min-w-0 items-center gap-3">
           <Link href="/admin/lists" className="editorial-back-button" aria-label="Voltar para listas"><ArrowLeft size={17} /></Link>
           <div className="flex min-w-0 items-center gap-2.5">
-            <h1 className="truncate text-sm font-medium text-ink-primary">Nova lista</h1>
+            <h1 className="max-w-48 truncate text-sm font-medium text-ink-primary sm:max-w-xs md:max-w-md" title={headerTitle}>{headerTitle}</h1>
             <span className="h-1 w-1 flex-none rounded-full bg-ink-muted" aria-hidden="true" />
             <span className="truncate text-sm text-ink-muted">{statusLabel}</span>
           </div>
@@ -208,8 +188,6 @@ export function EditorialListEditor({ listId, currentAuthor }: {
           <button type="button" disabled={saving} onClick={() => void save()} className="editorial-primary-button"><Save01 size={17} />{primaryActionLabel}</button>
         </div>
       </header>
-
-      {loadError ? <div className="border-b border-border bg-[var(--color-danger-hover)] px-5 py-3 text-center text-sm text-[var(--color-danger)]">{loadError}</div> : null}
 
       <div className="editorial-cms-body">
         <section className="editorial-writing-area">

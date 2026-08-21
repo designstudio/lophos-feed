@@ -100,16 +100,16 @@ export async function DELETE(_req: NextRequest, context: RouteContext) {
 
   const { data, error } = await getSupabaseAdmin()
     .from('editorial_lists')
-    .update({ status: 'archived' })
+    .delete()
     .eq('id', id)
-    .select('id, status, updated_at')
+    .select('id')
     .maybeSingle()
 
   if (error) {
-    console.error('[admin/lists/:id] archive failed:', error)
-    return NextResponse.json({ error: 'Não foi possível arquivar a lista.' }, { status: 500 })
+    console.error('[admin/lists/:id] delete failed:', error)
+    return NextResponse.json({ error: 'Não foi possível excluir a lista.' }, { status: 500 })
   }
   if (!data) return NextResponse.json({ error: 'Lista não encontrada.' }, { status: 404 })
 
-  return NextResponse.json({ list: data })
+  return NextResponse.json({ deleted: true, id: data.id })
 }
