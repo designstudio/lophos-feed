@@ -6,6 +6,7 @@ import { toFeedItem } from '@/lib/feed-item'
 import { FeedItem } from '@/lib/types'
 import { loadTopicBlockSignals } from '@/lib/topic-signals'
 import { getInterestTopicFilters, toInterestTopicLabels } from '@/lib/default-interest-topics'
+import { expandMatchedTopicCatalogFilters } from '@/lib/matched-topic-catalog'
 import {
   decodeFeedCursor,
   encodeFeedCursor,
@@ -192,12 +193,13 @@ export async function POST(req: NextRequest) {
         }
 
         const topicFilters = getInterestTopicFilters(topics)
+        const expandedMatchedTopics = await expandMatchedTopicCatalogFilters(db, topicFilters.matchedTopics)
 
         if (!cursor) {
           const blockSignals = await loadTopicBlockSignals(
             db,
             userId,
-            [...topicFilters.articleTopics, ...topicFilters.matchedTopics],
+            [...topicFilters.articleTopics, ...expandedMatchedTopics],
           )
           const customTopicIsExplicitlySelected = hasExplicitTopicFilter
             && topicFilters.matchedTopics.length > 0
@@ -205,19 +207,20 @@ export async function POST(req: NextRequest) {
             ? blockSignals.excludedTopics
             : [...new Set([...blockSignals.excludedTopics, ...blockSignals.negativeTopics])]
         }
+        const expandedBlockedTopics = await expandMatchedTopicCatalogFilters(db, blockedTopics)
         if (requestAborted) return
         console.log(
-          `[feed] calling get_personalized_feed_page_v2 with article_topics=${JSON.stringify(topicFilters.articleTopics)}, matched_topics=${JSON.stringify(topicFilters.matchedTopics)}, days=${days}, cursor=${cursor ? 'yes' : 'no'}`,
+          `[feed] calling get_personalized_feed_page_v2 with article_topics=${JSON.stringify(topicFilters.articleTopics)}, matched_topics=${JSON.stringify(expandedMatchedTopics)}, days=${days}, cursor=${cursor ? 'yes' : 'no'}`,
         )
-        console.log(`[feed] blocked topics=${JSON.stringify(blockedTopics)}`)
+        console.log(`[feed] blocked topics=${JSON.stringify(expandedBlockedTopics)}`)
         const queryStartedAt = performance.now()
         const { data: allArticles, error } = await db
           .rpc('get_personalized_feed_page_v2', {
             p_user_id: userId,
             p_topics: topicFilters.articleTopics,
-            p_custom_topics: topicFilters.matchedTopics,
+            p_custom_topics: expandedMatchedTopics,
             p_days: days,
-            p_excluded_topics: blockedTopics,
+            p_excluded_topics: expandedBlockedTopics,
             p_snapshot_at: snapshotAt,
             p_cursor_rank: cursor?.rank ?? null,
             p_cursor_sort_at: cursor?.sortAt ?? null,

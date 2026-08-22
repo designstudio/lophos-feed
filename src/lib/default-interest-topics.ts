@@ -10,7 +10,7 @@ export const INTEREST_TOPIC_CATEGORIES = [
   { label: 'Horror', aliases: ['horror'] },
   { label: 'Livros', aliases: ['books'] },
   { label: 'Economia', aliases: ['economia'] },
-  { label: 'Games', aliases: ['games', 'valorant', 'Games'] },
+  { label: 'Games', aliases: ['games', 'Games'] },
   { label: 'Esports', aliases: ['esports', 'e-sports'] },
   { label: 'Filmes e Séries', aliases: ['movies', 'cinema', 'Cinema'] },
   { label: 'Educação', aliases: ['educacao'] },
@@ -38,6 +38,20 @@ function normalizeTopicLookupKey(value: string): string {
 
 const categoryByTopicKey = new Map<string, InterestTopicCategory>()
 
+const CUSTOM_INTEREST_TOPIC_ALIASES = [
+  {
+    label: 'LGBTQIAPN+',
+    searchTerm: 'lgbt',
+    aliases: ['lgbt', 'lgbt+', 'lgbtq', 'lgbtq+', 'lgbtqia', 'lgbtqia+', 'lgbtqiapn', 'lgbtqiapn+'],
+  },
+] as const
+
+const customTopicByKey = new Map(
+  CUSTOM_INTEREST_TOPIC_ALIASES.flatMap((topic) =>
+    [topic.label, ...topic.aliases].map((value) => [normalizeTopicLookupKey(value), topic] as const),
+  ),
+)
+
 for (const category of INTEREST_TOPIC_CATEGORIES) {
   for (const value of [category.label, ...category.aliases]) {
     categoryByTopicKey.set(normalizeTopicLookupKey(value), category)
@@ -47,7 +61,16 @@ for (const category of INTEREST_TOPIC_CATEGORIES) {
 export function getInterestTopicLabel(value: string): string {
   const trimmedValue = value.trim()
   if (!trimmedValue) return ''
-  return categoryByTopicKey.get(normalizeTopicLookupKey(trimmedValue))?.label ?? trimmedValue
+  const lookupKey = normalizeTopicLookupKey(trimmedValue)
+  return categoryByTopicKey.get(lookupKey)?.label
+    ?? customTopicByKey.get(lookupKey)?.label
+    ?? trimmedValue
+}
+
+export function getCustomInterestTopicSearchTerm(value: string): string {
+  const trimmedValue = value.trim()
+  if (!trimmedValue) return ''
+  return customTopicByKey.get(normalizeTopicLookupKey(trimmedValue))?.searchTerm ?? trimmedValue
 }
 
 const TOPIC_LOWERCASE_WORDS = new Set([
@@ -66,7 +89,9 @@ const TOPIC_WORD_CAPITALIZATION: Record<string, string> = {
   ps5: 'PS5',
   rpg: 'RPG',
   tft: 'TFT',
+  valorant: 'Valorant',
   xbox: 'Xbox',
+  'lgbtqiapn+': 'LGBTQIAPN+',
 }
 
 function capitalizeTopicWord(word: string): string {
@@ -111,7 +136,9 @@ export function getInterestTopicFilters(values: string[]): InterestTopicFilters 
     if (category) {
       articleTopics.push(category.label, ...category.aliases)
     } else {
-      matchedTopics.push(trimmedValue, trimmedValue.toLocaleLowerCase('pt-BR'))
+      const label = getInterestTopicLabel(trimmedValue)
+      const searchTerm = getCustomInterestTopicSearchTerm(label)
+      matchedTopics.push(label, label.toLocaleLowerCase('pt-BR'), searchTerm.toLocaleLowerCase('pt-BR'))
     }
   }
 
@@ -135,6 +162,9 @@ export function getMatchingInterestTopicLabel(
       return [category.label, ...category.aliases]
         .some((candidate) => articleTopicKey === normalizeTopicLookupKey(candidate))
     }
-    return matchedTopicKeys.has(normalizeTopicLookupKey(selectedTopic))
+    const selectedTopicKey = normalizeTopicLookupKey(getCustomInterestTopicSearchTerm(selectedTopic))
+    return [...matchedTopicKeys].some((matchedTopicKey) =>
+      matchedTopicKey === selectedTopicKey || matchedTopicKey.includes(selectedTopicKey),
+    )
   })
 }

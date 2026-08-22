@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { NewsItem } from '@/lib/types'
 import { getInterestTopicFilters } from '@/lib/default-interest-topics'
+import { expandMatchedTopicCatalogFilters } from '@/lib/matched-topic-catalog'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   const searchQuery = `%${q}%`
   const topicFilters = getInterestTopicFilters(userTopics)
+  const expandedMatchedTopics = await expandMatchedTopicCatalogFilters(db, topicFilters.matchedTopics)
 
   const { data: hiddenRows, error: hiddenError } = await db
     .from('user_reactions')
@@ -53,8 +55,8 @@ export async function GET(req: NextRequest) {
     .limit(fetchLimit)
 
   const queries = [
-    ...(topicFilters.matchedTopics.length > 0
-      ? [buildSearchQuery().overlaps('matched_topics', topicFilters.matchedTopics)]
+    ...(expandedMatchedTopics.length > 0
+      ? [buildSearchQuery().overlaps('matched_topics', expandedMatchedTopics)]
       : []),
     ...(topicFilters.articleTopics.length > 0
       ? [buildSearchQuery().in('topic', topicFilters.articleTopics)]

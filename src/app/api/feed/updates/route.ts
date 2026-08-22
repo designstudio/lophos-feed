@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase'
 import { toFeedItem } from '@/lib/feed-item'
 import { loadBlockedTopics } from '@/lib/topic-signals'
 import { getInterestTopicFilters } from '@/lib/default-interest-topics'
+import { expandMatchedTopicCatalogFilters } from '@/lib/matched-topic-catalog'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,12 +21,13 @@ export async function POST(req: NextRequest) {
 
   const db = getSupabaseAdmin()
   const topicFilters = getInterestTopicFilters(topics)
+  const expandedMatchedTopics = await expandMatchedTopicCatalogFilters(db, topicFilters.matchedTopics)
   const blockedTopics = await loadBlockedTopics(
     db,
     userId,
-    [...topicFilters.articleTopics, ...topicFilters.matchedTopics],
+    [...topicFilters.articleTopics, ...expandedMatchedTopics],
   )
-  const blockedSet = new Set(blockedTopics)
+  const blockedSet = new Set(await expandMatchedTopicCatalogFilters(db, blockedTopics))
 
   // Check if there are articles newer than `since` matching user's topics
   const buildUpdatesQuery = () => db
@@ -36,8 +38,8 @@ export async function POST(req: NextRequest) {
     .limit(50)
 
   const queries = [
-    ...(topicFilters.matchedTopics.length > 0
-      ? [buildUpdatesQuery().overlaps('matched_topics', topicFilters.matchedTopics)]
+    ...(expandedMatchedTopics.length > 0
+      ? [buildUpdatesQuery().overlaps('matched_topics', expandedMatchedTopics)]
       : []),
     ...(topicFilters.articleTopics.length > 0
       ? [buildUpdatesQuery().in('topic', topicFilters.articleTopics)]
