@@ -6,7 +6,7 @@ import {
   getInterestTopicLabel,
   INTEREST_TOPIC_CATEGORIES,
 } from '@/lib/default-interest-topics'
-import { getCanonicalTopicSuggestion, getCatalogSearchTerm } from '@/lib/matched-topic-catalog'
+import { getCanonicalTopicSuggestions, getCatalogSearchTerm } from '@/lib/matched-topic-catalog'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,16 +46,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ suggestions: [] }, { status: 500 })
   }
 
-  const catalogTopics = (data ?? [])
-    .map((row: any) => String(row.topic ?? '').trim())
-    .filter(Boolean)
-  const canonicalCatalogTopic = catalogTopics.length > 0
-    ? getCanonicalTopicSuggestion(query, catalogTopics)
-    : ''
-  const catalogSuggestions = canonicalCatalogTopic
-    && (includeDefaults || getInterestTopicFilters([canonicalCatalogTopic]).articleTopics.length === 0)
-      ? [includeDefaults ? getInterestTopicLabel(canonicalCatalogTopic) : canonicalCatalogTopic]
-      : []
+  const catalogTopics = (data ?? []).flatMap((row: any) => {
+    const topic = String(row.topic ?? '').trim()
+    return topic ? [{ topic, article_count: Number(row.article_count ?? 0) }] : []
+  })
+  const catalogSuggestions = catalogTopics.length > 0
+    ? getCanonicalTopicSuggestions(query, catalogTopics)
+        .filter((topic) => includeDefaults || getInterestTopicFilters([topic]).articleTopics.length === 0)
+        .map((topic) => includeDefaults ? getInterestTopicLabel(topic) : topic)
+    : []
 
   const normalizedQuery = normalizeSearchValue(query)
   const defaultSuggestions = includeDefaults

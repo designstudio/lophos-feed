@@ -8,40 +8,48 @@ function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, '\\$&')
 }
 
-function normalizeToken(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase('pt-BR')
-    .replace(/[^a-z0-9]+/g, '')
-}
-
 export function getCatalogSearchTerm(value: string): string {
   return getCustomInterestTopicSearchTerm(value).trim().slice(0, 80)
 }
 
-export function getCanonicalTopicSuggestion(query: string, catalogTopics: string[]): string {
-  const knownLabel = getInterestTopicLabel(query)
-  if (knownLabel !== query.trim()) return knownLabel
+type CatalogTopic = {
+  topic: string
+  article_count: number
+}
 
-  const queryToken = normalizeToken(query)
-  if (!queryToken) return formatInterestTopicLabel(query)
+function normalizeTopicPhrase(value: string): string {
+  return value
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('pt-BR')
+    .replace(/\s+/g, ' ')
+}
 
-  const tokenCounts = new Map<string, { count: number; value: string }>()
-  for (const topic of catalogTopics) {
-    const uniqueTokens = new Set(topic.split(/\s+/).map((token) => token.trim()).filter(Boolean))
-    for (const token of uniqueTokens) {
-      const normalized = normalizeToken(token)
-      if (!normalized || (!normalized.includes(queryToken) && !queryToken.includes(normalized))) continue
-      const current = tokenCounts.get(normalized)
-      tokenCounts.set(normalized, { count: (current?.count ?? 0) + 1, value: token })
-    }
-  }
+export function getCanonicalTopicSuggestions(query: string, catalogTopics: CatalogTopic[]): string[] {
+  const trimmedQuery = query.trim()
+  const canonicalLabel = formatInterestTopicLabel(getInterestTopicLabel(trimmedQuery))
+  if (!canonicalLabel) return []
 
-  const bestToken = [...tokenCounts.values()]
-    .sort((left, right) => right.count - left.count || left.value.length - right.value.length)[0]?.value
+  const queryKey = normalizeTopicPhrase(trimmedQuery)
+  const canonicalKey = normalizeTopicPhrase(canonicalLabel)
 
-  return formatInterestTopicLabel(bestToken ?? query)
+  // Explicit aliases such as "lgbt" are intentionally represented only by
+  // their umbrella label instead of leaking every editorial keyword.
+  if (queryKey !== canonicalKey) return [canonicalLabel]
+
+  const hasExactCatalogTopic = catalogTopics.some(({ topic }) =>
+    normalizeTopicPhrase(topic) === queryKey,
+  )
+  if (hasExactCatalogTopic) return [canonicalLabel]
+
+  const childSuggestions = catalogTopics
+    .filter(({ topic, article_count }) =>
+      article_count >= 2 && normalizeTopicPhrase(topic).startsWith(`${queryKey} `),
+    )
+    .map(({ topic }) => formatInterestTopicLabel(topic))
+
+  return [...new Set([canonicalLabel, ...childSuggestions])].slice(0, 8)
 }
 
 export async function expandMatchedTopicCatalogFilters(db: any, topics: string[]): Promise<string[]> {
