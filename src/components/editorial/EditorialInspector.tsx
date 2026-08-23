@@ -162,6 +162,8 @@ export function EditorialInspector({
         ref={detailPageRef}
         className="t-page editorial-inspector-page"
         data-page-id="2"
+        data-can-scroll-up={showingDetailInspector && scrollState.canScrollUp}
+        data-can-scroll-down={showingDetailInspector && scrollState.canScrollDown}
         aria-hidden={!showingDetailInspector}
         inert={!showingDetailInspector}
         onScroll={updateScrollState}
@@ -309,6 +311,8 @@ export function EditorialInspector({
         ref={listPageRef}
         className="t-page editorial-inspector-page"
         data-page-id="1"
+        data-can-scroll-up={!showingDetailInspector && scrollState.canScrollUp}
+        data-can-scroll-down={!showingDetailInspector && scrollState.canScrollDown}
         aria-hidden={showingDetailInspector}
         inert={showingDetailInspector}
         onScroll={updateScrollState}
@@ -397,8 +401,6 @@ export function EditorialInspector({
       </section>
       </div>
     </aside>
-    {scrollState.canScrollUp ? <div className="editorial-inspector-scroll-cue editorial-inspector-scroll-cue--top" aria-hidden="true" /> : null}
-    {scrollState.canScrollDown ? <div className="editorial-inspector-scroll-cue editorial-inspector-scroll-cue--bottom" aria-hidden="true" /> : null}
     </div>
   )
 }

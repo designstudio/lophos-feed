@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { motion, useReducedMotion } from 'framer-motion'
 import { formatDistanceToNow } from 'date-fns'
@@ -7,10 +8,12 @@ import { ptBR } from 'date-fns/locale'
 import { FeedViewSwitcher, usePreferredFeedView } from '@/components/FeedViewSwitcher'
 import { IconLists } from '@/components/icons'
 import { TopicIcon } from '@/components/TopicIcon'
+import { EditorialListCardReactions } from './EditorialListCardReactions'
 import { EditorialListShowcaseCard } from './EditorialListShowcaseCard'
 import type { EditorialListCardItem } from '@/lib/editorial-list-card'
 
 export type EditorialListCatalogItem = EditorialListCardItem
+type ListReaction = 'like' | 'dislike'
 
 function capitalize(value: string) {
   const normalized = value.trim()
@@ -31,7 +34,11 @@ function PublicationMeta({ list }: { list: EditorialListCatalogItem }) {
   )
 }
 
-function MosaicLists({ lists }: { lists: EditorialListCatalogItem[] }) {
+function MosaicLists({ lists, reactions, onReactionChange }: {
+  lists: EditorialListCatalogItem[]
+  reactions: Record<string, ListReaction>
+  onReactionChange: (id: string, reaction: ListReaction | null) => void
+}) {
   const blocks: Array<{ columns: EditorialListCatalogItem[][]; reversed: boolean }> = []
 
   for (let index = 0; index < lists.length; index += 5) {
@@ -60,6 +67,8 @@ function MosaicLists({ lists }: { lists: EditorialListCatalogItem[] }) {
                   list={list}
                   animationIndex={blockIndex * 5 + columnIndex * 2 + cardIndex}
                   variant={((!reversed && columnIndex === 0) || (reversed && columnIndex === 2)) && cardIndex === 0 ? 'feature' : 'media'}
+                  initialReaction={reactions[list.id] ?? null}
+                  onReactionChange={onReactionChange}
                 />
               ))}
             </div>
@@ -70,7 +79,12 @@ function MosaicLists({ lists }: { lists: EditorialListCatalogItem[] }) {
   )
 }
 
-function ListCard({ list, animationIndex }: { list: EditorialListCatalogItem; animationIndex: number }) {
+function ListCard({ list, animationIndex, initialReaction, onReactionChange }: {
+  list: EditorialListCatalogItem
+  animationIndex: number
+  initialReaction: ListReaction | null
+  onReactionChange: (id: string, reaction: ListReaction | null) => void
+}) {
   const reduceMotion = useReducedMotion()
   return (
     <motion.article
@@ -82,29 +96,53 @@ function ListCard({ list, animationIndex }: { list: EditorialListCatalogItem; an
         ease: [0.22, 1, 0.36, 1],
       }}
     >
-      <Link href={`/lists/${list.slug}`} className="lists-catalog-row">
-        {list.cover_image_url ? (
-          <div className="lists-catalog-row__image">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/api/image-proxy?url=${encodeURIComponent(list.cover_image_url)}`} alt={list.cover_image_alt || ''} />
+      <div className="lists-catalog-row-shell">
+        <Link href={`/lists/${list.slug}`} className="lists-catalog-row">
+          {list.cover_image_url ? (
+            <div className="lists-catalog-row__image">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/image-proxy?url=${encodeURIComponent(list.cover_image_url)}`} alt={list.cover_image_alt || ''} />
+            </div>
+          ) : <div className="lists-catalog-row__image lists-catalog-row__image--empty"><IconLists size={24} /></div>}
+          <div className="lists-catalog-row__content">
+            <div className="category-topic-pill">
+              <TopicIcon topic={list.topic} />
+              <span>{capitalize(list.topic)}</span>
+            </div>
+            <h2>{list.title}</h2>
+            {list.seo_description ? <p>{list.seo_description}</p> : null}
+            <PublicationMeta list={list} />
           </div>
-        ) : <div className="lists-catalog-row__image lists-catalog-row__image--empty"><IconLists size={24} /></div>}
-        <div className="lists-catalog-row__content">
-          <div className="category-topic-pill">
-            <TopicIcon topic={list.topic} />
-            <span>{capitalize(list.topic)}</span>
-          </div>
-          <h2>{list.title}</h2>
-          {list.seo_description ? <p>{list.seo_description}</p> : null}
-          <PublicationMeta list={list} />
+        </Link>
+        <div className="lists-catalog-row__actions">
+          <EditorialListCardReactions
+            listId={list.id}
+            initialReaction={initialReaction}
+            onReactionChange={onReactionChange}
+          />
         </div>
-      </Link>
+      </div>
     </motion.article>
   )
 }
 
-export function EditorialListsCatalog({ lists }: { lists: EditorialListCatalogItem[] }) {
+export function EditorialListsCatalog({ lists, initialReactions = {} }: {
+  lists: EditorialListCatalogItem[]
+  initialReactions?: Record<string, ListReaction>
+}) {
   const view = usePreferredFeedView()
+  const [reactions, setReactions] = useState<Record<string, ListReaction>>(initialReactions)
+
+  useEffect(() => setReactions(initialReactions), [initialReactions])
+
+  const handleReactionChange = (id: string, reaction: ListReaction | null) => {
+    setReactions((current) => {
+      const next = { ...current }
+      if (reaction) next[id] = reaction
+      else delete next[id]
+      return next
+    })
+  }
 
   return (
     <div className="editorial-page-scroll">
@@ -123,10 +161,18 @@ export function EditorialListsCatalog({ lists }: { lists: EditorialListCatalogIt
             </div>
           </div>
         ) : view === 'mosaic' ? (
-          <MosaicLists lists={lists} />
+          <MosaicLists lists={lists} reactions={reactions} onReactionChange={handleReactionChange} />
         ) : (
           <div className="lists-catalog-list">
-            {lists.map((list, index) => <ListCard key={list.id} list={list} animationIndex={index} />)}
+            {lists.map((list, index) => (
+              <ListCard
+                key={list.id}
+                list={list}
+                animationIndex={index}
+                initialReaction={reactions[list.id] ?? null}
+                onReactionChange={handleReactionChange}
+              />
+            ))}
           </div>
         )}
       </main>

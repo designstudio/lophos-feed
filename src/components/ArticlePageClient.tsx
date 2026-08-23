@@ -304,11 +304,11 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                       className="w-full mb-8 relative transform-gpu group cursor-zoom-in"
                       aria-label="Ampliar imagem da notícia"
                     >
-                      <div className="relative h-full overflow-hidden rounded-[1.5rem] shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform duration-150">
+                      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[1.5rem] bg-bg-secondary shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform duration-150">
                         <img
                           src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
                           alt={item.title}
-                          className="article-image w-full h-auto"
+                          className="h-full w-full object-cover"
                           onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
                         />
                       </div>

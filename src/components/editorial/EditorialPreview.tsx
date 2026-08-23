@@ -60,7 +60,7 @@ export function EditorialPreview({ draft, authorName, authorImageUrl, publishedA
 
         {draft.coverImageUrl ? (
           <figure className="mb-8">
-            <ZoomableEditorialImage src={draft.coverImageUrl} alt={draft.coverImageAlt} credit={draft.coverImageCredit} imageClassName="article-image h-auto w-full" />
+            <ZoomableEditorialImage src={draft.coverImageUrl} alt={draft.coverImageAlt} credit={draft.coverImageCredit} />
           </figure>
         ) : null}
 

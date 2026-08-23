@@ -183,7 +183,6 @@ export default async function PublishedEditorialListPage({ params }: {
                 src={list.cover_image_url}
                 alt={list.cover_image_alt || ''}
                 credit={list.cover_image_credit || undefined}
-                imageClassName="article-image h-auto w-full"
               />
             </figure>
           ) : null}

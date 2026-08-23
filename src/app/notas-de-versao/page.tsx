@@ -3,6 +3,28 @@ import { LegalPage } from '@/components/LegalPage'
 
 const RELEASES = [
   {
+    date: '22 ago 2026',
+    sections: [
+      {
+        title: 'Novidades',
+        items: [
+          'O catálogo de listas agora permite curtir, descurtir ou indicar que um conteúdo não interessa tanto na visualização em mosaico quanto na visualização em lista.',
+          'As reações salvas das listas já chegam preenchidas na primeira exibição da página, sem atraso visual após o carregamento.',
+        ],
+      },
+      {
+        title: 'Melhorias e correções',
+        items: [
+          'Simplificamos o autocomplete de tópicos para priorizar termos abrangentes e manter sugestões compostas relevantes, funcionando de forma consistente para qualquer tema pesquisado.',
+          'Reservamos o espaço das imagens antes do carregamento para reduzir saltos de conteúdo em artigos e listas editoriais.',
+          'A sidebar de criação de listas agora usa um fade discreto para indicar quando ainda existe conteúdo acima ou abaixo da área visível.',
+          'Refinamos o feedback de pressão dos botões de configurações, preservando as reações que já usavam uma animação mais intensa.',
+          'Ajustamos quebras de texto no mosaico e a geometria de cantos aninhados em menus e seletores para deixar a leitura e o acabamento mais consistentes.',
+        ],
+      },
+    ],
+  },
+  {
     date: '21 ago 2026',
     sections: [
       {
