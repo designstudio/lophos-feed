@@ -1,6 +1,15 @@
 import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
+import { Outfit } from 'next/font/google'
 import './globals.css'
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-outfit',
+  fallback: ['system-ui', 'sans-serif'],
+})
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -35,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <ClerkProvider>
-      <html lang="pt-BR" suppressHydrationWarning>
+      <html lang="pt-BR" className={outfit.variable} suppressHydrationWarning>
         <head>
           <script dangerouslySetInnerHTML={{ __html: `
             (function() {

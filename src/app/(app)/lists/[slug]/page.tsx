@@ -10,6 +10,7 @@ import { ZoomableEditorialImage } from '@/components/editorial/ZoomableEditorial
 import type { EditorialDocument, EditorialListRecord, EditorialNode } from '@/components/editorial/editorial-types'
 import { TopicIcon } from '@/components/TopicIcon'
 import { getSupabaseAdmin } from '@/lib/supabase'
+import { clerkImageUrl } from '@/lib/image-url'
 
 const PUBLIC_LIST_COLUMNS = [
   'id',
@@ -172,7 +173,7 @@ export default async function PublishedEditorialListPage({ params }: {
             <span aria-hidden="true">·</span>
             {list.author_image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={list.author_image_url} alt="" className="h-5 w-5 rounded-full object-cover" />
+              <img src={clerkImageUrl(list.author_image_url, 64)} alt="" className="h-5 w-5 rounded-full object-cover" />
             ) : <span className="h-5 w-5 rounded-full bg-bg-tertiary" />}
             <span>Por {list.author_name}</span>
           </div>
@@ -183,6 +184,7 @@ export default async function PublishedEditorialListPage({ params }: {
                 src={list.cover_image_url}
                 alt={list.cover_image_alt || ''}
                 credit={list.cover_image_credit || undefined}
+                priority
               />
             </figure>
           ) : null}

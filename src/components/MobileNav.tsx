@@ -8,10 +8,12 @@ import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 import { IconFeed as Feed } from '@/components/icons'
 import { IconLists } from '@/components/icons'
 import { cn } from '@/lib/utils'
+import { useHydrated } from '@/hooks/useHydrated'
 
 export function MobileNav() {
   const pathname = usePathname()
   const { isSignedIn } = useAuth()
+  const signedIn = useHydrated() && Boolean(isSignedIn)
   const { openAuthPrompt } = useAuthPrompt()
   const dockedLayout = pathname.startsWith('/article/') || pathname.startsWith('/lists/')
   const isFeedActive = pathname === '/feed' || pathname === '/'
@@ -52,7 +54,7 @@ export function MobileNav() {
           }
         >
           <Feed size={20} />
-          {!dockedLayout && (isSignedIn ? 'Meu feed' : 'Feed')}
+          {!dockedLayout && (signedIn ? 'Meu feed' : 'Feed')}
         </Link>
 
         {!dockedLayout && (
@@ -70,7 +72,7 @@ export function MobileNav() {
         )}
 
         {!dockedLayout && (
-          isSignedIn ? <Link
+          signedIn ? <Link
             href="/settings"
             className={cn(
               'flex flex-col items-center gap-0.5 px-4 py-1.5 text-[10px] font-semibold transition-colors rounded-full whitespace-nowrap',

@@ -7,19 +7,24 @@ import { TopicIcon } from '@/components/TopicIcon'
 import { IconLists } from '@/components/icons'
 import { EditorialListCardReactions } from './EditorialListCardReactions'
 import type { EditorialListCatalogItem } from './EditorialListsCatalog'
+import { clerkImageUrl, imageProxySrcSet, imageProxyUrl } from '@/lib/image-url'
+
+const SHOWCASE_IMAGE_WIDTHS = [160, 320, 480, 640] as const
+const SHOWCASE_IMAGE_SIZES = '(max-width: 767px) 62vw, (max-width: 1023px) 31vw, 18rem'
 
 function capitalize(value: string) {
   const normalized = value.trim()
   return normalized ? normalized.charAt(0).toLocaleUpperCase('pt-BR') + normalized.slice(1) : normalized
 }
 
-export function EditorialListShowcaseCard({ list, animationIndex, variant, label = 'topic', initialReaction = null, onReactionChange }: {
+export function EditorialListShowcaseCard({ list, animationIndex, variant, label = 'topic', initialReaction = null, onReactionChange, priority = false }: {
   list: EditorialListCatalogItem
   animationIndex: number
   variant: 'feature' | 'media'
   label?: 'topic' | 'editorial-list'
   initialReaction?: 'like' | 'dislike' | null
   onReactionChange?: (id: string, reaction: 'like' | 'dislike' | null) => void
+  priority?: boolean
 }) {
   const reduceMotion = useReducedMotion()
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -166,8 +171,13 @@ export function EditorialListShowcaseCard({ list, animationIndex, variant, label
                   {/* Images form a decorative preview; the title labels the destination. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/api/image-proxy?url=${encodeURIComponent(image)}`}
+                    src={imageProxyUrl(image, 640)}
+                    srcSet={imageProxySrcSet(image, SHOWCASE_IMAGE_WIDTHS)}
+                    sizes={SHOWCASE_IMAGE_SIZES}
                     alt=""
+                    loading={priority && index === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={priority && index === 0 ? 'high' : 'auto'}
+                    decoding="async"
                     onLoad={measureTrack}
                   />
                 </div>
@@ -188,7 +198,7 @@ export function EditorialListShowcaseCard({ list, animationIndex, variant, label
         <div className="editorial-list-showcase-card__meta">
           {list.author_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={list.author_image_url} alt="" />
+            <img src={clerkImageUrl(list.author_image_url, 64)} alt="" loading="lazy" decoding="async" />
           ) : <span className="editorial-list-showcase-card__avatar" aria-hidden="true" />}
           <span>Por {list.author_name}</span>
         </div>

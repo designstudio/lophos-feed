@@ -11,13 +11,9 @@ import { LikeBurstIcon } from '@/components/LikeBurstIcon'
 import { TopicIcon } from '@/components/TopicIcon'
 import { useAuth } from '@clerk/nextjs'
 import { useAuthPrompt } from '@/components/auth/AuthPrompt'
+import { imageProxySrcSet, imageProxyUrl, isUsableEditorialImage } from '@/lib/image-url'
 
-const LAZY_PATTERNS = ['lazyload', 'lazy-load', 'placeholder', 'blank.gif', 'spacer.gif', 'fallback.gif']
-
-function proxyImage(url: string | undefined): string | undefined {
-  if (!url || LAZY_PATTERNS.some((pattern) => url.toLowerCase().includes(pattern))) return undefined
-  return `/api/image-proxy?url=${encodeURIComponent(url)}`
-}
+const LIST_IMAGE_WIDTHS = [320, 480, 640, 768, 960, 1200] as const
 
 function publishedLabel(publishedAt?: string): string | null {
   if (!publishedAt) return null
@@ -36,17 +32,16 @@ function sourceInitials(name?: string) {
     .toUpperCase()
 }
 
-function CoverageRail({ item }: { item: FeedItem }) {
+function CoverageRail({ item, priority }: { item: FeedItem; priority?: boolean }) {
   const rawImages = (item.coverageImages || [])
-    .map((image) => proxyImage(image))
-    .filter((image): image is string => Boolean(image))
+    .filter((image): image is string => isUsableEditorialImage(image))
 
   const coverage = rawImages
     .filter((image, index, images) => images.indexOf(image) === index)
     .slice(0, 4)
 
   if (coverage.length === 0) {
-    const mainImage = proxyImage(item.imageUrl)
+    const mainImage = isUsableEditorialImage(item.imageUrl) ? item.imageUrl : undefined
     if (mainImage) coverage.push(mainImage)
   }
 
@@ -64,9 +59,16 @@ function CoverageRail({ item }: { item: FeedItem }) {
               <div className="editorial-card__coverage-fallback" />
               {image && (
                 <img
-                  src={image}
+                  src={imageProxyUrl(image, 960)}
+                  srcSet={imageProxySrcSet(image, LIST_IMAGE_WIDTHS)}
+                  sizes={coverage.length === 1
+                    ? '(max-width: 767px) 100vw, (max-width: 1100px) 65vw, 60vw'
+                    : '(max-width: 767px) 100vw, (max-width: 1100px) 32vw, 30vw'}
                   alt=""
                   className="editorial-card__coverage-image"
+                  loading={priority && index === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={priority && index === 0 ? 'high' : 'auto'}
+                  decoding="async"
                   onError={(event) => { event.currentTarget.style.display = 'none' }}
                 />
               )}
@@ -97,6 +99,8 @@ export function NewsSourceAttribution({ sources }: { sources: FeedItem['sources'
                 src={source.favicon}
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
                 onError={(event) => { (event.currentTarget as HTMLImageElement).style.display = 'none' }}
               />
             )}
@@ -116,6 +120,7 @@ interface Props {
   fadingOut?: boolean
   solo?: boolean
   animationIndex?: number
+  priority?: boolean
   onReactionChange?: (articleId: string, reaction: 'like' | 'dislike' | null) => void
 }
 
@@ -125,6 +130,7 @@ export function NewsCard({
   initialReaction = null,
   fadingOut = false,
   animationIndex = 0,
+  priority = false,
   onReactionChange,
 }: Props) {
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
@@ -179,7 +185,7 @@ export function NewsCard({
           ease: [0.22, 1, 0.36, 1],
         }}
       >
-        <CoverageRail item={item} />
+        <CoverageRail item={item} priority={priority} />
 
         <div className="editorial-card__body">
           <div className="editorial-card__eyebrow">

@@ -22,6 +22,7 @@ import type { EditorialListCardItem } from '@/lib/editorial-list-card'
 import { interleaveEditorialLists, type MosaicContentItem } from '@/lib/mixed-feed'
 import { useAuth } from '@clerk/nextjs'
 import { useAuthPrompt } from '@/components/auth/AuthPrompt'
+import { imageProxySrcSet, imageProxyUrl, isUsableEditorialImage } from '@/lib/image-url'
 
 const FEED_CACHE_KEY = 'lophos_feed_cache'
 const MOSAIC_SCROLL_KEY = 'lophos_mosaic_feed_scroll'
@@ -56,8 +57,23 @@ function toTitleCase(value: string) {
   return value.split(' ').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 }
 
-function proxyImage(url?: string) {
-  return url ? `/api/image-proxy?url=${encodeURIComponent(url)}` : undefined
+const MOSAIC_IMAGE_WIDTHS = [320, 480, 640, 768, 960] as const
+const MOSAIC_IMAGE_SIZES = '(max-width: 767px) calc(100vw - 1.25rem), (max-width: 1023px) 50vw, 30vw'
+
+function mosaicImageSource(item: FeedItem) {
+  return [item.imageUrl, ...(item.coverageImages ?? [])].find(isUsableEditorialImage)
+}
+
+function preloadMosaicImage(item: FeedItem | undefined) {
+  if (!item) return
+  const source = mosaicImageSource(item)
+  if (!source) return
+  const image = new Image()
+  image.fetchPriority = 'high'
+  image.loading = 'eager'
+  image.sizes = MOSAIC_IMAGE_SIZES
+  image.srcset = imageProxySrcSet(source, MOSAIC_IMAGE_WIDTHS)
+  image.src = imageProxyUrl(source, 960)
 }
 
 function readCachedFeed(audience: CachedFeed['audience']): CachedFeed | null {
@@ -217,7 +233,12 @@ function writeMosaicFeedCache(
   } catch {}
 }
 
-async function requestFeedPage(topic: string | null, cursor: string | null, signal: AbortSignal): Promise<FeedPageResponse> {
+async function requestFeedPage(
+  topic: string | null,
+  cursor: string | null,
+  signal: AbortSignal,
+  onFirstItems?: (items: FeedItem[]) => void,
+): Promise<FeedPageResponse> {
   const response = await fetch('/api/feed', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -236,7 +257,10 @@ async function requestFeedPage(topic: string | null, cursor: string | null, sign
     const chunk = JSON.parse(line)
     if (chunk.error) throw new Error(chunk.error === 'No topics' ? 'Nenhum tópico salvo.' : chunk.error)
     if (Array.isArray(chunk.topics)) result.topics = chunk.topics
-    if (Array.isArray(chunk.items)) result.items.push(...chunk.items)
+    if (Array.isArray(chunk.items)) {
+      if (result.items.length === 0) onFirstItems?.(chunk.items)
+      result.items.push(...chunk.items)
+    }
     if (typeof chunk.hasMore === 'boolean') result.hasMore = chunk.hasMore
     if (typeof chunk.nextCursor === 'string' || chunk.nextCursor === null) result.nextCursor = chunk.nextCursor
   }
@@ -265,14 +289,17 @@ function MosaicStory({
   initialReaction,
   onReactionChange,
   animationIndex,
+  priority,
 }: {
   item: FeedItem
   variant: MosaicVariant
   initialReaction: 'like' | 'dislike' | null
   onReactionChange: (articleId: string, reaction: 'like' | 'dislike' | null) => void
   animationIndex: number
+  priority?: boolean
 }) {
-  const image = proxyImage(item.imageUrl || item.coverageImages?.[0])
+  const imageSource = mosaicImageSource(item)
+  const image = imageSource ? imageProxyUrl(imageSource, 960) : undefined
   const [imageFailed, setImageFailed] = useState(false)
   const hasImage = Boolean(image) && !imageFailed
   const showImage = variant !== 'text' && hasImage
@@ -373,7 +400,16 @@ function MosaicStory({
         {variant === 'feature' && <h2>{item.title}</h2>}
         {showImage && (
           <div className="mosaic-story__image">
-            <img src={image} alt="" onError={() => setImageFailed(true)} />
+            <img
+              src={image}
+              srcSet={imageSource ? imageProxySrcSet(imageSource, MOSAIC_IMAGE_WIDTHS) : undefined}
+              sizes={MOSAIC_IMAGE_SIZES}
+              alt=""
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : 'auto'}
+              decoding="async"
+              onError={() => setImageFailed(true)}
+            />
           </div>
         )}
         {variant !== 'feature' && <h2>{item.title}</h2>}
@@ -404,6 +440,14 @@ export function MosaicArticleGrid({
   contentItems?: MosaicContentItem[]
 }) {
   const blocks = buildMosaicBlocks(contentItems ?? interleaveEditorialLists(items, editorialLists), deferredStoryIds)
+  const priorityEntry = blocks
+    .flatMap(({ columns }) => columns.flat())
+    .find((entry) => entry.variant !== 'text' && (
+      entry.kind === 'article'
+        ? Boolean(mosaicImageSource(entry.item))
+        : entry.item.gallery_images.length > 0 || Boolean(entry.item.cover_image_url)
+    ))
+  const priorityKey = priorityEntry ? `${priorityEntry.kind}:${priorityEntry.item.id}` : null
 
   return (
     <div className="mosaic-feed-blocks">
@@ -422,6 +466,7 @@ export function MosaicArticleGrid({
                   initialReaction={reactions[entry.item.id] ?? null}
                   onReactionChange={onReactionChange}
                   animationIndex={columnIndex * 2 + storyIndex}
+                  priority={priorityKey === `article:${entry.item.id}`}
                 />
               ) : (
                 <EditorialListShowcaseCard
@@ -432,6 +477,7 @@ export function MosaicArticleGrid({
                   label="editorial-list"
                   initialReaction={listReactions[entry.item.id] ?? null}
                   onReactionChange={onListReactionChange}
+                  priority={priorityKey === `editorial-list:${entry.item.id}`}
                 />
               ))}
             </div>
@@ -499,6 +545,7 @@ export default function MosaicFeedView() {
     if (!isLoaded) return
     const cached = readCachedFeed(feedAudience)
     if (cached && cached.items.length > 0) {
+      preloadMosaicImage(cached.items.find((item) => Boolean(mosaicImageSource(item))))
       setItems(cached.items)
       setNextCursor(cached.nextCursor)
       nextCursorRef.current = cached.nextCursor
@@ -522,11 +569,15 @@ export default function MosaicFeedView() {
       try {
         let page: FeedPageResponse
         try {
-          page = await requestFeedPage(null, null, controller.signal)
+          page = await requestFeedPage(null, null, controller.signal, (firstItems) => {
+            preloadMosaicImage(firstItems.find((item) => Boolean(mosaicImageSource(item))))
+          })
         } catch (firstError) {
           if ((firstError as Error).name === 'AbortError') throw firstError
           await new Promise((resolve) => window.setTimeout(resolve, 450))
-          page = await requestFeedPage(null, null, controller.signal)
+          page = await requestFeedPage(null, null, controller.signal, (firstItems) => {
+            preloadMosaicImage(firstItems.find((item) => Boolean(mosaicImageSource(item))))
+          })
         }
         setItems(page.items)
         setTopics(page.topics)

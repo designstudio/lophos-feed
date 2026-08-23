@@ -15,6 +15,9 @@ import { LikeBurstIcon } from '@/components/LikeBurstIcon'
 import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 import { TopicIcon } from '@/components/TopicIcon'
 import { ArticleReportModal } from '@/components/ArticleReportModal'
+import { imageProxySrcSet, imageProxyUrl } from '@/lib/image-url'
+
+const ARTICLE_IMAGE_WIDTHS = [480, 640, 768, 960, 1200, 1600] as const
 
 function extractYouTubeId(url: string): string | null {
   const patterns = [
@@ -306,9 +309,14 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                     >
                       <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[1.5rem] bg-bg-secondary shadow-md hover:shadow-lg hover:scale-[1.02] transition-transform duration-150">
                         <img
-                          src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
+                          src={imageProxyUrl(item.imageUrl, 1200, 80)}
+                          srcSet={imageProxySrcSet(item.imageUrl, ARTICLE_IMAGE_WIDTHS, 80)}
+                          sizes="(max-width: 767px) calc(100vw - 2rem), 768px"
                           alt={item.title}
                           className="h-full w-full object-cover"
+                          loading="eager"
+                          fetchPriority="high"
+                          decoding="async"
                           onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
                         />
                       </div>
@@ -520,9 +528,13 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
                             {rel.imageUrl && (
                               <div className="bg-bg-secondary aspect-video w-full overflow-hidden">
                                 <img
-                                  src={`/api/image-proxy?url=${encodeURIComponent(rel.imageUrl)}`}
+                                  src={imageProxyUrl(rel.imageUrl, 640)}
+                                  srcSet={imageProxySrcSet(rel.imageUrl, [320, 480, 640])}
+                                  sizes="(max-width: 767px) calc(100vw - 2rem), 22rem"
                                   alt=""
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  loading="lazy"
+                                  decoding="async"
                                   onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none' }}
                                 />
                               </div>
@@ -630,9 +642,10 @@ export default function ArticlePageClient({ initialItem }: { initialItem: NewsIt
               <CloseCircle size={24} />
             </button>
             <img
-              src={`/api/image-proxy?url=${encodeURIComponent(item.imageUrl)}`}
+              src={imageProxyUrl(item.imageUrl, 1600, 80)}
               alt={item.title}
               className="max-w-full max-h-[90vh] rounded-[1.5rem] shadow-2xl"
+              decoding="async"
               onClick={(e) => e.stopPropagation()}
             />
           </div>

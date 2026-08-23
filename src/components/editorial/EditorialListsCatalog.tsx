@@ -11,6 +11,9 @@ import { TopicIcon } from '@/components/TopicIcon'
 import { EditorialListCardReactions } from './EditorialListCardReactions'
 import { EditorialListShowcaseCard } from './EditorialListShowcaseCard'
 import type { EditorialListCardItem } from '@/lib/editorial-list-card'
+import { clerkImageUrl, imageProxySrcSet, imageProxyUrl } from '@/lib/image-url'
+
+const CATALOG_IMAGE_WIDTHS = [320, 480, 640] as const
 
 export type EditorialListCatalogItem = EditorialListCardItem
 type ListReaction = 'like' | 'dislike'
@@ -25,7 +28,7 @@ function PublicationMeta({ list }: { list: EditorialListCatalogItem }) {
     <div className="lists-catalog-meta">
       {list.author_image_url
         // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={list.author_image_url} alt="" />
+        ? <img src={clerkImageUrl(list.author_image_url, 64)} alt="" loading="lazy" decoding="async" />
         : <span className="lists-catalog-meta__avatar" aria-hidden="true" />}
       <span>{list.author_name}</span>
       <span aria-hidden="true">·</span>
@@ -69,6 +72,7 @@ function MosaicLists({ lists, reactions, onReactionChange }: {
                   variant={((!reversed && columnIndex === 0) || (reversed && columnIndex === 2)) && cardIndex === 0 ? 'feature' : 'media'}
                   initialReaction={reactions[list.id] ?? null}
                   onReactionChange={onReactionChange}
+                  priority={blockIndex === 0 && columnIndex === 0 && cardIndex === 0}
                 />
               ))}
             </div>
@@ -101,7 +105,15 @@ function ListCard({ list, animationIndex, initialReaction, onReactionChange }: {
           {list.cover_image_url ? (
             <div className="lists-catalog-row__image">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/api/image-proxy?url=${encodeURIComponent(list.cover_image_url)}`} alt={list.cover_image_alt || ''} />
+              <img
+                src={imageProxyUrl(list.cover_image_url, 640)}
+                srcSet={imageProxySrcSet(list.cover_image_url, CATALOG_IMAGE_WIDTHS)}
+                sizes="(max-width: 767px) 100vw, 13rem"
+                alt={list.cover_image_alt || ''}
+                loading={animationIndex === 0 ? 'eager' : 'lazy'}
+                fetchPriority={animationIndex === 0 ? 'high' : 'auto'}
+                decoding="async"
+              />
             </div>
           ) : <div className="lists-catalog-row__image lists-catalog-row__image--empty"><IconLists size={24} /></div>}
           <div className="lists-catalog-row__content">

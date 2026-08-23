@@ -211,6 +211,7 @@ function FeedBlock({ items, blockIndex, reactions, fadingOut, onReactionChange }
           initialReaction={reactions[item.id] ?? null}
           fadingOut={fadingOut.has(item.id)}
           onReactionChange={onReactionChange}
+          priority={blockIndex === 0}
         />
       ))}
     </div>

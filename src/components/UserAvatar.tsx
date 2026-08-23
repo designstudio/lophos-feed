@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { User03 } from '@untitledui/icons'
+import { clerkImageUrl } from '@/lib/image-url'
 
 interface AvatarUser {
   hasImage?: boolean
@@ -19,7 +20,7 @@ function getInitials(user?: AvatarUser | null): string | null {
   return initials || user?.primaryEmailAddress?.emailAddress.charAt(0).toUpperCase() || null
 }
 
-export function UserAvatar({ user, className }: { user?: AvatarUser | null; className?: string }) {
+export function UserAvatar({ user, className, imageSize = 64 }: { user?: AvatarUser | null; className?: string; imageSize?: number }) {
   const initials = getInitials(user)
 
   return (
@@ -31,7 +32,7 @@ export function UserAvatar({ user, className }: { user?: AvatarUser | null; clas
       aria-hidden="true"
     >
       {user?.hasImage && user.imageUrl
-        ? <img src={user.imageUrl} alt="" className="h-full w-full object-cover" />
+        ? <img src={clerkImageUrl(user.imageUrl, imageSize)} alt="" className="h-full w-full object-cover" decoding="async" />
         : initials ?? <User03 size={14} className="h-[55%] w-[55%]" />}
     </span>
   )

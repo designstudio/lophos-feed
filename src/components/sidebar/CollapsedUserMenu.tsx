@@ -16,9 +16,13 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { FixedDropdown } from './FixedDropdown'
 import { useDropdownTransition } from '@/hooks/useDropdownTransition'
 import { useAuthPrompt } from '@/components/auth/AuthPrompt'
+import { useHydrated } from '@/hooks/useHydrated'
 
 export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenSettings: () => void; isAdmin?: boolean }) {
   const { user, isSignedIn } = useUser()
+  const hydrated = useHydrated()
+  const signedIn = hydrated && Boolean(isSignedIn)
+  const hydratedUser = hydrated ? user : null
   const { signOut } = useClerk()
   const { openAuthPrompt } = useAuthPrompt()
   const { open, closing, closeDropdown, toggleDropdown } = useDropdownTransition()
@@ -38,7 +42,7 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
 
   return (
     <div ref={ref} className="relative">
-      <Tooltip content={user?.firstName ?? 'Conta'} side="right">
+      <Tooltip content={hydratedUser?.firstName ?? 'Conta'} side="right">
         <button
           ref={triggerRef}
           onClick={toggleDropdown}
@@ -46,13 +50,13 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
           aria-expanded={open}
           className="flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-bg-secondary"
         >
-          <UserAvatar user={user} className="h-[26px] w-[26px] text-[10px]" />
+          <UserAvatar user={hydratedUser} className="h-[26px] w-[26px] text-[10px]" />
         </button>
       </Tooltip>
 
       <FixedDropdown anchorRef={triggerRef} open={open} closing={closing}>
           <div>
-            {isSignedIn ? <button
+            {signedIn ? <button
               onClick={() => {
                 closeDropdown()
                 onOpenSettings()
@@ -63,7 +67,7 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
               <span>Configurações</span>
             </button> : null}
 
-            {isSignedIn && isAdmin ? (
+            {signedIn && isAdmin ? (
               <Link
                 href="/admin/lists"
                 onClick={closeDropdown}
@@ -100,7 +104,7 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
 
             <div role="separator" className="my-1 border-t border-border" />
 
-            {isSignedIn ? (
+            {signedIn ? (
               <button
                 onClick={() => { closeDropdown(); void signOut() }}
                 className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--color-danger)] transition-colors hover:bg-[var(--color-danger-hover)]"

@@ -490,7 +490,7 @@ export function SettingsPageContent() {
               aria-label="Selecionar nova imagem de perfil"
             />
             <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={!user || uploadingAvatar || removingAvatar} className="settings-account-avatar" aria-label="Alterar avatar">
-              <UserAvatar user={user} className="h-full w-full text-xl" />
+              <UserAvatar user={user} imageSize={160} className="h-full w-full text-xl" />
             </button>
             <div className="settings-avatar-actions">
               <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={!user || uploadingAvatar || removingAvatar} className="settings-button settings-button--secondary settings-control-shadow">

@@ -17,6 +17,7 @@ import { Tooltip } from '@/components/Tooltip'
 import { startNavigationFeedback } from '@/components/NavigationFeedback'
 import { CollapsedUserMenu } from './sidebar/CollapsedUserMenu'
 import { useAuthPrompt } from '@/components/auth/AuthPrompt'
+import { useHydrated } from '@/hooks/useHydrated'
 
 const SearchModal = dynamic(
   () => import('@/components/SearchModal').then((module) => module.SearchModal),
@@ -33,8 +34,10 @@ interface Props {
 export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: Props) {
   const path = usePathname()
   const { sessionClaims, isSignedIn } = useAuth()
+  const hydrated = useHydrated()
+  const signedIn = hydrated && Boolean(isSignedIn)
   const { openAuthPrompt } = useAuthPrompt()
-  const isAdmin = sessionClaims?.metadata?.role === 'admin'
+  const isAdmin = signedIn && sessionClaims?.metadata?.role === 'admin'
   const isFeedActive = path === '/' || path === '/feed'
   const isListsActive = path === '/lists' || path.startsWith('/lists/')
   const router = useRouter()
@@ -42,12 +45,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const [userTopics, setUserTopics] = useState<string[]>([])
 
   useEffect(() => {
-    if (!isSignedIn || !showSearch || userTopics.length > 0) return
+    if (!signedIn || !showSearch || userTopics.length > 0) return
     fetch('/api/topics')
       .then((r) => r.json())
       .then((data) => setUserTopics((data.topics || []).map((x: { topic: string }) => x.topic)))
       .catch(() => {})
-  }, [isSignedIn, showSearch, userTopics.length])
+  }, [showSearch, signedIn, userTopics.length])
 
   return (
     <div>
@@ -64,10 +67,10 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         </div>
 
         <nav className="flex flex-col gap-2 flex-1 min-h-0 px-3">
-          <Tooltip content={isSignedIn ? 'Meu feed' : 'Feed'} side="right" className="w-full">
+          <Tooltip content={signedIn ? 'Meu feed' : 'Feed'} side="right" className="w-full">
             <Link
               href="/"
-              aria-label={isSignedIn ? 'Meu feed' : 'Feed'}
+              aria-label={signedIn ? 'Meu feed' : 'Feed'}
               aria-current={isFeedActive ? 'page' : undefined}
               className={cn(
                 'flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors',
@@ -92,7 +95,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
             </Link>
           </Tooltip>
 
-          {isSignedIn ? (
+          {signedIn ? (
             <Tooltip content="Minhas curtidas" side="right" className="w-full">
               <button
                 type="button"
@@ -114,7 +117,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
           <Tooltip content="Buscar" side="right" className="w-full">
             <button
               onClick={() => {
-                if (isSignedIn) {
+                if (signedIn) {
                   void import('@/components/SearchModal')
                   setShowSearch(true)
                 } else openAuthPrompt('login')
@@ -142,7 +145,7 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
 
         <div className="flex-shrink-0 px-3 pt-3 pb-5">
           <CollapsedUserMenu isAdmin={isAdmin} onOpenSettings={() => {
-            if (isSignedIn) {
+            if (signedIn) {
               startNavigationFeedback()
               router.push('/settings')
             } else openAuthPrompt('login')
