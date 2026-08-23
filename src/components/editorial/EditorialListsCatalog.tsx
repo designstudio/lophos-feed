@@ -12,6 +12,7 @@ import { EditorialListCardReactions } from './EditorialListCardReactions'
 import { EditorialListShowcaseCard } from './EditorialListShowcaseCard'
 import type { EditorialListCardItem } from '@/lib/editorial-list-card'
 import { clerkImageUrl, imageProxySrcSet, imageProxyUrl } from '@/lib/image-url'
+import { OptimizedImage } from '@/components/OptimizedImage'
 
 const CATALOG_IMAGE_WIDTHS = [320, 480, 640] as const
 
@@ -104,10 +105,10 @@ function ListCard({ list, animationIndex, initialReaction, onReactionChange }: {
         <Link href={`/lists/${list.slug}`} className="lists-catalog-row">
           {list.cover_image_url ? (
             <div className="lists-catalog-row__image">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={imageProxyUrl(list.cover_image_url, 640)}
-                srcSet={imageProxySrcSet(list.cover_image_url, CATALOG_IMAGE_WIDTHS)}
+              <OptimizedImage
+                originalSrc={list.cover_image_url}
+                optimizedSrc={imageProxyUrl(list.cover_image_url, 640)}
+                optimizedSrcSet={imageProxySrcSet(list.cover_image_url, CATALOG_IMAGE_WIDTHS)}
                 sizes="(max-width: 767px) 100vw, 13rem"
                 alt={list.cover_image_alt || ''}
                 loading={animationIndex === 0 ? 'eager' : 'lazy'}

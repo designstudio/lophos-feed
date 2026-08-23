@@ -8,6 +8,7 @@ import { IconLists } from '@/components/icons'
 import { EditorialListCardReactions } from './EditorialListCardReactions'
 import type { EditorialListCatalogItem } from './EditorialListsCatalog'
 import { clerkImageUrl, imageProxySrcSet, imageProxyUrl } from '@/lib/image-url'
+import { OptimizedImage } from '@/components/OptimizedImage'
 
 const SHOWCASE_IMAGE_WIDTHS = [160, 320, 480, 640] as const
 const SHOWCASE_IMAGE_SIZES = '(max-width: 767px) 62vw, (max-width: 1023px) 31vw, 18rem'
@@ -169,10 +170,10 @@ export function EditorialListShowcaseCard({ list, animationIndex, variant, label
                   key={`${image}-${index}`}
                 >
                   {/* Images form a decorative preview; the title labels the destination. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imageProxyUrl(image, 640)}
-                    srcSet={imageProxySrcSet(image, SHOWCASE_IMAGE_WIDTHS)}
+                  <OptimizedImage
+                    originalSrc={image}
+                    optimizedSrc={imageProxyUrl(image, 640)}
+                    optimizedSrcSet={imageProxySrcSet(image, SHOWCASE_IMAGE_WIDTHS)}
                     sizes={SHOWCASE_IMAGE_SIZES}
                     alt=""
                     loading={priority && index === 0 ? 'eager' : 'lazy'}

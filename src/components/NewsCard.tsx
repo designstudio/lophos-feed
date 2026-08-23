@@ -12,6 +12,7 @@ import { TopicIcon } from '@/components/TopicIcon'
 import { useAuth } from '@clerk/nextjs'
 import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 import { imageProxySrcSet, imageProxyUrl, isUsableEditorialImage } from '@/lib/image-url'
+import { OptimizedImage } from '@/components/OptimizedImage'
 
 const LIST_IMAGE_WIDTHS = [320, 480, 640, 768, 960, 1200] as const
 
@@ -58,9 +59,10 @@ function CoverageRail({ item, priority }: { item: FeedItem; priority?: boolean }
             <div className="editorial-card__coverage-media">
               <div className="editorial-card__coverage-fallback" />
               {image && (
-                <img
-                  src={imageProxyUrl(image, 960)}
-                  srcSet={imageProxySrcSet(image, LIST_IMAGE_WIDTHS)}
+                <OptimizedImage
+                  originalSrc={image}
+                  optimizedSrc={imageProxyUrl(image, 960)}
+                  optimizedSrcSet={imageProxySrcSet(image, LIST_IMAGE_WIDTHS)}
                   sizes={coverage.length === 1
                     ? '(max-width: 767px) 100vw, (max-width: 1100px) 65vw, 60vw'
                     : '(max-width: 767px) 100vw, (max-width: 1100px) 32vw, 30vw'}
@@ -69,7 +71,6 @@ function CoverageRail({ item, priority }: { item: FeedItem; priority?: boolean }
                   loading={priority && index === 0 ? 'eager' : 'lazy'}
                   fetchPriority={priority && index === 0 ? 'high' : 'auto'}
                   decoding="async"
-                  onError={(event) => { event.currentTarget.style.display = 'none' }}
                 />
               )}
             </div>

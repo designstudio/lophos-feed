@@ -21,6 +21,11 @@ export function imageProxySrcSet(
   return widths.map((width) => `${imageProxyUrl(source, width, quality)} ${width}w`).join(', ')
 }
 
+export function imageFallbackCheckUrl(source: string) {
+  const params = new URLSearchParams({ url: source, fallback: 'check' })
+  return `/api/image-proxy?${params}`
+}
+
 export function clerkImageUrl(source: string, size: number) {
   try {
     const url = new URL(source)

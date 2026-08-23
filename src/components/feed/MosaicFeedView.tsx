@@ -23,6 +23,7 @@ import { interleaveEditorialLists, type MosaicContentItem } from '@/lib/mixed-fe
 import { useAuth } from '@clerk/nextjs'
 import { useAuthPrompt } from '@/components/auth/AuthPrompt'
 import { imageProxySrcSet, imageProxyUrl, isUsableEditorialImage } from '@/lib/image-url'
+import { OptimizedImage } from '@/components/OptimizedImage'
 
 const FEED_CACHE_KEY = 'lophos_feed_cache'
 const MOSAIC_SCROLL_KEY = 'lophos_mosaic_feed_scroll'
@@ -299,10 +300,7 @@ function MosaicStory({
   priority?: boolean
 }) {
   const imageSource = mosaicImageSource(item)
-  const image = imageSource ? imageProxyUrl(imageSource, 960) : undefined
-  const [imageFailed, setImageFailed] = useState(false)
-  const hasImage = Boolean(image) && !imageFailed
-  const showImage = variant !== 'text' && hasImage
+  const showImage = variant !== 'text' && Boolean(imageSource)
   const [reaction, setReaction] = useState<'like' | 'dislike' | null>(initialReaction)
   const [reacting, setReacting] = useState(false)
   const [likeBurstToken, setLikeBurstToken] = useState(0)
@@ -312,8 +310,6 @@ function MosaicStory({
   const authGated = isLoaded && !isSignedIn
 
   useEffect(() => setReaction(initialReaction), [initialReaction])
-  useEffect(() => setImageFailed(false), [image])
-
   const react = async (type: 'like' | 'dislike') => {
     if (authGated) {
       openAuthPrompt('login')
@@ -400,15 +396,15 @@ function MosaicStory({
         {variant === 'feature' && <h2>{item.title}</h2>}
         {showImage && (
           <div className="mosaic-story__image">
-            <img
-              src={image}
-              srcSet={imageSource ? imageProxySrcSet(imageSource, MOSAIC_IMAGE_WIDTHS) : undefined}
+            <OptimizedImage
+              originalSrc={imageSource!}
+              optimizedSrc={imageProxyUrl(imageSource!, 960)}
+              optimizedSrcSet={imageProxySrcSet(imageSource!, MOSAIC_IMAGE_WIDTHS)}
               sizes={MOSAIC_IMAGE_SIZES}
               alt=""
               loading={priority ? 'eager' : 'lazy'}
               fetchPriority={priority ? 'high' : 'auto'}
               decoding="async"
-              onError={() => setImageFailed(true)}
             />
           </div>
         )}
