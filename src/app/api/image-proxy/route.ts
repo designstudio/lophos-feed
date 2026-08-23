@@ -282,7 +282,6 @@ async function readLimitedBody(response: Response, timings: ProxyTimings) {
 
 function chooseFormat(accept: string, sourceType: string): OutputFormat {
   if (sourceType.includes('svg') || sourceType.includes('gif')) return 'original'
-  if (accept.includes('image/avif')) return 'avif'
   if (accept.includes('image/webp')) return 'webp'
   if (sourceType.includes('png')) return 'png'
   return 'jpeg'
@@ -344,7 +343,7 @@ export async function GET(request: NextRequest) {
     const width = parseAllowedNumber(request.nextUrl.searchParams.get('w'), IMAGE_PROXY_WIDTHS, 1200)
     const quality = parseAllowedNumber(request.nextUrl.searchParams.get('q'), IMAGE_PROXY_QUALITIES, 75)
     const accept = request.headers.get('accept') || ''
-    const requestedFormat: OutputFormat = accept.includes('image/avif') ? 'avif' : accept.includes('image/webp') ? 'webp' : 'jpeg'
+    const requestedFormat: OutputFormat = accept.includes('image/webp') ? 'webp' : 'jpeg'
     const provisionalKey = cacheKey(source, width, quality, requestedFormat)
     const cacheLookupStartedAt = performance.now()
     const cached = readMemoryCache(provisionalKey)
