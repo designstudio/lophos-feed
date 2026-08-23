@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useAuth } from '@clerk/nextjs'
-import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
@@ -13,11 +13,15 @@ import { cn } from '@/lib/utils'
 import { useFeedContext } from '@/components/FeedContext'
 import { IconFeed, IconLists } from '@/components/icons'
 import { LophosLogo } from '@/components/LophosLogo'
-import { SearchModal } from '@/components/SearchModal'
 import { Tooltip } from '@/components/Tooltip'
 import { startNavigationFeedback } from '@/components/NavigationFeedback'
 import { CollapsedUserMenu } from './sidebar/CollapsedUserMenu'
 import { useAuthPrompt } from '@/components/auth/AuthPrompt'
+
+const SearchModal = dynamic(
+  () => import('@/components/SearchModal').then((module) => module.SearchModal),
+  { ssr: false },
+)
 
 interface Props {
   onRefresh?: () => void
@@ -34,19 +38,16 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
   const isFeedActive = path === '/' || path === '/feed'
   const isListsActive = path === '/lists' || path.startsWith('/lists/')
   const router = useRouter()
-  const [mounted, setMounted] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [userTopics, setUserTopics] = useState<string[]>([])
 
   useEffect(() => {
-    if (!isSignedIn) return
+    if (!isSignedIn || !showSearch || userTopics.length > 0) return
     fetch('/api/topics')
       .then((r) => r.json())
       .then((data) => setUserTopics((data.topics || []).map((x: { topic: string }) => x.topic)))
       .catch(() => {})
-  }, [isSignedIn])
-
-  useEffect(() => setMounted(true), [])
+  }, [isSignedIn, showSearch, userTopics.length])
 
   return (
     <div>
@@ -112,7 +113,12 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
 
           <Tooltip content="Buscar" side="right" className="w-full">
             <button
-              onClick={() => isSignedIn ? setShowSearch(true) : openAuthPrompt('login')}
+              onClick={() => {
+                if (isSignedIn) {
+                  void import('@/components/SearchModal')
+                  setShowSearch(true)
+                } else openAuthPrompt('login')
+              }}
               aria-label="Buscar"
               className="flex w-full items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm text-ink-secondary transition-colors hover:text-ink-primary hover:bg-bg-secondary"
             >
@@ -144,10 +150,9 @@ export function Sidebar({ onRefresh, refreshing, refreshLabel, refreshTitle }: P
         </div>
       </aside>
 
-      {showSearch && mounted && createPortal(
-        <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} userTopics={userTopics} />,
-        document.body
-      )}
+      {showSearch ? (
+        <SearchModal isOpen={showSearch} onClose={() => setShowSearch(false)} userTopics={userTopics} />
+      ) : null}
 
     </div>
   )

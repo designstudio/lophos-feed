@@ -63,7 +63,6 @@
   --pulse-count: 1;
   --pulse-min: 0.5;
   --reveal-dur: 400ms;
-  --reveal-blur: 2px;
   --reveal-ease: ease-in-out;
 
   /* Feedback and control states */
@@ -1637,26 +1636,18 @@ html, body {
 .t-skel-skeleton {
   z-index: 1;
   opacity: 1;
-  filter: blur(0);
-  transition:
-    opacity var(--reveal-dur) var(--reveal-ease),
-    filter  var(--reveal-dur) var(--reveal-ease);
+  transition: opacity var(--reveal-dur) var(--reveal-ease);
 }
 .t-skel-content {
   z-index: 2;
   opacity: 0;
-  filter: blur(var(--reveal-blur));
-  transition:
-    opacity var(--reveal-dur) var(--reveal-ease),
-    filter  var(--reveal-dur) var(--reveal-ease);
+  transition: opacity var(--reveal-dur) var(--reveal-ease);
 }
 .t-skel.is-revealed .t-skel-skeleton {
   opacity: 0;
-  filter: blur(var(--reveal-blur));
 }
 .t-skel.is-revealed .t-skel-content {
   opacity: 1;
-  filter: blur(0);
 }
 /* Snap-back when replaying: kill transitions so the reverse
    (revealed → skeleton) is instant. Drop `.is-resetting`
@@ -2424,6 +2415,11 @@ html, body {
   gap: clamp(3rem, 7vh, 5rem);
 }
 
+.editorial-card-stack[data-feed-block] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 24rem;
+}
+
 .editorial-card {
   position: relative;
   display: flex;
@@ -2702,6 +2698,10 @@ html, body {
     min-height: 0;
     margin-bottom: 1.25rem;
     border-radius: 0;
+  }
+
+  .editorial-card-stack[data-feed-block] {
+    contain-intrinsic-size: auto 32rem;
   }
 
   .editorial-card__coverage {

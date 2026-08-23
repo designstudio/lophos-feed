@@ -239,10 +239,11 @@ function TopicsDropdown({ topics, activeFilter, onSelect }: {
   }, [])
 
   useEffect(() => {
+    if (!open) return
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) closeDropdown() }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
-  }, [closeDropdown])
+  }, [closeDropdown, open])
 
   useEffect(() => {
     if (!open) return
@@ -364,6 +365,7 @@ export default function ListFeedView() {
   const [topics, setTopics]       = useState<string[]>([])
   const [streaming, setStreamingLocal] = useState(true)
   const [initialized, setInitialized] = useState(false)
+  const [skeletonMounted, setSkeletonMounted] = useState(true)
   const setStreaming = (v: boolean) => { setStreamingLocal(v); setRefreshing(v) }
   const [hasData, setHasData]     = useState(false)
   const [error, setError]         = useState<string | null>(null)
@@ -437,6 +439,7 @@ export default function ListFeedView() {
     setHasMore(false)
     hasMoreRef.current = false
     if (force) {
+      setSkeletonMounted(true)
       setItems([])
       setHasData(false)
       sessionStorage.removeItem(FEED_CACHE_KEY)
@@ -670,6 +673,14 @@ export default function ListFeedView() {
         : error)
     : 'Nenhuma notícia encontrada.'
 
+  useEffect(() => {
+    if (!hasData) {
+      setSkeletonMounted(true)
+      return
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setSkeletonMounted(false)
+  }, [hasData])
+
   const selectTopic = (topic: string | null) => {
     scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     if (activeFilterRef.current === topic) return
@@ -775,11 +786,21 @@ export default function ListFeedView() {
               data-state={showFeedSkeleton ? 'loading' : 'loaded'}
               aria-busy={showFeedSkeleton}
             >
-              <div className="t-skel-skeleton is-pulsing" aria-hidden={hasData}>
-                <div className="editorial-card-stack">
-                  <SkeletonBlock /><SkeletonBlock /><SkeletonBlock />
+              {skeletonMounted && (
+                <div
+                  className="t-skel-skeleton is-pulsing"
+                  aria-hidden={hasData}
+                  onTransitionEnd={(event) => {
+                    if (event.target === event.currentTarget && event.propertyName === 'opacity' && hasData) {
+                      setSkeletonMounted(false)
+                    }
+                  }}
+                >
+                  <div className="editorial-card-stack">
+                    <SkeletonBlock /><SkeletonBlock /><SkeletonBlock />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="t-skel-content" aria-hidden={!hasData} inert={!hasData}>
                 <div className="editorial-card-stack">

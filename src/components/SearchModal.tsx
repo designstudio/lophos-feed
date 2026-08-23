@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { NewsItem } from '@/lib/types'
 import { Clock as ClockCircle, X as CloseCircle } from '@untitledui/icons'
-import { NewsCard } from './NewsCard'
 import { cn } from '@/lib/utils'
 import { useModalTransition } from '@/hooks/useModalTransition'
 
@@ -21,6 +20,7 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState<string[]>([])
   const debounceTimerRef = useRef<NodeJS.Timeout>()
+  const topicsWereReadyRef = useRef(userTopics.length > 0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -77,6 +77,20 @@ export function SearchModal({ isOpen, onClose, userTopics = [] }: SearchModalPro
       setLoading(false)
     }
   }, [userTopics])
+
+  // If the user types while their topics are still loading, run that pending
+  // search as soon as the scoped topic list becomes available.
+  useEffect(() => {
+    const topicsAreReady = userTopics.length > 0
+    if (topicsAreReady && !topicsWereReadyRef.current && query.trim()) {
+      void performSearch(query)
+    }
+    topicsWereReadyRef.current = topicsAreReady
+  }, [performSearch, query, userTopics.length])
+
+  useEffect(() => () => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+  }, [])
 
   const handleQueryChange = (value: string) => {
     setQuery(value)

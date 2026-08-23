@@ -470,6 +470,7 @@ export default function MosaicFeedView() {
   const feedAudience: CachedFeed['audience'] = isSignedIn ? 'personalized' : 'public'
   const [items, setItems] = useState<FeedItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [skeletonMounted, setSkeletonMounted] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [reactions, setReactions] = useState<Record<string, 'like' | 'dislike'>>({})
   const [nextCursor, setNextCursor] = useState<string | null>(null)
@@ -664,6 +665,7 @@ export default function MosaicFeedView() {
     setActiveFilter(topic)
     activeFilterRef.current = topic
     setDeferredStoryIds(new Set())
+    setSkeletonMounted(true)
     setItems([])
     setLoading(true)
     setError(null)
@@ -725,6 +727,14 @@ export default function MosaicFeedView() {
 
   const visibleItems = items.filter((item) => reactions[item.id] !== 'dislike')
   const filterTopics = [...new Set(topics.map(toTitleCase))].sort(TOPIC_COLLATOR.compare)
+  useEffect(() => {
+    if (items.length === 0) {
+      setSkeletonMounted(true)
+      return
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setSkeletonMounted(false)
+  }, [items.length])
+
   useLayoutEffect(() => {
     const root = scrollRef.current
     if (!root) return
@@ -853,12 +863,19 @@ export default function MosaicFeedView() {
             data-state={loading && items.length === 0 ? 'loading' : 'loaded'}
             aria-busy={loading && items.length === 0}
           >
-            <div
-              className="t-skel-skeleton is-pulsing"
-              aria-hidden={items.length > 0}
-            >
-              <MosaicSkeleton />
-            </div>
+            {skeletonMounted && (
+              <div
+                className="t-skel-skeleton is-pulsing"
+                aria-hidden={items.length > 0}
+                onTransitionEnd={(event) => {
+                  if (event.target === event.currentTarget && event.propertyName === 'opacity' && items.length > 0) {
+                    setSkeletonMounted(false)
+                  }
+                }}
+              >
+                <MosaicSkeleton />
+              </div>
+            )}
 
             <div
               className="t-skel-content"

@@ -26,12 +26,13 @@ export function TopicsDropdown({ topics, activeFilter, onSelect }: {
   }, [])
 
   useEffect(() => {
+    if (!open) return
     const handleOutsideClick = (event: MouseEvent) => {
       if (ref.current && !ref.current.contains(event.target as Node)) closeDropdown()
     }
     document.addEventListener('mousedown', handleOutsideClick)
     return () => document.removeEventListener('mousedown', handleOutsideClick)
-  }, [closeDropdown])
+  }, [closeDropdown, open])
 
   useEffect(() => {
     if (!open) return

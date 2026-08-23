@@ -1,8 +1,10 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { usePreferredFeedView } from '@/components/FeedViewSwitcher'
-import ListFeedView from '@/components/feed/ListFeedView'
-import MosaicFeedView from '@/components/feed/MosaicFeedView'
+
+const ListFeedView = dynamic(() => import('@/components/feed/ListFeedView'))
+const MosaicFeedView = dynamic(() => import('@/components/feed/MosaicFeedView'))
 
 export function FeedPage() {
   const view = usePreferredFeedView()

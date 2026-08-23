@@ -16,6 +16,7 @@ export function FixedDropdown({
   const [pos, setPos] = useState({ left: 0, bottom: 0 })
 
   useEffect(() => {
+    if (!open) return
     if (anchorRef.current) {
       const r = anchorRef.current.getBoundingClientRect()
       const dropdownWidth = 192

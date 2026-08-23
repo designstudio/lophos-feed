@@ -26,6 +26,7 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
+    if (!open) return
     const h = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         closeDropdown()
@@ -33,7 +34,7 @@ export function CollapsedUserMenu({ onOpenSettings, isAdmin = false }: { onOpenS
     }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
-  }, [closeDropdown])
+  }, [closeDropdown, open])
 
   return (
     <div ref={ref} className="relative">

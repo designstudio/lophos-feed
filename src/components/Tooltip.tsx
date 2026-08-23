@@ -1,17 +1,34 @@
 'use client'
-import React, { useCallback, useEffect, useState } from 'react'
+
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal, flushSync } from 'react-dom'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
+type TooltipSide = 'top' | 'right' | 'bottom' | 'left'
+
 interface TooltipProps {
   content: string
-  side?: 'top' | 'right' | 'bottom' | 'left'
+  side?: TooltipSide
   children: React.ReactNode
   className?: string
   disabled?: boolean
 }
+
+type ActiveTooltip = {
+  trigger: HTMLElement
+  content: string
+  side: TooltipSide
+}
+
+type TooltipContextValue = {
+  show: (tooltip: ActiveTooltip) => void
+  hide: (trigger: HTMLElement) => void
+  dismiss: () => void
+}
+
+const TooltipContext = createContext<TooltipContextValue | null>(null)
 
 const ANIMATION_BY_SIDE = {
   top: { initial: { opacity: 0, y: 4 }, animate: { opacity: 1, y: 0 } },
@@ -20,157 +37,102 @@ const ANIMATION_BY_SIDE = {
   left: { initial: { opacity: 0, x: 6 }, animate: { opacity: 1, x: 0 } },
 } as const
 
-export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
+function getAnchor(trigger: HTMLElement, side: TooltipSide): React.CSSProperties {
+  const rect = trigger.getBoundingClientRect()
+  const gap = 8
+
+  if (side === 'right') {
+    return { position: 'fixed', left: rect.right + gap, top: rect.top + rect.height / 2, transform: 'translateY(-50%)' }
+  }
+  if (side === 'left') {
+    return { position: 'fixed', left: rect.left - gap, top: rect.top + rect.height / 2, transform: 'translate(-100%, -50%)' }
+  }
+  if (side === 'bottom') {
+    return { position: 'fixed', left: rect.left + rect.width / 2, top: rect.bottom + gap, transform: 'translateX(-50%)' }
+  }
+  return { position: 'fixed', left: rect.left + rect.width / 2, top: rect.top - gap, transform: 'translate(-50%, -100%)' }
+}
+
+export function TooltipProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const reduceMotion = useReducedMotion()
-  const [visible, setVisible] = useState(false)
-  const [portalEnabled, setPortalEnabled] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [active, setActive] = useState<ActiveTooltip | null>(null)
   const [anchor, setAnchor] = useState<React.CSSProperties | null>(null)
-  const triggerRef = React.useRef<HTMLDivElement>(null)
-  const ignoreShowUntilRef = React.useRef(0)
-  const hideTooltip = useCallback(() => setVisible(false), [])
+  const activeRef = useRef<ActiveTooltip | null>(null)
+  const ignoreShowUntilRef = useRef(0)
+
+  const dismiss = useCallback(() => {
+    activeRef.current = null
+    setActive(null)
+    setAnchor(null)
+  }, [])
 
   const dismissImmediately = useCallback(() => {
     ignoreShowUntilRef.current = performance.now() + 300
-    flushSync(() => {
-      setVisible(false)
-      setPortalEnabled(false)
-    })
-  }, [])
+    flushSync(dismiss)
+  }, [dismiss])
 
-  const getAnchor = useCallback((): React.CSSProperties | null => {
-    const rect = triggerRef.current?.getBoundingClientRect()
-    if (!rect) return null
-
-    const gap = 8
-
-    if (side === 'right') {
-      return {
-        position: 'fixed',
-        left: rect.right + gap,
-        top: rect.top + rect.height / 2,
-        transform: 'translateY(-50%)',
-      }
-    }
-
-    if (side === 'left') {
-      return {
-        position: 'fixed',
-        left: rect.left - gap,
-        top: rect.top + rect.height / 2,
-        transform: 'translate(-100%, -50%)',
-      }
-    }
-
-    if (side === 'bottom') {
-      return {
-        position: 'fixed',
-        left: rect.left + rect.width / 2,
-        top: rect.bottom + gap,
-        transform: 'translateX(-50%)',
-      }
-    }
-
-    return {
-      position: 'fixed',
-      left: rect.left + rect.width / 2,
-      top: rect.top - gap,
-      transform: 'translate(-50%, -100%)',
-    }
-  }, [side])
-
-  const showTooltip = useCallback(() => {
+  const show = useCallback((tooltip: ActiveTooltip) => {
     if (
-      !portalEnabled
-      || document.visibilityState !== 'visible'
+      document.visibilityState !== 'visible'
       || !document.hasFocus()
       || performance.now() < ignoreShowUntilRef.current
     ) return
 
-    const nextAnchor = getAnchor()
-    if (!nextAnchor) return
+    activeRef.current = tooltip
+    setAnchor(getAnchor(tooltip.trigger, tooltip.side))
+    setActive(tooltip)
+  }, [])
 
-    // Set the fixed coordinates before mounting the portal. Rendering the
-    // tooltip in normal body flow for even one frame changes the scrollbars.
-    setAnchor(nextAnchor)
-    setVisible(true)
-  }, [getAnchor, portalEnabled])
-
-  useEffect(() => {
-    hideTooltip()
-  }, [disabled, hideTooltip, pathname])
+  const hide = useCallback((trigger: HTMLElement) => {
+    if (activeRef.current?.trigger === trigger) dismiss()
+  }, [dismiss])
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState !== 'visible') {
-        dismissImmediately()
-        return
-      }
+    setMounted(true)
 
-      ignoreShowUntilRef.current = performance.now() + 300
-      setPortalEnabled(true)
+    const updateAnchor = () => {
+      const tooltip = activeRef.current
+      if (tooltip) setAnchor(getAnchor(tooltip.trigger, tooltip.side))
     }
-
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') dismissImmediately()
+    }
     const handleWindowFocus = () => {
-      if (document.visibilityState !== 'visible') return
-      ignoreShowUntilRef.current = performance.now() + 300
-      setPortalEnabled(true)
+      if (document.visibilityState === 'visible') ignoreShowUntilRef.current = performance.now() + 300
     }
 
     window.addEventListener('blur', dismissImmediately)
     window.addEventListener('focus', handleWindowFocus)
     window.addEventListener('pagehide', dismissImmediately)
+    window.addEventListener('scroll', updateAnchor, true)
+    window.addEventListener('resize', updateAnchor)
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       window.removeEventListener('blur', dismissImmediately)
       window.removeEventListener('focus', handleWindowFocus)
       window.removeEventListener('pagehide', dismissImmediately)
+      window.removeEventListener('scroll', updateAnchor, true)
+      window.removeEventListener('resize', updateAnchor)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [dismissImmediately])
 
   useEffect(() => {
-    setPortalEnabled(true)
-  }, [])
+    dismiss()
+  }, [dismiss, pathname])
 
-  useEffect(() => {
-    if (!visible || !triggerRef.current) return
-
-    const updateAnchor = () => {
-      const nextAnchor = getAnchor()
-      if (nextAnchor) setAnchor(nextAnchor)
-    }
-
-    updateAnchor()
-    window.addEventListener('scroll', updateAnchor, true)
-    window.addEventListener('resize', updateAnchor)
-
-    return () => {
-      window.removeEventListener('scroll', updateAnchor, true)
-      window.removeEventListener('resize', updateAnchor)
-    }
-  }, [getAnchor, visible])
-
-  if (disabled || !content) return <>{children}</>
-
-  const motionConfig = ANIMATION_BY_SIDE[side]
+  const value = React.useMemo(() => ({ show, hide, dismiss }), [dismiss, hide, show])
+  const motionConfig = active ? ANIMATION_BY_SIDE[active.side] : ANIMATION_BY_SIDE.top
 
   return (
-    <div
-      ref={triggerRef}
-      className={cn('relative inline-flex', className)}
-      onMouseEnter={showTooltip}
-      onMouseLeave={hideTooltip}
-      onFocus={showTooltip}
-      onBlur={hideTooltip}
-      onPointerDown={hideTooltip}
-    >
+    <TooltipContext.Provider value={value}>
       {children}
-
-      {portalEnabled && createPortal(
+      {mounted && createPortal(
         <AnimatePresence>
-          {visible && anchor && (
+          {active && anchor && (
             <div style={anchor} className="z-[9999] pointer-events-none">
               <motion.div
                 initial={motionConfig.initial}
@@ -189,14 +151,36 @@ export function Tooltip({ content, side = 'top', children, className, disabled }
                   role="tooltip"
                   className="block whitespace-nowrap rounded-full border border-border bg-[var(--color-tooltip-bg)] px-3 py-1.5 text-[12px] font-medium leading-none text-[var(--color-tooltip-ink)] shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
                 >
-                  {content}
+                  {active.content}
                 </span>
               </motion.div>
             </div>
           )}
         </AnimatePresence>,
-        document.body
+        document.body,
       )}
+    </TooltipContext.Provider>
+  )
+}
+
+export function Tooltip({ content, side = 'top', children, className, disabled }: TooltipProps) {
+  const manager = useContext(TooltipContext)
+  if (!manager) throw new Error('Tooltip must be used inside TooltipProvider')
+
+  if (disabled || !content) return <>{children}</>
+
+  const showTooltip = (trigger: HTMLElement) => manager.show({ trigger, content, side })
+
+  return (
+    <div
+      className={cn('relative inline-flex', className)}
+      onMouseEnter={(event) => showTooltip(event.currentTarget)}
+      onMouseLeave={(event) => manager.hide(event.currentTarget)}
+      onFocus={(event) => showTooltip(event.currentTarget)}
+      onBlur={(event) => manager.hide(event.currentTarget)}
+      onPointerDown={manager.dismiss}
+    >
+      {children}
     </div>
   )
 }
